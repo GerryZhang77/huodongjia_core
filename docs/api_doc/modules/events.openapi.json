@@ -1,0 +1,957 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "活动家平台 - 活动管理模块 API",
+    "description": "活动的创建、编辑、查询、报名管理等接口",
+    "version": "1.0.0",
+    "contact": {
+      "name": "活动家开发团队",
+      "email": "dev@huodongjia.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "本地开发环境"
+    },
+    {
+      "url": "https://api.huodongjia.com",
+      "description": "生产环境"
+    }
+  ],
+  "tags": [
+    {
+      "name": "活动查询",
+      "description": "获取活动列表、详情等查询接口"
+    },
+    {
+      "name": "活动管理",
+      "description": "创建、编辑、删除活动（商家权限）"
+    },
+    {
+      "name": "报名管理",
+      "description": "查看活动报名信息（商家权限）"
+    },
+    {
+      "name": "数据提取",
+      "description": "Excel表头提取、匹配规则生成等"
+    }
+  ],
+  "paths": {
+    "/api/events": {
+      "get": {
+        "summary": "获取所有活动",
+        "description": "获取活动列表，支持按状态筛选",
+        "tags": ["活动查询"],
+        "operationId": "getAllEvents",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "活动状态筛选",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "ongoing",
+                "completed",
+                "cancelled"
+              ],
+              "example": "draft"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/my": {
+      "get": {
+        "summary": "获取自己创建的活动",
+        "description": "商家获取自己创建的所有活动",
+        "tags": ["活动管理"],
+        "operationId": "getMyEvents",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{eventId}": {
+      "get": {
+        "summary": "获取特定活动信息（包括当前报名人数情况）",
+        "description": "获取活动详情，包含报名统计信息",
+        "tags": ["活动查询"],
+        "operationId": "getEventDetail",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "7ea8f4b1-8b70-4356-a39a-e43e81ed597b"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "event": {
+                      "$ref": "#/components/schemas/EventDetail"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "活动不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "编辑活动",
+        "description": "商家编辑自己的活动信息",
+        "tags": ["活动管理"],
+        "operationId": "updateEvent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "2798b125-ae0c-4e3e-a7e4-4181467ef28a"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEventRequest"
+              },
+              "example": {
+                "title": "测试活动-添加期望",
+                "expectation": "测试"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "编辑成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "活动更新成功"
+                    },
+                    "event": {
+                      "$ref": "#/components/schemas/Event"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限编辑此活动",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "取消活动",
+        "description": "商家取消/删除自己的活动",
+        "tags": ["活动管理"],
+        "operationId": "deleteEvent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "2798b125-ae0c-4e3e-a7e4-4181467ef28a"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "活动已取消"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限删除此活动",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/create": {
+      "post": {
+        "summary": "商家创建活动",
+        "description": "创建新的活动",
+        "tags": ["活动管理"],
+        "operationId": "createEvent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventRequest"
+              },
+              "example": {
+                "title": "周末户外活动",
+                "description": "一起去爬山",
+                "start_time": "2025-11-01T09:00:00Z",
+                "end_time": "2025-11-01T17:00:00Z",
+                "location": "香山公园",
+                "max_participants": 50,
+                "fee": 0,
+                "tags": ["户外", "运动"],
+                "registration_deadline": "2025-10-30T23:59:59Z"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "活动创建成功"
+                    },
+                    "event": {
+                      "$ref": "#/components/schemas/Event"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{eventId}/participants": {
+      "get": {
+        "summary": "商家获取特定活动报名信息",
+        "description": "获取活动的所有报名参与者列表",
+        "tags": ["报名管理"],
+        "operationId": "getEventParticipants",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "7ea8f4b1-8b70-4356-a39a-e43e81ed597b"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "总报名人数",
+                      "example": 15
+                    },
+                    "participants": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Participant"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "无权限查看此活动报名信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{eventId}/match-rules": {
+      "get": {
+        "summary": "提取匹配规则",
+        "description": "根据活动期望自动生成智能匹配规则",
+        "tags": ["数据提取"],
+        "operationId": "generateMatchRules",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "生成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "匹配规则生成成功"
+                    },
+                    "rules": {
+                      "type": "array",
+                      "description": "匹配规则列表",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": ["年龄相近", "兴趣爱好相似", "职业背景互补"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/extract-headers": {
+      "post": {
+        "summary": "提取表头",
+        "description": "从上传的Excel文件中提取表头信息",
+        "tags": ["数据提取"],
+        "operationId": "extractFormHeaders",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["filePath"],
+                "properties": {
+                  "filePath": {
+                    "type": "string",
+                    "description": "服务器上的文件路径",
+                    "example": "D:\\huodongjia\\uploads\\file-1761383941080-391176227.xlsx"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "提取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "表头提取成功"
+                    },
+                    "headers": {
+                      "type": "array",
+                      "description": "Excel表头列表",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": ["姓名", "年龄", "性别", "职业", "兴趣爱好"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "文件路径错误或文件格式不支持",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token 认证"
+      }
+    },
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "description": "活动基本信息",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "活动唯一ID",
+            "example": "7ea8f4b1-8b70-4356-a39a-e43e81ed597b"
+          },
+          "organizer_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "主办方用户ID",
+            "example": "525c4dd1-d460-4dd5-bf45-0b5984dda94e"
+          },
+          "title": {
+            "type": "string",
+            "description": "活动标题",
+            "example": "周末户外徒步活动"
+          },
+          "description": {
+            "type": "string",
+            "description": "活动描述",
+            "example": "一起去香山爬山，享受大自然"
+          },
+          "cover_image": {
+            "type": "string",
+            "nullable": true,
+            "description": "封面图片URL",
+            "example": "https://example.com/cover.jpg"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "活动开始时间",
+            "example": "2025-11-01T09:00:00Z"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "活动结束时间",
+            "example": "2025-11-01T17:00:00Z"
+          },
+          "location": {
+            "type": "string",
+            "description": "活动地点",
+            "example": "香山公园东门"
+          },
+          "max_participants": {
+            "type": "integer",
+            "description": "最大参与人数",
+            "example": 50
+          },
+          "fee": {
+            "type": "integer",
+            "description": "活动费用（单位：元）",
+            "example": 0
+          },
+          "tags": {
+            "type": "array",
+            "description": "活动标签",
+            "items": {
+              "type": "string"
+            },
+            "example": ["户外", "运动", "社交"]
+          },
+          "checkin_password": {
+            "type": "string",
+            "nullable": true,
+            "description": "签到密码",
+            "example": null
+          },
+          "status": {
+            "type": "string",
+            "description": "活动状态",
+            "enum": ["draft", "published", "ongoing", "completed", "cancelled"],
+            "example": "published"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间",
+            "example": "2025-10-20T10:30:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间",
+            "example": "2025-10-25T14:20:00Z"
+          },
+          "expectation": {
+            "type": "string",
+            "nullable": true,
+            "description": "主办方对参与者的期望",
+            "example": "希望大家都准时到达"
+          },
+          "registration_deadline": {
+            "type": "string",
+            "format": "date-time",
+            "description": "报名截止时间",
+            "example": "2025-10-30T23:59:59Z"
+          }
+        },
+        "required": [
+          "id",
+          "organizer_id",
+          "title",
+          "description",
+          "start_time",
+          "end_time",
+          "location",
+          "max_participants",
+          "fee",
+          "tags",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "EventDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Event"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "registration_stats": {
+                "type": "object",
+                "description": "报名统计信息",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "description": "总报名人数",
+                    "example": 25
+                  },
+                  "approved": {
+                    "type": "integer",
+                    "description": "已通过人数",
+                    "example": 20
+                  },
+                  "pending": {
+                    "type": "integer",
+                    "description": "待审核人数",
+                    "example": 3
+                  },
+                  "rejected": {
+                    "type": "integer",
+                    "description": "已拒绝人数",
+                    "example": 2
+                  }
+                },
+                "required": ["total", "approved", "pending", "rejected"]
+              }
+            },
+            "required": ["registration_stats"]
+          }
+        ]
+      },
+      "CreateEventRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "start_time",
+          "end_time",
+          "location",
+          "max_participants",
+          "fee",
+          "registration_deadline"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "活动标题",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "周末户外活动"
+          },
+          "description": {
+            "type": "string",
+            "description": "活动描述",
+            "minLength": 1,
+            "example": "一起去爬山"
+          },
+          "cover_image": {
+            "type": "string",
+            "description": "封面图片URL（可选）",
+            "example": "https://example.com/cover.jpg"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "活动开始时间",
+            "example": "2025-11-01T09:00:00Z"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "活动结束时间",
+            "example": "2025-11-01T17:00:00Z"
+          },
+          "location": {
+            "type": "string",
+            "description": "活动地点",
+            "example": "香山公园"
+          },
+          "max_participants": {
+            "type": "integer",
+            "description": "最大参与人数",
+            "minimum": 1,
+            "example": 50
+          },
+          "fee": {
+            "type": "integer",
+            "description": "活动费用（单位：元）",
+            "minimum": 0,
+            "example": 0
+          },
+          "tags": {
+            "type": "array",
+            "description": "活动标签",
+            "items": {
+              "type": "string"
+            },
+            "example": ["户外", "运动"]
+          },
+          "expectation": {
+            "type": "string",
+            "description": "对参与者的期望（可选）",
+            "example": "希望大家准时到达"
+          },
+          "registration_deadline": {
+            "type": "string",
+            "format": "date-time",
+            "description": "报名截止时间",
+            "example": "2025-10-30T23:59:59Z"
+          }
+        }
+      },
+      "UpdateEventRequest": {
+        "type": "object",
+        "description": "更新活动信息（所有字段可选）",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "测试活动-添加期望"
+          },
+          "description": {
+            "type": "string"
+          },
+          "cover_image": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "location": {
+            "type": "string"
+          },
+          "max_participants": {
+            "type": "integer"
+          },
+          "fee": {
+            "type": "integer"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expectation": {
+            "type": "string",
+            "example": "测试"
+          },
+          "registration_deadline": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Participant": {
+        "type": "object",
+        "description": "活动参与者信息",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "参与者用户ID",
+            "example": "7240883e-2f7a-48cc-841a-87dad4a5b312"
+          },
+          "status": {
+            "type": "string",
+            "description": "报名状态",
+            "enum": ["pending", "approved", "rejected"],
+            "example": "approved"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "报名时间",
+            "example": "2025-10-22T15:30:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间",
+            "example": "2025-10-23T09:00:00Z"
+          }
+        },
+        "required": ["user_id", "status", "created_at", "updated_at"]
+      },
+      "Pagination": {
+        "type": "object",
+        "description": "分页信息",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "当前页码",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "每页数量",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "description": "总数量",
+            "example": 45
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "总页数",
+            "example": 5
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "无权限访问此资源"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "FORBIDDEN"
+          }
+        },
+        "required": ["success", "message"]
+      }
+    }
+  }
+}

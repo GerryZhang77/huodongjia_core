@@ -1,0 +1,216 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "活动家平台 - 匹配模块 API",
+    "description": "智能匹配相关接口，包括关键词提取、词嵌入计算等",
+    "version": "1.0.0",
+    "contact": {
+      "name": "活动家开发团队",
+      "email": "dev@huodongjia.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "本地开发环境"
+    },
+    {
+      "url": "https://api.huodongjia.com",
+      "description": "生产环境"
+    }
+  ],
+  "tags": [
+    {
+      "name": "智能匹配",
+      "description": "参与者智能匹配相关接口"
+    },
+    {
+      "name": "关键词提取",
+      "description": "从参与者信息中提取关键词"
+    }
+  ],
+  "paths": {
+    "/api/matching/{eventId}/do-match": {
+      "get": {
+        "summary": "提取关键词并做词嵌入",
+        "description": "对指定活动的所有参与者提取关键词并计算词嵌入向量",
+        "tags": ["智能匹配"],
+        "operationId": "doMatching",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "匹配成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "匹配计算完成"
+                    },
+                    "total_participants": {
+                      "type": "integer",
+                      "description": "总参与者人数",
+                      "example": 50
+                    },
+                    "keywords_extracted": {
+                      "type": "integer",
+                      "description": "成功提取关键词的人数",
+                      "example": 48
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "匹配成功示例",
+                    "value": {
+                      "success": true,
+                      "message": "匹配计算完成",
+                      "total_participants": 50,
+                      "keywords_extracted": 48
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "活动不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/matching/{eventId}/extract-keywords": {
+      "get": {
+        "summary": "提取用户关键词条",
+        "description": "从参与者的个人信息、兴趣爱好等字段中提取关键词",
+        "tags": ["关键词提取"],
+        "operationId": "extractKeywords",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "提取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "关键词提取成功"
+                    },
+                    "keywords": {
+                      "type": "object",
+                      "description": "各参与者的关键词映射",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "example": {
+                        "user_001": ["户外", "摄影", "徒步"],
+                        "user_002": ["音乐", "阅读", "咖啡"]
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "关键词提取成功示例",
+                    "value": {
+                      "success": true,
+                      "message": "关键词提取成功",
+                      "keywords": {
+                        "user_001": ["户外", "摄影", "徒步"],
+                        "user_002": ["音乐", "阅读", "咖啡"],
+                        "user_003": ["运动", "健身", "篮球"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token 认证"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "活动不存在"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "NOT_FOUND"
+          }
+        },
+        "required": ["success", "message"]
+      }
+    }
+  }
+}

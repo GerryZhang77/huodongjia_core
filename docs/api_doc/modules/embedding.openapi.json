@@ -1,0 +1,436 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "活动家平台 - 词嵌入模块 API",
+    "description": "词向量计算、相似度计算、匹配评分等接口",
+    "version": "1.0.0",
+    "contact": {
+      "name": "活动家开发团队",
+      "email": "dev@huodongjia.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "本地开发环境（Node.js 服务器）"
+    },
+    {
+      "url": "http://localhost:5000",
+      "description": "本地Python词嵌入服务"
+    },
+    {
+      "url": "https://api.huodongjia.com",
+      "description": "生产环境"
+    }
+  ],
+  "tags": [
+    {
+      "name": "词嵌入计算",
+      "description": "词向量计算相关接口"
+    },
+    {
+      "name": "相似度计算",
+      "description": "基于词向量的相似度计算"
+    },
+    {
+      "name": "匹配评分",
+      "description": "综合匹配评分计算"
+    }
+  ],
+  "paths": {
+    "/api/embedding/get-embedding": {
+      "post": {
+        "summary": "获取词向量",
+        "description": "根据输入的词语获取其词嵌入向量",
+        "tags": ["词嵌入计算"],
+        "operationId": "getWordEmbedding",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["word"],
+                "properties": {
+                  "word": {
+                    "type": "string",
+                    "description": "需要获取词向量的词语",
+                    "example": "开朗"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "embedding": {
+                      "type": "array",
+                      "description": "词向量（通常为100-300维的浮点数数组）",
+                      "items": {
+                        "type": "number"
+                      },
+                      "example": [0.12, -0.34, 0.56, 0.78, -0.23]
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "获取词向量成功示例",
+                    "value": {
+                      "success": true,
+                      "embedding": [
+                        0.12, -0.34, 0.56, 0.78, -0.23, 0.45, -0.67, 0.89, 0.34,
+                        -0.12
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "词语不在词库中",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/embedding/{eventId}/calculate": {
+      "get": {
+        "summary": "计算词嵌入并保存到数据库",
+        "description": "为指定活动的所有参与者计算词嵌入向量并保存",
+        "tags": ["词嵌入计算"],
+        "operationId": "calculateEmbedding",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "计算成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "词嵌入计算完成"
+                    },
+                    "processed_count": {
+                      "type": "integer",
+                      "description": "已处理的参与者数量",
+                      "example": 48
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "词嵌入计算成功示例",
+                    "value": {
+                      "success": true,
+                      "message": "词嵌入计算完成",
+                      "processed_count": 48
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/embedding/{eventId}/similarity": {
+      "get": {
+        "summary": "计算余弦相似度",
+        "description": "计算活动参与者之间的词向量余弦相似度矩阵",
+        "tags": ["相似度计算"],
+        "operationId": "calculateSimilarity",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "计算成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "相似度计算完成"
+                    },
+                    "similarity_matrix": {
+                      "type": "object",
+                      "description": "相似度矩阵（user_id对user_id的相似度）",
+                      "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "number"
+                        }
+                      },
+                      "example": {
+                        "user_001": {
+                          "user_002": 0.85,
+                          "user_003": 0.62
+                        },
+                        "user_002": {
+                          "user_001": 0.85,
+                          "user_003": 0.73
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "相似度计算成功示例",
+                    "value": {
+                      "success": true,
+                      "message": "相似度计算完成",
+                      "similarity_matrix": {
+                        "user_001": {
+                          "user_002": 0.85,
+                          "user_003": 0.62
+                        },
+                        "user_002": {
+                          "user_001": 0.85,
+                          "user_003": 0.73
+                        },
+                        "user_003": {
+                          "user_001": 0.62,
+                          "user_002": 0.73
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/embedding/{eventId}/score": {
+      "post": {
+        "summary": "计算合并分数",
+        "description": "根据不同维度的相似度和权重计算最终匹配分数",
+        "tags": ["匹配评分"],
+        "operationId": "calculateScore",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["weights"],
+                "properties": {
+                  "weights": {
+                    "type": "array",
+                    "description": "各维度权重数组（总和应为1），顺序：[兴趣爱好, 职业背景, 年龄相近]",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "example": [0.4, 0.4, 0.2]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "计算成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "匹配分数计算完成"
+                    },
+                    "scores": {
+                      "type": "object",
+                      "description": "参与者之间的综合匹配分数",
+                      "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "number"
+                        }
+                      },
+                      "example": {
+                        "user_001": {
+                          "user_002": 0.78,
+                          "user_003": 0.65
+                        },
+                        "user_002": {
+                          "user_001": 0.78,
+                          "user_003": 0.82
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "匹配分数计算成功示例",
+                    "value": {
+                      "success": true,
+                      "message": "匹配分数计算完成",
+                      "scores": {
+                        "user_001": {
+                          "user_002": 0.78,
+                          "user_003": 0.65
+                        },
+                        "user_002": {
+                          "user_001": 0.78,
+                          "user_003": 0.82
+                        },
+                        "user_003": {
+                          "user_001": 0.65,
+                          "user_002": 0.82
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "权重参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "invalidWeights": {
+                    "summary": "权重总和不为1",
+                    "value": {
+                      "success": false,
+                      "message": "权重总和必须为1",
+                      "code": "INVALID_WEIGHTS"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token 认证"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "词语不在词库中"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "WORD_NOT_FOUND"
+          }
+        },
+        "required": ["success", "message"]
+      }
+    }
+  }
+}
