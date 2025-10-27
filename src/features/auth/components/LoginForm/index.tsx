@@ -58,6 +58,14 @@ export const LoginForm: React.FC = () => {
         </div>
         <h1 className="text-2xl font-bold text-gray-900">活动家平台</h1>
         <p className="text-gray-500 text-sm mt-2">欢迎回来，请登录您的账号</p>
+        {/* 开发环境提示 */}
+        {import.meta.env.DEV && (
+          <div className="mt-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-xs text-yellow-800">
+              🔧 开发环境 | Chrome 密码警告可忽略
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 登录表单 */}

@@ -3,24 +3,48 @@ import { http, HttpResponse } from "msw";
 // ========================================
 // 认证模块 Mock 数据
 // ========================================
-const mockUser = {
-  id: "user_123",
-  phone: "13800138000",
-  username: "testuser",
-  name: "测试用户",
-  user_type: "user",
+
+// 商家账号
+const mockOrganizer = {
+  id: "org_001",
+  phone: "13800138001",
+  username: "org1",
+  name: "张三商家",
+  user_type: "organizer",
   avatar: "https://i.pravatar.cc/150?img=1",
+  created_at: "2025-01-10T10:00:00Z",
+};
+
+// 管理员账号
+const mockAdmin = {
+  id: "admin_001",
+  phone: "13800138002",
+  username: "admin1",
+  name: "李四管理员",
+  user_type: "admin",
+  avatar: "https://i.pravatar.cc/150?img=2",
+  created_at: "2025-01-05T10:00:00Z",
+};
+
+// 普通用户账号
+const mockUser = {
+  id: "user_001",
+  phone: "13800138003",
+  username: "user1",
+  name: "王五用户",
+  user_type: "participant",
+  avatar: "https://i.pravatar.cc/150?img=3",
   created_at: "2025-01-15T08:30:00Z",
 };
 
-const mockMerchant = {
-  id: "merchant_456",
-  phone: "13800138001",
-  username: "merchant_test",
-  name: "测试商家",
-  user_type: "organizer",
-  avatar: "https://i.pravatar.cc/150?img=2",
-  created_at: "2025-01-10T10:00:00Z",
+// 用户映射表
+const userMap: Record<string, typeof mockOrganizer> = {
+  org1: mockOrganizer,
+  admin1: mockAdmin,
+  user1: mockUser,
+  // 兼容旧的测试账号
+  merchant_test: mockOrganizer,
+  testuser: mockUser,
 };
 
 // ========================================
@@ -70,7 +94,23 @@ export const authHandlers = [
     }
 
     // 根据手机号返回不同用户
-    const user = body.phone === "13800138001" ? mockMerchant : mockUser;
+    const phoneUserMap: Record<string, typeof mockOrganizer> = {
+      "13800138001": mockOrganizer,
+      "13800138002": mockAdmin,
+      "13800138003": mockUser,
+    };
+
+    const baseUser = phoneUserMap[body.phone] || mockUser;
+
+    // 转换为前端期望的格式
+    const user = {
+      id: baseUser.id,
+      identifier: body.phone,
+      name: baseUser.name,
+      role: baseUser.user_type as "organizer" | "admin" | "participant",
+      avatar: baseUser.avatar,
+      createdAt: baseUser.created_at,
+    };
 
     return HttpResponse.json({
       success: true,
@@ -82,7 +122,7 @@ export const authHandlers = [
   // 用户名密码登录
   http.post("/api/auth/login-password", async ({ request }) => {
     const body = (await request.json()) as {
-      username: string;
+      identifier: string;
       password: string;
     };
 
@@ -99,8 +139,18 @@ export const authHandlers = [
       );
     }
 
-    // 根据用户名返回不同用户
-    const user = body.username === "merchant_test" ? mockMerchant : mockUser;
+    // 从用户映射表中查找用户
+    const baseUser = userMap[body.identifier] || mockUser;
+
+    // 转换为前端期望的格式
+    const user = {
+      id: baseUser.id,
+      identifier: body.identifier,
+      name: baseUser.name,
+      role: baseUser.user_type as "organizer" | "admin" | "participant",
+      avatar: baseUser.avatar,
+      createdAt: baseUser.created_at,
+    };
 
     return HttpResponse.json({
       success: true,

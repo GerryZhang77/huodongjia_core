@@ -2,41 +2,46 @@
  * Auth 服务 - API 调用
  */
 
+import { api } from "@/lib/api";
 import type { LoginCredentials, LoginResponse } from "../types";
 
 /**
  * 用户登录
+ * 根据 OpenAPI 文档: POST /api/auth/login
  */
 export async function login(
   credentials: LoginCredentials
 ): Promise<LoginResponse> {
   try {
-    const response = await fetch("/api/auth/login-password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(credentials),
-    });
+    const response = (await api.post("/api/auth/login", {
+      identifier: credentials.identifier,
+      password: credentials.password,
+    })) as LoginResponse;
 
-    const data = await response.json();
-    return data;
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return {
       success: false,
-      message: "网络错误，请重试",
+      message: "登录失败，请重试",
     };
   }
 }
 
 /**
  * 用户登出
+ * 根据 OpenAPI 文档: POST /api/auth/logout
  */
 export async function logout(): Promise<void> {
-  // 清理本地存储
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  try {
+    await api.post("/api/auth/logout", {});
+  } catch (error) {
+    console.error("Logout error:", error);
+  } finally {
+    // 清理本地存储
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+  }
 }
 
 /**

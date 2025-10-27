@@ -60,9 +60,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage", // localStorage key
+      // 保存 user, token 和 isAuthenticated
       partialize: (state) => ({
         user: state.user,
         token: state.token,
+        isAuthenticated: state.isAuthenticated,
       }),
     }
   )
