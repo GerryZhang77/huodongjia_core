@@ -73,7 +73,9 @@
                           "type": "string"
                         }
                       },
+                      "x-apifox-orders": [],
                       "properties": {},
+                      "x-apifox-ignore-properties": [],
                       "example": {
                         "user_001": [
                           "户外",
@@ -87,7 +89,13 @@
                         ]
                       }
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "keywords"
+                  ],
+                  "x-apifox-ignore-properties": []
                 },
                 "example": {
                   "success": true,
@@ -112,10 +120,14 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           }
         },
-        "security": []
+        "security": [],
+        "x-apifox-folder": "关键词提取",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366709667-run"
       }
     }
   },
@@ -142,7 +154,14 @@
         "required": [
           "success",
           "message"
-        ]
+        ],
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "code"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       }
     },
     "securitySchemes": {

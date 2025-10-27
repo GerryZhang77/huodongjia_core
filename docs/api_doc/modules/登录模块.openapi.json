@@ -11,27 +11,21 @@
   },
   "tags": [
     {
-      "name": "用户认证"
-    },
-    {
       "name": "商家认证"
-    },
-    {
-      "name": "超管认证"
     },
     {
       "name": "通用认证"
     }
   ],
   "paths": {
-    "/login": {
+    "/api/auth/login": {
       "post": {
-        "summary": "超级管理员登录",
+        "summary": "商家登录",
         "deprecated": false,
-        "description": "超级管理员使用账号密码登录",
-        "operationId": "adminLogin",
+        "description": "商家（活动组织者）使用账号密码登录",
+        "operationId": "organizerLogin",
         "tags": [
-          "超管认证"
+          "商家认证"
         ],
         "parameters": [
           {
@@ -54,10 +48,10 @@
               "examples": {
                 "example1": {
                   "value": {
-                    "identifier": "admin1",
+                    "identifier": "organizer1",
                     "password": "123456"
                   },
-                  "summary": "超管登录示例"
+                  "summary": "商家登录示例"
                 }
               }
             }
@@ -75,26 +69,27 @@
                 "example": {
                   "success": true,
                   "message": "登录成功",
-                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI2YzRkM2UyLTVmNmctNWIzYy05ZDRlLTNmMmc1YjZjNGQzZSIsInBob25lIjoiMTg4MDAzODgwMDMiLCJ1c2VyX3R5cGUiOiJhZG1pbiIsImlhdCI6MTc2MTA1OTQ5OCwiZXhwIjoxNzYxNjY0Mjk4fQ.4yIZjYKvPuM1RfQmyBrN9aCNyMoDteewnwg5bYSqIoO",
+                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE1YjNjMmQxLTRlNWYtNGEyYi04YzNkLTJlMWY0YTViM2MyZCIsInBob25lIjoiMTM5MDAyMzkwMDIiLCJ1c2VyX3R5cGUiOiJvcmdhbml6ZXIiLCJpYXQiOjE3NjEwNTk0OTgsImV4cCI6MTc2MTY2NDI5OH0.3xHYiXJuOtL0QePlxAqM8zBMxLnDsdivnvf4aXRpHmN",
                   "user": {
-                    "id": "b6c4d3e2-5f6g-5b3c-9d4e-3f2g5b6c4d3e",
-                    "phone": "18800388003",
-                    "name": "王五（超管）",
-                    "user_type": "admin",
-                    "age": 32,
-                    "occupation": "系统管理员",
-                    "company": "活动家总部",
+                    "id": "a5b3c2d1-4e5f-4a2b-8c3d-2e1f4a5b3c2d",
+                    "phone": "13900239002",
+                    "name": "李四（商家）",
+                    "user_type": "organizer",
+                    "age": 35,
+                    "occupation": "活动策划师",
+                    "company": "活动家文化传媒",
                     "tags": [
-                      "管理",
-                      "运维",
-                      "技术"
+                      "活动组织",
+                      "策划",
+                      "运营"
                     ],
-                    "wechat_qr": "https://example.com/qr/admin123.jpg"
+                    "wechat_qr": "https://example.com/qr/organizer123.jpg"
                   }
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "401": {
             "description": "认证失败",
@@ -105,13 +100,17 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "未认证"
           }
         },
-        "security": []
+        "security": [],
+        "x-apifox-folder": "商家认证",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698039-run"
       }
     },
-    "/register": {
+    "/api/auth/register": {
       "post": {
         "summary": "商家注册",
         "deprecated": false,
@@ -158,7 +157,13 @@
                     "description": "公司名称（可选）",
                     "example": "XX科技有限公司"
                   }
-                }
+                },
+                "x-apifox-orders": [
+                  "account",
+                  "password",
+                  "companyName"
+                ],
+                "x-apifox-ignore-properties": []
               },
               "examples": {}
             }
@@ -175,7 +180,8 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "400": {
             "description": "注册失败",
@@ -186,13 +192,17 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "请求有误"
           }
         },
-        "security": []
+        "security": [],
+        "x-apifox-folder": "商家认证",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698040-run"
       }
     },
-    "/me": {
+    "/api/auth/me": {
       "get": {
         "summary": "获取当前用户信息",
         "deprecated": false,
@@ -228,7 +238,12 @@
                     "user": {
                       "$ref": "#/components/schemas/User"
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "user"
+                  ],
+                  "x-apifox-ignore-properties": []
                 },
                 "example": {
                   "success": true,
@@ -250,7 +265,8 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "401": {
             "description": "未登录或 Token 已过期",
@@ -261,17 +277,49 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "未认证"
           }
         },
         "security": [
           {
-            "bearerAuth": []
+            "bearerAuth": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "SqRpEuE0PDnRoCycim1Au",
+                  "schemeIds": [
+                    "bearerAuth"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "SqRpEuE0PDnRoCycim1Au",
+                "configs": {
+                  "bearerAuth": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "SqRpEuE0PDnRoCycim1Au": {
+                  "bearerAuth": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "通用认证",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698042-run"
       }
     },
-    "/password": {
+    "/api/auth/password": {
       "put": {
         "summary": "修改密码",
         "deprecated": false,
@@ -313,7 +361,12 @@
                     "minLength": 6,
                     "example": "654321"
                   }
-                }
+                },
+                "x-apifox-orders": [
+                  "oldPassword",
+                  "newPassword"
+                ],
+                "x-apifox-ignore-properties": []
               },
               "examples": {}
             }
@@ -336,7 +389,12 @@
                       "type": "string",
                       "example": "密码修改成功"
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message"
+                  ],
+                  "x-apifox-ignore-properties": []
                 },
                 "example": {
                   "success": true,
@@ -344,7 +402,8 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "401": {
             "description": "旧密码错误或未登录",
@@ -355,17 +414,49 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "未认证"
           }
         },
         "security": [
           {
-            "bearerAuth": []
+            "bearerAuth": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "bv_heKRzufmRZ4w5Kw36-",
+                  "schemeIds": [
+                    "bearerAuth"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "bv_heKRzufmRZ4w5Kw36-",
+                "configs": {
+                  "bearerAuth": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "bv_heKRzufmRZ4w5Kw36-": {
+                  "bearerAuth": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "通用认证",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698043-run"
       }
     },
-    "/logout": {
+    "/api/auth/logout": {
       "post": {
         "summary": "登出",
         "deprecated": false,
@@ -392,7 +483,9 @@
               "schema": {
                 "type": "object",
                 "properties": {},
-                "description": "可选的空对象"
+                "description": "可选的空对象",
+                "x-apifox-orders": [],
+                "x-apifox-ignore-properties": []
               },
               "example": {}
             }
@@ -414,7 +507,12 @@
                       "type": "string",
                       "example": "登出成功"
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message"
+                  ],
+                  "x-apifox-ignore-properties": []
                 },
                 "example": {
                   "success": true,
@@ -422,7 +520,8 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "401": {
             "description": "未登录或 Token 已过期",
@@ -433,14 +532,46 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "未认证"
           }
         },
         "security": [
           {
-            "bearerAuth": []
+            "bearerAuth": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "cIU0hH4wXn2JodHIc6-Yp",
+                  "schemeIds": [
+                    "bearerAuth"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "cIU0hH4wXn2JodHIc6-Yp",
+                "configs": {
+                  "bearerAuth": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "cIU0hH4wXn2JodHIc6-Yp": {
+                  "bearerAuth": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "通用认证",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698044-run"
       }
     }
   },
@@ -463,7 +594,13 @@
             "description": "密码",
             "example": "123456"
           }
-        }
+        },
+        "x-apifox-orders": [
+          "identifier",
+          "password"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       },
       "LoginResponse": {
         "type": "object",
@@ -490,7 +627,15 @@
           "message",
           "token",
           "user"
-        ]
+        ],
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "token",
+          "user"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       },
       "User": {
         "type": "object",
@@ -564,7 +709,20 @@
           "name",
           "user_type",
           "tags"
-        ]
+        ],
+        "x-apifox-orders": [
+          "id",
+          "phone",
+          "name",
+          "user_type",
+          "age",
+          "occupation",
+          "company",
+          "tags",
+          "wechat_qr"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       },
       "ErrorResponse": {
         "type": "object",
@@ -587,7 +745,14 @@
         "required": [
           "success",
           "message"
-        ]
+        ],
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "code"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       }
     },
     "securitySchemes": {

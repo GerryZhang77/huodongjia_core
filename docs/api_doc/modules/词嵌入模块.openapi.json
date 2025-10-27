@@ -142,7 +142,7 @@
         "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366709734-run"
       }
     },
-    "/{eventId}/calculate": {
+    "/api/embedding/{eventId}/calculate": {
       "get": {
         "summary": "计算相似度并保存到数据库",
         "deprecated": false,

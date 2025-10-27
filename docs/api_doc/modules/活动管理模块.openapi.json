@@ -24,7 +24,7 @@
     }
   ],
   "paths": {
-    "/": {
+    "/api/events": {
       "get": {
         "summary": "获取所有活动",
         "deprecated": false,
@@ -80,21 +80,58 @@
                         "$ref": "#/components/schemas/Event"
                       }
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "events"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           }
         },
         "security": [
           {
-            "bearerAuth1": []
+            "bearerAuth1": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "GuBdsoZUf_Qw4XJiS7ncg",
+                  "schemeIds": [
+                    "bearerAuth1"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "GuBdsoZUf_Qw4XJiS7ncg",
+                "configs": {
+                  "bearerAuth1": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "GuBdsoZUf_Qw4XJiS7ncg": {
+                  "bearerAuth1": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "活动查询",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698236-run"
       }
     },
-    "/{eventId}": {
+    "/api/events/{eventId}": {
       "get": {
         "summary": "获取特定活动信息（包括当前报名人数情况）",
         "deprecated": false,
@@ -142,11 +179,17 @@
                     "event": {
                       "$ref": "#/components/schemas/EventDetail"
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "event"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "404": {
             "description": "活动不存在",
@@ -157,14 +200,46 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "未找到"
           }
         },
         "security": [
           {
-            "bearerAuth1": []
+            "bearerAuth1": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "1dH8Q00Oke2j0wiX58Pha",
+                  "schemeIds": [
+                    "bearerAuth1"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "1dH8Q00Oke2j0wiX58Pha",
+                "configs": {
+                  "bearerAuth1": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "1dH8Q00Oke2j0wiX58Pha": {
+                  "bearerAuth1": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "活动查询",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698237-run"
       },
       "put": {
         "summary": "编辑活动",
@@ -231,11 +306,18 @@
                     "event": {
                       "$ref": "#/components/schemas/Event"
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "event"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "403": {
             "description": "无权限编辑此活动",
@@ -246,14 +328,46 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "权限不足"
           }
         },
         "security": [
           {
-            "bearerAuth1": []
+            "bearerAuth1": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "kDQP-sO0gjSvEn904PEVj",
+                  "schemeIds": [
+                    "bearerAuth1"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "kDQP-sO0gjSvEn904PEVj",
+                "configs": {
+                  "bearerAuth1": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "kDQP-sO0gjSvEn904PEVj": {
+                  "bearerAuth1": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "活动管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698239-run"
       },
       "delete": {
         "summary": "取消活动",
@@ -303,11 +417,17 @@
                       "type": "string",
                       "example": "活动已取消"
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "403": {
             "description": "无权限删除此活动",
@@ -318,17 +438,49 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "权限不足"
           }
         },
         "security": [
           {
-            "bearerAuth1": []
+            "bearerAuth1": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "Y2zp82hxu3VHRO18u7ycM",
+                  "schemeIds": [
+                    "bearerAuth1"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "Y2zp82hxu3VHRO18u7ycM",
+                "configs": {
+                  "bearerAuth1": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "Y2zp82hxu3VHRO18u7ycM": {
+                  "bearerAuth1": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "活动管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698240-run"
       }
     },
-    "/my": {
+    "/api/events/my": {
       "get": {
         "summary": "获取自己创建的活动",
         "deprecated": false,
@@ -370,21 +522,59 @@
                     "pagination": {
                       "$ref": "#/components/schemas/Pagination"
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "events",
+                    "pagination"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           }
         },
         "security": [
           {
-            "bearerAuth1": []
+            "bearerAuth1": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "_4NNInfMmH2C7v7qfLX28",
+                  "schemeIds": [
+                    "bearerAuth1"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "_4NNInfMmH2C7v7qfLX28",
+                "configs": {
+                  "bearerAuth1": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "_4NNInfMmH2C7v7qfLX28": {
+                  "bearerAuth1": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "活动管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698238-run"
       }
     },
-    "/create": {
+    "/api/events/create": {
       "post": {
         "summary": "商家创建活动",
         "deprecated": false,
@@ -448,11 +638,18 @@
                     "event": {
                       "$ref": "#/components/schemas/Event"
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "event"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "400": {
             "description": "请求参数错误",
@@ -463,17 +660,49 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "请求有误"
           }
         },
         "security": [
           {
-            "bearerAuth1": []
+            "bearerAuth1": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "_L5eP3NZk3bwIrnRtQ-SA",
+                  "schemeIds": [
+                    "bearerAuth1"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "_L5eP3NZk3bwIrnRtQ-SA",
+                "configs": {
+                  "bearerAuth1": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "_L5eP3NZk3bwIrnRtQ-SA": {
+                  "bearerAuth1": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "活动管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698241-run"
       }
     },
-    "/import-data/{eventId}": {
+    "/api/events/{eventId}/participants": {
       "post": {
         "summary": "根据用户映射关系保存报名信息",
         "deprecated": false,
@@ -508,7 +737,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {}
+                "properties": {},
+                "x-apifox-ignore-properties": [],
+                "x-apifox-orders": []
               },
               "example": {
                 "filePath": "D:\\huodongjia\\uploads\\file-1761383941080-391176227.xlsx",
@@ -566,6 +797,14 @@
                           "name",
                           "student_id",
                           "occupation"
+                        ],
+                        "x-apifox-ignore-properties": [],
+                        "x-apifox-orders": [
+                          "event_id",
+                          "other_info",
+                          "name",
+                          "student_id",
+                          "occupation"
                         ]
                       }
                     }
@@ -575,14 +814,25 @@
                     "message",
                     "importedCount",
                     "data"
+                  ],
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "importedCount",
+                    "data"
                   ]
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           }
         },
-        "security": []
+        "security": [],
+        "x-apifox-folder": "报名管理",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366773774-run"
       }
     },
     "/{eventId}/participants": {
@@ -641,11 +891,18 @@
                         "$ref": "#/components/schemas/Participant"
                       }
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "total",
+                    "participants"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "403": {
             "description": "无权限查看此活动报名信息",
@@ -656,17 +913,49 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "权限不足"
           }
         },
         "security": [
           {
-            "bearerAuth1": []
+            "bearerAuth1": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "olrGg2FC_MwjM-gt6sUCK",
+                  "schemeIds": [
+                    "bearerAuth1"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "olrGg2FC_MwjM-gt6sUCK",
+                "configs": {
+                  "bearerAuth1": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "olrGg2FC_MwjM-gt6sUCK": {
+                  "bearerAuth1": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "报名管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698242-run"
       }
     },
-    "/{eventId}/match-rules": {
+    "/api/events/{eventId}/match-rules": {
       "get": {
         "summary": "提取匹配规则",
         "deprecated": false,
@@ -727,21 +1016,59 @@
                         "职业背景互补"
                       ]
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "rules"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           }
         },
         "security": [
           {
-            "bearerAuth1": []
+            "bearerAuth1": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "egesoD5pVudrZvUeoUsc2",
+                  "schemeIds": [
+                    "bearerAuth1"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "egesoD5pVudrZvUeoUsc2",
+                "configs": {
+                  "bearerAuth1": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "egesoD5pVudrZvUeoUsc2": {
+                  "bearerAuth1": []
+                }
+              }
+            }
           }
-        ]
+        ],
+        "x-apifox-folder": "数据提取",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698243-run"
       }
     },
-    "/extract-headers": {
+    "/api/events/extract-headers": {
       "post": {
         "summary": "提取报名表表头",
         "deprecated": false,
@@ -776,7 +1103,11 @@
                     "description": "服务器上的文件路径",
                     "example": "D:\\huodongjia\\uploads\\file-1761383941080-391176227.xlsx"
                   }
-                }
+                },
+                "x-apifox-orders": [
+                  "filePath"
+                ],
+                "x-apifox-ignore-properties": []
               },
               "examples": {}
             }
@@ -813,11 +1144,18 @@
                         "兴趣爱好"
                       ]
                     }
-                  }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "headers"
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "成功"
           },
           "400": {
             "description": "文件路径错误或文件格式不支持",
@@ -828,10 +1166,14 @@
                 }
               }
             },
-            "headers": {}
+            "headers": {},
+            "x-apifox-name": "请求有误"
           }
         },
-        "security": []
+        "security": [],
+        "x-apifox-folder": "数据提取",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698244-run"
       }
     }
   },
@@ -965,7 +1307,28 @@
           "status",
           "created_at",
           "updated_at"
-        ]
+        ],
+        "x-apifox-orders": [
+          "id",
+          "organizer_id",
+          "title",
+          "description",
+          "cover_image",
+          "start_time",
+          "end_time",
+          "location",
+          "max_participants",
+          "fee",
+          "tags",
+          "checkin_password",
+          "status",
+          "created_at",
+          "updated_at",
+          "expectation",
+          "registration_deadline"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       },
       "EventDetail": {
         "allOf": [
@@ -1005,14 +1368,26 @@
                   "approved",
                   "pending",
                   "rejected"
-                ]
+                ],
+                "x-apifox-orders": [
+                  "total",
+                  "approved",
+                  "pending",
+                  "rejected"
+                ],
+                "x-apifox-ignore-properties": []
               }
             },
             "required": [
               "registration_stats"
-            ]
+            ],
+            "x-apifox-orders": [
+              "registration_stats"
+            ],
+            "x-apifox-ignore-properties": []
           }
-        ]
+        ],
+        "x-apifox-folder": "Schemas"
       },
       "CreateEventRequest": {
         "type": "object",
@@ -1096,7 +1471,22 @@
             "description": "报名截止时间",
             "example": "2025-10-30T23:59:59Z"
           }
-        }
+        },
+        "x-apifox-orders": [
+          "title",
+          "description",
+          "cover_image",
+          "start_time",
+          "end_time",
+          "location",
+          "max_participants",
+          "fee",
+          "tags",
+          "expectation",
+          "registration_deadline"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       },
       "UpdateEventRequest": {
         "type": "object",
@@ -1143,7 +1533,22 @@
             "type": "string",
             "format": "date-time"
           }
-        }
+        },
+        "x-apifox-orders": [
+          "title",
+          "description",
+          "cover_image",
+          "start_time",
+          "end_time",
+          "location",
+          "max_participants",
+          "fee",
+          "tags",
+          "expectation",
+          "registration_deadline"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       },
       "Participant": {
         "type": "object",
@@ -1183,7 +1588,15 @@
           "status",
           "created_at",
           "updated_at"
-        ]
+        ],
+        "x-apifox-orders": [
+          "user_id",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       },
       "Pagination": {
         "type": "object",
@@ -1209,7 +1622,15 @@
             "description": "总页数",
             "example": 5
           }
-        }
+        },
+        "x-apifox-orders": [
+          "page",
+          "pageSize",
+          "total",
+          "totalPages"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       },
       "ErrorResponse": {
         "type": "object",
@@ -1232,7 +1653,14 @@
         "required": [
           "success",
           "message"
-        ]
+        ],
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "code"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
       }
     },
     "securitySchemes": {
