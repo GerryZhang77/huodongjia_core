@@ -5,8 +5,8 @@ import { traeBadgePlugin } from "vite-plugin-trae-solo-badge";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  // 加载环境变量
-  const env = loadEnv(mode, process.cwd(), "");
+  // 加载环境变量（从 env/ 目录）
+  const env = loadEnv(mode, "env", "");
   const useMock = env.VITE_USE_MOCK;
 
   // ========================================
@@ -21,8 +21,11 @@ export default defineConfig(({ mode }) => {
   console.log("   模式:", mode);
   console.log("   Mock 模式:", useMock || "false (真实后端)");
   console.log("   代理状态:", shouldUseProxy ? "✅ 启用" : "❌ 禁用");
+  console.log("   环境变量目录: env/");
+  console.log("   加载文件: env/.env." + mode);
 
   return {
+    envDir: "env",
     plugins: [
       react({
         babel: {

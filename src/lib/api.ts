@@ -69,18 +69,11 @@ api.interceptors.request.use(
     // 动态设置 baseURL（根据请求路径）
     config.baseURL = getBaseURLByPath(originalPath);
 
-    // Apifox Mock 模式特殊处理：去掉路径中的模块前缀
+    // Apifox Mock 模式：保留完整路径（不需要重写）
+    // Apifox Mock URL 已经是完整的路径，例如：
+    // https://m1.apifoxmock.com/m1/7269221-6996856-6378684/api/auth/login
     if (useMock === "apifox") {
-      // 去掉模块前缀，例如 /api/auth/login -> /login
-      for (const prefix of Object.keys(MODULE_ROUTES)) {
-        if (originalPath.startsWith(prefix)) {
-          config.url = originalPath.replace(prefix, "");
-          console.log(
-            `[Apifox] Path rewrite: ${originalPath} -> ${config.url}`
-          );
-          break;
-        }
-      }
+      console.log(`[Apifox] Using full path: ${originalPath}`);
     }
 
     // 添加 JWT Token（如果存在）

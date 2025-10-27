@@ -21,37 +21,20 @@ export interface ApiEndpoint {
 
 // ========================================
 // 认证模块 API ID 映射
+// 注意：根据 OpenAPI 文档，/api/auth/login 用于商家登录
 // ========================================
 export const AUTH_API_IDS: ApiEndpoint[] = [
   {
     method: "POST",
     path: "/api/auth/login",
-    apiId: "366698037",
-    description: "普通用户登录",
-  },
-  {
-    method: "POST",
-    path: "/api/auth/register",
-    apiId: "366698038",
-    description: "普通用户注册/商家注册",
-  },
-  {
-    method: "POST",
-    path: "/api/auth/organizer/login",
     apiId: "366698039",
     description: "商家登录",
   },
   {
     method: "POST",
-    path: "/api/auth/organizer/register",
+    path: "/api/auth/register",
     apiId: "366698040",
     description: "商家注册",
-  },
-  {
-    method: "POST",
-    path: "/api/auth/admin/login",
-    apiId: "366698041",
-    description: "超级管理员登录",
   },
   {
     method: "GET",
@@ -80,32 +63,62 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
   {
     method: "GET",
     path: "/api/events",
-    apiId: "", // TODO: 从 Apifox 获取
-    description: "获取活动列表",
+    apiId: "366698236",
+    description: "获取所有活动",
   },
   {
     method: "GET",
-    path: "/api/events/:id",
-    apiId: "", // TODO: 从 Apifox 获取
-    description: "获取活动详情",
+    path: "/api/events/:eventId",
+    apiId: "366698237",
+    description: "获取特定活动信息",
+  },
+  {
+    method: "GET",
+    path: "/api/events/my",
+    apiId: "366698238",
+    description: "获取自己创建的活动",
   },
   {
     method: "POST",
-    path: "/api/events",
-    apiId: "", // TODO: 从 Apifox 获取
-    description: "创建活动",
+    path: "/api/events/create",
+    apiId: "366698241",
+    description: "商家创建活动",
   },
   {
     method: "PUT",
-    path: "/api/events/:id",
-    apiId: "", // TODO: 从 Apifox 获取
-    description: "更新活动",
+    path: "/api/events/:eventId",
+    apiId: "366698239",
+    description: "编辑活动",
   },
   {
     method: "DELETE",
-    path: "/api/events/:id",
-    apiId: "", // TODO: 从 Apifox 获取
-    description: "删除活动",
+    path: "/api/events/:eventId",
+    apiId: "366698240",
+    description: "取消活动",
+  },
+  {
+    method: "POST",
+    path: "/api/events/:eventId/participants",
+    apiId: "366773774",
+    description: "保存报名信息",
+  },
+  {
+    method: "GET",
+    path: "/:eventId/participants",
+    apiId: "366698242",
+    description: "获取活动报名信息",
+  },
+  {
+    method: "GET",
+    path: "/api/events/:eventId/match-rules",
+    apiId: "366698243",
+    description: "提取匹配规则",
+  },
+  {
+    method: "POST",
+    path: "/api/events/extract-headers",
+    apiId: "366698244",
+    description: "提取报名表表头",
   },
 ];
 
@@ -114,16 +127,10 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
 // ========================================
 export const MATCHING_API_IDS: ApiEndpoint[] = [
   {
-    method: "POST",
-    path: "/api/matching/execute",
-    apiId: "", // TODO: 从 Apifox 获取
-    description: "执行匹配",
-  },
-  {
     method: "GET",
-    path: "/api/matching/result/:id",
-    apiId: "", // TODO: 从 Apifox 获取
-    description: "获取匹配结果",
+    path: "/api/matching/:eventId/extract-keywords",
+    apiId: "366709667",
+    description: "提取用户关键词条",
   },
 ];
 
@@ -133,9 +140,15 @@ export const MATCHING_API_IDS: ApiEndpoint[] = [
 export const EMBEDDING_API_IDS: ApiEndpoint[] = [
   {
     method: "POST",
-    path: "/api/embeddings/compute",
-    apiId: "", // TODO: 从 Apifox 获取
-    description: "计算词嵌入",
+    path: "/api/embedding/:eventId/get-embedding",
+    apiId: "366709734",
+    description: "获取词向量",
+  },
+  {
+    method: "GET",
+    path: "/api/embedding/:eventId/calculate",
+    apiId: "366709735",
+    description: "计算相似度并保存到数据库",
   },
 ];
 
@@ -153,8 +166,10 @@ export const ALL_API_IDS: ApiEndpoint[] = [
 // 工具函数：根据请求方法和路径查找 API ID
 // ========================================
 export function findApifoxApiId(method: string, path: string): string | null {
-  // 规范化路径：移除动态参数（如 /api/events/123 -> /api/events/:id）
-  const normalizedPath = path.replace(/\/\d+/g, "/:id");
+  // 规范化路径：移除动态参数（如 /api/events/123 -> /api/events/:eventId）
+  const normalizedPath = path
+    .replace(/\/[a-f0-9-]{36}(?=\/|$)/gi, "/:eventId") // UUID
+    .replace(/\/\d+(?=\/|$)/g, "/:eventId"); // 数字 ID
 
   const endpoint = ALL_API_IDS.find(
     (item) =>
