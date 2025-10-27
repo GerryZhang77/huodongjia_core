@@ -10,7 +10,6 @@ import {
   Form,
   Input,
   TextArea,
-  DatePicker,
   Button,
   Toast,
   ImageUploader,
@@ -18,12 +17,22 @@ import {
   Stepper,
   Switch,
   Card,
+  Dialog,
 } from "antd-mobile";
 import { PictureOutline } from "antd-mobile-icons";
 import { useActivityDetail } from "../../hooks";
 import { uploadCoverImage } from "../../services";
-import { CATEGORY_OPTIONS, TAG_OPTIONS } from "../../utils";
+import {
+  CATEGORY_OPTIONS,
+  TAG_OPTIONS,
+  validateTitle,
+  validateDescription,
+  validateLocation,
+  validateParticipants,
+  createTimeValidationRules,
+} from "../../utils";
 import type { ActivityFormData } from "../../types";
+import { DatePickerField } from "./DatePickerField";
 
 interface ActivityFormProps {
   /**
@@ -92,20 +101,13 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
   // 新建模式：设置默认值
   useEffect(() => {
     if (!isEdit) {
-      const now = new Date();
-      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
       form.setFieldsValue({
-        registration_start: now,
-        registration_end: tomorrow,
-        start_time: tomorrow,
-        end_time: nextWeek,
         max_participants: 50,
         is_public: true,
         allow_waitlist: false,
         category: "business",
         tags: [],
+        // 不设置时间字段的默认值，让用户主动选择
       });
     }
   }, [isEdit, form]);
@@ -121,7 +123,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
       };
     } catch (error) {
       console.error("Image upload error:", error);
-      Toast.show("图片上传失败，请重试");
+      Toast.show({ icon: "fail", content: "图片上传失败，请重试" });
       throw error;
     } finally {
       setUploading(false);
@@ -131,43 +133,105 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
   // 表单提交
   const handleSubmit = async (values: ActivityFormData) => {
     try {
+      console.log("表单提交 - 开始", values);
+
+      // 验证必填字段
+      if (!values.title || !values.description) {
+        Toast.show({
+          icon: "fail",
+          content: "请填写活动标题和描述",
+        });
+        return;
+      }
+
+      // 验证时间字段
+      if (
+        !values.start_time ||
+        !values.end_time ||
+        !values.registration_start ||
+        !values.registration_end
+      ) {
+        Toast.show({
+          icon: "fail",
+          content: "请选择完整的活动时间和报名时间",
+        });
+        return;
+      }
+
       // 添加封面图片
       const submitData = {
         ...values,
         cover_image: fileList[0]?.url,
       };
 
+      console.log("表单提交 - 调用 onSubmit", submitData);
+
+      // 显示加载提示
+      Toast.show({
+        icon: "loading",
+        content: "正在提交...",
+        duration: 0,
+      });
+
       await onSubmit(submitData);
+
+      console.log("表单提交 - 成功");
     } catch (error) {
-      console.error("Submit error:", error);
+      console.error("表单提交错误:", error);
+
+      // 清除加载提示
+      Toast.clear();
+
+      // 判断错误类型
+      if (error instanceof Error) {
+        const errorMessage = error.message;
+
+        if (errorMessage.includes("网络") || errorMessage.includes("timeout")) {
+          Toast.show({
+            icon: "fail",
+            content: "网络连接失败，请检查网络后重试",
+            duration: 3000,
+          });
+        } else if (
+          errorMessage.includes("验证") ||
+          errorMessage.includes("字段")
+        ) {
+          Toast.show({
+            icon: "fail",
+            content: `数据验证失败: ${errorMessage}`,
+            duration: 3000,
+          });
+        } else {
+          Toast.show({
+            icon: "fail",
+            content: errorMessage || "提交失败，请稍后重试",
+            duration: 3000,
+          });
+        }
+      } else {
+        Toast.show({
+          icon: "fail",
+          content: "提交失败，请稍后重试",
+          duration: 3000,
+        });
+      }
     }
   };
 
-  // 表单验证
-  const validateTime = (_: any, value: Date) => {
-    const formValues = form.getFieldsValue();
+  // 取消操作 - 有内容时确认
+  const handleCancel = () => {
+    const values = form.getFieldsValue();
+    const hasContent =
+      values.title || values.description || fileList.length > 0;
 
-    if (formValues.registration_start && formValues.registration_end) {
-      if (formValues.registration_start >= formValues.registration_end) {
-        return Promise.reject("报名结束时间必须晚于开始时间");
-      }
+    if (hasContent) {
+      Dialog.confirm({
+        content: "确定要放弃当前编辑的内容吗？",
+        onConfirm: () => navigate("/dashboard"),
+      });
+    } else {
+      navigate("/dashboard");
     }
-
-    if (formValues.start_time && formValues.end_time) {
-      if (formValues.start_time >= formValues.end_time) {
-        return Promise.reject("活动结束时间必须晚于开始时间");
-      }
-    }
-
-    if (
-      formValues.registration_end &&
-      formValues.start_time &&
-      formValues.registration_end > formValues.start_time
-    ) {
-      return Promise.reject("报名结束时间不能晚于活动开始时间");
-    }
-
-    return Promise.resolve();
   };
 
   if (isEdit && detailLoading) {
@@ -179,10 +243,29 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
   }
 
   return (
-    <div className="p-4 pb-8">
+    <div className="max-w-4xl mx-auto px-5 md:px-8 py-6">
       <Form
         form={form}
         onFinish={handleSubmit}
+        onFinishFailed={(errorInfo) => {
+          console.log("表单验证失败:", errorInfo);
+
+          // 获取第一个错误信息
+          const firstError = errorInfo.errorFields?.[0];
+          if (firstError && firstError.errors?.[0]) {
+            Toast.show({
+              icon: "fail",
+              content: firstError.errors[0],
+              duration: 3000,
+            });
+          } else {
+            Toast.show({
+              icon: "fail",
+              content: "请检查表单填写是否完整",
+              duration: 3000,
+            });
+          }
+        }}
         {...({ validateTrigger: "onBlur" } as any)}
         mode="card"
         style={
@@ -197,11 +280,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           className="mb-4"
           style={{ "--border-radius": "12px" } as any}
         >
-          <Form.Item
-            name="title"
-            label="活动标题"
-            rules={[{ required: true, message: "请输入活动标题" }]}
-          >
+          <Form.Item name="title" label="活动标题" rules={validateTitle}>
             <Input
               placeholder="请输入活动标题"
               maxLength={50}
@@ -213,7 +292,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           <Form.Item
             name="description"
             label="活动描述"
-            rules={[{ required: true, message: "请输入活动描述" }]}
+            rules={validateDescription}
           >
             <TextArea
               placeholder="请详细描述活动内容、目的和亮点"
@@ -239,18 +318,34 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
             />
           </Form.Item>
 
-          <Form.Item name="cover_image" label="封面图片">
+          <Form.Item
+            name="cover_image"
+            label="封面图片"
+            rules={[
+              {
+                required: true,
+                message: "请上传活动封面图片",
+              },
+              {
+                validator: () => {
+                  if (fileList.length === 0) {
+                    return Promise.reject(new Error("请上传活动封面图片"));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
             <ImageUploader
               value={fileList}
               onChange={setFileList}
               upload={handleImageUpload}
               maxCount={1}
-              style={{ "--border-radius": "8px" } as any}
             >
               <div className="flex flex-col items-center justify-center h-24 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
                 <PictureOutline className="text-2xl text-gray-400 mb-1" />
                 <span className="text-sm text-gray-500">
-                  {uploading ? "上传中..." : "点击上传封面"}
+                  {uploading ? "上传中..." : "点击上传封面（必填）"}
                 </span>
               </div>
             </ImageUploader>
@@ -263,11 +358,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           className="mb-4"
           style={{ "--border-radius": "12px" } as any}
         >
-          <Form.Item
-            name="location"
-            label="活动地点"
-            rules={[{ required: true, message: "请输入活动地点" }]}
-          >
+          <Form.Item name="location" label="活动地点" rules={validateLocation}>
             <Input
               placeholder="请输入详细地址"
               style={{ "--border-radius": "8px" } as any}
@@ -276,32 +367,34 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 
           <Form.Item
             name="start_time"
-            label="开始时间"
-            rules={[
-              { required: true, message: "请选择开始时间" },
-              { validator: validateTime },
-            ]}
+            label="活动开始时间"
+            rules={createTimeValidationRules(form, "start_time")}
           >
-            <DatePicker {...({ precision: "minute" } as any)}>
-              {(value: Date | null) =>
-                value ? value.toLocaleString() : "请选择开始时间"
-              }
-            </DatePicker>
+            <DatePickerField
+              placeholder="请选择活动开始时间"
+              onValidate={() => {
+                // 当活动开始时间变化时，触发活动结束时间的重新验证
+                form.validateFields(["end_time"]).catch(() => {
+                  // 忽略验证错误，只是触发重新验证
+                });
+              }}
+            />
           </Form.Item>
 
           <Form.Item
             name="end_time"
-            label="结束时间"
-            rules={[
-              { required: true, message: "请选择结束时间" },
-              { validator: validateTime },
-            ]}
+            label="活动结束时间"
+            rules={createTimeValidationRules(form, "end_time")}
           >
-            <DatePicker {...({ precision: "minute" } as any)}>
-              {(value: Date | null) =>
-                value ? value.toLocaleString() : "请选择结束时间"
-              }
-            </DatePicker>
+            <DatePickerField
+              placeholder="请选择活动结束时间"
+              onValidate={() => {
+                // 当活动结束时间变化时，触发活动开始时间的重新验证
+                form.validateFields(["start_time"]).catch(() => {
+                  // 忽略验证错误，只是触发重新验证
+                });
+              }}
+            />
           </Form.Item>
         </Card>
 
@@ -313,38 +406,40 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         >
           <Form.Item
             name="registration_start"
-            label="报名开始"
-            rules={[
-              { required: true, message: "请选择报名开始时间" },
-              { validator: validateTime },
-            ]}
+            label="报名开始时间"
+            rules={createTimeValidationRules(form, "registration_start")}
           >
-            <DatePicker {...({ precision: "minute" } as any)}>
-              {(value: Date | null) =>
-                value ? value.toLocaleString() : "请选择报名开始时间"
-              }
-            </DatePicker>
+            <DatePickerField
+              placeholder="请选择报名开始时间"
+              onValidate={() => {
+                // 当报名开始时间变化时，触发报名截止时间的重新验证
+                form.validateFields(["registration_end"]).catch(() => {
+                  // 忽略验证错误，只是触发重新验证
+                });
+              }}
+            />
           </Form.Item>
 
           <Form.Item
             name="registration_end"
-            label="报名截止"
-            rules={[
-              { required: true, message: "请选择报名截止时间" },
-              { validator: validateTime },
-            ]}
+            label="报名截止时间"
+            rules={createTimeValidationRules(form, "registration_end")}
           >
-            <DatePicker {...({ precision: "minute" } as any)}>
-              {(value: Date | null) =>
-                value ? value.toLocaleString() : "请选择报名截止时间"
-              }
-            </DatePicker>
+            <DatePickerField
+              placeholder="请选择报名截止时间"
+              onValidate={() => {
+                // 当报名截止时间变化时，触发报名开始时间的重新验证
+                form.validateFields(["registration_start"]).catch(() => {
+                  // 忽略验证错误，只是触发重新验证
+                });
+              }}
+            />
           </Form.Item>
 
           <Form.Item
             name="max_participants"
             label="最大参与人数"
-            rules={[{ required: true, message: "请设置参与人数" }]}
+            rules={validateParticipants}
           >
             <Stepper
               min={1}
@@ -417,7 +512,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
             size="large"
             block
             fill="outline"
-            onClick={() => navigate("/dashboard")}
+            onClick={handleCancel}
             style={
               {
                 "--border-radius": "12px",
