@@ -127,6 +127,12 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
     description: "批量导入报名信息",
   },
   {
+    method: "POST",
+    path: "/api/events/:eventId/enrollments/notify",
+    apiId: "367358266",
+    description: "发送报名通知",
+  },
+  {
     method: "GET",
     path: "/api/events/:eventId/match-rules",
     apiId: "366698243",

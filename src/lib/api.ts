@@ -5,14 +5,54 @@ import { findApifoxApiId } from "@/config/apifox-api-ids";
 // 模块路由映射配置
 // ========================================
 // 根据请求路径前缀，路由到对应模块的 Mock URL
+// 注意：路由按照从最具体到最通用的顺序排列
 
-const MODULE_ROUTES = {
-  "/api/auth": import.meta.env.VITE_AUTH_MOCK_URL,
-  "/api/events": import.meta.env.VITE_EVENT_MOCK_URL,
-  "/api/matching": import.meta.env.VITE_MATCHING_MOCK_URL,
-  "/api/registrations": import.meta.env.VITE_REGISTRATION_MOCK_URL,
-  "/api/embeddings": import.meta.env.VITE_EMBEDDING_MOCK_URL,
-} as const;
+const MODULE_ROUTES = [
+  // 报名通知接口（最具体的路径，优先匹配）
+  // 在"报名管理 - 通知与导出 API"模块中
+  {
+    prefix: "/api/events/",
+    pattern: /^\/api\/events\/[^/]+\/enrollments\/notify/,
+    mockUrl: import.meta.env.VITE_ENROLLMENT_MOCK_URL,
+    name: "报名管理模块 - 通知",
+  },
+  // 认证模块
+  {
+    prefix: "/api/auth",
+    pattern: /^\/api\/auth/,
+    mockUrl: import.meta.env.VITE_AUTH_MOCK_URL,
+    name: "认证模块",
+  },
+  // 活动模块（包含批量导入、报名列表等接口）
+  // 在"活动管理模块"中
+  {
+    prefix: "/api/events",
+    pattern: /^\/api\/events/,
+    mockUrl: import.meta.env.VITE_EVENT_MOCK_URL,
+    name: "活动模块",
+  },
+  // 匹配模块
+  {
+    prefix: "/api/matching",
+    pattern: /^\/api\/matching/,
+    mockUrl: import.meta.env.VITE_MATCHING_MOCK_URL,
+    name: "匹配模块",
+  },
+  // 词嵌入模块
+  {
+    prefix: "/api/embeddings",
+    pattern: /^\/api\/embeddings/,
+    mockUrl: import.meta.env.VITE_EMBEDDING_MOCK_URL,
+    name: "词嵌入模块",
+  },
+  // 报名模块（旧版，待废弃）
+  {
+    prefix: "/api/registrations",
+    pattern: /^\/api\/registrations/,
+    mockUrl: import.meta.env.VITE_REGISTRATION_MOCK_URL,
+    name: "报名模块（旧）",
+  },
+] as const;
 
 // ========================================
 // 根据请求路径获取对应的 Base URL
@@ -25,25 +65,26 @@ function getBaseURLByPath(path: string): string {
     return import.meta.env.VITE_API_BASE_URL || "";
   }
 
-  // Apifox Mock 模式：根据路径前缀路由到对应模块
-  for (const [prefix, mockUrl] of Object.entries(MODULE_ROUTES)) {
-    if (path.startsWith(prefix)) {
-      if (!mockUrl) {
+  // Apifox Mock 模式：根据路径正则匹配路由到对应模块
+  // 按照数组顺序匹配，更具体的规则优先
+  for (const route of MODULE_ROUTES) {
+    if (route.pattern.test(path)) {
+      if (!route.mockUrl) {
         console.warn(
-          `警告: 路径 "${path}" 匹配到模块 "${prefix}"，但未配置对应的 Mock URL。`,
-          `请在 .env.development.mock 中配置对应的环境变量。`
+          `警告: 路径 "${path}" 匹配到模块 "${route.name}"，但未配置对应的 Mock URL。`,
+          `请在 .env.mock 中配置对应的环境变量。`
         );
         return import.meta.env.VITE_API_BASE_URL || "";
       }
-      console.log(`[API Router] ${path} -> ${mockUrl}`);
-      return mockUrl;
+      console.log(`[API Router] ${path} -> ${route.name} (${route.mockUrl})`);
+      return route.mockUrl;
     }
   }
 
   // 未匹配到任何模块，回退到默认 URL
   console.warn(
     `警告: 路径 "${path}" 未匹配到任何已配置的模块。`,
-    `已知模块: ${Object.keys(MODULE_ROUTES).join(", ")}`
+    `已知模块: ${MODULE_ROUTES.map((r) => r.name).join(", ")}`
   );
   return import.meta.env.VITE_API_BASE_URL || "";
 }
