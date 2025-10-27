@@ -12,6 +12,7 @@ import type {
   ImportEnrollmentRequest,
   ImportEnrollmentResponse,
   SendNotificationRequest,
+  SendNotificationResponse,
   BatchImportEnrollmentsResponse,
 } from "../types";
 
@@ -152,10 +153,22 @@ export const exportEnrollments = async (activityId: string): Promise<Blob> => {
 };
 
 /**
- * 发送通知给报名用户
+ * 发送通知给报名用户（新接口）
+ * 使用 POST /api/events/{eventId}/enrollments/notify
+ */
+export const sendEnrollmentNotification = async (
+  request: SendNotificationRequest
+): Promise<SendNotificationResponse> => {
+  const { activityId, ...payload } = request;
+
+  return api.post(`/api/events/${activityId}/enrollments/notify`, payload);
+};
+
+/**
+ * 旧版发送通知接口（保留兼容）
  */
 export const sendNotification = async (
-  request: SendNotificationRequest
+  request: Omit<SendNotificationRequest, "enrollments" | "activityInfo">
 ): Promise<void> => {
   const token = getToken();
 
@@ -168,8 +181,9 @@ export const sendNotification = async (
     body: JSON.stringify({
       activity_id: request.activityId,
       participant_ids: request.enrollmentIds,
-      message: request.message,
-      send_to_all: request.sendToAll,
+      content: request.content,
+      type: request.type,
+      title: request.title,
     }),
   });
 

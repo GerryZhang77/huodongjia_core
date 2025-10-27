@@ -1,50 +1,53 @@
-import React, { useState, useEffect, useRef } from "react";
+/**
+ * 报名管理页面 - 重构版
+ *
+ * 集成了新的筛选系统，支持：
+ * - 多维度筛选（状态、性别、年龄、行业、标签、城市、自定义字段）
+ * - 批量选择操作（全选、反选、清空）
+ * - 导入/导出 Excel
+ * - 发送通知
+ */
+
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   NavBar,
   Button,
   Card,
   List,
-  Avatar,
   Badge,
   Toast,
   ActionSheet,
-  Dialog,
-  SearchBar,
   Tabs,
-  Selector,
   TextArea,
   Modal,
   Tag,
   Empty,
+  Checkbox,
 } from "antd-mobile";
 import {
   UploadOutline,
   DownlandOutline,
   FilterOutline,
   MessageOutline,
-  UserOutline,
   CheckCircleOutline,
   CloseCircleOutline,
 } from "antd-mobile-icons";
 import { useStore } from "../store";
-
-interface Participant {
-  user_id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  avatar?: string;
-  registration_time: string;
-  status: "confirmed" | "waitlist" | "cancelled";
-  additional_info?: any;
-}
-
-interface FilterOptions {
-  status: string[];
-  registrationDate: string;
-  searchText: string;
-}
+import type { Enrollment, FilterCriteria } from "@/types/enrollment";
+import { DEFAULT_FILTER_CRITERIA, STATUS_LABELS } from "@/types/enrollment";
+import {
+  calculateFilterOptions,
+  applyFilters,
+  selectAll,
+  invertSelection,
+  clearSelection,
+  toggleSelection,
+  isAllSelected,
+  isIndeterminate,
+  getActiveFilterCount,
+} from "@/utils/enrollmentFilters";
+import { EnrollmentFilterDrawer } from "@/components/business/EnrollmentFilterDrawer";
 
 const EnrollmentManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -52,31 +55,65 @@ const EnrollmentManagement: React.FC = () => {
   const { token } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [filteredParticipants, setFilteredParticipants] = useState<
-    Participant[]
-  >([]);
+  // 原始报名数据（从 API 获取）
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 筛选相关状态
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(
+    DEFAULT_FILTER_CRITERIA
+  );
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+
+  // 批量选择状态
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // 其他状态
   const [activeTab, setActiveTab] = useState("all");
-  const [searchText, setSearchText] = useState("");
-  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
-    status: [],
-    registrationDate: "",
-    searchText: "",
-  });
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationContent, setNotificationContent] = useState("");
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>(
-    []
-  );
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
-  // 获取参与者列表
-  const fetchParticipants = async () => {
+  // 计算筛选选项（从报名数据中提取）
+  const filterOptions = useMemo(() => {
+    return calculateFilterOptions(enrollments);
+  }, [enrollments]);
+
+  // 应用筛选条件得到过滤后的数据
+  const filteredEnrollments = useMemo(() => {
+    let filtered = applyFilters(enrollments, filterCriteria);
+
+    // 按 Tab 进一步过滤状态
+    if (activeTab !== "all") {
+      filtered = filtered.filter((e) => e.status === activeTab);
+    }
+
+    return filtered;
+  }, [enrollments, filterCriteria, activeTab]);
+
+  // 活跃筛选条件数量（用于徽章显示）
+  const activeFilterCount = useMemo(() => {
+    return getActiveFilterCount(filterCriteria);
+  }, [filterCriteria]);
+
+  // 按钮是否禁用（没有选中任何人时禁用）
+  const isActionButtonDisabled = selectedIds.length === 0;
+
+  // 全选状态
+  const allSelected = useMemo(() => {
+    return isAllSelected(filteredEnrollments, selectedIds);
+  }, [filteredEnrollments, selectedIds]);
+
+  // 部分选中状态
+  const indeterminate = useMemo(() => {
+    return isIndeterminate(filteredEnrollments, selectedIds);
+  }, [filteredEnrollments, selectedIds]);
+
+  // 获取报名列表（新 API）
+  const fetchEnrollments = async () => {
     try {
-      const response = await fetch(`/api/event-participants/${id}`, {
+      const response = await fetch(`/api/events/${id}/enrollments`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -86,13 +123,12 @@ const EnrollmentManagement: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        setParticipants(data.participants || []);
-        setFilteredParticipants(data.participants || []);
+        setEnrollments(data.data || []);
       } else {
-        Toast.show(data.message || "获取参与者列表失败");
+        Toast.show(data.message || "获取报名列表失败");
       }
     } catch (error) {
-      console.error("Fetch participants error:", error);
+      console.error("Fetch enrollments error:", error);
       Toast.show("网络错误，请重试");
     } finally {
       setLoading(false);
@@ -101,31 +137,10 @@ const EnrollmentManagement: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      fetchParticipants();
+      fetchEnrollments();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  // 筛选参与者
-  useEffect(() => {
-    let filtered = participants;
-
-    // 按状态筛选
-    if (activeTab !== "all") {
-      filtered = filtered.filter((p) => p.status === activeTab);
-    }
-
-    // 按搜索文本筛选
-    if (searchText) {
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          p.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-          p.phone?.includes(searchText)
-      );
-    }
-
-    setFilteredParticipants(filtered);
-  }, [participants, activeTab, searchText]);
 
   // Excel导入
   const handleExcelImport = () => {
@@ -177,7 +192,7 @@ const EnrollmentManagement: React.FC = () => {
 
       if (data.success) {
         Toast.show(`成功导入 ${data.imported_count} 位参与者`);
-        fetchParticipants();
+        fetchEnrollments();
       } else {
         Toast.show(data.message || "导入失败");
       }
@@ -197,10 +212,17 @@ const EnrollmentManagement: React.FC = () => {
   // 导出Excel
   const handleExcelExport = async () => {
     try {
+      const exportIds = selectedIds.length > 0 ? selectedIds : undefined;
+
       const response = await fetch(`/api/export-participants/${id}`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          participant_ids: exportIds,
+        }),
       });
 
       if (response.ok) {
@@ -208,12 +230,14 @@ const EnrollmentManagement: React.FC = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `participants_${id}.xlsx`;
+        a.download = `participants_${id}_${Date.now()}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        Toast.show("导出成功");
+        Toast.show(
+          exportIds ? `导出 ${selectedIds.length} 人成功` : "导出成功"
+        );
       } else {
         Toast.show("导出失败");
       }
@@ -239,8 +263,7 @@ const EnrollmentManagement: React.FC = () => {
         },
         body: JSON.stringify({
           activity_id: id,
-          participant_ids:
-            selectedParticipants.length > 0 ? selectedParticipants : undefined,
+          participant_ids: selectedIds.length > 0 ? selectedIds : undefined,
           message: notificationContent,
         }),
       });
@@ -251,7 +274,7 @@ const EnrollmentManagement: React.FC = () => {
         Toast.show("通知发送成功");
         setShowNotificationModal(false);
         setNotificationContent("");
-        setSelectedParticipants([]);
+        setSelectedIds([]);
       } else {
         Toast.show(data.message || "发送失败");
       }
@@ -261,30 +284,29 @@ const EnrollmentManagement: React.FC = () => {
     }
   };
 
-  // 更新参与者状态
-  const updateParticipantStatus = async (
-    userId: string,
-    status: "confirmed" | "waitlist" | "cancelled"
+  // 更新报名状态
+  const updateEnrollmentStatus = async (
+    enrollmentId: string,
+    status: Enrollment["status"]
   ) => {
     try {
-      const response = await fetch("/api/update-participant-status", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          activity_id: id,
-          user_id: userId,
-          status,
-        }),
-      });
+      const response = await fetch(
+        `/api/events/${id}/enrollments/${enrollmentId}/status`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
 
       const data = await response.json();
 
       if (data.success) {
         Toast.show("状态更新成功");
-        fetchParticipants();
+        fetchEnrollments();
       } else {
         Toast.show(data.message || "更新失败");
       }
@@ -294,45 +316,69 @@ const EnrollmentManagement: React.FC = () => {
     }
   };
 
-  // 参与者操作
-  const handleParticipantAction = (participant: Participant) => {
+  // 报名操作菜单
+  const handleEnrollmentAction = (enrollment: Enrollment) => {
     ActionSheet.show({
       actions: [
         {
-          text: "确认参与",
-          key: "confirm",
-          onClick: () =>
-            updateParticipantStatus(participant.user_id, "confirmed"),
+          text: "通过审核",
+          key: "approve",
+          onClick: () => updateEnrollmentStatus(enrollment.id, "approved"),
+        },
+        {
+          text: "拒绝申请",
+          key: "reject",
+          danger: true,
+          onClick: () => updateEnrollmentStatus(enrollment.id, "rejected"),
         },
         {
           text: "加入候补",
           key: "waitlist",
-          onClick: () =>
-            updateParticipantStatus(participant.user_id, "waitlist"),
-        },
-        {
-          text: "取消报名",
-          key: "cancel",
-          danger: true,
-          onClick: () =>
-            updateParticipantStatus(participant.user_id, "cancelled"),
+          onClick: () => updateEnrollmentStatus(enrollment.id, "waitlist"),
         },
       ],
       cancelText: "取消",
     });
   };
 
+  // 批量操作：全选
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(clearSelection());
+    } else {
+      setSelectedIds(selectAll(filteredEnrollments));
+    }
+  };
+
+  // 批量操作：反选
+  const handleInvertSelection = () => {
+    setSelectedIds(invertSelection(filteredEnrollments, selectedIds));
+  };
+
+  // 批量操作：清空
+  const handleClearSelection = () => {
+    setSelectedIds(clearSelection());
+  };
+
+  // 切换单个选择
+  const handleToggleSelection = (enrollmentId: string) => {
+    setSelectedIds(toggleSelection(enrollmentId, selectedIds));
+  };
+
   // 状态标签配置
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      confirmed: { text: "已确认", color: "success" },
-      waitlist: { text: "候补", color: "warning" },
-      cancelled: { text: "已取消", color: "danger" },
+  const getStatusBadge = (status: Enrollment["status"]) => {
+    const statusConfig: Record<
+      Enrollment["status"],
+      { text: string; color: "success" | "warning" | "danger" | "default" }
+    > = {
+      approved: { text: STATUS_LABELS.approved, color: "success" },
+      pending: { text: STATUS_LABELS.pending, color: "warning" },
+      rejected: { text: STATUS_LABELS.rejected, color: "danger" },
+      waitlist: { text: STATUS_LABELS.waitlist, color: "default" },
+      cancelled: { text: STATUS_LABELS.cancelled, color: "default" },
     };
 
-    const config =
-      statusConfig[status as keyof typeof statusConfig] ||
-      statusConfig.confirmed;
+    const config = statusConfig[status] || statusConfig.pending;
     return <Badge content={config.text} color={config.color} />;
   };
 
@@ -348,23 +394,23 @@ const EnrollmentManagement: React.FC = () => {
   };
 
   const tabItems = [
-    { key: "all", title: `全部 (${participants.length})` },
+    { key: "all", title: `全部 (${enrollments.length})` },
     {
-      key: "confirmed",
-      title: `已确认 (${
-        participants.filter((p) => p.status === "confirmed").length
+      key: "approved",
+      title: `已通过 (${
+        enrollments.filter((p) => p.status === "approved").length
       })`,
     },
     {
-      key: "waitlist",
-      title: `候补 (${
-        participants.filter((p) => p.status === "waitlist").length
+      key: "pending",
+      title: `待审核 (${
+        enrollments.filter((p) => p.status === "pending").length
       })`,
     },
     {
-      key: "cancelled",
-      title: `已取消 (${
-        participants.filter((p) => p.status === "cancelled").length
+      key: "rejected",
+      title: `已拒绝 (${
+        enrollments.filter((p) => p.status === "rejected").length
       })`,
     },
   ];
@@ -400,16 +446,18 @@ const EnrollmentManagement: React.FC = () => {
             size="small"
             fill="outline"
             onClick={handleExcelExport}
+            disabled={isActionButtonDisabled && selectedIds.length === 0}
             style={{ "--border-radius": "8px", flex: 1 }}
           >
             <DownlandOutline className="mr-1" />
-            导出Excel
+            导出名单
           </Button>
 
           <Button
             size="small"
             color="primary"
             onClick={() => setShowNotificationModal(true)}
+            disabled={isActionButtonDisabled}
             style={{ "--border-radius": "8px", flex: 1 }}
           >
             <MessageOutline className="mr-1" />
@@ -432,17 +480,50 @@ const EnrollmentManagement: React.FC = () => {
           </div>
         )}
 
-        {/* 搜索框 */}
-        <SearchBar
-          placeholder="搜索姓名、邮箱或手机号"
-          value={searchText}
-          onChange={setSearchText}
-          style={{
-            "--border-radius": "8px",
-            "--background": "var(--adm-color-background)",
-            "--height": "36px",
-          }}
-        />
+        {/* 筛选按钮 */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="small"
+            fill="outline"
+            onClick={() => setShowFilterDrawer(true)}
+            style={{ "--border-radius": "8px" }}
+          >
+            <FilterOutline className="mr-1" />
+            筛选
+            {activeFilterCount > 0 && (
+              <Badge content={activeFilterCount} style={{ marginLeft: 4 }} />
+            )}
+          </Button>
+
+          {selectedIds.length > 0 && (
+            <>
+              <Button
+                size="small"
+                fill="outline"
+                onClick={handleSelectAll}
+                style={{ "--border-radius": "8px" }}
+              >
+                {allSelected ? "取消全选" : "全选"}
+              </Button>
+              <Button
+                size="small"
+                fill="outline"
+                onClick={handleInvertSelection}
+                style={{ "--border-radius": "8px" }}
+              >
+                反选
+              </Button>
+              <Button
+                size="small"
+                fill="outline"
+                onClick={handleClearSelection}
+                style={{ "--border-radius": "8px" }}
+              >
+                清空
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* 状态筛选标签 */}
@@ -461,102 +542,125 @@ const EnrollmentManagement: React.FC = () => {
         </Tabs>
       </div>
 
-      {/* 参与者列表 */}
+      {/* 报名列表 */}
       <div className="p-4">
         {loading ? (
           <div className="text-center py-8">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
             <p className="text-gray-600">加载中...</p>
           </div>
-        ) : filteredParticipants.length === 0 ? (
-          <Empty
-            description="暂无参与者"
-            image="https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=empty%20state%20illustration%20with%20users%20icon%20minimalist%20blue%20gray&image_size=square"
-          />
+        ) : filteredEnrollments.length === 0 ? (
+          <Empty description="暂无报名数据" />
         ) : (
-          <List>
-            {filteredParticipants.map((participant) => (
-              <List.Item
-                key={participant.user_id}
-                prefix={
-                  <Avatar
-                    src={participant.avatar}
-                    style={{ "--size": "48px" } as React.CSSProperties}
-                    fallback={participant.name.charAt(0)}
-                  />
-                }
-                extra={getStatusBadge(participant.status)}
-                onClick={() => handleParticipantAction(participant)}
-                arrow
-              >
-                <Card
-                  className="mb-2 shadow-sm rounded-lg"
-                  style={
-                    {
-                      "--body-padding": "12px",
-                    } as React.CSSProperties
-                  }
+          <div className="space-y-3">
+            {/* 批量选择工具栏 */}
+            {enrollments.length > 0 && (
+              <div className="flex items-center justify-between bg-white p-3 rounded-lg">
+                <Checkbox
+                  checked={allSelected}
+                  indeterminate={indeterminate}
+                  onChange={handleSelectAll}
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-gray-900">
-                        {participant.name}
-                      </h3>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedParticipants.includes(
-                            participant.user_id
+                  <span className="text-sm text-gray-600">
+                    {selectedIds.length > 0
+                      ? `已选 ${selectedIds.length} 人`
+                      : "全选"}
+                  </span>
+                </Checkbox>
+                <span className="text-sm text-gray-500">
+                  共 {filteredEnrollments.length} 人
+                </span>
+              </div>
+            )}
+
+            {/* 报名卡片列表 */}
+            <List>
+              {filteredEnrollments.map((enrollment) => (
+                <List.Item
+                  key={enrollment.id}
+                  prefix={
+                    <Checkbox
+                      checked={selectedIds.includes(enrollment.id)}
+                      onChange={() => handleToggleSelection(enrollment.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  }
+                  onClick={() => handleEnrollmentAction(enrollment)}
+                  arrow
+                >
+                  <Card
+                    className="mb-2 shadow-sm rounded-lg"
+                    style={
+                      {
+                        "--body-padding": "12px",
+                      } as React.CSSProperties
+                    }
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-gray-900">
+                          {enrollment.name}
+                        </h3>
+                        {getStatusBadge(enrollment.status)}
+                      </div>
+
+                      {enrollment.email && (
+                        <div className="text-sm text-gray-600">
+                          📧 {enrollment.email}
+                        </div>
+                      )}
+
+                      {enrollment.phone && (
+                        <div className="text-sm text-gray-600">
+                          📱 {enrollment.phone}
+                        </div>
+                      )}
+
+                      {enrollment.city && (
+                        <div className="text-sm text-gray-600">
+                          📍 {enrollment.city}
+                        </div>
+                      )}
+
+                      {/* 自定义字段显示 */}
+                      {enrollment.customFields &&
+                        Object.keys(enrollment.customFields).length > 0 && (
+                          <div className="pt-2 border-t border-gray-100">
+                            {Object.entries(enrollment.customFields).map(
+                              ([key, value]) => (
+                                <div
+                                  key={key}
+                                  className="text-sm text-gray-600 flex"
+                                >
+                                  <span className="font-medium mr-2">
+                                    {key}:
+                                  </span>
+                                  <span>{String(value)}</span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+
+                      <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+                        <span>
+                          报名时间：{formatDateTime(enrollment.enrolledAt)}
+                        </span>
+                        <div className="flex space-x-1">
+                          {enrollment.status === "approved" && (
+                            <CheckCircleOutline className="text-green-500" />
                           )}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedParticipants((prev) => [
-                                ...prev,
-                                participant.user_id,
-                              ]);
-                            } else {
-                              setSelectedParticipants((prev) =>
-                                prev.filter((id) => id !== participant.user_id)
-                              );
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
+                          {enrollment.status === "rejected" && (
+                            <CloseCircleOutline className="text-red-500" />
+                          )}
+                        </div>
                       </div>
                     </div>
-
-                    {participant.email && (
-                      <div className="text-sm text-gray-600">
-                        📧 {participant.email}
-                      </div>
-                    )}
-
-                    {participant.phone && (
-                      <div className="text-sm text-gray-600">
-                        📱 {participant.phone}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
-                      <span>
-                        报名时间：
-                        {formatDateTime(participant.registration_time)}
-                      </span>
-                      <div className="flex space-x-1">
-                        {participant.status === "confirmed" && (
-                          <CheckCircleOutline className="text-green-500" />
-                        )}
-                        {participant.status === "cancelled" && (
-                          <CloseCircleOutline className="text-red-500" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </List.Item>
-            ))}
-          </List>
+                  </Card>
+                </List.Item>
+              ))}
+            </List>
+          </div>
         )}
       </div>
 
@@ -569,6 +673,17 @@ const EnrollmentManagement: React.FC = () => {
         style={{ display: "none" }}
       />
 
+      {/* 筛选抽屉 */}
+      <EnrollmentFilterDrawer
+        visible={showFilterDrawer}
+        onClose={() => setShowFilterDrawer(false)}
+        filterOptions={filterOptions}
+        criteria={filterCriteria}
+        onCriteriaChange={setFilterCriteria}
+        resultCount={filteredEnrollments.length}
+        totalCount={enrollments.length}
+      />
+
       {/* 发送通知弹窗 */}
       <Modal
         visible={showNotificationModal}
@@ -578,8 +693,8 @@ const EnrollmentManagement: React.FC = () => {
           <div className="space-y-4">
             <div>
               <p className="text-sm text-gray-600 mb-2">
-                {selectedParticipants.length > 0
-                  ? `将发送给 ${selectedParticipants.length} 位选中的参与者`
+                {selectedIds.length > 0
+                  ? `将发送给 ${selectedIds.length} 位选中的参与者`
                   : "将发送给所有参与者"}
               </p>
             </div>
@@ -611,32 +726,32 @@ const EnrollmentManagement: React.FC = () => {
       />
 
       {/* 统计信息 */}
-      {participants.length > 0 && (
+      {enrollments.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 safe-area-pb">
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-600">
-              共 {participants.length} 人报名
+              共 {enrollments.length} 人报名
             </span>
             <div className="flex space-x-4">
               <span className="text-green-600">
-                已确认{" "}
-                {participants.filter((p) => p.status === "confirmed").length}
+                已通过{" "}
+                {enrollments.filter((p) => p.status === "approved").length}
               </span>
               <span className="text-yellow-600">
-                候补{" "}
-                {participants.filter((p) => p.status === "waitlist").length}
+                待审核{" "}
+                {enrollments.filter((p) => p.status === "pending").length}
               </span>
               <span className="text-red-600">
-                已取消{" "}
-                {participants.filter((p) => p.status === "cancelled").length}
+                已拒绝{" "}
+                {enrollments.filter((p) => p.status === "rejected").length}
               </span>
             </div>
           </div>
 
-          {selectedParticipants.length > 0 && (
+          {selectedIds.length > 0 && (
             <div className="mt-2 text-center">
               <Tag color="primary" fill="outline">
-                已选择 {selectedParticipants.length} 人
+                已选择 {selectedIds.length} 人
               </Tag>
             </div>
           )}

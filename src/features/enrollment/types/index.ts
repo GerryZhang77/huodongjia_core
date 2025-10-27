@@ -135,13 +135,65 @@ export interface ImportEnrollmentResponse {
 }
 
 /**
+ * 通知类型
+ */
+export type NotificationType = "approval" | "rejection" | "custom";
+
+/**
+ * 报名用户基础信息（用于通知）
+ */
+export interface EnrollmentBasicInfo {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+}
+
+/**
+ * 活动基础信息（用于通知）
+ */
+export interface ActivityBasicInfo {
+  id: string;
+  title: string;
+  startTime?: string;
+  location?: string;
+}
+
+/**
  * 发送通知请求
  */
 export interface SendNotificationRequest {
   activityId: string;
-  enrollmentIds?: string[];
-  message: string;
-  sendToAll?: boolean;
+  enrollmentIds: string[]; // 必填：接收通知的用户 ID 列表
+  type: NotificationType; // 通知类型：批准/拒绝/自定义
+  title?: string; // 通知标题（自定义类型必填）
+  content: string; // 通知内容（必填）
+  enrollments: EnrollmentBasicInfo[]; // 完整的报名用户信息
+  activityInfo: ActivityBasicInfo; // 活动基础信息
+}
+
+/**
+ * 发送通知响应
+ */
+export interface SendNotificationResponse {
+  success: boolean;
+  sentCount: number;
+  failedCount: number;
+  failures?: Array<{
+    enrollmentId: string;
+    name: string;
+    reason: string;
+  }>;
+  message?: string;
+}
+
+/**
+ * 导出报名数据请求
+ */
+export interface ExportEnrollmentsRequest {
+  activityId: string;
+  enrollmentIds?: string[]; // 选中的用户 ID，为空则导出全部
+  format?: "xlsx" | "csv"; // 导出格式，默认 xlsx
 }
 
 /**

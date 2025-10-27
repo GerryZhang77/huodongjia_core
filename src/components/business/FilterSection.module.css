@@ -1,0 +1,23 @@
+/* FilterSection 组件样式 */
+
+.filter-section {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-section :global(.adm-collapse-panel-header) {
+  padding: 12px 16px;
+}
+
+.filter-section :global(.adm-collapse-panel-content) {
+  padding: 0 16px 12px;
+}
+
+.filter-section-content {
+  padding-top: 8px;
+}
+
+.filter-section :global(.adm-tag) {
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 16px;
+}
