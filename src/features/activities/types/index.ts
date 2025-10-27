@@ -79,7 +79,7 @@ export interface ActivityFormData {
   registration_end: Date;
   category: ActivityCategory;
   tags: ActivityTag[];
-  cover_image?: string;
+  cover_image: string; // 必填字段
   requirements?: string;
   contact_info?: string;
   is_public: boolean;
@@ -87,24 +87,20 @@ export interface ActivityFormData {
 }
 
 /**
- * 创建活动请求
+ * 创建活动请求 (符合 OpenAPI 规范 - snake_case)
  */
 export interface CreateActivityRequest {
   title: string;
   description: string;
-  coverImage?: string;
-  registrationStart: string;
-  registrationEnd: string;
-  activityStart: string;
-  activityEnd: string;
+  cover_image: string; // 必填字段
+  start_time: string; // ISO 8601 格式
+  end_time: string; // ISO 8601 格式
   location: string;
-  capacity: number;
-  category?: ActivityCategory;
-  tags?: ActivityTag[];
-  requirements?: string;
-  contactInfo?: string;
-  isPublic?: boolean;
-  allowWaitlist?: boolean;
+  max_participants: number;
+  fee: number; // 活动费用（单位：元）
+  tags?: string[];
+  expectation?: string; // 对参与者的期望
+  registration_deadline: string; // ISO 8601 格式 - 报名截止时间
 }
 
 /**
