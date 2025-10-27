@@ -14,6 +14,7 @@ import { Dashboard } from "./pages/Dashboard";
 import ActivityDetail from "./pages/ActivityDetail";
 import ActivityCreate from "./pages/ActivityCreate";
 import ActivityEdit from "./pages/ActivityEdit";
+import { ActivityManage } from "./pages/ActivityManage";
 import EnrollmentManagement from "./pages/EnrollmentManagement";
 import MatchingConfiguration from "./pages/MatchingConfiguration";
 import ComponentShowcase from "./pages/ComponentShowcase";
@@ -58,10 +59,18 @@ function App() {
                 }
               />
               <Route
-                path="/activity/:id/edit"
+                path="/activity-edit/:id"
                 element={
                   <ProtectedRoute>
                     <ActivityEdit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/activity-manage/:id"
+                element={
+                  <ProtectedRoute>
+                    <ActivityManage />
                   </ProtectedRoute>
                 }
               />

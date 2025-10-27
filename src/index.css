@@ -52,6 +52,27 @@
   background-color: var(--color-primary-500);
 }
 
+/* 活动管理页面 Tabs 样式 */
+.activity-manage-tabs .adm-tabs-header {
+  background-color: white;
+  padding: 0 20px;
+}
+
+.activity-manage-tabs .adm-tabs-tab {
+  padding: 12px 16px;
+  font-size: 15px;
+}
+
+.activity-manage-tabs .adm-tabs-tab-active {
+  font-weight: 600;
+  color: var(--color-primary-500);
+}
+
+.activity-manage-tabs .adm-tabs-tab-line {
+  height: 3px;
+  border-radius: 2px;
+}
+
 /* 导航栏 */
 .adm-nav-bar {
   --height: 56px;

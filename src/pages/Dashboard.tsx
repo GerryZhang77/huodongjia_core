@@ -27,11 +27,7 @@ export const Dashboard: FC = () => {
   };
 
   const handleManageEnroll = (id: string) => {
-    navigate(`/enrollment-management?activityId=${id}`);
-  };
-
-  const handleManageMatch = (id: string) => {
-    navigate(`/matching-configuration?activityId=${id}`);
+    navigate(`/activity-manage/${id}`);
   };
 
   const handleDelete = (id: string) => {
@@ -191,7 +187,6 @@ export const Dashboard: FC = () => {
                     activity={activity}
                     onEdit={() => handleEdit(activity.id)}
                     onManageEnroll={() => handleManageEnroll(activity.id)}
-                    onManageMatch={() => handleManageMatch(activity.id)}
                     onDelete={() => void handleDelete(activity.id)}
                   />
                 </div>

@@ -8,7 +8,6 @@ import { Card, Tag } from "antd-mobile";
 import {
   EditSOutline,
   UserContactOutline,
-  UnorderedListOutline,
   DeleteOutline,
 } from "antd-mobile-icons";
 import type { Activity } from "../../types";
@@ -26,7 +25,6 @@ export interface DashboardActivityCardProps {
   activity: Activity;
   onEdit: (id: string) => void;
   onManageEnroll: (id: string) => void;
-  onManageMatch: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
@@ -37,7 +35,6 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
   activity,
   onEdit,
   onManageEnroll,
-  onManageMatch,
   onDelete,
 }) => {
   const statusInfo = getStatusInfo(activity.status);
@@ -150,7 +147,7 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
         </div>
 
         {/* 操作按钮组 */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             className="flex items-center justify-center gap-1 rounded-lg bg-primary-500/10 text-primary-600 border-0 hover:bg-primary-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
             onClick={(e) => {
@@ -170,18 +167,7 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
             }}
           >
             <UserContactOutline fontSize={14} />
-            <span>报名</span>
-          </button>
-
-          <button
-            className="flex items-center justify-center gap-1 rounded-lg bg-secondary-500/10 text-secondary-600 border-0 hover:bg-secondary-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              onManageMatch(activity.id);
-            }}
-          >
-            <UnorderedListOutline fontSize={14} />
-            <span>匹配</span>
+            <span>管理</span>
           </button>
 
           <button
