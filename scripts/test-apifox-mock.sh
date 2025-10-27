@@ -99,6 +99,21 @@ test_api "POST" \
     "上传活动封面图片"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  报名管理模块测试"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+test_api "GET" \
+    "https://m1.apifoxmock.com/m1/7269221-6996856-6383074/api/events/1/enrollments" \
+    "" \
+    "获取活动报名详细信息列表"
+
+test_api "POST" \
+    "https://m1.apifoxmock.com/m1/7269221-6996856-6383074/api/events/1/enrollments/batch-import" \
+    '{"enrollments": [{"name": "张三", "phone": "13800138000", "customFields": {"VIP等级": "金卡"}}]}' \
+    "批量导入报名信息"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  匹配模块测试"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""

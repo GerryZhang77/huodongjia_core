@@ -21,6 +21,9 @@
     },
     {
       "name": "数据提取"
+    },
+    {
+      "name": "图片上传"
     }
   ],
   "paths": {
@@ -55,6 +58,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -64,6 +68,7 @@
         ],
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "获取成功",
             "content": {
               "application/json": {
@@ -89,19 +94,18 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           }
         },
         "security": [
           {
-            "bearerAuth1": [],
+            "bearerAuth11": [],
             "x-apifox": {
               "schemeGroups": [
                 {
                   "id": "GuBdsoZUf_Qw4XJiS7ncg",
                   "schemeIds": [
-                    "bearerAuth1"
+                    "bearerAuth11"
                   ]
                 }
               ],
@@ -109,7 +113,7 @@
               "use": {
                 "id": "GuBdsoZUf_Qw4XJiS7ncg",
                 "configs": {
-                  "bearerAuth1": {
+                  "bearerAuth11": {
                     "authConfigs": {
                       "x-apifox": {
                         "token": "{{bearerToken}}"
@@ -120,7 +124,7 @@
               },
               "scopes": {
                 "GuBdsoZUf_Qw4XJiS7ncg": {
-                  "bearerAuth1": []
+                  "bearerAuth11": []
                 }
               }
             }
@@ -157,6 +161,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -166,6 +171,7 @@
         ],
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "获取成功",
             "content": {
               "application/json": {
@@ -188,10 +194,10 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           },
           "404": {
+            "x-apifox-name": "未找到",
             "description": "活动不存在",
             "content": {
               "application/json": {
@@ -200,19 +206,18 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "未找到"
+            "headers": {}
           }
         },
         "security": [
           {
-            "bearerAuth1": [],
+            "bearerAuth11": [],
             "x-apifox": {
               "schemeGroups": [
                 {
                   "id": "1dH8Q00Oke2j0wiX58Pha",
                   "schemeIds": [
-                    "bearerAuth1"
+                    "bearerAuth11"
                   ]
                 }
               ],
@@ -220,7 +225,7 @@
               "use": {
                 "id": "1dH8Q00Oke2j0wiX58Pha",
                 "configs": {
-                  "bearerAuth1": {
+                  "bearerAuth11": {
                     "authConfigs": {
                       "x-apifox": {
                         "token": "{{bearerToken}}"
@@ -231,7 +236,7 @@
               },
               "scopes": {
                 "1dH8Q00Oke2j0wiX58Pha": {
-                  "bearerAuth1": []
+                  "bearerAuth11": []
                 }
               }
             }
@@ -266,6 +271,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -289,6 +295,7 @@
         },
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "编辑成功",
             "content": {
               "application/json": {
@@ -316,10 +323,10 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           },
           "403": {
+            "x-apifox-name": "权限不足",
             "description": "无权限编辑此活动",
             "content": {
               "application/json": {
@@ -328,19 +335,18 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "权限不足"
+            "headers": {}
           }
         },
         "security": [
           {
-            "bearerAuth1": [],
+            "bearerAuth11": [],
             "x-apifox": {
               "schemeGroups": [
                 {
                   "id": "kDQP-sO0gjSvEn904PEVj",
                   "schemeIds": [
-                    "bearerAuth1"
+                    "bearerAuth11"
                   ]
                 }
               ],
@@ -348,7 +354,7 @@
               "use": {
                 "id": "kDQP-sO0gjSvEn904PEVj",
                 "configs": {
-                  "bearerAuth1": {
+                  "bearerAuth11": {
                     "authConfigs": {
                       "x-apifox": {
                         "token": "{{bearerToken}}"
@@ -359,7 +365,7 @@
               },
               "scopes": {
                 "kDQP-sO0gjSvEn904PEVj": {
-                  "bearerAuth1": []
+                  "bearerAuth11": []
                 }
               }
             }
@@ -394,6 +400,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -403,6 +410,7 @@
         ],
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "取消成功",
             "content": {
               "application/json": {
@@ -426,10 +434,10 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           },
           "403": {
+            "x-apifox-name": "权限不足",
             "description": "无权限删除此活动",
             "content": {
               "application/json": {
@@ -438,19 +446,18 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "权限不足"
+            "headers": {}
           }
         },
         "security": [
           {
-            "bearerAuth1": [],
+            "bearerAuth11": [],
             "x-apifox": {
               "schemeGroups": [
                 {
                   "id": "Y2zp82hxu3VHRO18u7ycM",
                   "schemeIds": [
-                    "bearerAuth1"
+                    "bearerAuth11"
                   ]
                 }
               ],
@@ -458,7 +465,7 @@
               "use": {
                 "id": "Y2zp82hxu3VHRO18u7ycM",
                 "configs": {
-                  "bearerAuth1": {
+                  "bearerAuth11": {
                     "authConfigs": {
                       "x-apifox": {
                         "token": "{{bearerToken}}"
@@ -469,7 +476,7 @@
               },
               "scopes": {
                 "Y2zp82hxu3VHRO18u7ycM": {
-                  "bearerAuth1": []
+                  "bearerAuth11": []
                 }
               }
             }
@@ -494,6 +501,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -503,6 +511,7 @@
         ],
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "获取成功",
             "content": {
               "application/json": {
@@ -532,19 +541,18 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           }
         },
         "security": [
           {
-            "bearerAuth1": [],
+            "bearerAuth11": [],
             "x-apifox": {
               "schemeGroups": [
                 {
                   "id": "_4NNInfMmH2C7v7qfLX28",
                   "schemeIds": [
-                    "bearerAuth1"
+                    "bearerAuth11"
                   ]
                 }
               ],
@@ -552,7 +560,7 @@
               "use": {
                 "id": "_4NNInfMmH2C7v7qfLX28",
                 "configs": {
-                  "bearerAuth1": {
+                  "bearerAuth11": {
                     "authConfigs": {
                       "x-apifox": {
                         "token": "{{bearerToken}}"
@@ -563,7 +571,7 @@
               },
               "scopes": {
                 "_4NNInfMmH2C7v7qfLX28": {
-                  "bearerAuth1": []
+                  "bearerAuth11": []
                 }
               }
             }
@@ -588,6 +596,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -621,6 +630,7 @@
         },
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "创建成功",
             "content": {
               "application/json": {
@@ -648,10 +658,10 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           },
           "400": {
+            "x-apifox-name": "请求有误",
             "description": "请求参数错误",
             "content": {
               "application/json": {
@@ -660,19 +670,18 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "请求有误"
+            "headers": {}
           }
         },
         "security": [
           {
-            "bearerAuth1": [],
+            "bearerAuth11": [],
             "x-apifox": {
               "schemeGroups": [
                 {
                   "id": "_L5eP3NZk3bwIrnRtQ-SA",
                   "schemeIds": [
-                    "bearerAuth1"
+                    "bearerAuth11"
                   ]
                 }
               ],
@@ -680,7 +689,7 @@
               "use": {
                 "id": "_L5eP3NZk3bwIrnRtQ-SA",
                 "configs": {
-                  "bearerAuth1": {
+                  "bearerAuth11": {
                     "authConfigs": {
                       "x-apifox": {
                         "token": "{{bearerToken}}"
@@ -691,7 +700,7 @@
               },
               "scopes": {
                 "_L5eP3NZk3bwIrnRtQ-SA": {
-                  "bearerAuth1": []
+                  "bearerAuth11": []
                 }
               }
             }
@@ -725,6 +734,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -738,8 +748,8 @@
               "schema": {
                 "type": "object",
                 "properties": {},
-                "x-apifox-ignore-properties": [],
-                "x-apifox-orders": []
+                "x-apifox-orders": [],
+                "x-apifox-ignore-properties": []
               },
               "example": {
                 "filePath": "D:\\huodongjia\\uploads\\file-1761383941080-391176227.xlsx",
@@ -755,6 +765,7 @@
         },
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "",
             "content": {
               "application/json": {
@@ -798,14 +809,14 @@
                           "student_id",
                           "occupation"
                         ],
-                        "x-apifox-ignore-properties": [],
                         "x-apifox-orders": [
                           "event_id",
                           "other_info",
                           "name",
                           "student_id",
                           "occupation"
-                        ]
+                        ],
+                        "x-apifox-ignore-properties": []
                       }
                     }
                   },
@@ -815,18 +826,17 @@
                     "importedCount",
                     "data"
                   ],
-                  "x-apifox-ignore-properties": [],
                   "x-apifox-orders": [
                     "success",
                     "message",
                     "importedCount",
                     "data"
-                  ]
+                  ],
+                  "x-apifox-ignore-properties": []
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           }
         },
         "security": [],
@@ -861,6 +871,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -870,6 +881,7 @@
         ],
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "获取成功",
             "content": {
               "application/json": {
@@ -901,10 +913,10 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           },
           "403": {
+            "x-apifox-name": "权限不足",
             "description": "无权限查看此活动报名信息",
             "content": {
               "application/json": {
@@ -913,19 +925,18 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "权限不足"
+            "headers": {}
           }
         },
         "security": [
           {
-            "bearerAuth1": [],
+            "bearerAuth11": [],
             "x-apifox": {
               "schemeGroups": [
                 {
                   "id": "olrGg2FC_MwjM-gt6sUCK",
                   "schemeIds": [
-                    "bearerAuth1"
+                    "bearerAuth11"
                   ]
                 }
               ],
@@ -933,7 +944,7 @@
               "use": {
                 "id": "olrGg2FC_MwjM-gt6sUCK",
                 "configs": {
-                  "bearerAuth1": {
+                  "bearerAuth11": {
                     "authConfigs": {
                       "x-apifox": {
                         "token": "{{bearerToken}}"
@@ -944,7 +955,7 @@
               },
               "scopes": {
                 "olrGg2FC_MwjM-gt6sUCK": {
-                  "bearerAuth1": []
+                  "bearerAuth11": []
                 }
               }
             }
@@ -953,6 +964,443 @@
         "x-apifox-folder": "报名管理",
         "x-apifox-status": "released",
         "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698242-run"
+      }
+    },
+    "/api/events/{eventId}/enrollments": {
+      "get": {
+        "summary": "获取活动报名详细信息列表",
+        "deprecated": false,
+        "description": "获取活动的所有报名信息，包含完整的报名者详细资料（姓名、电话、自定义字段等）。相比 participants 接口，此接口返回更完整的报名数据，适用于报名管理、导出等场景。",
+        "operationId": "getEventEnrollments",
+        "tags": [
+          "报名管理"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "7ea8f4b1-8b70-4356-a39a-e43e81ed597b"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "报名状态筛选",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected"
+              ],
+              "example": "approved"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "example": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "每页数量",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "example": 20
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "总报名人数",
+                      "example": 65
+                    },
+                    "enrollments": {
+                      "type": "array",
+                      "description": "报名信息列表",
+                      "items": {
+                        "$ref": "#/components/schemas/Enrollment"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "total",
+                    "enrollments",
+                    "pagination"
+                  ],
+                  "x-apifox-orders": [
+                    "success",
+                    "total",
+                    "enrollments",
+                    "pagination"
+                  ],
+                  "x-apifox-ignore-properties": []
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "x-apifox-name": "权限不足",
+            "description": "无权限查看此活动报名信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth11": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "enrollments_auth",
+                  "schemeIds": [
+                    "bearerAuth11"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "enrollments_auth",
+                "configs": {
+                  "bearerAuth11": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "enrollments_auth": {
+                  "bearerAuth11": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "报名管理",
+        "x-apifox-status": "designing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367265652-run"
+      }
+    },
+    "/api/events/{eventId}/enrollments/batch-import": {
+      "post": {
+        "summary": "批量导入报名信息",
+        "deprecated": false,
+        "description": "批量导入活动报名信息。前端解析 Excel/CSV 文件后，直接传递完整的报名数据数组，支持自定义字段。导入后报名状态默认为 approved。",
+        "operationId": "batchImportEnrollments",
+        "tags": [
+          "报名管理"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "7ea8f4b1-8b70-4356-a39a-e43e81ed597b"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enrollments": {
+                    "type": "array",
+                    "description": "报名信息数组",
+                    "items": {
+                      "$ref": "#/components/schemas/EnrollmentInput"
+                    }
+                  }
+                },
+                "required": [
+                  "enrollments"
+                ],
+                "x-apifox-orders": [
+                  "enrollments"
+                ],
+                "x-apifox-ignore-properties": []
+              },
+              "example": {
+                "enrollments": [
+                  {
+                    "name": "张三",
+                    "gender": "男",
+                    "age": 28,
+                    "phone": "13800138000",
+                    "email": "zhangsan@example.com",
+                    "occupation": "软件工程师",
+                    "company": "ABC科技公司",
+                    "industry": "互联网",
+                    "city": "上海",
+                    "tags": [
+                      "技术",
+                      "创业"
+                    ],
+                    "customFields": {
+                      "VIP等级": "金卡",
+                      "推荐人": "李四",
+                      "特殊需求": "需要素食"
+                    }
+                  },
+                  {
+                    "name": "王五",
+                    "gender": "女",
+                    "age": 25,
+                    "phone": "13900139000",
+                    "email": "wangwu@example.com",
+                    "occupation": "产品经理",
+                    "company": "XYZ科技",
+                    "industry": "互联网",
+                    "city": "北京",
+                    "tags": [
+                      "产品",
+                      "设计"
+                    ],
+                    "customFields": {
+                      "VIP等级": "银卡",
+                      "推荐人": "赵六"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "导入成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "批量导入成功"
+                    },
+                    "result": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "description": "总处理条数",
+                          "example": 50
+                        },
+                        "successCount": {
+                          "type": "integer",
+                          "description": "成功导入条数",
+                          "example": 48
+                        },
+                        "failedCount": {
+                          "type": "integer",
+                          "description": "失败条数",
+                          "example": 2
+                        },
+                        "errors": {
+                          "type": "array",
+                          "description": "失败记录详情",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "row": {
+                                "type": "integer",
+                                "description": "失败的行号",
+                                "example": 15
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "报名者姓名",
+                                "example": "李四"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "description": "失败原因",
+                                "example": "手机号格式不正确"
+                              }
+                            },
+                            "x-apifox-orders": [
+                              "row",
+                              "name",
+                              "reason"
+                            ],
+                            "x-apifox-ignore-properties": []
+                          }
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "successCount",
+                        "failedCount",
+                        "errors"
+                      ],
+                      "x-apifox-orders": [
+                        "total",
+                        "successCount",
+                        "failedCount",
+                        "errors"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "result"
+                  ],
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "result"
+                  ],
+                  "x-apifox-ignore-properties": []
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "x-apifox-name": "参数错误",
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "enrollments 数组不能为空",
+                  "code": "INVALID_INPUT"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "403": {
+            "x-apifox-name": "权限不足",
+            "description": "无权限操作此活动",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth11": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "batch_import_auth",
+                  "schemeIds": [
+                    "bearerAuth11"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "batch_import_auth",
+                "configs": {
+                  "bearerAuth11": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "batch_import_auth": {
+                  "bearerAuth11": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "报名管理",
+        "x-apifox-status": "designing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367265653-run"
       }
     },
     "/api/events/{eventId}/match-rules": {
@@ -981,6 +1429,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -990,6 +1439,7 @@
         ],
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "生成成功",
             "content": {
               "application/json": {
@@ -1026,19 +1476,18 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           }
         },
         "security": [
           {
-            "bearerAuth1": [],
+            "bearerAuth11": [],
             "x-apifox": {
               "schemeGroups": [
                 {
                   "id": "egesoD5pVudrZvUeoUsc2",
                   "schemeIds": [
-                    "bearerAuth1"
+                    "bearerAuth11"
                   ]
                 }
               ],
@@ -1046,7 +1495,7 @@
               "use": {
                 "id": "egesoD5pVudrZvUeoUsc2",
                 "configs": {
-                  "bearerAuth1": {
+                  "bearerAuth11": {
                     "authConfigs": {
                       "x-apifox": {
                         "token": "{{bearerToken}}"
@@ -1057,7 +1506,7 @@
               },
               "scopes": {
                 "egesoD5pVudrZvUeoUsc2": {
-                  "bearerAuth1": []
+                  "bearerAuth11": []
                 }
               }
             }
@@ -1082,6 +1531,7 @@
             "name": "apifoxToken",
             "in": "header",
             "description": "",
+            "required": false,
             "example": "{{apifoxToken}}",
             "schema": {
               "type": "string",
@@ -1108,14 +1558,14 @@
                   "filePath"
                 ],
                 "x-apifox-ignore-properties": []
-              },
-              "examples": {}
+              }
             }
           },
           "required": true
         },
         "responses": {
           "200": {
+            "x-apifox-name": "成功",
             "description": "提取成功",
             "content": {
               "application/json": {
@@ -1154,10 +1604,10 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "成功"
+            "headers": {}
           },
           "400": {
+            "x-apifox-name": "请求有误",
             "description": "文件路径错误或文件格式不支持",
             "content": {
               "application/json": {
@@ -1166,8 +1616,7 @@
                 }
               }
             },
-            "headers": {},
-            "x-apifox-name": "请求有误"
+            "headers": {}
           }
         },
         "security": [],
@@ -1175,10 +1624,530 @@
         "x-apifox-status": "released",
         "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698244-run"
       }
+    },
+    "/api/events/upload-image": {
+      "post": {
+        "summary": "上传活动封面图片",
+        "deprecated": false,
+        "description": "上传活动封面图片，支持 jpg、png、gif 格式，最大 5MB",
+        "operationId": "uploadActivityCoverImage",
+        "tags": [
+          "图片上传"
+        ],
+        "parameters": [
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "图片文件",
+                    "example": ""
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "url"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "请求是否成功",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "图片上传成功"
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "图片访问 URL",
+                      "example": "https://cdn.huodongjia.com/uploads/covers/2025/10/27/abc123.jpg"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "额外的图片信息",
+                      "properties": {
+                        "filename": {
+                          "type": "string",
+                          "description": "文件名",
+                          "example": "cover_1698403200000.jpg"
+                        },
+                        "size": {
+                          "type": "integer",
+                          "description": "文件大小（字节）",
+                          "example": 1024567
+                        },
+                        "width": {
+                          "type": "integer",
+                          "description": "图片宽度",
+                          "example": 1920
+                        },
+                        "height": {
+                          "type": "integer",
+                          "description": "图片高度",
+                          "example": 1080
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "description": "MIME 类型",
+                          "example": "image/jpeg"
+                        }
+                      },
+                      "x-apifox-orders": [
+                        "filename",
+                        "size",
+                        "width",
+                        "height",
+                        "mimeType"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "url",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "图片上传成功",
+                  "url": "https://cdn.huodongjia.com/uploads/covers/2025/10/27/abc123.jpg",
+                  "data": {
+                    "filename": "cover_1698403200000.jpg",
+                    "size": 1024567,
+                    "width": 1920,
+                    "height": 1080,
+                    "mimeType": "image/jpeg"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "2": {
+                    "summary": "未上传文件",
+                    "value": {
+                      "success": false,
+                      "message": "请选择要上传的文件",
+                      "error": {
+                        "code": "NO_FILE",
+                        "details": null
+                      }
+                    }
+                  },
+                  "3": {
+                    "summary": "文件格式不支持",
+                    "value": {
+                      "success": false,
+                      "message": "仅支持 jpg、png、gif 格式的图片",
+                      "error": {
+                        "code": "INVALID_FORMAT",
+                        "details": {
+                          "supportedFormats": [
+                            "image/jpeg",
+                            "image/png",
+                            "image/gif"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "4": {
+                    "summary": "文件过大",
+                    "value": {
+                      "success": false,
+                      "message": "图片大小不能超过 5MB",
+                      "error": {
+                        "code": "FILE_TOO_LARGE",
+                        "details": {
+                          "maxSize": 5242880,
+                          "actualSize": 6291456
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "请求有误"
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "请先登录",
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "未认证"
+          },
+          "500": {
+            "description": "服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "图片上传失败，请稍后重试",
+                  "error": {
+                    "code": "UPLOAD_FAILED",
+                    "details": null
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "服务器内部错误"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "图片上传",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367000012-run"
+      }
     }
   },
   "components": {
     "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "无权限访问此资源"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "FORBIDDEN"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ],
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "code"
+        ],
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
+      },
+      "Enrollment": {
+        "type": "object",
+        "description": "完整的报名信息（包含详细资料和自定义字段）",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "报名记录ID",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "activityId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "活动ID",
+            "example": "7ea8f4b1-8b70-4356-a39a-e43e81ed597b"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "用户ID（如果关联到用户账号）",
+            "example": "7240883e-2f7a-48cc-841a-87dad4a5b312"
+          },
+          "name": {
+            "type": "string",
+            "description": "姓名",
+            "example": "张三"
+          },
+          "gender": {
+            "type": "string",
+            "description": "性别",
+            "enum": [
+              "男",
+              "女",
+              "其他"
+            ],
+            "example": "男"
+          },
+          "age": {
+            "type": "integer",
+            "description": "年龄",
+            "example": 28
+          },
+          "phone": {
+            "type": "string",
+            "description": "联系电话",
+            "example": "13800138000"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "邮箱",
+            "example": "zhangsan@example.com"
+          },
+          "occupation": {
+            "type": "string",
+            "description": "职业",
+            "example": "软件工程师"
+          },
+          "company": {
+            "type": "string",
+            "description": "公司/单位",
+            "example": "ABC科技公司"
+          },
+          "industry": {
+            "type": "string",
+            "description": "行业",
+            "example": "互联网"
+          },
+          "city": {
+            "type": "string",
+            "description": "所在城市",
+            "example": "上海"
+          },
+          "tags": {
+            "type": "array",
+            "description": "标签",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "技术",
+              "创业"
+            ]
+          },
+          "customFields": {
+            "type": "object",
+            "description": "自定义字段（键值对形式存储未映射到系统字段的信息）",
+            "additionalProperties": true,
+            "x-apifox-orders": [],
+            "properties": {},
+            "x-apifox-ignore-properties": [],
+            "example": {
+              "VIP等级": "金卡",
+              "推荐人": "李四",
+              "特殊需求": "需要素食"
+            }
+          },
+          "status": {
+            "type": "string",
+            "description": "报名状态",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "example": "approved"
+          },
+          "enrolledAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "报名时间",
+            "example": "2025-10-27T10:30:00Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间",
+            "example": "2025-10-27T10:30:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "activityId",
+          "name",
+          "status",
+          "enrolledAt",
+          "updatedAt"
+        ],
+        "x-apifox-orders": [
+          "id",
+          "activityId",
+          "userId",
+          "name",
+          "gender",
+          "age",
+          "phone",
+          "email",
+          "occupation",
+          "company",
+          "industry",
+          "city",
+          "tags",
+          "customFields",
+          "status",
+          "enrolledAt",
+          "updatedAt"
+        ],
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
+      },
+      "EnrollmentInput": {
+        "type": "object",
+        "description": "批量导入报名时的输入数据",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "姓名（必填）",
+            "example": "张三"
+          },
+          "gender": {
+            "type": "string",
+            "description": "性别",
+            "enum": [
+              "男",
+              "女",
+              "其他"
+            ],
+            "example": "男"
+          },
+          "age": {
+            "type": "integer",
+            "description": "年龄",
+            "minimum": 0,
+            "maximum": 150,
+            "example": 28
+          },
+          "phone": {
+            "type": "string",
+            "description": "联系电话",
+            "pattern": "^1[3-9]\\d{9}$",
+            "example": "13800138000"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "邮箱",
+            "example": "zhangsan@example.com"
+          },
+          "occupation": {
+            "type": "string",
+            "description": "职业",
+            "example": "软件工程师"
+          },
+          "company": {
+            "type": "string",
+            "description": "公司/单位",
+            "example": "ABC科技公司"
+          },
+          "industry": {
+            "type": "string",
+            "description": "行业",
+            "example": "互联网"
+          },
+          "city": {
+            "type": "string",
+            "description": "所在城市",
+            "example": "上海"
+          },
+          "tags": {
+            "type": "array",
+            "description": "标签",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "技术",
+              "创业"
+            ]
+          },
+          "customFields": {
+            "type": "object",
+            "description": "自定义字段（Excel中未映射到系统字段的列）",
+            "additionalProperties": true,
+            "x-apifox-orders": [],
+            "properties": {},
+            "x-apifox-ignore-properties": [],
+            "example": {
+              "VIP等级": "金卡",
+              "推荐人": "李四",
+              "特殊需求": "需要素食"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "x-apifox-orders": [
+          "name",
+          "gender",
+          "age",
+          "phone",
+          "email",
+          "occupation",
+          "company",
+          "industry",
+          "city",
+          "tags",
+          "customFields"
+        ],
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
+      },
       "Event": {
         "type": "object",
         "description": "活动基本信息",
@@ -1327,8 +2296,8 @@
           "expectation",
           "registration_deadline"
         ],
-        "x-apifox-ignore-properties": [],
-        "x-apifox-folder": "Schemas"
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
       },
       "EventDetail": {
         "allOf": [
@@ -1485,8 +2454,8 @@
           "expectation",
           "registration_deadline"
         ],
-        "x-apifox-ignore-properties": [],
-        "x-apifox-folder": "Schemas"
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
       },
       "UpdateEventRequest": {
         "type": "object",
@@ -1547,8 +2516,8 @@
           "expectation",
           "registration_deadline"
         ],
-        "x-apifox-ignore-properties": [],
-        "x-apifox-folder": "Schemas"
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
       },
       "Participant": {
         "type": "object",
@@ -1595,8 +2564,8 @@
           "created_at",
           "updated_at"
         ],
-        "x-apifox-ignore-properties": [],
-        "x-apifox-folder": "Schemas"
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
       },
       "Pagination": {
         "type": "object",
@@ -1629,42 +2598,18 @@
           "total",
           "totalPages"
         ],
-        "x-apifox-ignore-properties": [],
-        "x-apifox-folder": "Schemas"
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": false
-          },
-          "message": {
-            "type": "string",
-            "description": "错误信息",
-            "example": "无权限访问此资源"
-          },
-          "code": {
-            "type": "string",
-            "description": "错误代码",
-            "example": "FORBIDDEN"
-          }
-        },
-        "required": [
-          "success",
-          "message"
-        ],
-        "x-apifox-orders": [
-          "success",
-          "message",
-          "code"
-        ],
-        "x-apifox-ignore-properties": [],
-        "x-apifox-folder": "Schemas"
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
       }
     },
     "securitySchemes": {
       "bearerAuth1": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 认证 Token"
+      },
+      "bearerAuth11": {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",

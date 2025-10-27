@@ -18,30 +18,43 @@ export type EnrollmentStatus =
 export type Gender = "male" | "female" | "other";
 
 /**
- * 报名实体
+ * 报名实体（完整数据结构，匹配 OpenAPI Enrollment schema）
  */
 export interface Enrollment {
   id: string;
   activityId: string;
-  userId: string;
-  userName: string;
-  userEmail?: string;
-  userPhone?: string;
-  userAvatar?: string;
+  userId?: string;
+  name: string;
   gender?: Gender;
   age?: number;
-  profession?: string;
+  phone?: string;
+  email?: string;
+  occupation?: string;
+  company?: string;
+  industry?: string;
   city?: string;
-  bio?: string;
-  requirements?: string;
-  additionalInfo?: Record<string, unknown>;
   tags?: string[];
+  customFields?: Record<string, unknown>; // 自定义字段，存储未识别的 Excel 列
   status: EnrollmentStatus;
-  registrationTime: string;
-  approvedTime?: string;
-  rejectedTime?: string;
-  createdAt: string;
+  enrolledAt: string;
   updatedAt: string;
+}
+
+/**
+ * 批量导入报名输入（匹配 OpenAPI EnrollmentInput schema）
+ */
+export interface EnrollmentInput {
+  name: string; // 必填
+  gender?: Gender;
+  age?: number;
+  phone?: string;
+  email?: string;
+  occupation?: string;
+  company?: string;
+  industry?: string;
+  city?: string;
+  tags?: string[];
+  customFields?: Record<string, unknown>; // 自定义字段
 }
 
 /**
@@ -58,13 +71,40 @@ export interface EnrollmentListQuery {
 }
 
 /**
- * 报名列表响应
+ * 报名列表响应（完整数据结构，匹配 OpenAPI）
  */
 export interface EnrollmentListResponse {
-  data: Enrollment[];
+  success: boolean;
   total: number;
-  page: number;
-  pageSize: number;
+  enrollments: Enrollment[];
+  pagination?: {
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+}
+
+/**
+ * 批量导入报名请求（新接口，前端解析）
+ */
+export interface BatchImportEnrollmentsRequest {
+  enrollments: EnrollmentInput[];
+}
+
+/**
+ * 批量导入报名响应（新接口）
+ */
+export interface BatchImportEnrollmentsResponse {
+  success: boolean;
+  successCount: number;
+  failedCount: number;
+  errors?: Array<{
+    index: number;
+    name: string;
+    reason: string;
+    field?: string;
+  }>;
+  message?: string;
 }
 
 /**

@@ -3,13 +3,16 @@
  * 报名模块 - API 服务
  */
 
+import { api } from "@/lib/api";
 import type {
+  EnrollmentInput,
   EnrollmentListQuery,
   EnrollmentListResponse,
   UpdateEnrollmentStatusRequest,
   ImportEnrollmentRequest,
   ImportEnrollmentResponse,
   SendNotificationRequest,
+  BatchImportEnrollmentsResponse,
 } from "../types";
 
 /**
@@ -20,11 +23,21 @@ const getToken = (): string | null => {
 };
 
 /**
- * 获取活动报名列表
+ * 旧版报名列表响应（兼容现有 API）
+ */
+interface LegacyEnrollmentListResponse {
+  data: unknown[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * 获取活动报名列表（旧版接口）
  */
 export const getEnrollments = async (
   query: EnrollmentListQuery
-): Promise<EnrollmentListResponse> => {
+): Promise<LegacyEnrollmentListResponse> => {
   const token = getToken();
   const { activityId, ...params } = query;
 
@@ -165,4 +178,40 @@ export const sendNotification = async (
   if (!data.success) {
     throw new Error(data.message || "发送通知失败");
   }
+};
+
+/**
+ * 获取报名详细列表（新接口）
+ * 使用 GET /api/events/{eventId}/enrollments
+ * 返回完整的报名数据，包括 customFields
+ */
+export const getEnrollmentsDetailed = async (
+  activityId: string,
+  params?: {
+    status?: string;
+    page?: number;
+    pageSize?: number;
+  }
+): Promise<EnrollmentListResponse> => {
+  return api.get(`/api/events/${activityId}/enrollments`, { params });
+};
+
+/**
+ * 批量导入报名（新接口）
+ * 使用 POST /api/events/{eventId}/enrollments/batch-import
+ * 前端已完成 Excel 解析，直接传递 enrollments 数组
+ */
+export const batchImportEnrollments = async (
+  activityId: string,
+  enrollments: EnrollmentInput[]
+): Promise<BatchImportEnrollmentsResponse> => {
+  // 使用配置好的 api 实例，会自动处理：
+  // - 路由到正确的 Mock URL
+  // - 添加 Apifox Token
+  // - 添加 API ID
+  // - 添加 JWT Token
+  // 注意：api 响应拦截器已经返回了 response.data，所以这里直接得到数据
+  return api.post(`/api/events/${activityId}/enrollments/batch-import`, {
+    enrollments,
+  });
 };

@@ -116,6 +116,18 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
   },
   {
     method: "GET",
+    path: "/api/events/:eventId/enrollments",
+    apiId: "367265652",
+    description: "获取活动报名详细信息列表（包含完整字段和自定义字段）",
+  },
+  {
+    method: "POST",
+    path: "/api/events/:eventId/enrollments/batch-import",
+    apiId: "367265653",
+    description: "批量导入报名信息",
+  },
+  {
+    method: "GET",
     path: "/api/events/:eventId/match-rules",
     apiId: "366698243",
     description: "提取匹配规则",
