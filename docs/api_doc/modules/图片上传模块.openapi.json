@@ -1,0 +1,279 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "图片上传模块 API",
+    "version": "1.0.0",
+    "description": "活动家平台 - 图片上传相关接口"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "本地开发环境"
+    },
+    {
+      "url": "https://api.huodongjia.com",
+      "description": "生产环境"
+    }
+  ],
+  "tags": [
+    {
+      "name": "图片上传",
+      "description": "图片上传相关接口"
+    }
+  ],
+  "paths": {
+    "/api/events/upload-image": {
+      "post": {
+        "summary": "上传活动封面图片",
+        "description": "上传活动封面图片，支持 jpg、png、gif 格式，最大 5MB",
+        "operationId": "uploadActivityCoverImage",
+        "tags": ["图片上传"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "图片文件"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "message", "url"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true,
+                      "description": "请求是否成功"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "图片上传成功",
+                      "description": "响应消息"
+                    },
+                    "url": {
+                      "type": "string",
+                      "example": "https://cdn.huodongjia.com/uploads/covers/2025/10/27/abc123.jpg",
+                      "description": "图片访问 URL"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "额外的图片信息",
+                      "properties": {
+                        "filename": {
+                          "type": "string",
+                          "example": "cover_1698403200000.jpg",
+                          "description": "文件名"
+                        },
+                        "size": {
+                          "type": "integer",
+                          "example": 1024567,
+                          "description": "文件大小（字节）"
+                        },
+                        "width": {
+                          "type": "integer",
+                          "example": 1920,
+                          "description": "图片宽度"
+                        },
+                        "height": {
+                          "type": "integer",
+                          "example": 1080,
+                          "description": "图片高度"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "example": "image/jpeg",
+                          "description": "MIME 类型"
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "上传成功示例",
+                    "value": {
+                      "success": true,
+                      "message": "图片上传成功",
+                      "url": "https://cdn.huodongjia.com/uploads/covers/2025/10/27/abc123.jpg",
+                      "data": {
+                        "filename": "cover_1698403200000.jpg",
+                        "size": 1024567,
+                        "width": 1920,
+                        "height": 1080,
+                        "mimeType": "image/jpeg"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "noFile": {
+                    "summary": "未上传文件",
+                    "value": {
+                      "success": false,
+                      "message": "请选择要上传的文件",
+                      "error": {
+                        "code": "NO_FILE",
+                        "details": null
+                      }
+                    }
+                  },
+                  "invalidFormat": {
+                    "summary": "文件格式不支持",
+                    "value": {
+                      "success": false,
+                      "message": "仅支持 jpg、png、gif 格式的图片",
+                      "error": {
+                        "code": "INVALID_FORMAT",
+                        "details": {
+                          "supportedFormats": [
+                            "image/jpeg",
+                            "image/png",
+                            "image/gif"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "fileTooLarge": {
+                    "summary": "文件过大",
+                    "value": {
+                      "success": false,
+                      "message": "图片大小不能超过 5MB",
+                      "error": {
+                        "code": "FILE_TOO_LARGE",
+                        "details": {
+                          "maxSize": 5242880,
+                          "actualSize": 6291456
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "unauthorized": {
+                    "summary": "未登录或 Token 无效",
+                    "value": {
+                      "success": false,
+                      "message": "请先登录",
+                      "error": {
+                        "code": "UNAUTHORIZED",
+                        "details": null
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "uploadFailed": {
+                    "summary": "上传失败",
+                    "value": {
+                      "success": false,
+                      "message": "图片上传失败，请稍后重试",
+                      "error": {
+                        "code": "UPLOAD_FAILED",
+                        "details": null
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 认证 Token"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["success", "message"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false,
+            "description": "请求是否成功"
+          },
+          "message": {
+            "type": "string",
+            "example": "操作失败",
+            "description": "错误消息"
+          },
+          "error": {
+            "type": "object",
+            "description": "错误详情",
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "ERROR_CODE",
+                "description": "错误代码"
+              },
+              "details": {
+                "type": "object",
+                "description": "错误详细信息",
+                "nullable": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
