@@ -137,7 +137,7 @@ export const Dashboard: FC = () => {
             color="primary"
             size="large"
             block
-            onClick={() => navigate("/activity-create")}
+            onClick={() => navigate("/activity/create")}
             className="rounded-xl h-12 font-semibold shadow-sm hover:shadow-md transition-all duration-200"
           >
             <div className="flex items-center justify-center gap-2">
@@ -162,7 +162,7 @@ export const Dashboard: FC = () => {
             <div className="text-center mt-4">
               <Button
                 color="primary"
-                onClick={() => navigate("/activity-create")}
+                onClick={() => navigate("/activity/create")}
                 className="rounded-lg"
               >
                 创建第一个活动
