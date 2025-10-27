@@ -1,0 +1,398 @@
+.import-enrollment-dialog {
+  padding: 16px 0;
+}
+
+/* 确保 Steps 标题在一行显示 */
+.import-enrollment-dialog .adm-steps {
+  font-size: 13px;
+}
+
+.import-enrollment-dialog .adm-step-title {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.step-content {
+  margin-top: 24px;
+  min-height: 400px;
+}
+
+/* 步骤 1: 上传文件 */
+.import-step-upload {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.upload-area {
+  width: 100%;
+  max-width: 400px;
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  border: 2px dashed var(--color-border, #d1d5db);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.upload-label:hover {
+  border-color: var(--color-primary, #4a78ff);
+  background-color: var(--color-primary-light, rgba(74, 120, 255, 0.05));
+}
+
+.upload-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.upload-text {
+  font-size: 16px;
+  color: var(--color-text, #111827);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.upload-hint {
+  font-size: 14px;
+  color: var(--color-text-secondary, #6b7280);
+  text-align: center;
+}
+
+/* 步骤 2: 字段映射 */
+.import-step-mapping {
+  padding: 16px;
+}
+
+.mapping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.mapping-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background-color: var(--color-background, #f9fafb);
+  border-radius: 8px;
+}
+
+.mapping-source,
+.mapping-target {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.field-value {
+  font-size: 14px;
+  color: var(--color-text, #111827);
+  font-weight: 500;
+}
+
+.mapping-arrow {
+  font-size: 20px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.field-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.field-select:focus {
+  outline: none;
+  border-color: var(--color-primary, #4a78ff);
+  box-shadow: 0 0 0 3px rgba(74, 120, 255, 0.1);
+}
+
+.mapping-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+  text-align: center;
+  padding: 8px;
+}
+
+/* 步骤 3: 数据预览 */
+.import-step-preview {
+  padding: 16px;
+}
+
+.preview-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: var(--color-background, #f9fafb);
+  border-radius: 8px;
+}
+
+.stat-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.stat-value {
+  font-size: 16px;
+  color: var(--color-text, #111827);
+  font-weight: 600;
+}
+
+.stat-value.stat-custom {
+  color: var(--color-warning, #f59e0b);
+}
+
+.custom-fields-hint {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background-color: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.6;
+}
+
+.preview-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 8px;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.preview-table thead {
+  background-color: var(--color-background, #f9fafb);
+}
+
+.preview-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text, #111827);
+  border-bottom: 2px solid var(--color-border, #d1d5db);
+  white-space: nowrap;
+}
+
+.preview-table td {
+  padding: 12px 16px;
+  color: var(--color-text, #111827);
+  border-bottom: 1px solid var(--color-border-light, #e5e7eb);
+  white-space: nowrap;
+}
+
+.preview-table tbody tr:hover {
+  background-color: var(--color-background, #f9fafb);
+}
+
+.required-mark {
+  color: var(--color-error, #ef4444);
+}
+
+/* 步骤 4: 导入结果 */
+.import-step-result {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+.importing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-border, #d1d5db);
+  border-top-color: var(--color-primary, #4a78ff);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.importing-text {
+  font-size: 16px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.import-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.result-icon {
+  font-size: 64px;
+}
+
+.result-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text, #111827);
+}
+
+.result-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  background-color: var(--color-background, #f9fafb);
+  border-radius: 8px;
+}
+
+.result-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-stat.success .stat-value {
+  color: var(--color-success, #10b981);
+}
+
+.result-stat.error .stat-value {
+  color: var(--color-error, #ef4444);
+}
+
+.error-list {
+  width: 100%;
+  padding: 16px;
+  background-color: var(--color-error-light, #fef2f2);
+  border: 1px solid var(--color-error, #ef4444);
+  border-radius: 8px;
+}
+
+.error-list-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-error, #ef4444);
+  margin-bottom: 8px;
+}
+
+.error-item {
+  font-size: 12px;
+  color: var(--color-text-secondary, #6b7280);
+  padding: 4px 0;
+}
+
+/* ========================================
+   响应式适配 - PC 端优化
+   ======================================== */
+
+/* 平板及以上 (768px+) */
+@media (min-width: 768px) {
+  /* Dialog 外层容器宽度控制 */
+  .adm-dialog-wrap .adm-center-popup-wrap {
+    max-width: 750px;
+    width: 90vw;
+  }
+
+  /* Dialog 容器宽度 */
+  .import-enrollment-dialog {
+    min-width: 700px;
+    max-width: 90vw;
+  }
+
+  /* 增加步骤内容高度 */
+  .step-content {
+    min-height: 500px;
+  }
+
+  /* 优化表格显示 */
+  .preview-table {
+    font-size: 15px;
+  }
+
+  .preview-table th,
+  .preview-table td {
+    padding: 14px 18px;
+  }
+
+  /* 优化字段映射布局 */
+  .mapping-list {
+    max-height: 500px;
+  }
+
+  .mapping-item {
+    padding: 16px;
+  }
+}
+
+/* 桌面端 (1024px+) */
+@media (min-width: 1024px) {
+  /* Dialog 外层容器 */
+  .adm-dialog-wrap .adm-center-popup-wrap {
+    max-width: 900px;
+  }
+
+  /* 进一步增加宽度 */
+  .import-enrollment-dialog {
+    min-width: 850px;
+  }
+
+  /* 增加步骤内容高度 */
+  .step-content {
+    min-height: 550px;
+  }
+
+  /* 优化上传区域 */
+  .upload-area {
+    max-width: 500px;
+  }
+}
+
+/* 大屏幕 (1440px+) */
+@media (min-width: 1440px) {
+  .adm-dialog-wrap .adm-center-popup-wrap {
+    max-width: 1000px;
+  }
+
+  .import-enrollment-dialog {
+    min-width: 950px;
+  }
+}
