@@ -71,16 +71,27 @@ export const getActivityById = async (id: string): Promise<Activity> => {
 export const createActivity = async (
   request: CreateActivityRequest
 ): Promise<Activity> => {
+  console.log("[createActivity] 发送请求:", request);
+
   const response = (await api.post(
-    "/api/events",
+    "/api/events/create",
     request
   )) as ApiResponse<Activity>;
 
+  console.log("[createActivity] 收到响应:", response);
+
   if (!response.success) {
+    console.error("[createActivity] 请求失败:", {
+      success: response.success,
+      message: response.message,
+      data: response.data,
+      event: response.event,
+    });
     throw new Error(response.message || "创建活动失败");
   }
 
   if (!response.event) {
+    console.error("[createActivity] 缺少 event 字段:", response);
     throw new Error("创建活动失败:未返回活动数据");
   }
 
