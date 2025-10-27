@@ -93,6 +93,11 @@ test_api "POST" \
     '{"title": "测试活动", "description": "这是一个测试活动"}' \
     "创建活动"
 
+test_api "POST" \
+    "https://m1.apifoxmock.com/m1/7269221-6996856-6383074/api/events/upload-image" \
+    '{}' \
+    "上传活动封面图片"
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  匹配模块测试"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

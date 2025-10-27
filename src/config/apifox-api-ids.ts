@@ -98,6 +98,12 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
   },
   {
     method: "POST",
+    path: "/api/events/upload-image",
+    apiId: "367000012", // 请替换为实际的 API ID
+    description: "上传活动封面图片",
+  },
+  {
+    method: "POST",
     path: "/api/events/:eventId/participants",
     apiId: "366773774",
     description: "保存报名信息",
