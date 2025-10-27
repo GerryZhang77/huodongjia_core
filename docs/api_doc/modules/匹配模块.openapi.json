@@ -1,0 +1,159 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "匹配模块",
+    "description": "智能匹配相关接口，包括关键词提取、词嵌入计算等",
+    "version": "1.0.0",
+    "contact": {
+      "name": "活动家开发团队",
+      "email": "dev@huodongjia.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "关键词提取"
+    }
+  ],
+  "paths": {
+    "/api/matching/{eventId}/extract-keywords": {
+      "get": {
+        "summary": "提取用户关键词条",
+        "deprecated": false,
+        "description": "从参与者的个人信息、兴趣爱好等字段中提取关键词",
+        "operationId": "extractKeywords",
+        "tags": [
+          "关键词提取"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "提取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "关键词提取成功"
+                    },
+                    "keywords": {
+                      "type": "object",
+                      "description": "各参与者的关键词映射",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "properties": {},
+                      "example": {
+                        "user_001": [
+                          "户外",
+                          "摄影",
+                          "徒步"
+                        ],
+                        "user_002": [
+                          "音乐",
+                          "阅读",
+                          "咖啡"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "关键词提取成功",
+                  "keywords": {
+                    "user_001": [
+                      "户外",
+                      "摄影",
+                      "徒步"
+                    ],
+                    "user_002": [
+                      "音乐",
+                      "阅读",
+                      "咖啡"
+                    ],
+                    "user_003": [
+                      "运动",
+                      "健身",
+                      "篮球"
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "活动不存在"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "NOT_FOUND"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth2": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token 认证"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}

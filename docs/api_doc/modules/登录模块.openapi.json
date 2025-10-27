@@ -1,0 +1,604 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "登录模块",
+    "description": "用户认证、注册、登录等接口。支持普通用户、商家、超级管理员三种角色。",
+    "version": "1.0.0",
+    "contact": {
+      "name": "活动家开发团队",
+      "email": "dev@huodongjia.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "用户认证"
+    },
+    {
+      "name": "商家认证"
+    },
+    {
+      "name": "超管认证"
+    },
+    {
+      "name": "通用认证"
+    }
+  ],
+  "paths": {
+    "/login": {
+      "post": {
+        "summary": "超级管理员登录",
+        "deprecated": false,
+        "description": "超级管理员使用账号密码登录",
+        "operationId": "adminLogin",
+        "tags": [
+          "超管认证"
+        ],
+        "parameters": [
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "examples": {
+                "example1": {
+                  "value": {
+                    "identifier": "admin1",
+                    "password": "123456"
+                  },
+                  "summary": "超管登录示例"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "登录成功",
+                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI2YzRkM2UyLTVmNmctNWIzYy05ZDRlLTNmMmc1YjZjNGQzZSIsInBob25lIjoiMTg4MDAzODgwMDMiLCJ1c2VyX3R5cGUiOiJhZG1pbiIsImlhdCI6MTc2MTA1OTQ5OCwiZXhwIjoxNzYxNjY0Mjk4fQ.4yIZjYKvPuM1RfQmyBrN9aCNyMoDteewnwg5bYSqIoO",
+                  "user": {
+                    "id": "b6c4d3e2-5f6g-5b3c-9d4e-3f2g5b6c4d3e",
+                    "phone": "18800388003",
+                    "name": "王五（超管）",
+                    "user_type": "admin",
+                    "age": 32,
+                    "occupation": "系统管理员",
+                    "company": "活动家总部",
+                    "tags": [
+                      "管理",
+                      "运维",
+                      "技术"
+                    ],
+                    "wechat_qr": "https://example.com/qr/admin123.jpg"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "认证失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/register": {
+      "post": {
+        "summary": "商家注册",
+        "deprecated": false,
+        "description": "创建新的商家账号",
+        "operationId": "organizerRegister",
+        "tags": [
+          "商家认证"
+        ],
+        "parameters": [
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "account",
+                  "password"
+                ],
+                "properties": {
+                  "account": {
+                    "type": "string",
+                    "description": "商家账号",
+                    "example": "organizer_company1"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "密码（至少6位）",
+                    "minLength": 6,
+                    "example": "123456"
+                  },
+                  "companyName": {
+                    "type": "string",
+                    "description": "公司名称（可选）",
+                    "example": "XX科技有限公司"
+                  }
+                }
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "注册失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/me": {
+      "get": {
+        "summary": "获取当前用户信息",
+        "deprecated": false,
+        "description": "获取当前登录用户的详细信息",
+        "operationId": "getCurrentUser",
+        "tags": [
+          "通用认证"
+        ],
+        "parameters": [
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "user": {
+                    "id": "7240883e-2f7a-48cc-841a-87dad4a5b312",
+                    "phone": "13800138001",
+                    "name": "张三",
+                    "user_type": "user",
+                    "age": 28,
+                    "occupation": "产品经理",
+                    "company": "XX科技有限公司",
+                    "tags": [
+                      "户外",
+                      "摄影",
+                      "旅行"
+                    ],
+                    "wechat_qr": "https://example.com/qr/user123.jpg"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未登录或 Token 已过期",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/password": {
+      "put": {
+        "summary": "修改密码",
+        "deprecated": false,
+        "description": "修改当前用户的密码",
+        "operationId": "changePassword",
+        "tags": [
+          "通用认证"
+        ],
+        "parameters": [
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "oldPassword",
+                  "newPassword"
+                ],
+                "properties": {
+                  "oldPassword": {
+                    "type": "string",
+                    "description": "旧密码",
+                    "example": "123456"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "description": "新密码（至少6位）",
+                    "minLength": 6,
+                    "example": "654321"
+                  }
+                }
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "修改成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "密码修改成功"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "密码修改成功"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "旧密码错误或未登录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/logout": {
+      "post": {
+        "summary": "登出",
+        "deprecated": false,
+        "description": "退出登录，使当前 Token 失效",
+        "operationId": "logout",
+        "tags": [
+          "通用认证"
+        ],
+        "parameters": [
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "description": "可选的空对象"
+              },
+              "example": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登出成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "登出成功"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "message": "登出成功"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "description": "未登录或 Token 已过期",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "identifier",
+          "password"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "用户账号（用户名或手机号）",
+            "example": "user1"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "example": "123456"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "登录成功"
+          },
+          "token": {
+            "type": "string",
+            "description": "JWT Token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjcyNDA4ODNlLTJmN2EtNDhjYy04NDFhLTg3ZGFkNGE1YjMxMiIsInBob25lIjoiMTM4MDAxMzgwMDEiLCJ1c2VyX3R5cGUiOiJ1c2VyIiwiaWF0IjoxNzYxMDU5NDk4LCJleHAiOjE3NjE2NjQyOTh9.2yGWjWHtNsG9PdPwvop7xzALwwKmbCrhmue3ZWOqGlM"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "token",
+          "user"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "用户唯一ID",
+            "example": "7240883e-2f7a-48cc-841a-87dad4a5b312"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号",
+            "nullable": true,
+            "example": "13800138001"
+          },
+          "name": {
+            "type": "string",
+            "description": "用户姓名",
+            "example": "张三"
+          },
+          "user_type": {
+            "type": "string",
+            "description": "用户类型",
+            "enum": [
+              "user",
+              "organizer",
+              "admin"
+            ],
+            "example": "user"
+          },
+          "age": {
+            "type": "integer",
+            "description": "年龄",
+            "nullable": true,
+            "example": 28
+          },
+          "occupation": {
+            "type": "string",
+            "description": "职业",
+            "nullable": true,
+            "example": "产品经理"
+          },
+          "company": {
+            "type": "string",
+            "description": "公司",
+            "nullable": true,
+            "example": "XX科技有限公司"
+          },
+          "tags": {
+            "type": "array",
+            "description": "用户标签",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "户外",
+              "摄影",
+              "旅行"
+            ]
+          },
+          "wechat_qr": {
+            "type": "string",
+            "description": "微信二维码URL",
+            "nullable": true,
+            "example": "https://example.com/qr/user123.jpg"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "user_type",
+          "tags"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "账号或密码错误"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "INVALID_CREDENTIALS"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token 认证"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}

@@ -1,0 +1,301 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "词嵌入模块",
+    "description": "词向量计算、相似度计算、匹配评分等接口",
+    "version": "1.0.0",
+    "contact": {
+      "name": "活动家开发团队",
+      "email": "dev@huodongjia.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "词嵌入计算"
+    }
+  ],
+  "paths": {
+    "/api/embedding/{eventId}/get-embedding": {
+      "post": {
+        "summary": "获取词向量",
+        "deprecated": false,
+        "description": "根据输入的词语获取其词嵌入向量",
+        "operationId": "getWordEmbedding",
+        "tags": [
+          "词嵌入计算"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "word"
+                ],
+                "properties": {
+                  "word": {
+                    "type": "string",
+                    "description": "需要获取词向量的词语",
+                    "example": "开朗"
+                  }
+                },
+                "x-apifox-orders": [
+                  "word"
+                ],
+                "x-apifox-ignore-properties": []
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "embedding": {
+                      "type": "array",
+                      "description": "词向量（通常为100-300维的浮点数数组）",
+                      "items": {
+                        "type": "number"
+                      },
+                      "example": [
+                        0.12,
+                        -0.34,
+                        0.56,
+                        0.78,
+                        -0.23
+                      ]
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "embedding"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "embedding": [
+                    0.12,
+                    -0.34,
+                    0.56,
+                    0.78,
+                    -0.23,
+                    0.45,
+                    -0.67,
+                    0.89,
+                    0.34,
+                    -0.12
+                  ]
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "400": {
+            "description": "词语不在词库中",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "请求有误"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "词嵌入计算",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366709734-run"
+      }
+    },
+    "/{eventId}/calculate": {
+      "get": {
+        "summary": "计算相似度并保存到数据库",
+        "deprecated": false,
+        "description": "为指定活动的所有参与者计算词嵌入向量并保存",
+        "operationId": "calculateEmbedding",
+        "tags": [
+          "词嵌入计算"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "计算成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "词嵌入计算完成"
+                    },
+                    "processed_count": {
+                      "type": "integer",
+                      "description": "已处理的参与者数量",
+                      "example": 48
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "processed_count"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "词嵌入计算完成",
+                  "processed_count": 48
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth3": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "Kx9IkwzmoaMXCiOXLaozS",
+                  "schemeIds": [
+                    "bearerAuth3"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "Kx9IkwzmoaMXCiOXLaozS",
+                "configs": {
+                  "bearerAuth3": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "Kx9IkwzmoaMXCiOXLaozS": {
+                  "bearerAuth3": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "词嵌入计算",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366709735-run"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "词语不在词库中"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "WORD_NOT_FOUND"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ],
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "code"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth3": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token 认证"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}
