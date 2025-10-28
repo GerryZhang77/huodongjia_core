@@ -1,4 +1,74 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="32" height="32" fill="#0A0B0D"/>
-<path d="M26.6677 23.7149H8.38057V20.6496H5.33301V8.38159H26.6677V23.7149ZM8.38057 20.6496H23.6201V11.4482H8.38057V20.6496ZM16.0011 16.0021L13.8461 18.1705L11.6913 16.0021L13.8461 13.8337L16.0011 16.0021ZM22.0963 16.0008L19.9414 18.1691L17.7865 16.0008L19.9414 13.8324L22.0963 16.0008Z" fill="#32F08C"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 背景圆形 -->
+  <circle cx="256" cy="256" r="240" fill="#6366F1" opacity="0.1"/>
+  
+  <!-- 主体设计：三个活力人形连接图标 -->
+  <g transform="translate(256, 256)">
+    
+    <!-- 左侧人形 -->
+    <g transform="translate(-90, -20)">
+      <!-- 头部 -->
+      <circle cx="0" cy="-30" r="28" fill="#FF6B6B">
+        <animate attributeName="r" values="28;30;28" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <!-- 身体 -->
+      <rect x="-18" y="-5" width="36" height="45" rx="18" fill="#FF6B6B"/>
+      <!-- 手臂连接线 -->
+      <rect x="18" y="5" width="40" height="8" rx="4" fill="#FF6B6B" transform="rotate(-20 18 5)"/>
+    </g>
+    
+    <!-- 中间人形 -->
+    <g transform="translate(0, 0)">
+      <!-- 头部 -->
+      <circle cx="0" cy="-30" r="32" fill="#6366F1">
+        <animate attributeName="r" values="32;34;32" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+      </circle>
+      <!-- 身体 -->
+      <rect x="-20" y="-5" width="40" height="50" rx="20" fill="#6366F1"/>
+      <!-- 左手臂 -->
+      <rect x="-60" y="5" width="45" height="8" rx="4" fill="#6366F1" transform="rotate(20 -20 5)"/>
+      <!-- 右手臂 -->
+      <rect x="15" y="5" width="45" height="8" rx="4" fill="#6366F1" transform="rotate(-20 20 5)"/>
+    </g>
+    
+    <!-- 右侧人形 -->
+    <g transform="translate(90, -20)">
+      <!-- 头部 -->
+      <circle cx="0" cy="-30" r="28" fill="#10B981">
+        <animate attributeName="r" values="28;30;28" dur="2s" begin="1s" repeatCount="indefinite"/>
+      </circle>
+      <!-- 身体 -->
+      <rect x="-18" y="-5" width="36" height="45" rx="18" fill="#10B981"/>
+      <!-- 手臂连接线 -->
+      <rect x="-58" y="5" width="40" height="8" rx="4" fill="#10B981" transform="rotate(20 -18 5)"/>
+    </g>
+    
+    <!-- 底部连接弧线 -->
+    <path d="M -90 40 Q 0 80 90 40" stroke="#6366F1" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.6">
+      <animate attributeName="d" values="M -90 40 Q 0 80 90 40;M -90 40 Q 0 85 90 40;M -90 40 Q 0 80 90 40" dur="3s" repeatCount="indefinite"/>
+    </path>
+    
+    <!-- 装饰圆点 -->
+    <circle cx="-120" cy="-60" r="8" fill="#FBBF24" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="120" cy="-60" r="8" fill="#F472B6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.3;0.8" dur="2.5s" begin="0.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="0" cy="-80" r="6" fill="#A78BFA" opacity="0.6">
+      <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2.5s" begin="1.5s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- 连接光晕效果 -->
+    <g opacity="0.3">
+      <circle cx="0" cy="0" r="100" fill="none" stroke="#6366F1" stroke-width="2">
+        <animate attributeName="r" values="100;120;100" dur="4s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.3;0.1;0.3" dur="4s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+  </g>
+  
+  <!-- 外框圆角矩形（可选，增加识别度） -->
+  <rect x="16" y="16" width="480" height="480" rx="80" fill="none" stroke="#6366F1" stroke-width="8" opacity="0.2"/>
 </svg>

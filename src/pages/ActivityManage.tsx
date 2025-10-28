@@ -112,11 +112,18 @@ export const ActivityManage: FC = () => {
         <div className="max-w-4xl mx-auto">
           <Tabs
             activeKey={activeTab}
-            onChange={(key) => setActiveTab(key as TabKey)}
+            onChange={(key) => {
+              // 如果切换到匹配管理，跳转到完整的匹配配置页面
+              if (key === "match") {
+                navigate(`/activity/${id}/matching`);
+              } else {
+                setActiveTab(key as TabKey);
+              }
+            }}
             className="activity-manage-tabs"
           >
             <Tabs.Tab title="报名管理" key="enroll" />
-            <Tabs.Tab title="匹配管理" key="match" disabled />
+            <Tabs.Tab title="匹配管理" key="match" />
           </Tabs>
         </div>
       </div>
@@ -124,13 +131,6 @@ export const ActivityManage: FC = () => {
       {/* Tab 内容区 */}
       <div className="max-w-4xl mx-auto">
         {activeTab === "enroll" && <EnrollmentManageTab activityId={id!} />}
-        {activeTab === "match" && (
-          <div className="px-5 md:px-8 py-12">
-            <div className="text-center text-gray-500">
-              匹配管理功能开发中...
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
