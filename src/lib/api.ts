@@ -2,6 +2,25 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import { findApifoxApiId } from "@/config/apifox-api-ids";
 
 // ========================================
+// 自定义 API 响应类型
+// ========================================
+// 由于响应拦截器返回 response.data，实际返回的是数据本身，不是 AxiosResponse
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface CustomAxiosInstance
+  extends Omit<AxiosInstance, "get" | "post" | "put" | "delete" | "patch"> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get<T = any>(url: string, config?: any): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  post<T = any>(url: string, data?: any, config?: any): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  put<T = any>(url: string, data?: any, config?: any): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delete<T = any>(url: string, config?: any): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  patch<T = any>(url: string, data?: any, config?: any): Promise<T>;
+}
+
+// ========================================
 // 模块路由映射配置
 // ========================================
 // 根据请求路径前缀，路由到对应模块的 Mock URL
@@ -31,6 +50,13 @@ const MODULE_ROUTES = [
     mockUrl: import.meta.env.VITE_EVENT_MOCK_URL,
     name: "活动模块",
   },
+  // 匹配结果发布（最具体的路径，优先匹配）
+  {
+    prefix: "/api/match-groups",
+    pattern: /^\/api\/match-groups/,
+    mockUrl: import.meta.env.VITE_MATCH_RESULT_MOCK_URL,
+    name: "匹配结果发布",
+  },
   // 匹配模块
   {
     prefix: "/api/matching",
@@ -38,10 +64,17 @@ const MODULE_ROUTES = [
     mockUrl: import.meta.env.VITE_MATCHING_MOCK_URL,
     name: "匹配模块",
   },
-  // 词嵌入模块
+  // 规则设置模块 (Phase 2 & 3) - 必须在 /api/match 之前，避免被误匹配
   {
-    prefix: "/api/embeddings",
-    pattern: /^\/api\/embeddings/,
+    prefix: "/api/match-rules",
+    pattern: /^\/api\/match-rules/,
+    mockUrl: import.meta.env.VITE_RULES_MOCK_URL,
+    name: "规则设置模块",
+  },
+  // 词嵌入模块（使用 /api/match/ 路径）
+  {
+    prefix: "/api/match",
+    pattern: /^\/api\/match(?!-rules)/, // 使用负向前瞻，排除 /api/match-rules
     mockUrl: import.meta.env.VITE_EMBEDDING_MOCK_URL,
     name: "词嵌入模块",
   },
@@ -92,12 +125,13 @@ function getBaseURLByPath(path: string): string {
 // ========================================
 // 创建 Axios 实例
 // ========================================
-export const api: AxiosInstance = axios.create({
+// 注意：响应拦截器返回 response.data，所以实际返回类型是数据本身
+export const api = axios.create({
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
   },
-});
+}) as CustomAxiosInstance;
 
 // ========================================
 // 请求拦截器

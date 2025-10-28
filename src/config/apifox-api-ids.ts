@@ -153,8 +153,20 @@ export const MATCHING_API_IDS: ApiEndpoint[] = [
   {
     method: "GET",
     path: "/api/matching/:eventId/extract-keywords",
-    apiId: "366709667",
+    apiId: "368050996",
     description: "提取用户关键词条",
+  },
+  {
+    method: "GET",
+    path: "/api/match-groups/:activityId",
+    apiId: "367384350",
+    description: "获取匹配结果",
+  },
+  {
+    method: "POST",
+    path: "/api/match-groups/:activityId/publish",
+    apiId: "367384351",
+    description: "发布匹配结果",
   },
 ];
 
@@ -163,16 +175,66 @@ export const MATCHING_API_IDS: ApiEndpoint[] = [
 // ========================================
 export const EMBEDDING_API_IDS: ApiEndpoint[] = [
   {
-    method: "POST",
-    path: "/api/embedding/:eventId/get-embedding",
+    method: "GET", // Apifox 上配置的是 GET，不是 POST
+    path: "/api/match/:eventId/get-embedding",
     apiId: "366709734",
     description: "获取词向量",
   },
   {
     method: "GET",
-    path: "/api/embedding/:eventId/calculate",
+    path: "/api/match/:eventId/calculate",
     apiId: "366709735",
     description: "计算相似度并保存到数据库",
+  },
+];
+
+// ========================================
+// 规则设置模块 API ID 映射 (Phase 2 & 3)
+// ========================================
+export const RULES_API_IDS: ApiEndpoint[] = [
+  // Phase 2: 规则设置
+  {
+    method: "POST",
+    path: "/api/match-rules/:activityId/generate",
+    apiId: "367410116",
+    description: "AI 生成匹配规则",
+  },
+  {
+    method: "GET",
+    path: "/api/match-rules/:activityId",
+    apiId: "367410117",
+    description: "获取活动规则列表",
+  },
+  {
+    method: "POST",
+    path: "/api/match-rules/:activityId",
+    apiId: "367410118",
+    description: "批量保存规则配置（创建/更新/删除）",
+  },
+  {
+    method: "GET",
+    path: "/api/match-rules/:activityId/constraints",
+    apiId: "367410119",
+    description: "获取约束条件",
+  },
+  {
+    method: "POST",
+    path: "/api/match-rules/:activityId/constraints",
+    apiId: "367410120",
+    description: "保存约束条件",
+  },
+  // Phase 3: 匹配执行
+  {
+    method: "POST",
+    path: "/api/match-rules/:activityId/execute",
+    apiId: "367410121",
+    description: "执行匹配算法（异步任务）",
+  },
+  {
+    method: "GET",
+    path: "/api/match-rules/task/:taskId",
+    apiId: "367410122",
+    description: "查询匹配任务进度",
   },
 ];
 
@@ -184,6 +246,7 @@ export const ALL_API_IDS: ApiEndpoint[] = [
   ...EVENT_API_IDS,
   ...MATCHING_API_IDS,
   ...EMBEDDING_API_IDS,
+  ...RULES_API_IDS,
 ];
 
 // ========================================
