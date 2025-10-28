@@ -231,7 +231,7 @@ const MatchingResultsTab: React.FC<MatchingResultsTabProps> = ({
 
           {/* 未分组区域 */}
           {ungroupedParticipants.length > 0 && (
-            <div className="space-y-3 mt-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between px-2">
                 <h3 className="text-base font-semibold text-gray-900">
                   ⏳ 未分组成员
@@ -241,52 +241,47 @@ const MatchingResultsTab: React.FC<MatchingResultsTabProps> = ({
                 </span>
               </div>
 
-              <DroppableGroupCard
-                group={{
-                  id: "ungrouped",
-                  name: "未分组",
-                  members: ungroupedParticipants,
-                  score: 0,
-                  reasons: [],
-                  isLocked: false,
-                }}
+              <Card
+                style={
+                  {
+                    borderRadius: "12px",
+                    border: "2px dashed #E5E7EB",
+                  } as React.CSSProperties
+                }
               >
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {ungroupedParticipants.map((member) => (
-                    <div key={member.id} className="relative">
+                    <div key={member.id}>
                       <DraggableMemberCard member={member} isInGroup={false} />
-                      {/* 添加到组按钮 */}
-                      <Button
-                        size="small"
-                        color="primary"
-                        fill="outline"
-                        className="absolute right-2 top-2 rounded-md"
-                        onClick={() => {
-                          setSelectedMember(member);
-                          setShowAddModal(true);
-                        }}
-                        style={{
-                          fontSize: "12px",
-                          padding: "4px 10px",
-                          minHeight: "32px",
-                          minWidth: "80px",
-                        }}
-                      >
-                        <div className="flex items-center gap-1">
-                          <AddOutline fontSize={14} />
-                          <span>添加到组</span>
-                        </div>
-                      </Button>
+                      {/* 优化：按钮放在卡片下方，更明显 */}
+                      <div className="mt-2">
+                        <Button
+                          size="small"
+                          color="primary"
+                          fill="outline"
+                          block
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setShowAddModal(true);
+                          }}
+                          className="rounded-lg h-9"
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <AddOutline fontSize={16} />
+                            <span>添加到分组</span>
+                          </div>
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-3 p-2 bg-yellow-50 rounded text-center">
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg text-center">
                   <p className="text-xs text-gray-600">
-                    💡 提示：拖拽未分组成员到目标分组，或点击"添加到组"按钮
+                    💡 拖拽成员到目标分组，或点击"添加到分组"按钮手动分配
                   </p>
                 </div>
-              </DroppableGroupCard>
+              </Card>
             </div>
           )}
 
@@ -304,45 +299,55 @@ const MatchingResultsTab: React.FC<MatchingResultsTabProps> = ({
           )}
         </div>
 
-        {/* 底部操作栏 (固定) - 响应式设计 */}
+        {/* 底部操作栏 (固定) - 紧凑设计 */}
         {groups.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-10">
             <div className="max-w-4xl mx-auto px-4 md:px-6 py-3">
-              {/* 锁定状态提示 */}
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                <span>
-                  🔒 已锁定: {groups.filter((g) => g.isLocked).length} 个分组
-                </span>
-                <span>
-                  🔓 未锁定: {groups.filter((g) => !g.isLocked).length} 个分组
-                </span>
+              {/* 状态指示器 - 更紧凑 */}
+              <div className="flex items-center justify-center gap-4 mb-2">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <span className="text-xs text-gray-600">
+                    已锁定 {groups.filter((g) => g.isLocked).length}
+                  </span>
+                </div>
+                <div className="w-px h-3 bg-gray-300"></div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="text-xs text-gray-600">
+                    未锁定 {groups.filter((g) => !g.isLocked).length}
+                  </span>
+                </div>
               </div>
 
-              {/* 发布按钮 */}
+              {/* 发布按钮 - 更突出 */}
               <Button
                 color="primary"
                 size="large"
                 block
                 loading={isPublishing}
                 onClick={() => setShowPublishModal(true)}
-                className="rounded-xl h-12 font-semibold"
+                className="rounded-xl h-12 font-semibold shadow-md"
+                style={
+                  {
+                    background: hasPublished
+                      ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
+                      : "linear-gradient(135deg, #4A78FF 0%, #2563EB 100%)",
+                  } as React.CSSProperties
+                }
               >
                 {hasPublished ? (
                   <div className="flex items-center justify-center gap-2">
-                    <CheckOutline />
+                    <CheckOutline fontSize={20} />
                     <span>重新发布结果</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
-                    <CheckOutline />
+                    <CheckOutline fontSize={20} />
                     <span>发布匹配结果</span>
                   </div>
                 )}
               </Button>
-
-              <p className="text-xs text-gray-400 text-center mt-2">
-                发布后将通过站内通知告知参与者分组结果
-              </p>
             </div>
           </div>
         )}

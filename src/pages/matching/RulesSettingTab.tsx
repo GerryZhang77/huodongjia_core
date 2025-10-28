@@ -9,7 +9,7 @@ import {
   Stepper,
   Toast,
 } from "antd-mobile";
-import { StarOutline, AddCircleOutline } from "antd-mobile-icons";
+import { StarOutline, AddCircleOutline, SetOutline } from "antd-mobile-icons";
 import { MatchingRule, MatchConstraints } from "./types";
 import AddCustomRuleModal from "./AddCustomRuleModal";
 
@@ -49,17 +49,6 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
   const totalWeight = rules
     .filter((r) => r.enabled)
     .reduce((sum, r) => sum + r.weight, 0);
-
-  // 计算归一化后的权重
-  const normalizedRules: Array<MatchingRule & { normalizedWeight: number }> =
-    totalWeight > 0
-      ? rules.map((rule) => ({
-          ...rule,
-          normalizedWeight: rule.enabled
-            ? Math.round((rule.weight / totalWeight) * 100)
-            : 0,
-        }))
-      : rules.map((rule) => ({ ...rule, normalizedWeight: 0 }));
 
   // 更新规则权重
   const updateRuleWeight = (ruleId: string, weight: number) => {
@@ -170,19 +159,6 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
       console.warn("[规则设置] ❌ 验证失败：没有启用任何规则");
       Toast.show({
         content: "请至少启用一条匹配规则",
-        icon: "fail",
-        duration: 3000,
-      });
-      console.log("=".repeat(60));
-      return;
-    }
-
-    // 验证权重总和是否为 100
-    if (totalWeight !== 100) {
-      console.warn("[规则设置] ❌ 验证失败：权重总和不为 100");
-      console.warn("[规则设置]   - 当前权重总和:", totalWeight);
-      Toast.show({
-        content: `规则权重总和必须为 100%，当前为 ${totalWeight}%`,
         icon: "fail",
         duration: 3000,
       });
@@ -313,7 +289,13 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
                   </div>
 
                   {rule.enabled && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">权重调整</span>
+                        <span className="text-base font-bold text-primary-500">
+                          {rule.weight}%
+                        </span>
+                      </div>
                       <Slider
                         value={rule.weight}
                         onChange={(value) =>
@@ -322,7 +304,18 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
                         min={0}
                         max={100}
                         step={5}
-                        style={{ "--fill-color": "var(--adm-color-primary)" }}
+                        marks={{
+                          0: "0",
+                          25: "25",
+                          50: "50",
+                          75: "75",
+                          100: "100",
+                        }}
+                        style={
+                          {
+                            "--fill-color": "var(--adm-color-primary)",
+                          } as React.CSSProperties
+                        }
                       />
                       <div className="flex justify-end gap-2">
                         <Button
@@ -330,6 +323,7 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
                           fill="outline"
                           color="danger"
                           onClick={() => deleteRule(rule.id)}
+                          className="rounded-lg"
                         >
                           删除
                         </Button>
@@ -341,30 +335,18 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
 
               {/* 权重总和提示 */}
               {rules.filter((r) => r.enabled).length > 0 && (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-700">
-                      ⚠️ 当前权重总和: {totalWeight}%
-                      {totalWeight !== 100 && (
-                        <span className="text-yellow-600 ml-2">
-                          (将自动归一化为 100%)
-                        </span>
-                      )}
-                    </p>
-                    {totalWeight !== 100 && normalizedRules.length > 0 && (
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div className="font-medium">归一化后的权重分布:</div>
-                        {normalizedRules
-                          .filter((r) => r.enabled)
-                          .map((rule) => (
-                            <div key={rule.id}>
-                              • {rule.name}: {rule.weight}% →{" "}
-                              {rule.normalizedWeight}%
-                            </div>
-                          ))}
-                      </div>
-                    )}
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm text-gray-700">
+                      💡 当前权重总和:{" "}
+                      <span className="font-semibold text-primary-500">
+                        {totalWeight}%
+                      </span>
+                    </span>
                   </div>
+                  <p className="text-xs text-gray-500">
+                    系统会自动按比例归一化权重，无需手动调整到 100%
+                  </p>
                 </div>
               )}
             </div>
@@ -402,17 +384,21 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
         >
           <div className="space-y-4">
             {/* 每组人数 */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-700">每组人数</span>
-                <span className="text-xs text-gray-500">
-                  {constraints.minGroupSize || 3} -{" "}
-                  {constraints.maxGroupSize || 8} 人
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-medium text-gray-900">
+                  👥 每组人数
                 </span>
+                <div className="px-3 py-1 bg-primary-100 rounded-md">
+                  <span className="text-sm font-semibold text-primary-600">
+                    {constraints.minGroupSize || 3} -{" "}
+                    {constraints.maxGroupSize || 8} 人
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="text-xs text-gray-500 mb-1">最小</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">最小人数</div>
                   <Stepper
                     value={constraints.minGroupSize || 3}
                     onChange={(value) =>
@@ -425,8 +411,8 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
                     max={constraints.maxGroupSize || 10}
                   />
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-gray-500 mb-1">最大</div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">最大人数</div>
                   <Stepper
                     value={constraints.maxGroupSize || 8}
                     onChange={(value) =>
@@ -443,17 +429,21 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
             </div>
 
             {/* 性别比例 */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-700">性别比例范围</span>
-                <span className="text-xs text-gray-500">
-                  {constraints.genderRatioMin || 40}% -{" "}
-                  {constraints.genderRatioMax || 60}%
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-medium text-gray-900">
+                  ⚖️ 性别比例
                 </span>
+                <div className="px-3 py-1 bg-secondary-100 rounded-md">
+                  <span className="text-sm font-semibold text-secondary-600">
+                    {constraints.genderRatioMin || 40}% -{" "}
+                    {constraints.genderRatioMax || 60}%
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="text-xs text-gray-500 mb-1">最小</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">最小比例</div>
                   <Stepper
                     value={constraints.genderRatioMin || 40}
                     onChange={(value) =>
@@ -467,8 +457,8 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
                     step={5}
                   />
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-gray-500 mb-1">最大</div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-2">最大比例</div>
                   <Stepper
                     value={constraints.genderRatioMax || 60}
                     onChange={(value) =>
@@ -486,12 +476,16 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
             </div>
 
             {/* 同行业上限 */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-700">同行业最多人数</span>
-                <span className="text-xs text-gray-500">
-                  {constraints.sameIndustryMax || 2} 人
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-medium text-gray-900">
+                  🏢 同行业限制
                 </span>
+                <div className="px-3 py-1 bg-accent-100 rounded-md">
+                  <span className="text-sm font-semibold text-accent-600">
+                    最多 {constraints.sameIndustryMax || 2} 人
+                  </span>
+                </div>
               </div>
               <Stepper
                 value={constraints.sameIndustryMax || 2}
@@ -510,7 +504,7 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
       </div>
 
       {/* 底部操作按钮 - 响应式设计 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-10">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-10">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-3">
           <div className="flex gap-3">
             <Button
@@ -518,16 +512,25 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
               size="large"
               onClick={handleSave}
               disabled={rules.length === 0}
-              className="flex-1 rounded-xl h-11 font-medium"
+              className="flex-1 rounded-xl h-12 font-medium border-2 border-gray-300 hover:border-primary-500 transition-colors"
             >
-              💾 保存规则配置
+              <div className="flex items-center justify-center gap-2">
+                <SetOutline fontSize={18} />
+                <span>保存规则配置</span>
+              </div>
             </Button>
             <Button
               color="primary"
               size="large"
               onClick={handleNext}
               disabled={rules.filter((r) => r.enabled).length === 0}
-              className="flex-1 rounded-xl h-11 font-medium"
+              className="flex-1 rounded-xl h-12 font-semibold shadow-md hover:shadow-lg transition-shadow"
+              style={
+                {
+                  background:
+                    "linear-gradient(135deg, #4A78FF 0%, #2563EB 100%)",
+                } as React.CSSProperties
+              }
             >
               下一步：执行匹配
             </Button>
