@@ -1,0 +1,921 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "匹配结果发布 API",
+    "description": "活动家智能匹配平台 - 匹配结果发布相关接口",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "匹配结果发布"
+    }
+  ],
+  "paths": {
+    "/api/match-groups/{activityId}": {
+      "get": {
+        "summary": "获取匹配结果",
+        "deprecated": false,
+        "description": "获取活动的最新匹配结果，包括所有分组、未分组成员、匹配得分等信息",
+        "tags": [
+          "匹配结果发布"
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "description": "活动 ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "evt_1234567890"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetMatchResultResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "activityId": "evt_1234567890",
+                    "matchedAt": "2025-10-27T09:15:00Z",
+                    "isPublished": false,
+                    "groups": [
+                      {
+                        "groupId": "grp_001",
+                        "groupName": "第1组",
+                        "members": [
+                          {
+                            "enrollmentId": "enr_001",
+                            "name": "张三",
+                            "position": 1,
+                            "avatar": "https://example.com/avatar1.jpg",
+                            "tags": [
+                              "技术",
+                              "创业"
+                            ]
+                          },
+                          {
+                            "enrollmentId": "enr_002",
+                            "name": "李四",
+                            "position": 2,
+                            "avatar": "https://example.com/avatar2.jpg",
+                            "tags": [
+                              "设计",
+                              "产品"
+                            ]
+                          }
+                        ],
+                        "isLocked": false,
+                        "score": 85.5
+                      },
+                      {
+                        "groupId": "grp_002",
+                        "groupName": "第2组",
+                        "members": [
+                          {
+                            "enrollmentId": "enr_004",
+                            "name": "赵六",
+                            "position": 1,
+                            "tags": [
+                              "运营",
+                              "市场"
+                            ]
+                          }
+                        ],
+                        "isLocked": true,
+                        "score": 78.2
+                      }
+                    ],
+                    "ungroupedMembers": [
+                      {
+                        "enrollmentId": "enr_003",
+                        "name": "王五",
+                        "avatar": "https://example.com/avatar3.jpg",
+                        "tags": [
+                          "金融",
+                          "投资"
+                        ]
+                      }
+                    ],
+                    "statistics": {
+                      "totalGroups": 2,
+                      "totalMembers": 3,
+                      "ungroupedCount": 1,
+                      "averageScore": 81.85,
+                      "minScore": 78.2,
+                      "maxScore": 85.5
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "您没有权限查看此活动的匹配结果"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "未认证"
+          },
+          "404": {
+            "description": "匹配结果不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "MATCH_RESULT_NOT_FOUND",
+                    "message": "该活动还没有生成匹配结果"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "未找到"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth5": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "cBG308zjBZvEEq-_tPyt8",
+                  "schemeIds": [
+                    "bearerAuth5"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "cBG308zjBZvEEq-_tPyt8",
+                "configs": {
+                  "bearerAuth5": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "cBG308zjBZvEEq-_tPyt8": {
+                  "bearerAuth5": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "匹配结果发布",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367384350-run"
+      }
+    },
+    "/api/match-groups/{activityId}/publish": {
+      "post": {
+        "summary": "发布匹配结果",
+        "deprecated": false,
+        "description": "将活动的匹配结果正式发布，可选择是否同时发送通知给参与者",
+        "tags": [
+          "匹配结果发布"
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "description": "活动 ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "example": "evt_1234567890"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishMatchResultRequest"
+              },
+              "examples": {
+                "withNotification": {
+                  "value": {
+                    "groups": [
+                      {
+                        "groupId": "grp_001",
+                        "groupName": "第1组",
+                        "members": [
+                          {
+                            "enrollmentId": "enr_001",
+                            "name": "张三",
+                            "position": 1
+                          },
+                          {
+                            "enrollmentId": "enr_002",
+                            "name": "李四",
+                            "position": 2
+                          }
+                        ],
+                        "isLocked": true
+                      }
+                    ],
+                    "ungroupedMembers": [],
+                    "sendNotification": true
+                  },
+                  "summary": "发布并发送通知"
+                },
+                "withoutNotification": {
+                  "value": {
+                    "groups": [
+                      {
+                        "groupId": "grp_001",
+                        "groupName": "第1组",
+                        "members": [
+                          {
+                            "enrollmentId": "enr_001",
+                            "name": "张三",
+                            "position": 1
+                          }
+                        ],
+                        "isLocked": false
+                      }
+                    ],
+                    "ungroupedMembers": [
+                      {
+                        "enrollmentId": "enr_003",
+                        "name": "王五"
+                      }
+                    ],
+                    "sendNotification": false
+                  },
+                  "summary": "仅发布不发送通知"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "发布成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishMatchResultResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "匹配结果已成功发布",
+                  "data": {
+                    "publishedAt": "2025-10-27T10:30:00Z",
+                    "totalGroups": 5,
+                    "totalMembers": 20,
+                    "ungroupedCount": 2,
+                    "notificationsSent": 20
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "2": {
+                    "summary": "分组数据无效",
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_GROUPS",
+                        "message": "分组数据验证失败",
+                        "details": {
+                          "invalidGroupIds": [
+                            "grp_999"
+                          ],
+                          "reason": "部分分组 ID 不存在"
+                        }
+                      }
+                    }
+                  },
+                  "3": {
+                    "summary": "没有有效分组",
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "EMPTY_GROUPS",
+                        "message": "至少需要一个有效分组才能发布"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "请求有误"
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": "您没有权限发布此活动的匹配结果"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "未认证"
+          },
+          "404": {
+            "description": "活动不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACTIVITY_NOT_FOUND",
+                    "message": "指定的活动不存在"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "未找到"
+          },
+          "500": {
+            "description": "服务器内部错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "发布匹配结果时发生错误，请稍后重试"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "服务器内部错误"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth5": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "LkEMwOA7mnn7sEm7zTeqM",
+                  "schemeIds": [
+                    "bearerAuth5"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "LkEMwOA7mnn7sEm7zTeqM",
+                "configs": {
+                  "bearerAuth5": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "LkEMwOA7mnn7sEm7zTeqM": {
+                  "bearerAuth5": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "匹配结果发布",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367384351-run"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GetMatchResultResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "操作是否成功",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "activityId",
+              "groups",
+              "ungroupedMembers"
+            ],
+            "properties": {
+              "activityId": {
+                "type": "string",
+                "description": "活动 ID",
+                "example": "evt_1234567890"
+              },
+              "matchedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "匹配执行时间（ISO 8601 格式）",
+                "example": "2025-10-27T09:15:00Z"
+              },
+              "isPublished": {
+                "type": "boolean",
+                "description": "是否已发布",
+                "default": false
+              },
+              "publishedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "发布时间（如果已发布）",
+                "example": "2025-10-27T10:30:00Z"
+              },
+              "groups": {
+                "type": "array",
+                "description": "所有分组列表",
+                "items": {
+                  "$ref": "#/components/schemas/MatchGroup"
+                }
+              },
+              "ungroupedMembers": {
+                "type": "array",
+                "description": "未分组成员列表",
+                "items": {
+                  "$ref": "#/components/schemas/UngroupedMember"
+                }
+              },
+              "statistics": {
+                "type": "object",
+                "description": "统计信息",
+                "properties": {
+                  "totalGroups": {
+                    "type": "integer",
+                    "description": "总分组数",
+                    "example": 5
+                  },
+                  "totalMembers": {
+                    "type": "integer",
+                    "description": "已分组成员总数",
+                    "example": 20
+                  },
+                  "ungroupedCount": {
+                    "type": "integer",
+                    "description": "未分组成员数量",
+                    "example": 2
+                  },
+                  "averageScore": {
+                    "type": "number",
+                    "description": "平均匹配得分",
+                    "example": 82.5
+                  },
+                  "minScore": {
+                    "type": "number",
+                    "description": "最低匹配得分",
+                    "example": 75
+                  },
+                  "maxScore": {
+                    "type": "number",
+                    "description": "最高匹配得分",
+                    "example": 95
+                  }
+                },
+                "x-apifox-orders": [
+                  "totalGroups",
+                  "totalMembers",
+                  "ungroupedCount",
+                  "averageScore",
+                  "minScore",
+                  "maxScore"
+                ],
+                "x-apifox-ignore-properties": []
+              }
+            },
+            "x-apifox-orders": [
+              "activityId",
+              "matchedAt",
+              "isPublished",
+              "publishedAt",
+              "groups",
+              "ungroupedMembers",
+              "statistics"
+            ],
+            "x-apifox-ignore-properties": []
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "data"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "PublishMatchResultRequest": {
+        "type": "object",
+        "required": [
+          "groups",
+          "sendNotification"
+        ],
+        "properties": {
+          "groups": {
+            "type": "array",
+            "description": "所有分组信息（包括锁定和未锁定的）",
+            "items": {
+              "$ref": "#/components/schemas/MatchGroup"
+            },
+            "minItems": 1
+          },
+          "ungroupedMembers": {
+            "type": "array",
+            "description": "未分组的成员列表",
+            "items": {
+              "$ref": "#/components/schemas/UngroupedMember"
+            },
+            "default": []
+          },
+          "sendNotification": {
+            "type": "boolean",
+            "description": "是否发送通知给参与者",
+            "default": false
+          }
+        },
+        "x-apifox-orders": [
+          "groups",
+          "ungroupedMembers",
+          "sendNotification"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "PublishMatchResultResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "message",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "操作是否成功",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "匹配结果已成功发布"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "publishedAt",
+              "totalGroups",
+              "totalMembers"
+            ],
+            "properties": {
+              "publishedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "发布时间（ISO 8601 格式）",
+                "example": "2025-10-27T10:30:00Z"
+              },
+              "totalGroups": {
+                "type": "integer",
+                "description": "总分组数",
+                "minimum": 0,
+                "example": 5
+              },
+              "totalMembers": {
+                "type": "integer",
+                "description": "已分组成员总数",
+                "minimum": 0,
+                "example": 20
+              },
+              "ungroupedCount": {
+                "type": "integer",
+                "description": "未分组成员数量",
+                "minimum": 0,
+                "example": 2
+              },
+              "notificationsSent": {
+                "type": "integer",
+                "description": "已发送的通知数量（如果 sendNotification 为 true）",
+                "minimum": 0,
+                "example": 20
+              }
+            },
+            "x-apifox-orders": [
+              "publishedAt",
+              "totalGroups",
+              "totalMembers",
+              "ungroupedCount",
+              "notificationsSent"
+            ],
+            "x-apifox-ignore-properties": []
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "data"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "MatchGroup": {
+        "type": "object",
+        "required": [
+          "groupId",
+          "groupName",
+          "members",
+          "isLocked"
+        ],
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "description": "分组唯一标识",
+            "example": "grp_001"
+          },
+          "groupName": {
+            "type": "string",
+            "description": "分组名称",
+            "maxLength": 50,
+            "example": "第1组"
+          },
+          "members": {
+            "type": "array",
+            "description": "组内成员列表",
+            "items": {
+              "$ref": "#/components/schemas/GroupMember"
+            },
+            "minItems": 1
+          },
+          "isLocked": {
+            "type": "boolean",
+            "description": "是否锁定该分组（锁定后重新匹配时不会改变）",
+            "default": false
+          },
+          "score": {
+            "type": "number",
+            "description": "匹配得分（0-100）",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 85.5
+          }
+        },
+        "x-apifox-orders": [
+          "groupId",
+          "groupName",
+          "members",
+          "isLocked",
+          "score"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "GroupMember": {
+        "type": "object",
+        "required": [
+          "enrollmentId",
+          "name"
+        ],
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "description": "报名记录 ID",
+            "example": "enr_001"
+          },
+          "name": {
+            "type": "string",
+            "description": "成员姓名",
+            "maxLength": 100,
+            "example": "张三"
+          },
+          "position": {
+            "type": "integer",
+            "description": "在组内的位置（用于排序）",
+            "minimum": 1,
+            "example": 1
+          },
+          "avatar": {
+            "type": "string",
+            "format": "uri",
+            "description": "成员头像 URL",
+            "example": "https://example.com/avatar.jpg"
+          },
+          "tags": {
+            "type": "array",
+            "description": "成员标签",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "技术",
+              "创业"
+            ]
+          }
+        },
+        "x-apifox-orders": [
+          "enrollmentId",
+          "name",
+          "position",
+          "avatar",
+          "tags"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "UngroupedMember": {
+        "type": "object",
+        "required": [
+          "enrollmentId",
+          "name"
+        ],
+        "properties": {
+          "enrollmentId": {
+            "type": "string",
+            "description": "报名记录 ID",
+            "example": "enr_003"
+          },
+          "name": {
+            "type": "string",
+            "description": "成员姓名",
+            "maxLength": 100,
+            "example": "王五"
+          },
+          "avatar": {
+            "type": "string",
+            "format": "uri",
+            "description": "成员头像 URL",
+            "example": "https://example.com/avatar.jpg"
+          },
+          "tags": {
+            "type": "array",
+            "description": "成员标签",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "设计",
+              "产品"
+            ]
+          }
+        },
+        "x-apifox-orders": [
+          "enrollmentId",
+          "name",
+          "avatar",
+          "tags"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "error"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "操作是否成功",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "错误代码",
+                "enum": [
+                  "INVALID_GROUPS",
+                  "EMPTY_GROUPS",
+                  "UNAUTHORIZED",
+                  "ACTIVITY_NOT_FOUND",
+                  "MATCH_RESULT_NOT_FOUND",
+                  "INTERNAL_SERVER_ERROR"
+                ],
+                "example": "INVALID_GROUPS"
+              },
+              "message": {
+                "type": "string",
+                "description": "错误描述信息",
+                "example": "分组数据验证失败"
+              },
+              "details": {
+                "type": "object",
+                "description": "详细错误信息（可选）",
+                "additionalProperties": true,
+                "x-apifox-orders": [],
+                "properties": {},
+                "x-apifox-ignore-properties": []
+              }
+            },
+            "x-apifox-orders": [
+              "code",
+              "message",
+              "details"
+            ],
+            "x-apifox-ignore-properties": []
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "error"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth5": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "使用 JWT Token 进行身份验证。格式: Authorization: Bearer <token>"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}

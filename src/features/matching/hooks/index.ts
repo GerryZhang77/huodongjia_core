@@ -5,3 +5,4 @@
 export * from "./useMatchRules";
 export * from "./useGenerateRules";
 export * from "./useExecuteMatching";
+export * from "./useMatchResult";

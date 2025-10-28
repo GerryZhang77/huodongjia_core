@@ -12,6 +12,9 @@
   "tags": [
     {
       "name": "关键词提取"
+    },
+    {
+      "name": "匹配结果发布"
     }
   ],
   "paths": {
@@ -21,9 +24,7 @@
         "deprecated": false,
         "description": "从参与者的个人信息、兴趣爱好等字段中提取关键词",
         "operationId": "extractKeywords",
-        "tags": [
-          "关键词提取"
-        ],
+        "tags": ["关键词提取"],
         "parameters": [
           {
             "name": "eventId",
@@ -77,45 +78,21 @@
                       "properties": {},
                       "x-apifox-ignore-properties": [],
                       "example": {
-                        "user_001": [
-                          "户外",
-                          "摄影",
-                          "徒步"
-                        ],
-                        "user_002": [
-                          "音乐",
-                          "阅读",
-                          "咖啡"
-                        ]
+                        "user_001": ["户外", "摄影", "徒步"],
+                        "user_002": ["音乐", "阅读", "咖啡"]
                       }
                     }
                   },
-                  "x-apifox-orders": [
-                    "success",
-                    "message",
-                    "keywords"
-                  ],
+                  "x-apifox-orders": ["success", "message", "keywords"],
                   "x-apifox-ignore-properties": []
                 },
                 "example": {
                   "success": true,
                   "message": "关键词提取成功",
                   "keywords": {
-                    "user_001": [
-                      "户外",
-                      "摄影",
-                      "徒步"
-                    ],
-                    "user_002": [
-                      "音乐",
-                      "阅读",
-                      "咖啡"
-                    ],
-                    "user_003": [
-                      "运动",
-                      "健身",
-                      "篮球"
-                    ]
+                    "user_001": ["户外", "摄影", "徒步"],
+                    "user_002": ["音乐", "阅读", "咖啡"],
+                    "user_003": ["运动", "健身", "篮球"]
                   }
                 }
               }
@@ -151,15 +128,8 @@
             "example": "NOT_FOUND"
           }
         },
-        "required": [
-          "success",
-          "message"
-        ],
-        "x-apifox-orders": [
-          "success",
-          "message",
-          "code"
-        ],
+        "required": ["success", "message"],
+        "x-apifox-orders": ["success", "message", "code"],
         "x-apifox-ignore-properties": [],
         "x-apifox-folder": "Schemas"
       }
