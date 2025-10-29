@@ -12,6 +12,11 @@ import {
   useDeleteActivity,
 } from "@/features/activities/hooks/useActivities";
 import { DashboardActivityCard } from "@/features/activities/components/DashboardActivityCard";
+import {
+  demoActivity,
+  isDemoMode,
+  isDemoActivity,
+} from "@/mocks/demo-activity";
 
 /**
  * Dashboard 页面组件
@@ -21,6 +26,9 @@ export const Dashboard: FC = () => {
   const { data, isLoading, error, refetch } = useActivities();
   const { deleteActivity, isDeleting } = useDeleteActivity();
 
+  // 演示模式控制
+  const showDemoMode = isDemoMode();
+
   // 处理操作
   const handleEdit = (id: string) => {
     navigate(`/activity-edit/${id}`);
@@ -28,6 +36,15 @@ export const Dashboard: FC = () => {
 
   const handleManageEnroll = (id: string) => {
     navigate(`/activity-manage/${id}`);
+  };
+
+  const handleViewDetail = (id: string) => {
+    // 演示活动路由到预览详情页
+    if (isDemoActivity(id)) {
+      navigate(`/activity/preview/${id}`);
+    } else {
+      navigate(`/activity-detail/${id}`);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -46,8 +63,8 @@ export const Dashboard: FC = () => {
     deleteActivity(id, activity.title);
   };
 
-  // 加载态
-  if (isLoading) {
+  // 加载态 - 演示模式下跳过加载提示
+  if (isLoading && !showDemoMode) {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* 头部骨架屏 */}
@@ -70,8 +87,8 @@ export const Dashboard: FC = () => {
     );
   }
 
-  // 错误态
-  if (error) {
+  // 错误态 - 演示模式下跳过错误提示
+  if (error && !showDemoMode) {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* 简化头部 */}
@@ -101,7 +118,11 @@ export const Dashboard: FC = () => {
     );
   }
 
-  const activities = data?.activities || [];
+  // 合并真实活动和演示活动
+  const realActivities = data?.activities || [];
+  const activities = showDemoMode
+    ? [demoActivity] // 演示模式：只显示演示活动
+    : realActivities; // 正常模式：显示真实活动
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -188,6 +209,7 @@ export const Dashboard: FC = () => {
                     onEdit={() => handleEdit(activity.id)}
                     onManageEnroll={() => handleManageEnroll(activity.id)}
                     onDelete={() => void handleDelete(activity.id)}
+                    onViewDetail={() => handleViewDetail(activity.id)}
                   />
                 </div>
               ))}

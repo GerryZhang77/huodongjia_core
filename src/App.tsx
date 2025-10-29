@@ -12,6 +12,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import ActivityDetail from "./pages/ActivityDetail";
+import ActivityDetailTemp from "./pages/ActivityDetailTemp";
 import ActivityCreate from "./pages/ActivityCreate";
 import ActivityEdit from "./pages/ActivityEdit";
 import { ActivityManage } from "./pages/ActivityManage";
@@ -55,6 +56,15 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ActivityDetail />
+                  </ProtectedRoute>
+                }
+              />
+              {/* 活动详情页 - 预览版本 */}
+              <Route
+                path="/activity/preview/:id"
+                element={
+                  <ProtectedRoute>
+                    <ActivityDetailTemp />
                   </ProtectedRoute>
                 }
               />

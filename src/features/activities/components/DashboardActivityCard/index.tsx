@@ -9,6 +9,7 @@ import {
   EditSOutline,
   UserContactOutline,
   DeleteOutline,
+  EyeOutline,
 } from "antd-mobile-icons";
 import type { Activity } from "../../types";
 import {
@@ -17,6 +18,7 @@ import {
   formatRelativeTime,
   canDeleteActivity,
 } from "../../utils";
+import { isDemoActivity } from "@/mocks/demo-activity";
 
 /**
  * 组件 Props
@@ -26,6 +28,7 @@ export interface DashboardActivityCardProps {
   onEdit: (id: string) => void;
   onManageEnroll: (id: string) => void;
   onDelete: (id: string) => void;
+  onViewDetail?: (id: string) => void; // 新增：查看详情回调
 }
 
 /**
@@ -36,10 +39,12 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
   onEdit,
   onManageEnroll,
   onDelete,
+  onViewDetail,
 }) => {
   const statusInfo = getStatusInfo(activity.status);
   const isFull = activity.enrolledCount >= activity.capacity;
   const canDelete = canDeleteActivity(activity.enrolledCount);
+  const isDemo = isDemoActivity(activity.id);
 
   return (
     <Card
@@ -147,44 +152,74 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
         </div>
 
         {/* 操作按钮组 */}
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            className="flex items-center justify-center gap-1 rounded-lg bg-primary-500/10 text-primary-600 border-0 hover:bg-primary-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(activity.id);
-            }}
-          >
-            <EditSOutline fontSize={14} />
-            <span>编辑</span>
-          </button>
+        <div className={`grid ${isDemo ? "grid-cols-2" : "grid-cols-3"} gap-2`}>
+          {/* 演示活动：显示详情和管理按钮 */}
+          {isDemo ? (
+            <>
+              <button
+                className="flex items-center justify-center gap-1 rounded-lg bg-success-500/10 text-success-600 border-0 hover:bg-success-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewDetail?.(activity.id);
+                }}
+              >
+                <EyeOutline fontSize={14} />
+                <span>查看详情</span>
+              </button>
 
-          <button
-            className="flex items-center justify-center gap-1 rounded-lg bg-accent-500/10 text-accent-600 border-0 hover:bg-accent-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              onManageEnroll(activity.id);
-            }}
-          >
-            <UserContactOutline fontSize={14} />
-            <span>管理</span>
-          </button>
+              <button
+                className="flex items-center justify-center gap-1 rounded-lg bg-accent-500/10 text-accent-600 border-0 hover:bg-accent-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onManageEnroll(activity.id);
+                }}
+              >
+                <UserContactOutline fontSize={14} />
+                <span>管理</span>
+              </button>
+            </>
+          ) : (
+            <>
+              {/* 正常活动：显示编辑、管理、删除按钮 */}
+              <button
+                className="flex items-center justify-center gap-1 rounded-lg bg-primary-500/10 text-primary-600 border-0 hover:bg-primary-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(activity.id);
+                }}
+              >
+                <EditSOutline fontSize={14} />
+                <span>编辑</span>
+              </button>
 
-          <button
-            disabled={!canDelete}
-            className={`flex items-center justify-center gap-1 rounded-lg transition-all duration-150 h-8 font-medium text-sm px-2 border-0 ${
-              !canDelete
-                ? "bg-gray-200 text-gray-600 cursor-not-allowed"
-                : "bg-error-50 text-error-600 hover:bg-error-100"
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(activity.id);
-            }}
-          >
-            <DeleteOutline fontSize={14} />
-            <span>删除</span>
-          </button>
+              <button
+                className="flex items-center justify-center gap-1 rounded-lg bg-accent-500/10 text-accent-600 border-0 hover:bg-accent-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onManageEnroll(activity.id);
+                }}
+              >
+                <UserContactOutline fontSize={14} />
+                <span>管理</span>
+              </button>
+
+              <button
+                disabled={!canDelete}
+                className={`flex items-center justify-center gap-1 rounded-lg transition-all duration-150 h-8 font-medium text-sm px-2 border-0 ${
+                  !canDelete
+                    ? "bg-gray-200 text-gray-600 cursor-not-allowed"
+                    : "bg-error-50 text-error-600 hover:bg-error-100"
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(activity.id);
+                }}
+              >
+                <DeleteOutline fontSize={14} />
+                <span>删除</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </Card>
