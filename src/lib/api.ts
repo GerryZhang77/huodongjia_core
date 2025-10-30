@@ -42,6 +42,13 @@ const MODULE_ROUTES = [
     mockUrl: import.meta.env.VITE_AUTH_MOCK_URL,
     name: "认证模块",
   },
+  // 文件上传模块
+  {
+    prefix: "/api/file",
+    pattern: /^\/api\/file/,
+    mockUrl: import.meta.env.VITE_FILE_MOCK_URL,
+    name: "文件上传模块",
+  },
   // 活动模块（包含批量导入、报名列表等接口）
   // 在"活动管理模块"中
   {
@@ -67,14 +74,14 @@ const MODULE_ROUTES = [
   // 规则设置模块 (Phase 2 & 3) - 必须在 /api/match 之前，避免被误匹配
   {
     prefix: "/api/match-rules",
-    pattern: /^\/api\/match-rules/,
+    pattern: /^\/api\/match(-rules|\/[^/]+\/(generate|execute))/, // 匹配 /api/match-rules 和 /api/match/:id/generate|execute
     mockUrl: import.meta.env.VITE_RULES_MOCK_URL,
     name: "规则设置模块",
   },
   // 词嵌入模块（使用 /api/match/ 路径）
   {
     prefix: "/api/match",
-    pattern: /^\/api\/match(?!-rules)/, // 使用负向前瞻，排除 /api/match-rules
+    pattern: /^\/api\/match\/[^/]+\/(get-embedding|calculate)/, // 只匹配词嵌入相关接口
     mockUrl: import.meta.env.VITE_EMBEDDING_MOCK_URL,
     name: "词嵌入模块",
   },

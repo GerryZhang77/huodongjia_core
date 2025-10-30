@@ -602,6 +602,16 @@
               "type": "string",
               "default": "{{apifoxToken}}"
             }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "",
+            "required": false,
+            "example": "{{orgToken}}",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -611,16 +621,16 @@
                 "$ref": "#/components/schemas/CreateEventRequest"
               },
               "example": {
-                "title": "周末户外活动",
-                "description": "一起去爬山",
+                "title": "跨部门联谊",
+                "description": "部门之间游玩交流",
                 "start_time": "2025-11-01T09:00:00Z",
                 "end_time": "2025-11-01T17:00:00Z",
-                "location": "香山公园",
-                "max_participants": 50,
+                "location": "学校操场",
+                "max_participants": 100,
                 "fee": 0,
                 "tags": [
                   "户外",
-                  "运动"
+                  "交友"
                 ],
                 "registration_deadline": "2025-10-30T23:59:59Z"
               }
@@ -673,39 +683,7 @@
             "headers": {}
           }
         },
-        "security": [
-          {
-            "bearerAuth11": [],
-            "x-apifox": {
-              "schemeGroups": [
-                {
-                  "id": "_L5eP3NZk3bwIrnRtQ-SA",
-                  "schemeIds": [
-                    "bearerAuth11"
-                  ]
-                }
-              ],
-              "required": true,
-              "use": {
-                "id": "_L5eP3NZk3bwIrnRtQ-SA",
-                "configs": {
-                  "bearerAuth11": {
-                    "authConfigs": {
-                      "x-apifox": {
-                        "token": "{{bearerToken}}"
-                      }
-                    }
-                  }
-                }
-              },
-              "scopes": {
-                "_L5eP3NZk3bwIrnRtQ-SA": {
-                  "bearerAuth11": []
-                }
-              }
-            }
-          }
-        ],
+        "security": [],
         "x-apifox-folder": "活动管理",
         "x-apifox-status": "released",
         "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698241-run"
@@ -715,7 +693,7 @@
       "post": {
         "summary": "根据用户映射关系保存报名信息",
         "deprecated": false,
-        "description": "需要先调用”提取报名表表头“接口，前端才能渲染表格供用户设置映射关系",
+        "description": "需要前端先调用上传文件接口，调用本接口时传递文件位置和表头到数据库字段的映射关系",
         "tags": [
           "报名管理"
         ],
@@ -725,7 +703,7 @@
             "in": "path",
             "description": "",
             "required": true,
-            "example": "{{eventId}}",
+            "example": "8e7801b0-5afd-48bc-9095-6edcc31b2c1e",
             "schema": {
               "type": "string"
             }
@@ -752,7 +730,7 @@
                 "x-apifox-ignore-properties": []
               },
               "example": {
-                "filePath": "D:\\huodongjia\\uploads\\file-1761383941080-391176227.xlsx",
+                "filePath": "D:\\huodongjia\\uploads\\file-1761569823011-727370879.xlsx",
                 "map_info": {
                   "user": "name",
                   "专业": "occupation",
@@ -843,9 +821,7 @@
         "x-apifox-folder": "报名管理",
         "x-apifox-status": "developing",
         "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366773774-run"
-      }
-    },
-    "/{eventId}/participants": {
+      },
       "get": {
         "summary": "商家获取特定活动报名信息",
         "deprecated": false,
@@ -1131,7 +1107,7 @@
           }
         ],
         "x-apifox-folder": "报名管理",
-        "x-apifox-status": "designing",
+        "x-apifox-status": "released",
         "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367265652-run"
       }
     },
@@ -1399,13 +1375,13 @@
           }
         ],
         "x-apifox-folder": "报名管理",
-        "x-apifox-status": "designing",
+        "x-apifox-status": "released",
         "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367265653-run"
       }
     },
-    "/api/events/{eventId}/match-rules": {
-      "get": {
-        "summary": "提取匹配规则",
+    "/{eventId}/match-rules": {
+      "post": {
+        "summary": "提取匹配规则（废弃）",
         "deprecated": false,
         "description": "根据活动期望自动生成智能匹配规则",
         "operationId": "generateMatchRules",
@@ -1418,7 +1394,7 @@
             "in": "path",
             "description": "活动ID",
             "required": true,
-            "example": "",
+            "example": "8e7801b0-5afd-48bc-9095-6edcc31b2c1e",
             "schema": {
               "type": "string",
               "format": "uuid",
@@ -1435,8 +1411,33 @@
               "type": "string",
               "default": "{{apifoxToken}}"
             }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "",
+            "required": false,
+            "example": "{{orgToken}}",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "x-apifox-ignore-properties": [],
+                "x-apifox-orders": []
+              },
+              "example": {
+                "expectation": "我正在举办一个学生会跨部门联谊活动，希望匹配双方兴趣相似，年级相符（都为本科/硕士），性别相同"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "x-apifox-name": "成功",
@@ -1479,47 +1480,15 @@
             "headers": {}
           }
         },
-        "security": [
-          {
-            "bearerAuth11": [],
-            "x-apifox": {
-              "schemeGroups": [
-                {
-                  "id": "egesoD5pVudrZvUeoUsc2",
-                  "schemeIds": [
-                    "bearerAuth11"
-                  ]
-                }
-              ],
-              "required": true,
-              "use": {
-                "id": "egesoD5pVudrZvUeoUsc2",
-                "configs": {
-                  "bearerAuth11": {
-                    "authConfigs": {
-                      "x-apifox": {
-                        "token": "{{bearerToken}}"
-                      }
-                    }
-                  }
-                }
-              },
-              "scopes": {
-                "egesoD5pVudrZvUeoUsc2": {
-                  "bearerAuth11": []
-                }
-              }
-            }
-          }
-        ],
+        "security": [],
         "x-apifox-folder": "数据提取",
         "x-apifox-status": "released",
         "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366698243-run"
       }
     },
-    "/api/events/extract-headers": {
+    "/extract-headers": {
       "post": {
-        "summary": "提取报名表表头",
+        "summary": "提取报名表表头（用不到）",
         "deprecated": false,
         "description": "从上传的Excel文件中提取表头信息",
         "operationId": "extractFormHeaders",
@@ -1558,6 +1527,9 @@
                   "filePath"
                 ],
                 "x-apifox-ignore-properties": []
+              },
+              "example": {
+                "filePath": "D:\\huodongjia\\uploads\\file-1761569823011-727370879.xlsx"
               }
             }
           },
@@ -1627,7 +1599,7 @@
     },
     "/api/events/upload-image": {
       "post": {
-        "summary": "上传活动封面图片",
+        "summary": "上传活动封面图片（暂时前端硬编码图片）",
         "deprecated": false,
         "description": "上传活动封面图片，支持 jpg、png、gif 格式，最大 5MB",
         "operationId": "uploadActivityCoverImage",
@@ -1662,7 +1634,8 @@
                 "required": [
                   "file"
                 ]
-              }
+              },
+              "examples": {}
             }
           },
           "required": true

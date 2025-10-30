@@ -107,6 +107,51 @@ export interface BatchImportEnrollmentsResponse {
   message?: string;
 }
 
+// ========================================
+// 新导入流程类型定义
+// ========================================
+
+/**
+ * 文件上传响应
+ * 注意：根据 OpenAPI 规范，响应是扁平结构，不是嵌套的 data 对象
+ */
+export interface FileUploadResponse {
+  success: boolean;
+  filename: string; // 服务端生成的文件名
+  originalname: string; // 原始文件名
+  size: number; // 文件大小（字节）
+  path: string; // 服务端文件路径（关键字段）
+  message: string;
+}
+
+/**
+ * 参与者导入请求（新流程：先上传文件，再提交映射）
+ */
+export interface CreateParticipantsRequest {
+  filepath: string; // 服务端文件路径
+  fieldMapping: Record<string, string>; // 字段映射：{ "Excel列名": "字段名" }
+}
+
+/**
+ * 参与者导入响应
+ */
+export interface CreateParticipantsResponse {
+  success: boolean;
+  data: {
+    total: number; // 总记录数
+    imported: number; // 成功导入数
+    failed: number; // 失败数
+    errors?: Array<{
+      // 错误详情
+      row: number; // 行号
+      name?: string; // 姓名
+      reason: string; // 失败原因
+      field?: string; // 问题字段
+    }>;
+  };
+  message: string;
+}
+
 /**
  * 更新报名状态请求
  */

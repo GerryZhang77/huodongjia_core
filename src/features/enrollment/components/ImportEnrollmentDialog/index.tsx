@@ -2,8 +2,7 @@ import { FC, useState } from "react";
 import { Dialog, Steps, Toast } from "antd-mobile";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-import { batchImportEnrollments } from "../../services/enrollmentApi";
-import type { EnrollmentInput } from "../../types";
+import { useFileUpload, useCreateParticipants } from "../../hooks";
 import "./index.css";
 
 interface ImportEnrollmentDialogProps {
@@ -74,9 +73,10 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
 }) => {
   const [step, setStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
+  const [filepath, setFilepath] = useState<string>(""); // 服务端文件路径
+  const [filename, setFilename] = useState<string>(""); // 原始文件名
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [fieldMapping, setFieldMapping] = useState<FieldMapping[]>([]);
-  const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     total: number;
     imported: number;
@@ -84,13 +84,19 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
     errors: ImportError[];
   } | null>(null);
 
+  // 使用新的 Hooks
+  const { mutateAsync: uploadFile, isPending: isUploading } = useFileUpload();
+  const { mutateAsync: createParticipants, isPending: isImporting } =
+    useCreateParticipants(activityId);
+
   // 重置状态
   const handleReset = () => {
     setStep(0);
     setFile(null);
+    setFilepath("");
+    setFilename("");
     setPreviewData(null);
     setFieldMapping([]);
-    setImporting(false);
     setImportResult(null);
   };
 
@@ -100,8 +106,8 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
     onClose();
   };
 
-  // 文件选择
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 文件选择 → 立即上传
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -127,11 +133,42 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
     }
 
     setFile(selectedFile);
-    parseFile(selectedFile);
+
+    try {
+      // 【新流程】立即上传到服务器
+      const uploadResponse = await uploadFile(selectedFile);
+
+      console.log("上传响应完整数据:", uploadResponse);
+
+      // 验证响应数据（扁平结构）
+      if (!uploadResponse?.path) {
+        throw new Error("上传响应数据格式错误：缺少 path 字段");
+      }
+
+      // 保存服务端文件路径
+      setFilepath(uploadResponse.path); // 使用 path 字段
+      setFilename(uploadResponse.originalname || selectedFile.name);
+
+      Toast.show({
+        icon: "success",
+        content: "文件上传成功",
+        duration: 1500,
+      });
+
+      // 本地解析预览（前端读取）
+      await parseFileForPreview(selectedFile);
+    } catch (error) {
+      console.error("文件上传失败:", error);
+      Toast.show({
+        icon: "fail",
+        content: error instanceof Error ? error.message : "文件上传失败",
+      });
+      setFile(null);
+    }
   };
 
-  // 解析文件
-  const parseFile = async (file: File) => {
+  // 解析文件（仅用于预览）
+  const parseFileForPreview = async (file: File) => {
     try {
       const fileExt = file.name.substring(file.name.lastIndexOf("."));
       let data: PreviewData;
@@ -335,94 +372,58 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
     setStep(step - 1);
   };
 
-  // 执行导入
+  // 执行导入（新流程：提交字段映射和服务端文件路径）
   const handleImport = async () => {
-    if (!previewData || !fieldMapping) return;
+    if (!previewData || !fieldMapping || !filepath) return;
 
-    setImporting(true);
     setStep(3); // 进入导入中状态
 
     try {
-      // 将预览数据转换为 EnrollmentInput 格式
-      const enrollments: EnrollmentInput[] = previewData.rows.map((row) => {
-        const enrollment: EnrollmentInput = {
-          name: "", // 必填字段
-        };
-
-        // 根据字段映射填充数据
-        fieldMapping.forEach((mapping) => {
-          const value = row[mapping.sourceField];
-
-          // 跳过空值
-          if (value === undefined || value === null || value === "") return;
-
-          // 处理标准字段
-          if (mapping.targetField === "name") {
-            enrollment.name = String(value);
-          } else if (mapping.targetField === "gender") {
-            enrollment.gender = String(value) as "male" | "female" | "other";
-          } else if (mapping.targetField === "age") {
-            enrollment.age = Number(value);
-          } else if (mapping.targetField === "phone") {
-            enrollment.phone = String(value);
-          } else if (mapping.targetField === "email") {
-            enrollment.email = String(value);
-          } else if (mapping.targetField === "occupation") {
-            enrollment.occupation = String(value);
-          } else if (mapping.targetField === "company") {
-            enrollment.company = String(value);
-          } else if (mapping.targetField === "industry") {
-            enrollment.industry = String(value);
-          } else if (mapping.targetField === "city") {
-            enrollment.city = String(value);
-          } else if (mapping.targetField.startsWith("_custom_")) {
-            // 处理自定义字段
-            if (!enrollment.customFields) {
-              enrollment.customFields = {};
-            }
-            // 使用原始列名作为键
-            enrollment.customFields[mapping.sourceField] = value;
-          }
-        });
-
-        return enrollment;
+      // 【新流程】构建字段映射对象：{ "Excel列名": "字段名" }
+      const mappingObject: Record<string, string> = {};
+      fieldMapping.forEach((mapping) => {
+        if (mapping.targetField && mapping.targetField !== "") {
+          mappingObject[mapping.sourceField] = mapping.targetField;
+        }
       });
 
-      // 调用批量导入 API
-      const response = await batchImportEnrollments(activityId, enrollments);
+      // 提交字段映射和文件路径
+      const response = await createParticipants({
+        filepath,
+        fieldMapping: mappingObject,
+      });
 
       // 设置导入结果
       const result = {
-        total: previewData.total,
-        imported: response.successCount,
-        failed: response.failedCount,
+        total: response.data.total,
+        imported: response.data.imported,
+        failed: response.data.failed,
         errors:
-          response.errors?.map((error) => ({
-            row: error.index,
+          response.data.errors?.map((error) => ({
+            row: error.row,
             field: error.field || "unknown",
-            value: error.name,
+            value: error.name || "N/A",
             reason: error.reason,
           })) || [],
       };
 
       setImportResult(result);
 
-      if (response.success) {
-        Toast.show({
-          icon: "success",
-          content: `成功导入 ${response.successCount} 条数据${
-            response.failedCount > 0 ? `，${response.failedCount} 条失败` : ""
-          }`,
-        });
+      Toast.show({
+        icon: "success",
+        content: `成功导入 ${response.data.imported} 条数据${
+          response.data.failed > 0 ? `，${response.data.failed} 条失败` : ""
+        }`,
+        duration: 2000,
+      });
 
-        // 通知父组件刷新
-        onSuccess();
-      } else {
-        Toast.show({
-          icon: "fail",
-          content: response.message || "部分数据导入失败",
-        });
-      }
+      // 通知父组件刷新（Hook 会自动刷新缓存）
+      onSuccess();
+
+      // 延迟关闭弹窗
+      setTimeout(() => {
+        handleClose();
+      }, 2000);
     } catch (error) {
       console.error("导入失败:", error);
       Toast.show({
@@ -445,8 +446,11 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
           },
         ],
       });
-    } finally {
-      setImporting(false);
+
+      // 返回映射步骤，允许重新导入
+      setTimeout(() => {
+        setStep(2);
+      }, 2000);
     }
   };
 
@@ -456,24 +460,33 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
       case 0:
         return (
           <div className="import-step import-step-upload">
-            <div className="upload-area">
-              <input
-                type="file"
-                accept={ACCEPTED_FORMATS.join(",")}
-                onChange={handleFileChange}
-                style={{ display: "none" }}
-                id="file-input"
-              />
-              <label htmlFor="file-input" className="upload-label">
-                <div className="upload-icon">📁</div>
-                <div className="upload-text">
-                  {file ? file.name : "点击选择文件或拖拽文件到此处"}
+            {isUploading ? (
+              <div className="uploading">
+                <div className="loading-spinner"></div>
+                <div className="uploading-text">
+                  正在上传文件{filename && `: ${filename}`}...
                 </div>
-                <div className="upload-hint">
-                  支持格式: {ACCEPTED_FORMATS.join(", ")} (最大 5MB)
-                </div>
-              </label>
-            </div>
+              </div>
+            ) : (
+              <div className="upload-area">
+                <input
+                  type="file"
+                  accept={ACCEPTED_FORMATS.join(",")}
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                  id="file-input"
+                />
+                <label htmlFor="file-input" className="upload-label">
+                  <div className="upload-icon">📁</div>
+                  <div className="upload-text">
+                    {file ? file.name : "点击选择文件或拖拽文件到此处"}
+                  </div>
+                  <div className="upload-hint">
+                    支持格式: {ACCEPTED_FORMATS.join(", ")} (最大 5MB)
+                  </div>
+                </label>
+              </div>
+            )}
           </div>
         );
 
@@ -585,10 +598,10 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
       case 3:
         return (
           <div className="import-step import-step-result">
-            {importing ? (
+            {isImporting ? (
               <div className="importing">
                 <div className="loading-spinner"></div>
-                <div className="importing-text">正在导入数据...</div>
+                <div className="importing-text">正在导入数据，请稍候...</div>
               </div>
             ) : (
               <div className="import-result">
@@ -654,8 +667,9 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
         [
           {
             key: "cancel",
-            text: step === 3 && !importing ? "关闭" : "取消",
+            text: step === 3 && !isImporting ? "关闭" : "取消",
             onClick: handleClose,
+            disabled: isUploading || isImporting,
           },
           ...(step > 0 && step < 3
             ? [
@@ -663,6 +677,7 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
                   key: "prev",
                   text: "上一步",
                   onClick: handlePrev,
+                  disabled: isUploading || isImporting,
                 },
               ]
             : []),
@@ -682,7 +697,7 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
                   key: "import",
                   text: "确认导入",
                   onClick: handleImport,
-                  disabled: importing,
+                  disabled: isImporting,
                 },
               ]
             : []),

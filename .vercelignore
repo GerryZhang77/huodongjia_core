@@ -1,0 +1,35 @@
+# Vercel 部署忽略文件
+
+# API 后端（不需要部署到 Vercel）
+api/
+
+# 开发文件
+*.local
+*.log
+*.backup.tsx
+*_old_backup.tsx
+
+# 测试文件
+tests/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# 文档（可选）
+docs-private/
+docs/
+
+# 备份文件
+backups/
+
+# 设计稿
+ui_design_drafts/
+
+# Node modules（Vercel 会自动安装）
+node_modules/
+
+# 环境变量（除了 .env.mock）
+env/.env.local
+env/.env.test
+env/.env.production

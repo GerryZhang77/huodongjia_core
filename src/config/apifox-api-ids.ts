@@ -106,7 +106,7 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
     method: "POST",
     path: "/api/events/:eventId/participants",
     apiId: "366773774",
-    description: "保存报名信息",
+    description: "导入参与者（批量创建报名）",
   },
   {
     method: "GET",
@@ -124,7 +124,8 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
     method: "POST",
     path: "/api/events/:eventId/enrollments/batch-import",
     apiId: "367265653",
-    description: "批量导入报名信息",
+    description:
+      "【已废弃】批量导入报名信息（新流程使用 /api/file/upload + /api/events/:eventId/participants）",
   },
   {
     method: "POST",
@@ -143,6 +144,18 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
     path: "/api/events/extract-headers",
     apiId: "366698244",
     description: "提取报名表表头",
+  },
+];
+
+// ========================================
+// 文件上传模块 API ID 映射
+// ========================================
+export const FILE_API_IDS: ApiEndpoint[] = [
+  {
+    method: "POST",
+    path: "/api/file/upload",
+    apiId: "366621854",
+    description: "上传文件（Excel等）",
   },
 ];
 
@@ -195,7 +208,7 @@ export const RULES_API_IDS: ApiEndpoint[] = [
   // Phase 2: 规则设置
   {
     method: "POST",
-    path: "/api/match-rules/:activityId/generate",
+    path: "/api/match/:eventId/generate",
     apiId: "367410116",
     description: "AI 生成匹配规则",
   },
@@ -226,7 +239,7 @@ export const RULES_API_IDS: ApiEndpoint[] = [
   // Phase 3: 匹配执行
   {
     method: "POST",
-    path: "/api/match-rules/:activityId/execute",
+    path: "/api/match/:activityId/execute",
     apiId: "367410121",
     description: "执行匹配算法（异步任务）",
   },
@@ -244,6 +257,7 @@ export const RULES_API_IDS: ApiEndpoint[] = [
 export const ALL_API_IDS: ApiEndpoint[] = [
   ...AUTH_API_IDS,
   ...EVENT_API_IDS,
+  ...FILE_API_IDS,
   ...MATCHING_API_IDS,
   ...EMBEDDING_API_IDS,
   ...RULES_API_IDS,

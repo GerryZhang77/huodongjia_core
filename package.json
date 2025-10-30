@@ -9,6 +9,7 @@
     "dev:local": "vite --mode local",
     "dev:test": "vite --mode test",
     "build": "tsc -b && vite build --mode production",
+    "build:mock": "vite build --mode mock",
     "build:preview": "vite build --mode local",
     "lint": "eslint .",
     "preview": "vite preview",

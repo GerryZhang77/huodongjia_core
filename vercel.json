@@ -1,9 +1,6 @@
 {
+  "buildCommand": "npm run build:mock",
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

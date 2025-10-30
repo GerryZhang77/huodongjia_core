@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": {
     "title": "匹配模块",
-    "description": "智能匹配相关接口，包括关键词提取、词嵌入计算等",
+    "description": "活动家智能匹配平台 - 规则设置模块 API \n 1. 规则生成- AI 生成匹配规则：根据自然语言描述生成规则\n2. 规则管理\\n- 获取规则列表：统一处理规则的创建、更新、删除操作\n3. 边界条件- 获取约束条件配置-保存约束条件\n4. 匹配执行- 执行匹配算法- 查询匹配进度\n",
     "version": "1.0.0",
     "contact": {
       "name": "活动家开发团队",
@@ -11,31 +11,1638 @@
   },
   "tags": [
     {
-      "name": "关键词提取"
+      "name": "规则管理"
     },
     {
-      "name": "匹配结果发布"
+      "name": "边界条件（暂时不用）"
+    },
+    {
+      "name": "匹配执行"
+    },
+    {
+      "name": "一键匹配子接口（仅后端测试使用）"
+    },
+    {
+      "name": "匹配结果获取"
+    },
+    {
+      "name": "规则生成"
+    },
+    {
+      "name": "边界条件"
     }
   ],
   "paths": {
-    "/api/matching/{eventId}/extract-keywords": {
+    "/api/match/{activityId}/rules": {
       "get": {
-        "summary": "提取用户关键词条",
+        "summary": "获取活动规则列表",
         "deprecated": false,
-        "description": "从参与者的个人信息、兴趣爱好等字段中提取关键词",
-        "operationId": "extractKeywords",
-        "tags": ["关键词提取"],
+        "description": "获取指定活动的所有匹配规则配置",
+        "operationId": "getMatchRules",
+        "tags": [
+          "规则管理"
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "description": "活动 ID",
+            "required": true,
+            "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "Apifox Token",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "获取成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "rules",
+                        "totalWeight",
+                        "enabledCount",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "rules": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/MatchingRule"
+                          }
+                        },
+                        "totalWeight": {
+                          "type": "integer",
+                          "description": "总权重（应始终为100）",
+                          "example": 100
+                        },
+                        "enabledCount": {
+                          "type": "integer",
+                          "description": "启用规则数量",
+                          "example": 3
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "最后更新时间"
+                        }
+                      },
+                      "x-apifox-orders": [
+                        "rules",
+                        "totalWeight",
+                        "enabledCount",
+                        "updatedAt"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "获取成功",
+                  "data": {
+                    "rules": [
+                      {
+                        "id": "rule_001",
+                        "name": "兴趣爱好相似度",
+                        "description": "根据参与者的兴趣爱好标签计算相似度",
+                        "type": "similarity",
+                        "field": "tags",
+                        "weight": 40,
+                        "enabled": true,
+                        "config": {
+                          "method": "jaccard"
+                        }
+                      },
+                      {
+                        "id": "rule_002",
+                        "name": "年龄相近",
+                        "description": "优先匹配年龄相近的参与者",
+                        "type": "similarity",
+                        "field": "age",
+                        "weight": 35,
+                        "enabled": true,
+                        "config": {
+                          "method": "numeric_distance"
+                        }
+                      },
+                      {
+                        "id": "rule_003",
+                        "name": "职业背景互补",
+                        "description": "避免同一组内职业过于集中",
+                        "type": "diversity",
+                        "field": "occupation",
+                        "weight": 25,
+                        "enabled": true,
+                        "config": {
+                          "method": "diversity_boost"
+                        }
+                      }
+                    ],
+                    "totalWeight": 100,
+                    "enabledCount": 3,
+                    "updatedAt": "2025-10-28T10:30:00Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "x-apifox-name": "未认证",
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "x-apifox-name": "未找到",
+            "description": "规则未配置",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "该活动尚未配置匹配规则",
+                  "code": "RULES_NOT_FOUND"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth4": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "w8GJvPkvlcM_UnzVtgvcZ",
+                  "schemeIds": [
+                    "bearerAuth4"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "w8GJvPkvlcM_UnzVtgvcZ",
+                "configs": {
+                  "bearerAuth4": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "w8GJvPkvlcM_UnzVtgvcZ": {
+                  "bearerAuth4": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "规则管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367410117-run"
+      }
+    },
+    "/api/match-rules/{activityId}": {
+      "post": {
+        "summary": "批量保存规则配置（暂时不用）",
+        "deprecated": false,
+        "description": "批量保存/更新活动的匹配规则配置\n\n**功能说明**：\n- 前端传入完整的规则数组，后端自动处理创建、更新、删除操作\n- 有 ID 且存在 → 更新规则\n- 有 ID 但数据库中不存在 → 忽略\n- 无 ID → 创建新规则\n- 数据库中存在但不在请求数组中的规则 → 删除规则\n\n**权重验证**：\n- 所有启用规则的权重总和必须为 100\n- 每个规则的 weight 必须在 0-100 之间\n\n**唯一性验证**：\n- 规则名称不能重复",
+        "operationId": "saveMatchRules",
+        "tags": [
+          "规则管理"
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "description": "活动 ID",
+            "required": true,
+            "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "Apifox Token",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rules"
+                ],
+                "properties": {
+                  "rules": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/MatchingRule"
+                    },
+                    "description": "完整的规则数组"
+                  }
+                },
+                "x-apifox-orders": [
+                  "rules"
+                ],
+                "x-apifox-ignore-properties": []
+              },
+              "example": {
+                "rules": [
+                  {
+                    "id": "rule_001",
+                    "name": "兴趣爱好相似度",
+                    "description": "根据参与者的兴趣爱好标签计算相似度",
+                    "type": "similarity",
+                    "field": "tags",
+                    "weight": 45,
+                    "enabled": true,
+                    "config": {
+                      "method": "jaccard"
+                    }
+                  },
+                  {
+                    "id": "rule_002",
+                    "name": "年龄相近",
+                    "description": "优先匹配年龄相近的参与者",
+                    "type": "similarity",
+                    "field": "age",
+                    "weight": 35,
+                    "enabled": true,
+                    "config": {
+                      "method": "numeric_distance"
+                    }
+                  },
+                  {
+                    "name": "自定义规则：同城优先",
+                    "description": "优先匹配同城参与者",
+                    "type": "similarity",
+                    "field": "city",
+                    "weight": 20,
+                    "enabled": true,
+                    "config": {
+                      "method": "exact_match"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "规则配置保存成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "savedCount",
+                        "rules",
+                        "savedAt"
+                      ],
+                      "properties": {
+                        "savedCount": {
+                          "type": "integer",
+                          "description": "保存的规则数量",
+                          "example": 3
+                        },
+                        "rules": {
+                          "type": "array",
+                          "description": "保存后的完整规则列表（含服务端生成的 ID）",
+                          "items": {
+                            "$ref": "#/components/schemas/MatchingRule"
+                          }
+                        },
+                        "savedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "保存时间"
+                        }
+                      },
+                      "x-apifox-orders": [
+                        "savedCount",
+                        "rules",
+                        "savedAt"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "规则配置保存成功",
+                  "data": {
+                    "savedCount": 3,
+                    "rules": [
+                      {
+                        "id": "rule_001",
+                        "name": "兴趣爱好相似度",
+                        "description": "根据参与者的兴趣爱好标签计算相似度",
+                        "type": "similarity",
+                        "field": "tags",
+                        "weight": 45,
+                        "enabled": true,
+                        "config": {
+                          "method": "jaccard"
+                        }
+                      },
+                      {
+                        "id": "rule_002",
+                        "name": "年龄相近",
+                        "description": "优先匹配年龄相近的参与者",
+                        "type": "similarity",
+                        "field": "age",
+                        "weight": 35,
+                        "enabled": true,
+                        "config": {
+                          "method": "numeric_distance"
+                        }
+                      },
+                      {
+                        "id": "rule_custom_001",
+                        "name": "自定义规则：同城优先",
+                        "description": "优先匹配同城参与者",
+                        "type": "similarity",
+                        "field": "city",
+                        "weight": 20,
+                        "enabled": true,
+                        "config": {
+                          "method": "exact_match"
+                        }
+                      }
+                    ],
+                    "savedAt": "2025-10-28T10:35:00Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "x-apifox-name": "请求有误",
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "2": {
+                    "summary": "权重不合法",
+                    "value": {
+                      "success": false,
+                      "message": "启用规则的权重总和必须为 100，当前为 95",
+                      "code": "INVALID_WEIGHT_SUM"
+                    }
+                  },
+                  "3": {
+                    "summary": "规则名称重复",
+                    "value": {
+                      "success": false,
+                      "message": "规则名称重复: 兴趣爱好相似度",
+                      "code": "DUPLICATE_RULE_NAME"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "x-apifox-name": "未认证",
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth4": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "hFiLRkJc_beELePMVQt05",
+                  "schemeIds": [
+                    "bearerAuth4"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "hFiLRkJc_beELePMVQt05",
+                "configs": {
+                  "bearerAuth4": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "hFiLRkJc_beELePMVQt05": {
+                  "bearerAuth4": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "规则管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367410118-run"
+      }
+    },
+    "/api/match/{activityId}/generate": {
+      "post": {
+        "summary": "AI 生成匹配规则",
+        "deprecated": false,
+        "description": "基于自然语言描述，使用 AI 生成匹配规则列表",
+        "operationId": "generateMatchRules",
+        "tags": [
+          "规则管理",
+          "规则生成"
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "description": "活动 ID",
+            "required": true,
+            "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "Apifox Token",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "description"
+                ],
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "自然语言描述匹配需求",
+                    "minLength": 10,
+                    "maxLength": 500
+                  },
+                  "participantCount": {
+                    "type": "integer",
+                    "description": "参与者数量（可选，用于优化规则）",
+                    "minimum": 1
+                  },
+                  "expectedGroupSize": {
+                    "type": "integer",
+                    "description": "期望每组人数（可选，默认4-6人）",
+                    "minimum": 2
+                  }
+                },
+                "x-apifox-orders": [
+                  "description",
+                  "participantCount",
+                  "expectedGroupSize"
+                ],
+                "x-apifox-ignore-properties": []
+              },
+              "example": {
+                "description": "我希望参与者能够根据兴趣爱好相似进行匹配，同时考虑年龄相近和职业背景互补",
+                "participantCount": 50,
+                "expectedGroupSize": 5
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "生成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "匹配规则生成成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "rules",
+                        "suggestedConstraints"
+                      ],
+                      "properties": {
+                        "rules": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/MatchingRule"
+                          }
+                        },
+                        "suggestedConstraints": {
+                          "$ref": "#/components/schemas/MatchConstraints"
+                        }
+                      },
+                      "x-apifox-orders": [
+                        "rules",
+                        "suggestedConstraints"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "匹配规则生成成功",
+                  "data": {
+                    "rules": [
+                      {
+                        "id": "rule_001",
+                        "name": "兴趣爱好相似度",
+                        "description": "根据参与者的兴趣爱好标签计算相似度，兴趣越相近得分越高",
+                        "type": "similarity",
+                        "field": "tags",
+                        "weight": 40,
+                        "enabled": true,
+                        "config": {
+                          "method": "jaccard"
+                        }
+                      },
+                      {
+                        "id": "rule_002",
+                        "name": "年龄相近",
+                        "description": "优先匹配年龄相近的参与者，年龄差距越小得分越高",
+                        "type": "similarity",
+                        "field": "age",
+                        "weight": 30,
+                        "enabled": true,
+                        "config": {
+                          "method": "numeric_distance"
+                        }
+                      },
+                      {
+                        "id": "rule_003",
+                        "name": "职业背景互补",
+                        "description": "避免同一组内职业过于集中，促进跨行业交流",
+                        "type": "diversity",
+                        "field": "occupation",
+                        "weight": 30,
+                        "enabled": true,
+                        "config": {
+                          "method": "diversity_boost"
+                        }
+                      }
+                    ],
+                    "suggestedConstraints": {
+                      "minGroupSize": 4,
+                      "maxGroupSize": 6,
+                      "genderRatioMin": 0.3,
+                      "genderRatioMax": 0.7,
+                      "sameIndustryMax": 2
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "x-apifox-name": "请求有误",
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "描述内容过短，请至少输入10个字符",
+                  "code": "INVALID_DESCRIPTION"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "x-apifox-name": "未认证",
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "x-apifox-name": "未找到",
+            "description": "活动不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "活动不存在",
+                  "code": "EVENT_NOT_FOUND"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "500": {
+            "x-apifox-name": "服务器错误",
+            "description": "AI 服务错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "AI 服务暂时不可用，请稍后重试",
+                  "code": "AI_SERVICE_ERROR"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth4": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "20K5eNnOdW5ipR1fDvup2",
+                  "schemeIds": [
+                    "bearerAuth4"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "20K5eNnOdW5ipR1fDvup2",
+                "configs": {
+                  "bearerAuth4": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "20K5eNnOdW5ipR1fDvup2": {
+                  "bearerAuth4": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "规则管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367410116-run"
+      }
+    },
+    "/api/match-rules/{activityId}/constraints": {
+      "get": {
+        "summary": "获取约束条件",
+        "deprecated": false,
+        "description": "获取活动的匹配约束条件配置",
+        "operationId": "getMatchConstraints",
+        "tags": [
+          "边界条件（暂时不用）",
+          "边界条件"
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "description": "活动 ID",
+            "required": true,
+            "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "Apifox Token",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "获取成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "constraints",
+                        "defaultConstraints",
+                        "updatedAt"
+                      ],
+                      "properties": {
+                        "constraints": {
+                          "$ref": "#/components/schemas/MatchConstraints",
+                          "description": "当前配置的约束条件"
+                        },
+                        "defaultConstraints": {
+                          "$ref": "#/components/schemas/MatchConstraints",
+                          "description": "默认约束条件（供参考）"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "最后更新时间"
+                        }
+                      },
+                      "x-apifox-orders": [
+                        "constraints",
+                        "defaultConstraints",
+                        "updatedAt"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "获取成功",
+                  "data": {
+                    "constraints": {
+                      "minGroupSize": 4,
+                      "maxGroupSize": 6,
+                      "genderRatioMin": 0.3,
+                      "genderRatioMax": 0.7,
+                      "sameIndustryMax": 2,
+                      "sameAgeGroupMax": 3
+                    },
+                    "defaultConstraints": {
+                      "minGroupSize": 3,
+                      "maxGroupSize": 8,
+                      "genderRatioMin": 0.2,
+                      "genderRatioMax": 0.8,
+                      "sameIndustryMax": 3,
+                      "sameAgeGroupMax": 4
+                    },
+                    "updatedAt": "2025-10-28T10:30:00Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "x-apifox-name": "未认证",
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "x-apifox-name": "未找到",
+            "description": "活动不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth4": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "bfZCb4sE2_E8inmrgIM5F",
+                  "schemeIds": [
+                    "bearerAuth4"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "bfZCb4sE2_E8inmrgIM5F",
+                "configs": {
+                  "bearerAuth4": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "bfZCb4sE2_E8inmrgIM5F": {
+                  "bearerAuth4": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "边界条件（暂时不用）",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367410119-run"
+      },
+      "post": {
+        "summary": "保存约束条件",
+        "deprecated": false,
+        "description": "保存/更新活动的匹配约束条件\n\n**验证规则**：\n- minGroupSize < maxGroupSize\n- genderRatioMin < genderRatioMax\n- 所有数值必须 >= 0",
+        "operationId": "saveMatchConstraints",
+        "tags": [
+          "边界条件（暂时不用）",
+          "边界条件"
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "description": "活动 ID",
+            "required": true,
+            "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "Apifox Token",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "constraints"
+                ],
+                "properties": {
+                  "constraints": {
+                    "$ref": "#/components/schemas/MatchConstraints"
+                  }
+                },
+                "x-apifox-orders": [
+                  "constraints"
+                ],
+                "x-apifox-ignore-properties": []
+              },
+              "example": {
+                "constraints": {
+                  "minGroupSize": 4,
+                  "maxGroupSize": 6,
+                  "genderRatioMin": 0.3,
+                  "genderRatioMax": 0.7,
+                  "sameIndustryMax": 2,
+                  "sameAgeGroupMax": 3
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "保存成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "约束条件保存成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "constraints",
+                        "savedAt"
+                      ],
+                      "properties": {
+                        "constraints": {
+                          "$ref": "#/components/schemas/MatchConstraints"
+                        },
+                        "savedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "保存时间"
+                        }
+                      },
+                      "x-apifox-orders": [
+                        "constraints",
+                        "savedAt"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "约束条件保存成功",
+                  "data": {
+                    "constraints": {
+                      "minGroupSize": 4,
+                      "maxGroupSize": 6,
+                      "genderRatioMin": 0.3,
+                      "genderRatioMax": 0.7,
+                      "sameIndustryMax": 2,
+                      "sameAgeGroupMax": 3
+                    },
+                    "savedAt": "2025-10-28T10:40:00Z"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "x-apifox-name": "请求有误",
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "最小组人数不能大于最大组人数",
+                  "code": "INVALID_GROUP_SIZE_RANGE"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "x-apifox-name": "未认证",
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth4": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "tLt8gYGTxEOjXT93Y4K_-",
+                  "schemeIds": [
+                    "bearerAuth4"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "tLt8gYGTxEOjXT93Y4K_-",
+                "configs": {
+                  "bearerAuth4": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "tLt8gYGTxEOjXT93Y4K_-": {
+                  "bearerAuth4": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "边界条件（暂时不用）",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367410120-run"
+      }
+    },
+    "/api/match/{activityId}/execute": {
+      "post": {
+        "summary": "执行匹配算法",
+        "deprecated": false,
+        "description": "执行智能匹配算法，生成分组结果（异步任务）\n\n**说明**：\n- 匹配算法为耗时操作，采用异步任务模式\n- 立即返回 taskId，通过查询接口获取进度和结果\n- Phase 3 功能",
+        "operationId": "executeMatching",
+        "tags": [
+          "匹配执行"
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "description": "活动 ID",
+            "required": true,
+            "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "Apifox Token",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "preserveLockedGroups": {
+                    "type": "boolean",
+                    "description": "是否保留已锁定的分组",
+                    "default": true
+                  }
+                },
+                "x-apifox-orders": [
+                  "preserveLockedGroups"
+                ],
+                "x-apifox-ignore-properties": []
+              },
+              "example": {
+                "preserveLockedGroups": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "x-apifox-name": "已接受",
+            "description": "任务已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "匹配任务已创建"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "taskId",
+                        "status"
+                      ],
+                      "properties": {
+                        "taskId": {
+                          "type": "string",
+                          "description": "任务 ID",
+                          "example": "task_abc123"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "running",
+                            "completed",
+                            "failed"
+                          ],
+                          "description": "任务状态",
+                          "example": "pending"
+                        }
+                      },
+                      "x-apifox-orders": [
+                        "taskId",
+                        "status"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "匹配任务已创建",
+                  "data": {
+                    "taskId": "task_abc123",
+                    "status": "pending"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "x-apifox-name": "请求有误",
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "请先配置匹配规则",
+                  "code": "RULES_NOT_CONFIGURED"
+                }
+              }
+            },
+            "headers": {}
+          },
+          "401": {
+            "x-apifox-name": "未认证",
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth4": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "MraNyvn0lDNKYjAEQw_xa",
+                  "schemeIds": [
+                    "bearerAuth4"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "MraNyvn0lDNKYjAEQw_xa",
+                "configs": {
+                  "bearerAuth4": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "MraNyvn0lDNKYjAEQw_xa": {
+                  "bearerAuth4": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "匹配执行",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367410121-run"
+      }
+    },
+    "/api/match-rules/task/{taskId}": {
+      "get": {
+        "summary": "查询匹配任务进度（后端尚未实现）",
+        "deprecated": false,
+        "description": "查询匹配任务的执行进度和结果\n\n**任务状态**：\n- pending: 等待执行\n- running: 执行中\n- completed: 执行完成\n- failed: 执行失败\n\n**轮询建议**：\n- 每 2-3 秒查询一次\n- 任务完成后停止轮询",
+        "operationId": "getMatchingTaskStatus",
+        "tags": [
+          "匹配执行"
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "description": "任务 ID",
+            "required": true,
+            "example": "task_abc123",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "Apifox Token",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "taskId",
+                        "status",
+                        "progress"
+                      ],
+                      "properties": {
+                        "taskId": {
+                          "type": "string",
+                          "description": "任务 ID",
+                          "example": "task_abc123"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "running",
+                            "completed",
+                            "failed"
+                          ],
+                          "description": "任务状态",
+                          "example": "completed"
+                        },
+                        "progress": {
+                          "type": "integer",
+                          "description": "进度百分比 (0-100)",
+                          "minimum": 0,
+                          "maximum": 100,
+                          "example": 100
+                        },
+                        "resultId": {
+                          "type": "string",
+                          "description": "匹配结果 ID（completed 状态时返回）",
+                          "example": "result_xyz789"
+                        },
+                        "error": {
+                          "type": "string",
+                          "description": "错误信息（failed 状态时返回）"
+                        }
+                      },
+                      "x-apifox-orders": [
+                        "taskId",
+                        "status",
+                        "progress",
+                        "resultId",
+                        "error"
+                      ],
+                      "x-apifox-ignore-properties": []
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "examples": {
+                  "1": {
+                    "summary": "执行中",
+                    "value": {
+                      "success": true,
+                      "message": "查询成功",
+                      "data": {
+                        "taskId": "task_abc123",
+                        "status": "running",
+                        "progress": 45
+                      }
+                    }
+                  },
+                  "2": {
+                    "summary": "执行完成",
+                    "value": {
+                      "success": true,
+                      "message": "查询成功",
+                      "data": {
+                        "taskId": "task_abc123",
+                        "status": "completed",
+                        "progress": 100,
+                        "resultId": "result_xyz789"
+                      }
+                    }
+                  },
+                  "3": {
+                    "summary": "执行失败",
+                    "value": {
+                      "success": true,
+                      "message": "查询成功",
+                      "data": {
+                        "taskId": "task_abc123",
+                        "status": "failed",
+                        "progress": 0,
+                        "error": "匹配算法执行失败: 参与者数据不足"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "x-apifox-name": "未找到",
+            "description": "任务不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "任务不存在",
+                  "code": "TASK_NOT_FOUND"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth4": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "VYHcfg85yecIo8nFQpO2t",
+                  "schemeIds": [
+                    "bearerAuth4"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "VYHcfg85yecIo8nFQpO2t",
+                "configs": {
+                  "bearerAuth4": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "VYHcfg85yecIo8nFQpO2t": {
+                  "bearerAuth4": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "匹配执行",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367410122-run"
+      }
+    },
+    "/api/match/{eventId}/extract-keywords": {
+      "get": {
+        "summary": "1. 提取用户与匹配规则关联的字段",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "一键匹配子接口（仅后端测试使用）"
+        ],
         "parameters": [
           {
             "name": "eventId",
             "in": "path",
-            "description": "活动ID",
+            "description": "",
             "required": true,
-            "example": "",
+            "example": "8e7801b0-5afd-48bc-9095-6edcc31b2c1e",
             "schema": {
-              "type": "string",
-              "format": "uuid",
-              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+              "type": "string"
             }
           },
           {
@@ -51,49 +1658,28 @@
         ],
         "responses": {
           "200": {
-            "description": "提取成功",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean",
-                      "example": true
+                      "type": "boolean"
                     },
                     "message": {
-                      "type": "string",
-                      "example": "关键词提取成功"
-                    },
-                    "keywords": {
-                      "type": "object",
-                      "description": "各参与者的关键词映射",
-                      "additionalProperties": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "x-apifox-orders": [],
-                      "properties": {},
-                      "x-apifox-ignore-properties": [],
-                      "example": {
-                        "user_001": ["户外", "摄影", "徒步"],
-                        "user_002": ["音乐", "阅读", "咖啡"]
-                      }
+                      "type": "string"
                     }
                   },
-                  "x-apifox-orders": ["success", "message", "keywords"],
-                  "x-apifox-ignore-properties": []
-                },
-                "example": {
-                  "success": true,
-                  "message": "关键词提取成功",
-                  "keywords": {
-                    "user_001": ["户外", "摄影", "徒步"],
-                    "user_002": ["音乐", "阅读", "咖啡"],
-                    "user_003": ["运动", "健身", "篮球"]
-                  }
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": [
+                    "success",
+                    "message"
+                  ]
                 }
               }
             },
@@ -102,16 +1688,616 @@
           }
         },
         "security": [],
-        "x-apifox-folder": "关键词提取",
-        "x-apifox-status": "released",
-        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366709667-run"
+        "x-apifox-folder": "一键匹配子接口（仅后端测试使用）",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-368049433-run"
+      }
+    },
+    "/api/match/{eventId}/get-embedding": {
+      "get": {
+        "summary": "2. 进行词嵌入",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "一键匹配子接口（仅后端测试使用）"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": []
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "一键匹配子接口（仅后端测试使用）",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-368273333-run"
+      }
+    },
+    "/api/match/{eventId}/calculate": {
+      "get": {
+        "summary": "3. 计算相似度并保存到match-scores",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "一键匹配子接口（仅后端测试使用）"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": []
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "一键匹配子接口（仅后端测试使用）",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-368277783-run"
+      }
+    },
+    "/api/match/{eventId}/total-score": {
+      "post": {
+        "summary": "4. 根据传入的权重计算总分数",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "一键匹配子接口（仅后端测试使用）"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "8e7801b0-5afd-48bc-9095-6edcc31b2c1e",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": []
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "一键匹配子接口（仅后端测试使用）",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-368058347-run"
+      }
+    },
+    "/api/match/{evnetId}/best-matches": {
+      "get": {
+        "summary": "5. 计算每个用户的最匹配用户",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "一键匹配子接口（仅后端测试使用）"
+        ],
+        "parameters": [
+          {
+            "name": "evnetId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "8e7801b0-5afd-48bc-9095-6edcc31b2c1e",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "processedUsers": {
+                          "type": "integer"
+                        },
+                        "domains": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "processedUsers",
+                        "domains"
+                      ],
+                      "x-apifox-ignore-properties": [],
+                      "x-apifox-orders": [
+                        "processedUsers",
+                        "domains"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "一键匹配子接口（仅后端测试使用）",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-368260777-run"
+      }
+    },
+    "/api/match/{eventId}/results": {
+      "get": {
+        "summary": "商家/参与者获取匹配结果",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "匹配结果获取"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "8e7801b0-5afd-48bc-9095-6edcc31b2c1e",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "",
+            "required": false,
+            "example": "{{Authorization}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "event_id": {
+                            "type": "string"
+                          },
+                          "user_id1": {
+                            "type": "string"
+                          },
+                          "user_id2": {
+                            "type": "string"
+                          },
+                          "score1": {
+                            "type": "number"
+                          },
+                          "score2": {
+                            "type": "number"
+                          },
+                          "score3": {
+                            "type": "integer"
+                          },
+                          "score4": {
+                            "type": "integer"
+                          },
+                          "score5": {
+                            "type": "integer"
+                          },
+                          "score6": {
+                            "type": "integer"
+                          },
+                          "score7": {
+                            "type": "integer"
+                          },
+                          "score8": {
+                            "type": "integer"
+                          },
+                          "score9": {
+                            "type": "integer"
+                          },
+                          "score10": {
+                            "type": "integer"
+                          },
+                          "total_score": {
+                            "type": "integer"
+                          },
+                          "domains": {
+                            "type": "integer"
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "event_id",
+                          "user_id1",
+                          "user_id2",
+                          "score1",
+                          "score2",
+                          "score3",
+                          "score4",
+                          "score5",
+                          "score6",
+                          "score7",
+                          "score8",
+                          "score9",
+                          "score10",
+                          "total_score",
+                          "domains",
+                          "version",
+                          "created_at",
+                          "updated_at"
+                        ],
+                        "x-apifox-ignore-properties": [],
+                        "x-apifox-orders": [
+                          "id",
+                          "event_id",
+                          "user_id1",
+                          "user_id2",
+                          "score1",
+                          "score2",
+                          "score3",
+                          "score4",
+                          "score5",
+                          "score6",
+                          "score7",
+                          "score8",
+                          "score9",
+                          "score10",
+                          "total_score",
+                          "domains",
+                          "version",
+                          "created_at",
+                          "updated_at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "匹配结果获取",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-368305876-run"
       }
     }
   },
   "components": {
     "schemas": {
+      "MatchingRule": {
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "weight",
+          "enabled"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "规则唯一标识（创建时可不传，由后端生成）",
+            "example": "rule_001"
+          },
+          "name": {
+            "type": "string",
+            "description": "规则名称",
+            "minLength": 1,
+            "maxLength": 50,
+            "example": "兴趣爱好相似度"
+          },
+          "description": {
+            "type": "string",
+            "description": "规则描述",
+            "maxLength": 200,
+            "example": "根据参与者的兴趣爱好标签计算相似度"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "similarity",
+              "diversity",
+              "constraint",
+              "preference"
+            ],
+            "description": "规则类型：similarity-相似度匹配，diversity-多样性匹配，constraint-约束条件，preference-偏好设置",
+            "example": "similarity"
+          },
+          "field": {
+            "type": "string",
+            "description": "匹配字段（如: tags, age, occupation）",
+            "example": "tags"
+          },
+          "weight": {
+            "type": "integer",
+            "description": "权重 (0-100)",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 40
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "是否启用",
+            "default": true,
+            "example": true
+          },
+          "config": {
+            "type": "object",
+            "description": "规则配置参数",
+            "properties": {
+              "method": {
+                "type": "string",
+                "description": "匹配方法（如: jaccard, cosine, numeric_distance）",
+                "example": "jaccard"
+              },
+              "threshold": {
+                "type": "number",
+                "description": "阈值",
+                "example": 0.4
+              },
+              "penalty": {
+                "type": "number",
+                "description": "惩罚系数",
+                "example": 0.5
+              }
+            },
+            "x-apifox-orders": [
+              "method",
+              "threshold",
+              "penalty"
+            ],
+            "x-apifox-ignore-properties": []
+          }
+        },
+        "x-apifox-orders": [
+          "id",
+          "name",
+          "description",
+          "type",
+          "field",
+          "weight",
+          "enabled",
+          "config"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "MatchConstraints": {
+        "type": "object",
+        "properties": {
+          "minGroupSize": {
+            "type": "integer",
+            "description": "最小组人数",
+            "minimum": 2,
+            "example": 4
+          },
+          "maxGroupSize": {
+            "type": "integer",
+            "description": "最大组人数",
+            "minimum": 2,
+            "example": 6
+          },
+          "genderRatioMin": {
+            "type": "number",
+            "description": "性别比例下限 (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.3
+          },
+          "genderRatioMax": {
+            "type": "number",
+            "description": "性别比例上限 (0-1)",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.7
+          },
+          "sameIndustryMax": {
+            "type": "integer",
+            "description": "同行业最大人数",
+            "minimum": 0,
+            "example": 2
+          },
+          "sameAgeGroupMax": {
+            "type": "integer",
+            "description": "同年龄段最大人数",
+            "minimum": 0,
+            "example": 3
+          }
+        },
+        "x-apifox-orders": [
+          "minGroupSize",
+          "maxGroupSize",
+          "genderRatioMin",
+          "genderRatioMax",
+          "sameIndustryMax",
+          "sameAgeGroupMax"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
       "ErrorResponse": {
         "type": "object",
+        "required": [
+          "success",
+          "message",
+          "code"
+        ],
         "properties": {
           "success": {
             "type": "boolean",
@@ -120,26 +2306,37 @@
           "message": {
             "type": "string",
             "description": "错误信息",
-            "example": "活动不存在"
+            "example": "请求参数错误"
           },
           "code": {
             "type": "string",
             "description": "错误代码",
-            "example": "NOT_FOUND"
+            "example": "INVALID_PARAMETER"
+          },
+          "details": {
+            "type": "object",
+            "description": "错误详情（可选）",
+            "x-apifox-orders": [],
+            "properties": {},
+            "x-apifox-ignore-properties": []
           }
         },
-        "required": ["success", "message"],
-        "x-apifox-orders": ["success", "message", "code"],
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "code",
+          "details"
+        ],
         "x-apifox-ignore-properties": [],
         "x-apifox-folder": "Schemas"
       }
     },
     "securitySchemes": {
-      "bearerAuth2": {
+      "bearerAuth4": {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "JWT Token 认证"
+        "description": "JWT 认证，格式: Bearer <token>"
       }
     }
   },

@@ -211,20 +211,22 @@ export const getEnrollmentsDetailed = async (
 };
 
 /**
- * 批量导入报名（新接口）
- * 使用 POST /api/events/{eventId}/enrollments/batch-import
- * 前端已完成 Excel 解析，直接传递 enrollments 数组
+ * 批量导入报名（旧接口 - 已废弃）
+ * @deprecated 使用新流程：先上传文件 (fileUploadApi.uploadExcel)，再提交映射 (participantsApi.createParticipants)
+ *
+ * 旧流程：POST /api/events/{eventId}/enrollments/batch-import
+ * 新流程：
+ *   1. POST /api/file/upload (上传文件)
+ *   2. POST /api/events/{eventId}/participants (提交字段映射和文件路径)
+ *   3. GET /api/events/{eventId}/enrollments (刷新报名列表)
  */
 export const batchImportEnrollments = async (
   activityId: string,
   enrollments: EnrollmentInput[]
 ): Promise<BatchImportEnrollmentsResponse> => {
-  // 使用配置好的 api 实例，会自动处理：
-  // - 路由到正确的 Mock URL
-  // - 添加 Apifox Token
-  // - 添加 API ID
-  // - 添加 JWT Token
-  // 注意：api 响应拦截器已经返回了 response.data，所以这里直接得到数据
+  console.warn(
+    "batchImportEnrollments 已废弃，请使用新的导入流程：fileUploadApi + participantsApi"
+  );
   return api.post(`/api/events/${activityId}/enrollments/batch-import`, {
     enrollments,
   });

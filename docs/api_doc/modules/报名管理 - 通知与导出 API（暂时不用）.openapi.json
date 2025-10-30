@@ -1,0 +1,476 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "报名管理 - 通知与导出 API（暂时不用）",
+    "description": "报名用户通知发送和名单导出接口",
+    "version": "1.0.0",
+    "contact": {
+      "name": "活动家开发团队",
+      "email": "dev@huodongjia.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "通知管理"
+    }
+  ],
+  "paths": {
+    "/api/events/{eventId}/enrollments/notify": {
+      "post": {
+        "summary": "批量发送报名通知（低优先级）",
+        "deprecated": false,
+        "description": "向选中的报名用户批量发送通知，支持批准、拒绝、自定义三种通知类型",
+        "operationId": "sendEnrollmentNotifications",
+        "tags": [
+          "通知管理"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "7ea8f4b1-8b70-4356-a39a-e43e81ed597b"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "Apifox Mock Token",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendNotificationRequest"
+              },
+              "example": {
+                "enrollmentIds": [
+                  "550e8400-e29b-41d4-a716-446655440001",
+                  "550e8400-e29b-41d4-a716-446655440002"
+                ],
+                "type": "approval",
+                "title": "报名审核通过通知",
+                "content": "恭喜您！您的活动报名已通过审核，请准时参加活动。",
+                "enrollments": [
+                  {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "name": "张三",
+                    "phone": "13800138000",
+                    "email": "zhangsan@example.com"
+                  },
+                  {
+                    "id": "550e8400-e29b-41d4-a716-446655440002",
+                    "name": "李四",
+                    "phone": "13800138001",
+                    "email": "lisi@example.com"
+                  }
+                ],
+                "activityInfo": {
+                  "id": "7ea8f4b1-8b70-4356-a39a-e43e81ed597b",
+                  "title": "周末户外徒步活动",
+                  "startTime": "2025-11-01T09:00:00Z",
+                  "location": "香山公园东门"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "发送成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendNotificationResponse"
+                },
+                "example": {
+                  "success": true,
+                  "sentCount": 2,
+                  "failedCount": 0,
+                  "message": "通知发送成功"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "400": {
+            "description": "请求参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INVALID_REQUEST",
+                    "message": "enrollmentIds 不能为空"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "请求有误"
+          },
+          "403": {
+            "description": "无权限操作",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "无权限向此活动的报名用户发送通知"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "权限不足"
+          },
+          "500": {
+            "description": "服务器错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "通知发送失败，请稍后重试"
+                  }
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "服务器内部错误"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth2": [],
+            "x-apifox": {
+              "schemeGroups": [
+                {
+                  "id": "uijcvIFmrnhwMf4m7BALV",
+                  "schemeIds": [
+                    "bearerAuth2"
+                  ]
+                }
+              ],
+              "required": true,
+              "use": {
+                "id": "uijcvIFmrnhwMf4m7BALV",
+                "configs": {
+                  "bearerAuth2": {
+                    "authConfigs": {
+                      "x-apifox": {
+                        "token": "{{bearerToken}}"
+                      }
+                    }
+                  }
+                }
+              },
+              "scopes": {
+                "uijcvIFmrnhwMf4m7BALV": {
+                  "bearerAuth2": []
+                }
+              }
+            }
+          }
+        ],
+        "x-apifox-folder": "通知管理",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367358266-run"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SendNotificationRequest": {
+        "type": "object",
+        "required": [
+          "enrollmentIds",
+          "type",
+          "content",
+          "enrollments",
+          "activityInfo"
+        ],
+        "properties": {
+          "enrollmentIds": {
+            "type": "array",
+            "description": "接收通知的报名用户ID列表",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "example": [
+              "550e8400-e29b-41d4-a716-446655440001",
+              "550e8400-e29b-41d4-a716-446655440002"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "description": "通知类型",
+            "enum": [
+              "approval",
+              "rejection",
+              "custom"
+            ],
+            "example": "approval"
+          },
+          "title": {
+            "type": "string",
+            "description": "通知标题（自定义类型必填）",
+            "maxLength": 50,
+            "example": "报名审核通过通知"
+          },
+          "content": {
+            "type": "string",
+            "description": "通知内容",
+            "maxLength": 500,
+            "example": "恭喜您！您的活动报名已通过审核，请准时参加活动。"
+          },
+          "enrollments": {
+            "type": "array",
+            "description": "完整的报名用户信息（用于发送通知）",
+            "items": {
+              "$ref": "#/components/schemas/EnrollmentBasicInfo"
+            }
+          },
+          "activityInfo": {
+            "$ref": "#/components/schemas/ActivityBasicInfo"
+          }
+        },
+        "x-apifox-orders": [
+          "enrollmentIds",
+          "type",
+          "title",
+          "content",
+          "enrollments",
+          "activityInfo"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "EnrollmentBasicInfo": {
+        "type": "object",
+        "description": "报名用户基础信息",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "报名记录ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "用户姓名"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "邮箱"
+          }
+        },
+        "x-apifox-orders": [
+          "id",
+          "name",
+          "phone",
+          "email"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "ActivityBasicInfo": {
+        "type": "object",
+        "description": "活动基础信息",
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "活动ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "活动标题"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "活动开始时间"
+          },
+          "location": {
+            "type": "string",
+            "description": "活动地点"
+          }
+        },
+        "x-apifox-orders": [
+          "id",
+          "title",
+          "startTime",
+          "location"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "SendNotificationResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "sentCount",
+          "failedCount"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功",
+            "example": true
+          },
+          "sentCount": {
+            "type": "integer",
+            "description": "成功发送数量",
+            "example": 2
+          },
+          "failedCount": {
+            "type": "integer",
+            "description": "发送失败数量",
+            "example": 0
+          },
+          "failures": {
+            "type": "array",
+            "description": "发送失败的详情",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enrollmentId": {
+                  "type": "string",
+                  "description": "报名用户ID"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "用户姓名"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "失败原因"
+                }
+              },
+              "x-apifox-orders": [
+                "enrollmentId",
+                "name",
+                "reason"
+              ],
+              "x-apifox-ignore-properties": []
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "通知发送成功"
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "sentCount",
+          "failedCount",
+          "failures",
+          "message"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "error"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "错误代码",
+                "example": "INVALID_REQUEST"
+              },
+              "message": {
+                "type": "string",
+                "description": "错误消息",
+                "example": "请求参数错误"
+              },
+              "details": {
+                "type": "object",
+                "description": "错误详情",
+                "x-apifox-orders": [],
+                "properties": {},
+                "x-apifox-ignore-properties": []
+              }
+            },
+            "x-apifox-orders": [
+              "code",
+              "message",
+              "details"
+            ],
+            "x-apifox-ignore-properties": []
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "error"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth2": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token 认证"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}

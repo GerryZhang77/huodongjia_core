@@ -3,3 +3,5 @@
  */
 
 export * from "./enrollmentApi";
+export * from "./fileUploadApi";
+export * from "./participantsApi";

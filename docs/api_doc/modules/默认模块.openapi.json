@@ -1,0 +1,506 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "默认模块",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "关键词提取"
+    }
+  ],
+  "paths": {
+    "/api/matching/{eventId}/extract-keywords": {
+      "get": {
+        "summary": "提取用户关键词条",
+        "deprecated": false,
+        "description": "从参与者的个人信息、兴趣爱好等字段中提取关键词",
+        "operationId": "extractKeywords",
+        "tags": [
+          "关键词提取"
+        ],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "活动ID",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "d1375b03-e2fe-418d-b096-9064eae0d1b9"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "required": false,
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "x-apifox-name": "成功",
+            "description": "提取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "关键词提取成功"
+                    },
+                    "keywords": {
+                      "type": "object",
+                      "description": "各参与者的关键词映射",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "x-apifox-orders": [],
+                      "properties": {},
+                      "x-apifox-ignore-properties": [],
+                      "example": {
+                        "user_001": [
+                          "户外",
+                          "摄影",
+                          "徒步"
+                        ],
+                        "user_002": [
+                          "音乐",
+                          "阅读",
+                          "咖啡"
+                        ]
+                      }
+                    }
+                  },
+                  "x-apifox-orders": [
+                    "success",
+                    "message",
+                    "keywords"
+                  ],
+                  "x-apifox-ignore-properties": []
+                },
+                "example": {
+                  "success": true,
+                  "message": "关键词提取成功",
+                  "keywords": {
+                    "user_001": [
+                      "户外",
+                      "摄影",
+                      "徒步"
+                    ],
+                    "user_002": [
+                      "音乐",
+                      "阅读",
+                      "咖啡"
+                    ],
+                    "user_003": [
+                      "运动",
+                      "健身",
+                      "篮球"
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "关键词提取",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-368050996-run"
+      }
+    },
+    "/api/file/upload": {
+      "post": {
+        "summary": "上传文件",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string",
+                    "example": "file://C:\\Users\\44457\\Desktop\\test.xlsx"
+                  }
+                }
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "filename": {
+                      "type": "string"
+                    },
+                    "originalname": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "integer"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "filename",
+                    "originalname",
+                    "size",
+                    "path",
+                    "message"
+                  ],
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": [
+                    "success",
+                    "filename",
+                    "originalname",
+                    "size",
+                    "path",
+                    "message"
+                  ]
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-366621854-run"
+      }
+    },
+    "/api/file/download/{filePath}": {
+      "get": {
+        "summary": "下载文件",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "filePath",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "register_info_1761640916979.xlsx",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": []
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-367898117-run"
+      }
+    },
+    "/api/nfc/{eventId}/{otherUserId}": {
+      "get": {
+        "summary": "nfc刷卡",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "8e7801b0-5afd-48bc-9095-6edcc31b2c1e",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "otherUserId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "84f03bfc-dab2-4429-be2f-5e5e97c49d50",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "",
+            "required": false,
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImUxMzBmOTRhLTRkNDMtNGU5My1iOTZmLWJiYjAzZDE4NDYwMCIsInBob25lIjpudWxsLCJ1c2VyX3R5cGUiOiJ1c2VyIiwiaWF0IjoxNzYxNjU2MDIxLCJleHAiOjE3NjIyNjA4MjF9.I-eIBznxk2qD88pN31MEv9F14XEcRZO98291TD5pHeE",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apifoxToken",
+            "in": "header",
+            "description": "",
+            "example": "{{apifoxToken}}",
+            "schema": {
+              "type": "string",
+              "default": "{{apifoxToken}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "event_id": {
+                          "type": "string"
+                        },
+                        "user_id1": {
+                          "type": "string"
+                        },
+                        "user_id2": {
+                          "type": "string"
+                        },
+                        "score1": {
+                          "type": "number"
+                        },
+                        "score2": {
+                          "type": "number"
+                        },
+                        "score3": {
+                          "type": "integer"
+                        },
+                        "score4": {
+                          "type": "integer"
+                        },
+                        "score5": {
+                          "type": "integer"
+                        },
+                        "score6": {
+                          "type": "integer"
+                        },
+                        "score7": {
+                          "type": "integer"
+                        },
+                        "score8": {
+                          "type": "integer"
+                        },
+                        "score9": {
+                          "type": "integer"
+                        },
+                        "score10": {
+                          "type": "integer"
+                        },
+                        "total_score": {
+                          "type": "integer"
+                        },
+                        "domains": {
+                          "type": "integer"
+                        },
+                        "version": {
+                          "type": "integer"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "event_id",
+                        "user_id1",
+                        "user_id2",
+                        "score1",
+                        "score2",
+                        "score3",
+                        "score4",
+                        "score5",
+                        "score6",
+                        "score7",
+                        "score8",
+                        "score9",
+                        "score10",
+                        "total_score",
+                        "domains",
+                        "version",
+                        "created_at",
+                        "updated_at"
+                      ],
+                      "x-apifox-ignore-properties": [],
+                      "x-apifox-orders": [
+                        "id",
+                        "event_id",
+                        "user_id1",
+                        "user_id2",
+                        "score1",
+                        "score2",
+                        "score3",
+                        "score4",
+                        "score5",
+                        "score6",
+                        "score7",
+                        "score8",
+                        "score9",
+                        "score10",
+                        "total_score",
+                        "domains",
+                        "version",
+                        "created_at",
+                        "updated_at"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": [
+                    "success",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/7269221/apis/api-368061988-run"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误信息",
+            "example": "活动不存在"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码",
+            "example": "NOT_FOUND"
+          }
+        },
+        "required": [
+          "success",
+          "message"
+        ],
+        "x-apifox-orders": [
+          "success",
+          "message",
+          "code"
+        ],
+        "x-apifox-folder": "Schemas",
+        "x-apifox-ignore-properties": []
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth21": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token 认证"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}

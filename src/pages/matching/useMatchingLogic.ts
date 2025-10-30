@@ -191,14 +191,12 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
         };
       }
 
-      const response = await api.post(`/api/match-rules/${eventId}/generate`, {
+      const response = await api.post(`/api/match/${eventId}/generate`, {
         description: naturalLanguageInput,
         participantCount: participants.length,
       });
 
-      console.log("[生成规则] API 响应:", response);
-
-      // 因为拦截器已经返回了 response.data，所以 response 的类型实际上是:
+      console.log("[生成规则] API 响应:", response); // 因为拦截器已经返回了 response.data，所以 response 的类型实际上是:
       // { success: boolean, message: string, data: { rules: [...], suggestedConstraints: {...} } }
       // 使用 unknown 作为中间类型转换，避免类型断言错误
       const apiResponse = response as unknown as GenerateRulesResponse;
@@ -323,7 +321,7 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
 
     setIsMatching(true);
     setMatchingProgress(0);
-    setMatchingStage("extracting-keywords");
+    setMatchingStage("matching");
     setMatchingError(null);
 
     // 根据参与人数估算总时间（秒）
@@ -331,37 +329,13 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
     setEstimatedTimeRemaining(estimatedTotal);
 
     try {
-      // 1. 提取关键词 (20%)
-      await api.get(`/api/matching/${eventId}/extract-keywords`);
-
-      setMatchingProgress(20);
-      setMatchingStage("calculating-embedding");
-      setEstimatedTimeRemaining(estimatedTotal * 0.8);
-
-      // 2. 计算词嵌入 (40%) - 注意：Apifox 上这个接口是 GET，不是 POST
-      await api.get(`/api/match/${eventId}/get-embedding`);
-
-      setMatchingProgress(40);
-      setMatchingStage("calculating-similarity");
-      setEstimatedTimeRemaining(estimatedTotal * 0.6);
-
-      // 3. 计算相似度 (60%)
-      // 注意：响应拦截器已经返回 response.data，所以这里直接得到数据
-      const similarityData = await api.get(`/api/match/${eventId}/calculate`);
-
-      if (!similarityData?.success) {
-        throw new Error(similarityData?.message || "计算相似度失败");
-      }
-
-      setMatchingProgress(60);
+      // 执行匹配算法（后端会自动完成：提取关键词 → 计算词嵌入 → 计算相似度 → 匹配分组）
+      setMatchingProgress(10);
       setMatchingStage("matching");
-      setEstimatedTimeRemaining(estimatedTotal * 0.4);
 
-      // 4. 执行匹配算法 (80%)
-      const matchData = await api.post(`/api/match-rules/${eventId}/execute`, {
+      const matchData = await api.post(`/api/match/${eventId}/execute`, {
         rules: rules.filter((rule) => rule.enabled),
         constraints,
-        similarity_matrix: similarityData.similarity_matrix,
       });
 
       if (!matchData.success) {
@@ -371,7 +345,7 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       setMatchingProgress(80);
       setEstimatedTimeRemaining(estimatedTotal * 0.2);
 
-      // 5. 获取匹配结果 (100%)
+      // 获取匹配结果
       const resultData = await api.get(`/api/match-groups/${eventId}`);
 
       if (resultData?.success) {
