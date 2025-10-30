@@ -35,20 +35,32 @@ export const useAuthStore = create<AuthState>()(
 
       // 设置认证信息
       setAuth: (user, token) => {
+        console.log("💾 [authStore] setAuth 被调用:", {
+          userName: user.name,
+          userId: user.id,
+          tokenLength: token.length,
+        });
+
         set({
           user,
           token,
           isAuthenticated: true,
         });
+
+        console.log("✅ [authStore] 状态已更新为已认证");
       },
 
       // 清除认证信息
       clearAuth: () => {
+        console.log("🗑️  [authStore] clearAuth 被调用");
+
         set({
           user: null,
           token: null,
           isAuthenticated: false,
         });
+
+        console.log("✅ [authStore] 认证信息已清除");
       },
 
       // 更新用户信息

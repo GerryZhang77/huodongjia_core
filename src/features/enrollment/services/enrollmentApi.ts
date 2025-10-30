@@ -14,7 +14,77 @@ import type {
   SendNotificationRequest,
   SendNotificationResponse,
   BatchImportEnrollmentsResponse,
+  Enrollment,
+  Gender,
+  EnrollmentStatus,
 } from "../types";
+
+/**
+ * 后端返回的原始报名数据结构（数据库字段命名）
+ */
+interface BackendEnrollment {
+  id: string;
+  event_id: string;
+  user_id: string | null;
+  name: string;
+  sex: string | null; // 'male' | 'female' | 'other'
+  age: number | null;
+  occupation: string | null;
+  other_info: string | null; // JSON 字符串
+  status: string; // 'pending' | 'approved' | 'rejected' | 'cancelled'
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * 转换后端数据到前端 Enrollment 类型
+ */
+const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
+  // 解析 other_info JSON 字符串
+  let otherInfo: Record<string, unknown> = {};
+  if (backend.other_info) {
+    try {
+      otherInfo = JSON.parse(backend.other_info);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_error) {
+      console.warn("Failed to parse other_info:", backend.other_info);
+    }
+  }
+
+  // 从 other_info 中提取字段
+  const phone = (otherInfo.phone || otherInfo.手机号 || otherInfo.联系方式) as
+    | string
+    | undefined;
+  const email = (otherInfo.email || otherInfo.邮箱 || otherInfo.电子邮箱) as
+    | string
+    | undefined;
+  const company = (otherInfo.company || otherInfo.公司 || otherInfo.单位) as
+    | string
+    | undefined;
+  const industry = (otherInfo.industry || otherInfo.行业) as string | undefined;
+  const city = (otherInfo.city || otherInfo.城市 || otherInfo.所在地) as
+    | string
+    | undefined;
+
+  return {
+    id: backend.id,
+    activityId: backend.event_id,
+    userId: backend.user_id || undefined,
+    name: backend.name,
+    gender: (backend.sex as Gender) || undefined,
+    age: backend.age || undefined,
+    phone,
+    email,
+    occupation: backend.occupation || undefined,
+    company,
+    industry,
+    city,
+    customFields: otherInfo, // 保留完整的 other_info 作为 customFields
+    status: backend.status as EnrollmentStatus,
+    enrolledAt: backend.created_at,
+    updatedAt: backend.updated_at,
+  };
+};
 
 /**
  * 获取 token
@@ -195,8 +265,7 @@ export const sendNotification = async (
 };
 
 /**
- * 获取报名详细列表（新接口）
- * 使用 GET /api/events/{eventId}/enrollments
+ * 获取报名列表（详细版）
  * 返回完整的报名数据，包括 customFields
  */
 export const getEnrollmentsDetailed = async (
@@ -207,7 +276,40 @@ export const getEnrollmentsDetailed = async (
     pageSize?: number;
   }
 ): Promise<EnrollmentListResponse> => {
-  return api.get(`/api/events/${activityId}/enrollments`, { params });
+  // 🎯 演示活动 ID 映射：将演示活动 ID 映射为固定 ID
+  const DEMO_ACTIVITY_ID = "act-pku-innovation-2025-fall";
+  const FIXED_ENROLLMENT_ID = "00000000-0000-0000-0000-000000000000";
+
+  const requestId =
+    activityId === DEMO_ACTIVITY_ID ? FIXED_ENROLLMENT_ID : activityId;
+
+  // 调用后端 API
+  // 后端返回格式: { success: true, total: number, participants: BackendEnrollment[] }
+  const response = await api.get<{
+    success: boolean;
+    total: number;
+    participants: BackendEnrollment[];
+  }>(`/api/events/${requestId}/enrollments`, { params });
+
+  console.log("🔍 后端原始响应:", response);
+  console.log("🔍 participants 数组:", response.participants);
+  console.log("🔍 participants 长度:", response.participants?.length);
+
+  // 提取报名数组
+  const backendEnrollments = response.participants || [];
+
+  console.log("✅ 提取到的报名数组长度:", backendEnrollments.length);
+
+  // 转换后端数据到前端类型
+  const enrollments = backendEnrollments.map(transformBackendEnrollment);
+
+  console.log("✅ 转换后的报名数据:", enrollments.length, "条");
+
+  return {
+    success: true,
+    enrollments,
+    total: response.total || enrollments.length,
+  };
 };
 
 /**

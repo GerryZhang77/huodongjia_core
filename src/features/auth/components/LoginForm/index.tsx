@@ -58,14 +58,15 @@ export const LoginForm: React.FC = () => {
         </div>
         <h1 className="text-2xl font-bold text-gray-900">活动家平台</h1>
         <p className="text-gray-500 text-sm mt-2">欢迎回来，请登录您的账号</p>
-        {/* 开发环境提示 */}
-        {import.meta.env.DEV && (
-          <div className="mt-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-xs text-yellow-800">
-              🔧 开发环境 | Chrome 密码警告可忽略
-            </p>
-          </div>
-        )}
+        {/* 开发环境提示 - 仅非生产模式显示 */}
+        {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
+          import.meta.env.DEV && (
+            <div className="mt-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs text-yellow-800">
+                🔧 开发环境 | Chrome 密码警告可忽略
+              </p>
+            </div>
+          )}
       </div>
 
       {/* 登录表单 */}
@@ -147,57 +148,58 @@ export const LoginForm: React.FC = () => {
           登录
         </Button>
 
-        {/* 测试账号提示 - 仅开发环境显示 */}
-        {import.meta.env.DEV && (
-          <div className="mt-6">
-            <Collapse>
-              <Collapse.Panel
-                key="test-accounts"
-                title={
-                  <div className="flex items-center text-sm text-gray-600">
-                    <InformationCircleOutline className="mr-1" />
-                    <span>查看测试账号</span>
-                  </div>
-                }
-              >
-                <div className="space-y-3 pt-2">
-                  {TEST_ACCOUNTS.map((account) => (
-                    <div
-                      key={account.value}
-                      className="p-3 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          {account.label}
-                        </span>
-                        <Button
-                          size="mini"
-                          fill="outline"
-                          onClick={() => {
-                            setIdentifier(account.value);
-                            setPassword("123456"); // 默认密码
-                            Toast.show({
-                              icon: "success",
-                              content: "已填充测试账号",
-                            });
-                          }}
-                        >
-                          快速填充
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        账号: {account.value} | {account.description}
-                      </p>
+        {/* 测试账号提示 - 仅非生产模式显示 */}
+        {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
+          import.meta.env.DEV && (
+            <div className="mt-6">
+              <Collapse>
+                <Collapse.Panel
+                  key="test-accounts"
+                  title={
+                    <div className="flex items-center text-sm text-gray-600">
+                      <InformationCircleOutline className="mr-1" />
+                      <span>查看测试账号</span>
                     </div>
-                  ))}
-                  <div className="text-xs text-gray-400 text-center mt-2">
-                    ⚠️ 此区域仅在开发环境显示
+                  }
+                >
+                  <div className="space-y-3 pt-2">
+                    {TEST_ACCOUNTS.map((account) => (
+                      <div
+                        key={account.value}
+                        className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            {account.label}
+                          </span>
+                          <Button
+                            size="mini"
+                            fill="outline"
+                            onClick={() => {
+                              setIdentifier(account.value);
+                              setPassword("123456"); // 默认密码
+                              Toast.show({
+                                icon: "success",
+                                content: "已填充测试账号",
+                              });
+                            }}
+                          >
+                            快速填充
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          账号: {account.value} | {account.description}
+                        </p>
+                      </div>
+                    ))}
+                    <div className="text-xs text-gray-400 text-center mt-2">
+                      ⚠️ 此区域仅在开发环境显示
+                    </div>
                   </div>
-                </div>
-              </Collapse.Panel>
-            </Collapse>
-          </div>
-        )}
+                </Collapse.Panel>
+              </Collapse>
+            </div>
+          )}
       </div>
     </Card>
   );

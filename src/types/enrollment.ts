@@ -41,6 +41,7 @@ export interface Enrollment {
 
   // 职业信息
   occupation?: string;
+  company?: string; // 公司名称
   industry?: string;
 
   // 联系方式

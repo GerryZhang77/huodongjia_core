@@ -48,6 +48,7 @@ import {
   getActiveFilterCount,
 } from "@/utils/enrollmentFilters";
 import { EnrollmentFilterDrawer } from "@/components/business/EnrollmentFilterDrawer";
+import { isDemoActivity } from "@/mocks/demo-activity";
 
 const EnrollmentManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -113,23 +114,64 @@ const EnrollmentManagement: React.FC = () => {
   // 获取报名列表（新 API）
   const fetchEnrollments = async () => {
     try {
-      const response = await fetch(`/api/events/${id}/enrollments`, {
+      // 【Mock 环境】如果是演示活动，使用固定 ID 请求服务端报名数据
+      const requestId = isDemoActivity(id)
+        ? "00000000-0000-0000-0000-000000000000"
+        : id;
+
+      const isDemo = isDemoActivity(id);
+
+      console.log(
+        `📋 fetchEnrollments - 活动ID: ${id}, 请求ID: ${requestId}, 是否演示: ${isDemo}`
+      );
+
+      const response = await fetch(`/api/events/${requestId}/enrollments`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
 
+      // 【Mock 环境】演示活动的 404 错误静默处理
+      if (!response.ok) {
+        if (isDemo && response.status === 404) {
+          console.log(
+            "📋 fetchEnrollments - 演示活动报名数据未就绪（404），使用空列表"
+          );
+          setEnrollments([]);
+          return;
+        }
+
+        // 非演示活动的错误，尝试解析错误信息
+        try {
+          const errorData = await response.json();
+          Toast.show(errorData.message || `请求失败 (${response.status})`);
+        } catch {
+          Toast.show(`请求失败 (${response.status})`);
+        }
+        return;
+      }
+
       const data = await response.json();
 
       if (data.success) {
+        console.log(
+          `✅ fetchEnrollments - 成功获取 ${data.data?.length || 0} 条报名数据`
+        );
         setEnrollments(data.data || []);
       } else {
         Toast.show(data.message || "获取报名列表失败");
       }
     } catch (error) {
       console.error("Fetch enrollments error:", error);
-      Toast.show("网络错误，请重试");
+
+      // 【Mock 环境】演示活动的网络错误也静默处理
+      if (!isDemoActivity(id)) {
+        Toast.show("网络错误，请重试");
+      } else {
+        console.log("📋 fetchEnrollments - 演示活动请求失败，使用空列表");
+        setEnrollments([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -162,9 +204,14 @@ const EnrollmentManagement: React.FC = () => {
     setUploadProgress(0);
 
     try {
+      // 【Mock 环境】如果是演示活动，使用固定 ID
+      const requestId = isDemoActivity(id)
+        ? "00000000-0000-0000-0000-000000000000"
+        : id!;
+
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("activity_id", id!);
+      formData.append("activity_id", requestId);
 
       // 模拟上传进度
       const progressInterval = setInterval(() => {
@@ -212,9 +259,14 @@ const EnrollmentManagement: React.FC = () => {
   // 导出Excel
   const handleExcelExport = async () => {
     try {
+      // 【Mock 环境】如果是演示活动，使用固定 ID
+      const requestId = isDemoActivity(id)
+        ? "00000000-0000-0000-0000-000000000000"
+        : id;
+
       const exportIds = selectedIds.length > 0 ? selectedIds : undefined;
 
-      const response = await fetch(`/api/export-participants/${id}`, {
+      const response = await fetch(`/api/export-participants/${requestId}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -255,6 +307,11 @@ const EnrollmentManagement: React.FC = () => {
     }
 
     try {
+      // 【Mock 环境】如果是演示活动，使用固定 ID
+      const requestId = isDemoActivity(id)
+        ? "00000000-0000-0000-0000-000000000000"
+        : id;
+
       const response = await fetch("/api/send-notification", {
         method: "POST",
         headers: {
@@ -262,7 +319,7 @@ const EnrollmentManagement: React.FC = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          activity_id: id,
+          activity_id: requestId,
           participant_ids: selectedIds.length > 0 ? selectedIds : undefined,
           message: notificationContent,
         }),

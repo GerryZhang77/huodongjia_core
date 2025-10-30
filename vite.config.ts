@@ -9,6 +9,11 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, "env", "");
   const useMock = env.VITE_USE_MOCK;
 
+  // 调试：打印所有环境变量
+  console.log("🐛 调试信息:");
+  console.log("   VITE_USE_MOCK:", env.VITE_USE_MOCK);
+  console.log("   VITE_API_BASE_URL:", env.VITE_API_BASE_URL);
+
   // ========================================
   // 条件代理配置
   // ========================================
@@ -17,10 +22,14 @@ export default defineConfig(({ mode }) => {
   // - VITE_USE_MOCK=msw: 禁用代理,使用 MSW 拦截
   const shouldUseProxy = useMock === "false" || !useMock;
 
+  // 获取代理目标地址（优先使用环境变量中的真实后端地址）
+  const proxyTarget = env.VITE_API_BASE_URL || "http://localhost:3001";
+
   console.log("🔧 Vite 配置信息:");
   console.log("   模式:", mode);
   console.log("   Mock 模式:", useMock || "false (真实后端)");
   console.log("   代理状态:", shouldUseProxy ? "✅ 启用" : "❌ 禁用");
+  console.log("   代理目标:", shouldUseProxy ? proxyTarget : "N/A");
   console.log("   环境变量目录: env/");
   console.log("   加载文件: env/.env." + mode);
 
@@ -47,7 +56,7 @@ export default defineConfig(({ mode }) => {
       proxy: shouldUseProxy
         ? {
             "/api": {
-              target: "http://localhost:3001",
+              target: proxyTarget,
               changeOrigin: true,
               secure: false,
               configure: (proxy, _options) => {

@@ -13,14 +13,27 @@ export async function login(
   credentials: LoginCredentials
 ): Promise<LoginResponse> {
   try {
+    console.log("🔐 [authApi] 发送登录请求:", {
+      identifier: credentials.identifier,
+      // password 不打印
+    });
+
     const response = (await api.post("/api/auth/login", {
       identifier: credentials.identifier,
       password: credentials.password,
     })) as LoginResponse;
 
+    console.log("✅ [authApi] 登录响应:", {
+      success: response.success,
+      message: response.message,
+      hasToken: !!response.token,
+      hasUser: !!response.user,
+      user: response.user,
+    });
+
     return response;
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("❌ [authApi] 登录错误:", error);
     return {
       success: false,
       message: "登录失败，请重试",

@@ -99,10 +99,24 @@ const MODULE_ROUTES = [
 // ========================================
 function getBaseURLByPath(path: string): string {
   const useMock = import.meta.env.VITE_USE_MOCK;
+  const apiBaseURL = import.meta.env.VITE_API_BASE_URL;
+
+  // 调试日志
+  console.log("[getBaseURLByPath] 调试信息:", {
+    path,
+    useMock,
+    apiBaseURL,
+    allEnv: {
+      VITE_USE_MOCK: import.meta.env.VITE_USE_MOCK,
+      VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+    },
+  });
 
   // 非 Mock 模式：使用统一的真实后端 URL
   if (useMock !== "apifox") {
-    return import.meta.env.VITE_API_BASE_URL || "";
+    const baseURL = apiBaseURL || "";
+    console.log("[getBaseURLByPath] 返回真实后端 URL:", baseURL);
+    return baseURL;
   }
 
   // Apifox Mock 模式：根据路径正则匹配路由到对应模块
@@ -148,8 +162,45 @@ api.interceptors.request.use(
     const useMock = import.meta.env.VITE_USE_MOCK;
     const originalPath = config.url || "";
 
-    // 动态设置 baseURL（根据请求路径）
-    config.baseURL = getBaseURLByPath(originalPath);
+    // ========================================
+    // 1. 添加 Authorization 头部（从 Zustand Store 获取 token）
+    // ========================================
+    const authStorage = localStorage.getItem("auth-storage");
+    if (authStorage) {
+      try {
+        const authData = JSON.parse(authStorage);
+        const token = authData?.state?.token;
+
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log("[API] ✅ Token 已添加到请求头");
+        } else {
+          console.warn("[API] ⚠️  auth-storage 中没有 token");
+        }
+      } catch (error) {
+        console.error("[API] ❌ 解析 auth-storage 失败:", error);
+      }
+    } else {
+      console.warn("[API] ⚠️  localStorage 中没有 auth-storage");
+    }
+
+    // ========================================
+    // 2. 动态设置 baseURL（根据请求路径）
+    // ========================================
+    const baseURL = getBaseURLByPath(originalPath);
+    config.baseURL = baseURL;
+
+    // 非 Mock 模式：使用完整 URL（绕过 Vite 代理）
+    if (useMock !== "apifox" && baseURL) {
+      // 将相对路径转换为完整 URL
+      if (!originalPath.startsWith("http")) {
+        config.url = `${baseURL}${originalPath}`;
+        config.baseURL = ""; // 清空 baseURL，避免重复拼接
+      }
+      console.log(
+        `[Real Backend] ${config.method?.toUpperCase()} ${config.url}`
+      );
+    }
 
     // Apifox Mock 模式：保留完整路径（不需要重写）
     // Apifox Mock URL 已经是完整的路径，例如：
@@ -158,13 +209,9 @@ api.interceptors.request.use(
       console.log(`[Apifox] Using full path: ${originalPath}`);
     }
 
-    // 添加 JWT Token（如果存在）
-    const token = localStorage.getItem("access_token");
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    // Apifox Mock 模式：添加 apifoxToken 和 apifoxApiId
+    // ========================================
+    // 3. Apifox Mock 模式：添加 apifoxToken 和 apifoxApiId
+    // ========================================
     if (useMock === "apifox") {
       const apifoxToken = import.meta.env.VITE_APIFOX_TOKEN;
       if (apifoxToken && config.headers) {
@@ -246,10 +293,19 @@ api.interceptors.response.use(
 
     // 401 未授权：清除 token，跳转登录
     if (status === 401) {
+      console.error("🚨 [API] 收到 401 错误，准备清除认证信息");
+      console.error("🚨 [API] 请求 URL:", error.config?.url);
+      console.error(
+        "🚨 [API] 当前 token:",
+        localStorage.getItem("access_token")
+      );
+
       localStorage.removeItem("access_token");
+      console.error("🚨 [API] access_token 已清除");
 
       // 避免在登录页重复跳转
       if (!window.location.pathname.includes("/login")) {
+        console.error("🚨 [API] 跳转到登录页");
         window.location.href = "/login";
       }
     }

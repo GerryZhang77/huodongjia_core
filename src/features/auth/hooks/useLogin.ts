@@ -8,6 +8,7 @@ import { useAuthStore } from "../stores";
 import { login as loginApi } from "../services";
 import type { LoginCredentials } from "../types";
 import { authNotification } from "@/components/ui/AuthNotification/manager";
+import { debugLogger } from "@/utils/debugLogger";
 
 export function useLogin() {
   const navigate = useNavigate();
@@ -24,12 +25,36 @@ export function useLogin() {
     setLoading(true);
 
     try {
+      debugLogger.log("[useLogin] 开始登录流程");
+      console.log("🚀 [useLogin] 开始登录流程");
+
       const response = await loginApi(credentials);
+
+      debugLogger.log("[useLogin] 收到响应", {
+        success: response.success,
+        hasToken: !!response.token,
+        hasUser: !!response.user,
+      });
+      console.log("📥 [useLogin] 收到响应:", {
+        success: response.success,
+        hasToken: !!response.token,
+        hasUser: !!response.user,
+      });
 
       // 登录成功
       if (response.success && response.token && response.user) {
+        debugLogger.log("[useLogin] 登录成功，保存认证信息");
+        console.log("✅ [useLogin] 登录成功，保存认证信息");
+
         // 保存认证信息到 Store
         setAuth(response.user, response.token);
+
+        debugLogger.log("[useLogin] 认证信息已保存，检查 localStorage");
+        console.log("💾 [useLogin] 认证信息已保存，检查 localStorage");
+
+        const stored = localStorage.getItem("auth-storage");
+        debugLogger.log("[useLogin] localStorage 内容", stored);
+        console.log("🔍 [useLogin] localStorage 内容:", stored);
 
         // 显示成功通知
         authNotification.success(
@@ -38,12 +63,19 @@ export function useLogin() {
         );
 
         // 延迟跳转，确保通知显示
+        debugLogger.log("[useLogin] 准备跳转到 Dashboard");
+        console.log("🔄 [useLogin] 准备跳转到 Dashboard");
+
         setTimeout(() => {
+          debugLogger.log("[useLogin] 执行跳转到 /dashboard");
+          console.log("➡️  [useLogin] 执行跳转到 /dashboard");
           navigate("/dashboard", { replace: true });
         }, 1000); // 延长到 1 秒，确保用户看到成功提示
 
         return true;
       } else {
+        console.warn("⚠️  [useLogin] 登录失败 - 响应数据不完整");
+
         // 登录失败 - 根据错误代码提供详细信息
         const errorMessage = getErrorMessage(response.code, response.message);
 
@@ -53,7 +85,7 @@ export function useLogin() {
         return false;
       }
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("❌ [useLogin] 捕获异常:", error);
 
       // 网络错误或其他异常
       authNotification.error(

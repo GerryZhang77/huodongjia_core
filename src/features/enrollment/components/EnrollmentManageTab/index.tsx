@@ -62,6 +62,12 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
   const [notificationDialogVisible, setNotificationDialogVisible] =
     useState(false);
 
+  // 分页相关状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [total, setTotal] = useState(0); // 保留用于后端分页
+
   // 筛选相关状态
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(
@@ -81,28 +87,43 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
     return applyFilters(enrollments, filterCriteria);
   }, [enrollments, filterCriteria]);
 
+  // 对筛选后的数据进行客户端分页
+  const paginatedEnrollments = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredEnrollments.slice(startIndex, endIndex);
+  }, [filteredEnrollments, currentPage, pageSize]);
+
+  // 分页总数（基于筛选后的数据）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const paginatedTotal = useMemo(() => {
+    return filteredEnrollments.length;
+  }, [filteredEnrollments]);
+
   // 活跃筛选条件数量
   const activeFilterCount = useMemo(() => {
     return getActiveFilterCount(filterCriteria);
   }, [filterCriteria]);
 
-  // 全选状态
+  // 全选状态（基于当前页的数据）
   const allSelected = useMemo(() => {
-    return isAllSelected(filteredEnrollments, selectedIds);
-  }, [filteredEnrollments, selectedIds]);
+    return isAllSelected(paginatedEnrollments, selectedIds);
+  }, [paginatedEnrollments, selectedIds]);
 
   // 部分选中状态
   const indeterminate = useMemo(() => {
-    return isIndeterminate(filteredEnrollments, selectedIds);
-  }, [filteredEnrollments, selectedIds]);
+    return isIndeterminate(paginatedEnrollments, selectedIds);
+  }, [paginatedEnrollments, selectedIds]);
 
-  // 加载报名列表
+  // 加载报名列表（一次性加载所有数据，前端分页）
   const loadEnrollments = async () => {
     setLoading(true);
     try {
+      // 不传分页参数，获取所有数据
       const response = await getEnrollmentsDetailed(activityId);
       if (response.success) {
         setEnrollments(response.enrollments || []);
+        setTotal(response.total || 0);
       } else {
         Toast.show({
           icon: "fail",
@@ -111,6 +132,21 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
       }
     } catch (error) {
       console.error("加载报名列表失败:", error);
+
+      // 🎯 演示活动的 404 错误静默处理（不显示 toast）
+      const DEMO_ACTIVITY_ID = "act-pku-innovation-2025-fall";
+      const isDemoActivity = activityId === DEMO_ACTIVITY_ID;
+      const is404Error =
+        (error as { response?: { status?: number } })?.response?.status === 404;
+
+      if (isDemoActivity && is404Error) {
+        console.log("✅ 演示活动暂无报名数据，已静默处理");
+        setEnrollments([]);
+        setTotal(0);
+        return;
+      }
+
+      // 非演示活动或非 404 错误才显示 toast
       Toast.show({
         icon: "fail",
         content: error instanceof Error ? error.message : "加载失败",
@@ -120,7 +156,7 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
     }
   };
 
-  // 初始加载
+  // 初始加载（移除 currentPage 依赖，只加载一次）
   useEffect(() => {
     loadEnrollments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,7 +170,8 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
   // 导入成功回调
   const handleImportSuccess = () => {
     setImportDialogVisible(false);
-    // 刷新报名列表
+    // 重置到第一页并刷新报名列表
+    setCurrentPage(1);
     loadEnrollments();
     Toast.show({
       icon: "success",
@@ -150,14 +187,15 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
   // 取消筛选
   const handleCancelFilter = () => {
     setFilterCriteria(DEFAULT_FILTER_CRITERIA);
+    setCurrentPage(1); // 重置到第一页
   };
 
-  // 全选/取消全选
+  // 全选/取消全选（当前页）
   const handleSelectAll = () => {
     if (allSelected) {
       setSelectedIds(clearSelection());
     } else {
-      setSelectedIds(selectAll(filteredEnrollments));
+      setSelectedIds(selectAll(paginatedEnrollments));
     }
   };
 
@@ -354,32 +392,43 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Tag color="success">
-                  通过{" "}
-                  {
-                    filteredEnrollments.filter((e) => e.status === "approved")
-                      .length
-                  }
-                </Tag>
-                <Tag color="warning">
-                  待审核{" "}
-                  {
-                    filteredEnrollments.filter((e) => e.status === "pending")
-                      .length
-                  }
-                </Tag>
-                <Tag color="danger">
-                  拒绝{" "}
-                  {
-                    filteredEnrollments.filter((e) => e.status === "rejected")
-                      .length
-                  }
-                </Tag>
+                {import.meta.env.VITE_PRODUCTION_MODE === "true" ? (
+                  // 生产模式：全部显示为已通过
+                  <Tag color="success">已通过 {filteredEnrollments.length}</Tag>
+                ) : (
+                  // 开发模式：显示真实统计
+                  <>
+                    <Tag color="success">
+                      通过{" "}
+                      {
+                        filteredEnrollments.filter(
+                          (e) => e.status === "approved"
+                        ).length
+                      }
+                    </Tag>
+                    <Tag color="warning">
+                      待审核{" "}
+                      {
+                        filteredEnrollments.filter(
+                          (e) => e.status === "pending"
+                        ).length
+                      }
+                    </Tag>
+                    <Tag color="danger">
+                      拒绝{" "}
+                      {
+                        filteredEnrollments.filter(
+                          (e) => e.status === "rejected"
+                        ).length
+                      }
+                    </Tag>
+                  </>
+                )}
               </div>
             </div>
 
             {/* 全选工具栏 */}
-            {filteredEnrollments.length > 0 && (
+            {paginatedEnrollments.length > 0 && (
               <div className="flex items-center justify-between bg-white p-3 rounded-lg mb-3 border border-gray-200">
                 <Checkbox
                   checked={allSelected}
@@ -389,11 +438,12 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
                   <span className="text-sm text-gray-600">
                     {selectedIds.length > 0
                       ? `已选 ${selectedIds.length} 人`
-                      : "全选"}
+                      : "全选当前页"}
                   </span>
                 </Checkbox>
                 <span className="text-sm text-gray-500">
-                  共 {filteredEnrollments.length} 人
+                  当前页 {paginatedEnrollments.length} 人 / 共{" "}
+                  {filteredEnrollments.length} 人
                 </span>
               </div>
             )}
@@ -401,7 +451,7 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
             {/* 报名列表 */}
             <Card className="rounded-xl overflow-hidden">
               <List>
-                {filteredEnrollments.map((enrollment) => (
+                {paginatedEnrollments.map((enrollment) => (
                   <List.Item
                     key={enrollment.id}
                     prefix={
@@ -412,67 +462,177 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
                       />
                     }
                     description={
-                      <div className="space-y-1">
-                        {/* 基础信息 */}
-                        <div className="text-sm text-gray-600">
-                          {[
-                            enrollment.gender === "male"
-                              ? "男"
-                              : enrollment.gender === "female"
-                              ? "女"
-                              : enrollment.gender,
-                            enrollment.age && `${enrollment.age}岁`,
-                            enrollment.occupation,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
+                      <div className="space-y-1.5">
+                        {/* 基础信息行 */}
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          {enrollment.gender &&
+                            enrollment.gender !== "other" && (
+                              <span>
+                                {enrollment.gender === "male"
+                                  ? "👨 男"
+                                  : enrollment.gender === "female"
+                                  ? "👩 女"
+                                  : null}
+                              </span>
+                            )}
+                          {enrollment.age && <span>{enrollment.age}岁</span>}
+                          {enrollment.occupation && (
+                            <span>{enrollment.occupation}</span>
+                          )}
                         </div>
 
-                        {/* 联系方式 */}
-                        {(enrollment.phone || enrollment.email) && (
-                          <div className="text-xs text-gray-500">
-                            {[enrollment.phone, enrollment.email]
+                        {/* 公司/行业信息 */}
+                        {(enrollment.company || enrollment.industry) && (
+                          <div className="text-sm text-gray-600">
+                            {[enrollment.company, enrollment.industry]
                               .filter(Boolean)
-                              .join(" | ")}
+                              .join(" · ")}
                           </div>
                         )}
 
-                        {/* 自定义字段 */}
+                        {/* 联系方式 */}
+                        {(enrollment.phone || enrollment.email) && (
+                          <div className="text-xs text-gray-500 flex items-center gap-2">
+                            {enrollment.phone && (
+                              <span>📱 {enrollment.phone}</span>
+                            )}
+                            {enrollment.email && (
+                              <span>📧 {enrollment.email}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 城市信息 */}
+                        {enrollment.city && (
+                          <div className="text-xs text-gray-500">
+                            📍 {enrollment.city}
+                          </div>
+                        )}
+
+                        {/* 自定义字段标签 */}
                         {enrollment.customFields &&
                           Object.keys(enrollment.customFields).length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {Object.entries(enrollment.customFields).map(
-                                ([key, value]) => (
-                                  <Tag
-                                    key={key}
-                                    color="default"
-                                    fill="outline"
-                                    className="text-xs"
-                                  >
-                                    {key}: {String(value)}
-                                  </Tag>
-                                )
-                              )}
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {Object.entries(enrollment.customFields)
+                                .filter(([key, value]) => {
+                                  // 过滤掉已经单独展示的字段和内部字段
+                                  const excludedKeys = [
+                                    "phone",
+                                    "手机号",
+                                    "联系方式",
+                                    "email",
+                                    "邮箱",
+                                    "电子邮箱",
+                                    "company",
+                                    "公司",
+                                    "单位",
+                                    "industry",
+                                    "行业",
+                                    "city",
+                                    "城市",
+                                    "所在地",
+                                    "other", // 过滤内部字段
+                                    "sex",
+                                    "性别",
+                                    "年龄",
+                                    "age",
+                                    "name",
+                                    "姓名",
+                                    "status",
+                                    "状态",
+                                    "index", // 过滤索引字段
+                                    "序号",
+                                    "id",
+                                    "ID",
+                                  ];
+
+                                  // 过滤掉排除的键
+                                  if (excludedKeys.includes(key)) {
+                                    return false;
+                                  }
+
+                                  // 过滤掉空值、null、undefined
+                                  if (
+                                    value === null ||
+                                    value === undefined ||
+                                    value === ""
+                                  ) {
+                                    return false;
+                                  }
+
+                                  // 转换为字符串并清理
+                                  const stringValue = String(value)
+                                    .trim()
+                                    .toLowerCase();
+
+                                  // 过滤掉纯数字（如 "59", "60"）
+                                  if (/^\d+$/.test(stringValue)) {
+                                    return false;
+                                  }
+
+                                  // 过滤掉无意义的值
+                                  const excludedValues = [
+                                    "other",
+                                    "null",
+                                    "undefined",
+                                    "nan",
+                                    "none",
+                                    "无",
+                                    "空",
+                                  ];
+                                  if (excludedValues.includes(stringValue)) {
+                                    return false;
+                                  }
+
+                                  return true;
+                                })
+                                .slice(0, 3) // 只显示前3个额外字段
+                                .map(([key, value]) => {
+                                  // 如果值是对象或数组，转换为字符串
+                                  const displayValue =
+                                    typeof value === "object"
+                                      ? JSON.stringify(value)
+                                      : String(value);
+
+                                  return (
+                                    <Tag
+                                      key={key}
+                                      color="primary"
+                                      fill="outline"
+                                      className="text-xs"
+                                    >
+                                      {displayValue.length > 10
+                                        ? displayValue.substring(0, 10) + "..."
+                                        : displayValue}
+                                    </Tag>
+                                  );
+                                })}
                             </div>
                           )}
                       </div>
                     }
                     extra={
-                      <Tag
-                        color={
-                          enrollment.status === "approved"
-                            ? "success"
+                      import.meta.env.VITE_PRODUCTION_MODE === "true" ? (
+                        // 生产模式：强制显示"已通过"
+                        <Tag color="success">已通过</Tag>
+                      ) : (
+                        // 开发模式：显示真实状态
+                        <Tag
+                          color={
+                            enrollment.status === "approved"
+                              ? "success"
+                              : enrollment.status === "rejected"
+                              ? "danger"
+                              : "warning"
+                          }
+                        >
+                          {enrollment.status === "approved"
+                            ? "已通过"
                             : enrollment.status === "rejected"
-                            ? "danger"
-                            : "warning"
-                        }
-                      >
-                        {enrollment.status === "approved"
-                          ? "已通过"
-                          : enrollment.status === "rejected"
-                          ? "已拒绝"
-                          : "待审核"}
-                      </Tag>
+                            ? "已拒绝"
+                            : "待审核"}
+                        </Tag>
+                      )
                     }
                   >
                     <div className="font-medium text-gray-900">
@@ -482,6 +642,35 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
                 ))}
               </List>
             </Card>
+
+            {/* 分页器 */}
+            {filteredEnrollments.length > pageSize && (
+              <div className="flex justify-center items-center gap-4 py-4 mt-4">
+                <Button
+                  size="small"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  className="rounded-lg"
+                >
+                  上一页
+                </Button>
+                <span className="text-sm text-gray-600">
+                  第 {currentPage} 页 / 共{" "}
+                  {Math.ceil(filteredEnrollments.length / pageSize)} 页
+                </span>
+                <Button
+                  size="small"
+                  disabled={
+                    currentPage >=
+                    Math.ceil(filteredEnrollments.length / pageSize)
+                  }
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  className="rounded-lg"
+                >
+                  下一页
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
