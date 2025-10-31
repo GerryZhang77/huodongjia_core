@@ -15,10 +15,7 @@ module.exports = async (req, res) => {
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, PATCH, OPTIONS"
   );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization"
-  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   // 处理 OPTIONS 预检请求
   if (req.method === "OPTIONS") {
@@ -27,10 +24,11 @@ module.exports = async (req, res) => {
 
   // 从 URL 中提取 API 路径
   // Vercel rewrites: /api/auth/login -> /serverless/proxy?path=/api/auth/login
-  const apiPath = req.url.includes('?') 
-    ? new URL(req.url, 'http://localhost').searchParams.get('path') || req.url.split('?')[0]
+  const apiPath = req.url.includes("?")
+    ? new URL(req.url, "http://localhost").searchParams.get("path") ||
+      req.url.split("?")[0]
     : req.url;
-  
+
   // 确保路径以 /api 开头
   const targetPath = apiPath.startsWith("/api") ? apiPath : `/api${apiPath}`;
   const targetUrl = `${BACKEND_URL}${targetPath}`;
@@ -54,7 +52,8 @@ module.exports = async (req, res) => {
     if (req.method !== "GET" && req.method !== "HEAD") {
       if (req.body) {
         // Vercel 已经解析过的 body（对象）
-        body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        body =
+          typeof req.body === "string" ? req.body : JSON.stringify(req.body);
       }
     }
 

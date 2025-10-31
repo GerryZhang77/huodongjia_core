@@ -1,6 +1,6 @@
 /**
  * Vercel API Route - API 代理
- * 
+ *
  * 路径：/api/proxy
  * 功能：代理所有 API 请求到后端
  */
@@ -14,10 +14,7 @@ export default async function handler(req, res) {
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, PATCH, OPTIONS"
   );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization"
-  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   // 处理 OPTIONS 预检请求
   if (req.method === "OPTIONS") {
@@ -26,7 +23,9 @@ export default async function handler(req, res) {
 
   // 从查询参数获取完整路径
   const { path: apiPath } = req.query;
-  const targetPath = Array.isArray(apiPath) ? `/${apiPath.join('/')}` : `/${apiPath || ''}`;
+  const targetPath = Array.isArray(apiPath)
+    ? `/${apiPath.join("/")}`
+    : `/${apiPath || ""}`;
   const targetUrl = `${BACKEND_URL}${targetPath}`;
 
   console.log(`[API Proxy] ${req.method} ${targetPath}`);
@@ -48,7 +47,8 @@ export default async function handler(req, res) {
     let body = undefined;
     if (req.method !== "GET" && req.method !== "HEAD") {
       if (req.body) {
-        body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        body =
+          typeof req.body === "string" ? req.body : JSON.stringify(req.body);
       }
     }
 
