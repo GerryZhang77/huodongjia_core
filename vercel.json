@@ -3,17 +3,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api-proxy/:path*"
+      "destination": "/serverless/proxy"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "api-proxy/[...path].ts": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  }
+  ]
 }
