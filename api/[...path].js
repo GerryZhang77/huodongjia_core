@@ -24,8 +24,8 @@ export default async function handler(req, res) {
   // 从查询参数获取完整路径
   const { path: apiPath } = req.query;
   const targetPath = Array.isArray(apiPath)
-    ? `/${apiPath.join("/")}`
-    : `/${apiPath || ""}`;
+    ? `/api/${apiPath.join("/")}`
+    : `/api/${apiPath || ""}`;
   const targetUrl = `${BACKEND_URL}${targetPath}`;
 
   console.log(`[API Proxy] ${req.method} ${targetPath}`);
