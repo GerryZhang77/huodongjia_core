@@ -3,11 +3,17 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://47.92.0.104:12345/api/:path*"
+      "destination": "/api-proxy/:path*"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api-proxy/[...path].ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
 }

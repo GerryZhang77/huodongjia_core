@@ -120,7 +120,11 @@ function getBaseURLByPath(path: string): string {
     // 🔥 生产环境：使用相对路径，通过 Vercel rewrites 代理
     // 🔧 开发环境：使用完整 HTTP 地址
     const baseURL = isDev ? apiBaseURL || "" : "";
-    console.log("[getBaseURLByPath] 返回真实后端 URL:", baseURL, isDev ? "(开发环境)" : "(生产环境 - 使用 Vercel 代理)");
+    console.log(
+      "[getBaseURLByPath] 返回真实后端 URL:",
+      baseURL,
+      isDev ? "(开发环境)" : "(生产环境 - 使用 Vercel 代理)"
+    );
     return baseURL;
   }
 
