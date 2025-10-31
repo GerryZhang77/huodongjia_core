@@ -100,30 +100,32 @@ const MODULE_ROUTES = [
 function getBaseURLByPath(path: string): string {
   const useMock = import.meta.env.VITE_USE_MOCK;
   const apiBaseURL = import.meta.env.VITE_API_BASE_URL;
-  const isDev = import.meta.env.DEV; // Vite 提供的开发环境标识
+  const isProductionMode = import.meta.env.VITE_PRODUCTION_MODE === 'true'; // 🔥 使用 VITE_PRODUCTION_MODE 判断
 
   // 调试日志
   console.log("[getBaseURLByPath] 调试信息:", {
     path,
     useMock,
     apiBaseURL,
-    isDev,
+    isProductionMode,
     allEnv: {
       VITE_USE_MOCK: import.meta.env.VITE_USE_MOCK,
       VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+      VITE_PRODUCTION_MODE: import.meta.env.VITE_PRODUCTION_MODE,
       DEV: import.meta.env.DEV,
+      PROD: import.meta.env.PROD,
     },
   });
 
   // 非 Mock 模式：使用统一的真实后端 URL
   if (useMock !== "apifox") {
-    // 🔥 生产环境：使用相对路径，通过 Vercel rewrites 代理
-    // 🔧 开发环境：使用完整 HTTP 地址
-    const baseURL = isDev ? apiBaseURL || "" : "";
+    // 🔥 生产模式：使用相对路径，通过 Vercel Serverless Function 代理
+    // 🔧 开发模式：使用完整 HTTP 地址直接访问
+    const baseURL = isProductionMode ? "" : (apiBaseURL || "");
     console.log(
       "[getBaseURLByPath] 返回真实后端 URL:",
-      baseURL,
-      isDev ? "(开发环境)" : "(生产环境 - 使用 Vercel 代理)"
+      baseURL || "(空字符串 - 使用相对路径)",
+      isProductionMode ? "(生产模式 - 使用 Vercel 代理)" : "(开发模式 - 直接访问后端)"
     );
     return baseURL;
   }
