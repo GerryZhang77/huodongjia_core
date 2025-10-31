@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>北大创新学社25秋冬学期成员人群综合画像</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <style>
+    :root{
+      --pku-red:#8e1f1f;--pku-light-red:#b14545;--tech-blue:#1a56db;
+      --innovation-orange:#e67e22;--light-gray:#f5f7fa;--dark-gray:#4b5563;
+      --accent-green:#10b981;--accent-purple:#8b5cf6;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;}
+    body{background-color:#f8f9fa;color:#333;line-height:1.6;
+      background-image:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);}
+    .container{max-width:1200px;margin:0 auto;padding:20px;}
+    header{background:linear-gradient(135deg,var(--pku-red) 0%,#6c1a1a 100%);
+      color:#fff;padding:40px 20px;text-align:center;border-radius:0 0 20px 20px;
+      margin-bottom:40px;box-shadow:0 4px 12px rgba(0,0,0,.1);position:relative;overflow:hidden;}
+    header::before{content:"";position:absolute;top:0;left:0;width:100%;height:100%;
+      background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1" d="M0,100 Q50,50 100,100 T200,100"/></svg>');
+      opacity:.3;}
+    h1{font-size:2.5rem;margin-bottom:15px;position:relative;z-index:2;}
+    .subtitle{font-size:1.2rem;max-width:800px;margin:0 auto 20px;font-weight:300;position:relative;z-index:2;}
+    .stats-bar{display:flex;justify-content:center;gap:30px;margin-top:25px;position:relative;z-index:2;}
+    .stat-item{background:rgba(255,255,255,.15);border-radius:10px;padding:15px 25px;text-align:center;backdrop-filter:blur(5px);}
+    .stat-value{font-size:1.8rem;font-weight:bold;margin-bottom:5px;}
+    .stat-label{font-size:.9rem;opacity:.9;}
+    .section{background:#fff;border-radius:15px;padding:30px;margin-bottom:30px;
+      box-shadow:0 5px 15px rgba(0,0,0,.05);transition:transform .3s ease,box-shadow .3s ease;}
+    .section:hover{transform:translateY(-5px);box-shadow:0 8px 25px rgba(0,0,0,.1);}
+    .section-header{display:flex;align-items:center;margin-bottom:25px;padding-bottom:15px;border-bottom:2px solid var(--light-gray);}
+    .section-icon{font-size:2rem;margin-right:15px;color:var(--pku-red);}
+    .section-title{font-size:1.8rem;color:var(--pku-red);}
+    .content-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:stretch;}
+    @media (max-width:768px){.content-grid{grid-template-columns:1fr;}}
+    .chart-container{height:300px;position:relative;margin:20px 0;padding:6px;}
+    .chart-container>canvas{width:100% !important;height:100% !important;}
+    .data-list{list-style-type:none;}
+    .data-list li{padding:12px 0;border-bottom:1px dashed #eee;display:flex;justify-content:space-between;}
+    .data-list li:last-child{border-bottom:none;}
+    .data-label{font-weight:600;color:var(--dark-gray);}
+    .data-value{font-weight:bold;color:var(--pku-red);}
+    .highlight-box{background:linear-gradient(to right,rgba(142,31,31,.08),rgba(142,31,31,.03));
+      border-left:4px solid var(--pku-red);padding:20px;border-radius:0 8px 8px 0;margin:25px 0;}
+    .summary-table{width:100%;border-collapse:collapse;margin:25px 0;}
+    .summary-table th,.summary-table td{padding:12px 15px;text-align:left;}
+    .summary-table th{background-color:var(--pku-light-red);color:#fff;font-weight:500;}
+    .summary-table tr:nth-child(even){background-color:rgba(142,31,31,.05);}
+    .conclusion{background:linear-gradient(135deg,#f0f4f8 0%,#dfe6ee 100%);padding:30px;border-radius:15px;margin:30px 0;border-left:5px solid var(--tech-blue);}
+    .conclusion-title{font-size:1.5rem;color:var(--tech-blue);margin-bottom:20px;display:flex;align-items:center;}
+    .conclusion-title i{margin-right:10px;}
+    .conclusion-content{font-size:1.1rem;line-height:1.8;}
+    .tag-cloud{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0;}
+    .tag{background:rgba(26,86,219,.1);color:var(--tech-blue);padding:8px 15px;border-radius:30px;font-size:.9rem;display:flex;align-items:center;}
+    .tag i{margin-right:5px;}
+    .quote{font-style:italic;padding:20px;background:rgba(230,126,34,.08);border-radius:10px;margin:20px 0;position:relative;}
+    /* 修复：content 语法错误 */
+    .quote::before{content:"“";position:absolute;top:-20px;left:10px;font-size:4rem;color:rgba(230,126,34,.2);font-family:Georgia,serif;}
+    .department-structure{display:flex;flex-direction:column;gap:15px;margin:20px 0;}
+    .department-item{background:#fff;border-radius:10px;padding:15px;box-shadow:0 3px 10px rgba(0,0,0,.05);border-left:4px solid var(--accent-purple);}
+    .department-header{display:flex;justify-content:space-between;margin-bottom:10px;}
+    .department-name{font-weight:bold;color:var(--dark-gray);}
+    .department-percent{color:var(--pku-red);font-weight:bold;}
+    .department-desc{font-size:.95rem;color:var(--dark-gray);opacity:.8;}
+    footer{text-align:center;padding:30px 0;color:var(--dark-gray);font-size:.9rem;margin-top:50px;border-top:1px solid #e5e7eb;}
+    .highlight{background:linear-gradient(to right,var(--innovation-orange),var(--pku-light-red));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:bold;}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>北大创新学社25秋冬学期成员人群综合画像</h1>
+      <p class="subtitle">基于300+名成员数据的综合分析与群体特征展示</p>
+      <p class="subtitle"> 数据统计与分析 @ 活动家 Eventclub</p>
+      <div class="stats-bar">
+        <div class="stat-item"><div class="stat-value">354</div><div class="stat-label">成员总数</div></div>
+        <div class="stat-item"><div class="stat-value">6</div><div class="stat-label">职能部门</div></div>
+        <div class="stat-item"><div class="stat-value">8</div><div class="stat-label">行业创投部门</div></div>
+        <div class="stat-item"><div class="stat-value">4</div><div class="stat-label">创投俱乐部/EMBA俱乐部</div></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- 学历与年级分布 -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-icon">🎓</div>
+        <h2 class="section-title">学历与年级分布</h2>
+      </div>
+      <div class="content-grid">
+        <div>
+          <div class="chart-container"><canvas id="academicChart"></canvas></div>
+        </div>
+        <div>
+          <ul class="data-list">
+            <li><span class="data-label">本科生占比</span><span class="data-value">14.5%</span></li>
+            <li><span class="data-label">硕士生占比（硕/研/MBA）</span><span class="data-value">73.9%</span></li>
+            <li><span class="data-label">博士生占比（博/直博）</span><span class="data-value">11.5%</span></li>
+            <li><span class="data-label">主要年级分布</span><span class="data-value">硕博生集中于2023–2025级；本科以2025级为主</span></li>
+          </ul>
+          <div class="highlight-box">
+            <p>成员整体呈年轻化趋势，以<span class="highlight">24本、25本</span>本科生和<span class="highlight">24硕、25硕</span>硕士生为主，正处于学业与职业探索的关键期。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 专业分布特征 -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-icon">🏫</div>
+        <h2 class="section-title">专业分布特征</h2>
+      </div>
+      <div class="content-grid">
+        <div>
+          <div class="chart-container"><canvas id="majorChart"></canvas></div>
+        </div>
+        <div>
+          <p style="margin-bottom: 20px;">专业覆盖广泛，呈现典型的<span class="highlight">"跨学科+创新导向"</span>特征：</p>
+          <ul class="data-list">
+            <li><span class="data-label">经管类</span><span class="data-value">30%</span></li>
+            <li><span class="data-label">理工科</span><span class="data-value">25%</span></li>
+            <li><span class="data-label">文社政法类</span><span class="data-value">20%</span></li>
+            <li><span class="data-label">生命与医学方向</span><span class="data-value">15%</span></li>
+            <li><span class="data-label">其他专业</span><span class="data-value">10%</span></li>
+          </ul>
+          <div class="highlight-box">
+            <p>整体体现出强烈的<span class="highlight">"综合创新人才"结构</span>，理工与经管并重，法学与人文交叉明显。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 部门分布结构（基于实际名单统计） -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-icon">🧭</div>
+        <h2 class="section-title">部门分布结构</h2>
+      </div>
+      <div class="content-grid">
+        <div>
+          <div class="chart-container"><canvas id="departmentChart"></canvas></div>
+        </div>
+        <div>
+          <div class="department-structure">
+            <div class="department-item"><div class="department-header"><span class="department-name">创业者关系部</span><span class="department-percent">13.0%</span></div><div class="department-desc">链接创始人生态、项目撮合与落地</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">互联网部</span><span class="department-percent">11.2%</span></div><div class="department-desc">产品与增长、平台与内容运营</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">AI俱乐部</span><span class="department-percent">10.6%</span></div><div class="department-desc">模型与应用实践、技术沙龙与共创</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">科转部</span><span class="department-percent">10.5%</span></div><div class="department-desc">科研成果转化、投产学研对接</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">外联部</span><span class="department-percent">9.7%</span></div><div class="department-desc">对外合作与资源拓展、赞助与联合活动</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">品牌管理部</span><span class="department-percent">8.4%</span></div><div class="department-desc">品牌定位、视觉物料与传播统筹</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">综合事务部</span><span class="department-percent">5.6%</span></div><div class="department-desc">组织协调、流程制度与会议执行</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">医疗部</span><span class="department-percent">5.3%</span></div><div class="department-desc">医健产业交流、临床与产业链对接</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">政策支持部</span><span class="department-percent">4.0%</span></div><div class="department-desc">政策信息梳理、申报辅导与合规</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">文创与大消费部</span><span class="department-percent">3.7%</span></div><div class="department-desc">文创消费趋势、品牌与产品共创</div></div>
+            <div class="department-item"><div class="department-header"><span class="department-name">其他（出海/教育与公益/硬科技/会员/元宇宙与区块链/碳中和/会长团）</span><span class="department-percent">18.0%</span></div><div class="department-desc">细分方向分布较广，承担专业支撑与特色活动</div></div>
+          </div>
+          <div class="highlight-box"><p>整体呈现<span class="highlight">“创业者关系 × 互联网/AI × 科转/外联”</span>的三核结构，品牌与综合事务提供稳定支撑。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 优势关键词分析 -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-icon">🧠</div>
+        <h2 class="section-title">优势关键词分析</h2>
+      </div>
+      <div class="content-grid">
+        <div>
+          <div class="chart-container"><canvas id="strengthChart"></canvas></div>
+        </div>
+        <div>
+          <div class="tag-cloud">
+            <div class="tag"><i class="fas fa-comments"></i> 善于沟通</div>
+            <div class="tag"><i class="fas fa-users"></i> 外向</div>
+            <div class="tag"><i class="fas fa-handshake"></i> 协调能力强</div>
+            <div class="tag"><i class="fas fa-tasks"></i> 项目经验</div>
+            <div class="tag"><i class="fas fa-bolt"></i> 执行力</div>
+            <div class="tag"><i class="fas fa-flag"></i> 领导力</div>
+            <div class="tag"><i class="fas fa-lightbulb"></i> 喜欢新事物</div>
+            <div class="tag"><i class="fas fa-graduation-cap"></i> 学习快</div>
+            <div class="tag"><i class="fas fa-compass"></i> 探索精神</div>
+            <div class="tag"><i class="fas fa-hands-helping"></i> 有责任感</div>
+            <div class="tag"><i class="fas fa-fist-raised"></i> 坚持</div>
+            <div class="tag"><i class="fas fa-user-clock"></i> 自律</div>
+          </div>
+          <div class="highlight-box">
+            <p>基于高频词分析的优势分布：</p>
+            <ul style="padding-left: 20px; margin-top: 10px;">
+              <li><span class="highlight">沟通表达与人际关系</span>（出现率 ≈40%）</li>
+              <li><span class="highlight">组织与执行力</span>（≈35%）</li>
+              <li><span class="highlight">创新与学习能力</span>（≈30%）</li>
+              <li><span class="highlight">责任心与毅力</span>（≈25%）</li>
+            </ul>
+          </div>
+          <p>体现出社团整体的<span class="highlight">"主动型学习者 + 实干型创新者"</span>特征。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 最自豪的事情 -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-icon">🌟</div>
+        <h2 class="section-title">最自豪的事情（心理特征）</h2>
+      </div>
+      <div class="content-grid">
+        <div><div class="chart-container"><canvas id="proudChart"></canvas></div></div>
+        <div>
+          <div class="highlight-box"><p>通过文本语义聚类，可归纳为三类典型成就取向：</p></div>
+          <div style="margin:25px 0;"><h3 style="color: var(--innovation-orange); margin-bottom: 15px;">1. 自我成长与突破型（≈45%）</h3>
+            <div class="quote">"复读考上理想学校"<br>"克服焦虑，提升绩点"<br>"勇敢独自旅行"</div></div>
+          <div style="margin:25px 0;"><h3 style="color: var(--accent-purple); margin-bottom: 15px;">2. 项目实践与创业型（≈35%）</h3>
+            <div class="quote">"创建项目获奖"<br>"参与创新创业比赛"<br>"带团队完成活动"</div></div>
+          <div style="margin:25px 0;"><h3 style="color: var(--tech-blue); margin-bottom: 15px;">3. 服务与领导型（≈20%）</h3>
+            <div class="quote">"组织志愿活动"<br>"带领团队完成任务"<br>"平衡学习与工作"</div></div>
+          <div class="highlight-box"><p>整体呈现出<span class="highlight">"积极、自主、具领导潜质的青年创新者"</span>画像。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 综合人群画像总结 -->
+    <section class="section">
+      <div class="section-header"><div class="section-icon">👥</div><h2 class="section-title">综合人群画像总结</h2></div>
+      <table class="summary-table">
+        <thead><tr><th>维度</th><th>主要特征</th><th>占比或趋势</th></tr></thead>
+        <tbody>
+          <tr><td>年龄层</td><td>本科至硕士，20–25岁</td><td>年轻化，高行动力</td></tr>
+          <tr><td>学科背景</td><td>经管与理工主导，交叉学科多</td><td>复合创新型</td></tr>
+          <tr><td>能力特征</td><td>沟通力、执行力、责任心</td><td>高</td></tr>
+          <tr><td>创业方向</td><td>科技创新、互联网、绿色发展</td><td>热门</td></tr>
+          <tr><td>性格倾向</td><td>外向、积极、有探索精神</td><td>明显</td></tr>
+          <tr><td>成就动机</td><td>自我提升、实践导向</td><td>强</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 综合结论 -->
+    <div class="conclusion">
+      <h3 class="conclusion-title"><i class="fas fa-search"></i> 综合结论</h3>
+      <div class="conclusion-content">
+        <p>学社骨干整体构成了一个<span class="highlight">"高智商 + 高执行力 + 高社会责任感"</span>的青年创新群体。</p>
+        <p>他们来自多元学科，以本科及硕士阶段学生为主，倾向于在互联网、AI、绿色科技与生命健康等新兴领域探索创新路径。</p>
+        <p>他们具备良好的沟通与团队协作能力，兼具理性与创造力，是典型的<span class="highlight">"多维成长型人才"</span>群体。</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="container">
+    <p>© 2025 北京大学创新学社 | 活动家Eventclub·数据统计与分析中心</p>
+    <p>数据来源：2025学年秋冬季学期成员调研（样本量：近300人）</p>
+  </footer>
+
+  <!-- 统一初始化图表（避免重复 new；缺失的画布不会报错） -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      // 全局样式
+      if (window.Chart) {
+        Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        Chart.defaults.plugins.legend.position = 'bottom';
+      }
+
+      function safeNewChart(elId, config){
+        const el = document.getElementById(elId);
+        if (!el || !window.Chart) return;
+        const old = Chart.getChart(el);
+        if (old) old.destroy();
+        const ctx = el.getContext('2d');
+        return new Chart(ctx, config);
+      }
+
+      // 学历与年级分布图（占位示例）
+      safeNewChart('academicChart', {
+        type: 'pie',
+        data: {
+          labels: ['本科生 (60%)','硕士生 (35%)','博士及其他 (5%)'],
+          datasets: [{
+            data: [60,35,5],
+            backgroundColor:[
+              'rgba(142,31,31,.8)','rgba(142,31,31,.6)','rgba(142,31,31,.4)'
+            ],
+            borderColor:['rgba(142,31,31,1)','rgba(142,31,31,1)','rgba(142,31,31,1)'],
+            borderWidth:1
+          }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ title:{ display:true, text:'学历分布比例' } }
+        }
+      });
+
+      // 专业分布图
+      safeNewChart('majorChart', {
+        type: 'doughnut',
+        data: {
+          labels: ['经管类 (30%)','理工科 (25%)','文社政法类 (20%)','生命与医学 (15%)','其他 (10%)'],
+          datasets: [{
+            data: [30,25,20,15,10],
+            backgroundColor:[
+              'rgba(26,86,219,.8)','rgba(230,126,34,.8)','rgba(139,92,246,.8)','rgba(16,185,129,.8)','rgba(107,114,128,.8)'
+            ],
+            borderColor:[
+              'rgba(26,86,219,1)','rgba(230,126,34,1)','rgba(139,92,246,1)','rgba(16,185,129,1)','rgba(107,114,128,1)'
+            ],
+            borderWidth:1
+          }]
+        },
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ title:{ display:true, text:'专业分布比例' } } }
+      });
+
+      // 部门分布图（真实统计数据）
+      safeNewChart('departmentChart', {
+        type: 'bar',
+        data: {
+          labels: ['创业者关系部','互联网部','AI俱乐部','科转部','外联部','品牌管理部','综合事务部','医疗部','政策支持部','文创与大消费部','其他'],
+          datasets: [{
+            label:'占比（%）',
+            data:[13.0,11.2,10.6,10.5,9.7,8.4,5.6,5.3,4.0,3.7,18.0],
+            borderWidth:1
+          }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          layout:{ padding:{ left:16, right:16, top:8, bottom:8 } },
+          scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>v+'%' } } },
+          plugins:{ legend:{ display:false }, title:{ display:true, text:'部门分布（占比）' } }
+        }
+      });
+
+      // 优势关键词雷达图
+      safeNewChart('strengthChart', {
+        type: 'radar',
+        data: {
+          labels: ['沟通表达','组织执行','创新学习','责任心','团队协作','领导力'],
+          datasets: [{
+            label:'能力优势分布',
+            data:[90,85,80,75,70,65],
+            fill:true,
+            backgroundColor:'rgba(230,126,34,.2)',
+            borderColor:'rgba(230,126,34,1)',
+            pointBackgroundColor:'rgba(230,126,34,1)',
+            pointBorderColor:'#fff',
+            pointHoverBackgroundColor:'#fff',
+            pointHoverBorderColor:'rgba(230,126,34,1)'
+          }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          layout:{ padding:{ left:8, right:8, top:8, bottom:8 } },
+          scales:{ r:{ angleLines:{ display:true }, suggestedMin:0, suggestedMax:100 } },
+          plugins:{ title:{ display:true, text:'成员核心能力雷达图' } }
+        }
+      });
+
+      // 最自豪的事情图
+      safeNewChart('proudChart', {
+        type: 'pie',
+        data: {
+          labels: ['自我成长与突破型 (45%)','项目实践与创业型 (35%)','服务与领导型 (20%)'],
+          datasets: [{
+            data:[45,35,20],
+            backgroundColor:['rgba(230,126,34,.8)','rgba(139,92,246,.8)','rgba(26,86,219,.8)'],
+            borderColor:['rgba(230,126,34,1)','rgba(139,92,246,1)','rgba(26,86,219,1)'],
+            borderWidth:1
+          }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ position:'bottom' }, title:{ display:true, text:'成就取向分布' } }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

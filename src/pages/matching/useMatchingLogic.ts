@@ -260,7 +260,19 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       }
     } catch (error) {
       console.error("Generate rules error:", error);
-      Toast.show({ content: "网络错误，请重试", icon: "fail" });
+      
+      // 🔥 临时修改：Mock 生产环境专用 - 生成规则失败跳转到人群画像页面
+      Toast.show({ 
+        content: "生成规则失败，即将为您展示活动人群画像", 
+        icon: "fail",
+        duration: 2000,
+      });
+      
+      // 延迟跳转到人群画像页面
+      setTimeout(() => {
+        console.log("🔄 [生成规则失败] 跳转到人群画像页面");
+        window.location.href = "/portrait.html";
+      }, 2000);
     } finally {
       setIsGeneratingRules(false);
     }
@@ -307,26 +319,29 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       }
     } catch (error) {
       console.error("Save rules error:", error);
-      Toast.show({ content: "网络错误，请重试", icon: "fail" });
+      
+      // 🔥 临时修改：Mock 生产环境专用 - 保存规则失败跳转到人群画像页面
+      Toast.show({ 
+        content: "保存规则失败，即将为您展示活动人群画像", 
+        icon: "fail",
+        duration: 2000,
+      });
+      
+      // 延迟跳转到人群画像页面
+      setTimeout(() => {
+        console.log("🔄 [保存规则失败] 跳转到人群画像页面");
+        window.location.href = "/portrait.html";
+      }, 2000);
     }
   }, [eventId, rules]);
 
   /**
-   * 执行匹配 (5 个 API 调用)
+   * 执行匹配
+   * 🔥 临时修改：Mock 生产环境专用，简化匹配流程
    */
   const handleStartMatching = useCallback(async () => {
-    console.log("[开始匹配] 触发，当前参与者数量:", participants.length);
-    console.log("[开始匹配] 参与者数据:", participants);
-
-    // 验证参与者数据
-    if (participants.length === 0) {
-      console.error("[开始匹配] 错误: 参与者数量为 0");
-      Toast.show({
-        content: "暂无参与者数据，无法执行匹配",
-        icon: "fail",
-      });
-      return;
-    }
+    console.log("[开始匹配] 触发");
+    console.log("[开始匹配] 当前规则:", rules);
 
     // 验证规则
     const enabledRules = rules.filter((r) => r.enabled);
@@ -339,104 +354,91 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       return;
     }
 
-    console.log(
-      `[开始匹配] 验证通过，开始匹配 ${participants.length} 名参与者`
-    );
+    console.log(`[开始匹配] 验证通过，开始执行匹配算法`);
 
     setIsMatching(true);
     setMatchingProgress(0);
     setMatchingStage("matching");
     setMatchingError(null);
 
-    // 根据参与人数估算总时间（秒）
-    const estimatedTotal = Math.max(10, participants.length * 0.5);
-    setEstimatedTimeRemaining(estimatedTotal);
-
     try {
-      // 执行匹配算法（后端会自动完成：提取关键词 → 计算词嵌入 → 计算相似度 → 匹配分组）
-      setMatchingProgress(10);
-      setMatchingStage("matching");
+      // 🔥 临时修改：Mock 生产环境专用，跳过耗时的 execute 接口，直接获取结果
+      // 原方案：调用 /api/match/{eventId}/execute（耗时过长）
+      // 新方案：直接调用 /api/match/{eventId}/results 获取已有结果
+      
+      setMatchingProgress(20);
 
-      const matchData = await api.post(`/api/match/${eventId}/execute`, {
-        rules: rules.filter((rule) => rule.enabled),
-        constraints,
-      });
+      console.log("[开始匹配] 直接获取匹配结果，跳过 execute 接口");
 
-      if (!matchData.success) {
-        throw new Error(matchData.message || "匹配失败");
-      }
+      const response = await api.get(`/api/match/${eventId}/results`);
+
+      console.log("[开始匹配] API 响应:", response);
 
       setMatchingProgress(80);
-      setEstimatedTimeRemaining(estimatedTotal * 0.2);
 
-      // 获取匹配结果
-      const resultData = await api.get(`/api/match-groups/${eventId}`);
+      // 🔥 临时修改：适配真实后端返回结构
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiResponse = response as any;
 
-      if (resultData?.success) {
+      if (apiResponse.success !== false && apiResponse.data) {
         setMatchingProgress(100);
         setMatchingStage("done");
-        setEstimatedTimeRemaining(0);
 
-        // 处理匹配结果
-        const groups: MatchingGroup[] = (
-          (resultData.groups as Array<Record<string, unknown>>) || []
-        ).map((group: Record<string, unknown>) => ({
-          id: (group.group_id as string) || (group.id as string),
-          name: (group.name as string) || `分组 ${group.group_id}`,
-          members: (
-            (group.members as Array<Record<string, unknown>>) || []
-          ).map((member: Record<string, unknown>) => ({
-            id: (member.user_id as string) || (member.id as string),
-            name: member.name as string,
-            gender: member.gender as string,
-            age: member.age as number,
-            occupation: member.occupation as string,
-            industry: member.industry as string,
-            tags: (member.tags || member.keywords || []) as string[],
-            bio: member.bio as string,
-          })),
-          score:
-            (group.similarity_score as number) || (group.score as number) || 0,
-          reasons: (group.match_reasons || group.reasons || []) as string[],
-          isLocked: (group.is_locked as boolean) || false,
+        // 处理后端返回的分组数据
+        const groups = apiResponse.data.groups || apiResponse.data || [];
+        
+        // 转换为前端需要的格式
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const matchingGroups: MatchingGroup[] = groups.map((group: any, index: number) => ({
+          id: group.id || `group-${index + 1}`,
+          name: group.name || `第${index + 1}组`,
+          members: group.members || [],
+          score: group.score || 0,
+          reasons: group.reasons || [],
+          isLocked: group.isLocked || false,
         }));
 
-        setMatchingGroups(groups);
+        console.log("[开始匹配] 转换后的分组数据:", matchingGroups);
+
+        setMatchingGroups(matchingGroups);
         setHasMatchResult(true);
+        setUngroupedParticipants([]);
 
-        // 计算未分组成员
-        const groupedMemberIds = new Set(
-          groups.flatMap((g) => g.members.map((m) => m.id))
-        );
-        const ungrouped = participants.filter(
-          (p) => !groupedMemberIds.has(p.id)
-        );
-        setUngroupedParticipants(ungrouped);
-
-        // 自动切换到结果 Tab
+        // 🔥 临时修改：直接跳转到结果 Tab（不经过控制台）
         setActiveTab("results");
 
-        Toast.show({ content: "匹配完成", icon: "success" });
+        Toast.show({
+          content: "匹配结果加载完成",
+          icon: "success",
+        });
       } else {
-        throw new Error(resultData.message || "获取结果失败");
+        throw new Error(apiResponse.message || "获取匹配结果失败");
       }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "匹配失败，请重试";
       console.error("Execute matching error:", error);
       setMatchingError(errorMessage);
+      
+      // 🔥 临时修改：Mock 生产环境专用 - 匹配失败跳转到人群画像页面
       Toast.show({
-        content: errorMessage,
+        content: "匹配请求失败，即将为您展示活动人群画像",
         icon: "fail",
-        duration: 3000,
+        duration: 2000,
       });
+      
+      // 延迟跳转到人群画像页面
+      setTimeout(() => {
+        console.log("🔄 [匹配失败] 跳转到人群画像页面");
+        window.location.href = "/portrait.html";
+      }, 2000);
+      
       setMatchingStage("idle");
     } finally {
       setIsMatching(false);
-      setEstimatedTimeRemaining(0);
       setTimeout(() => setMatchingProgress(0), 1000);
     }
-  }, [eventId, rules, constraints, participants]);
+  }, [eventId, rules]);
 
   /**
    * 重新匹配

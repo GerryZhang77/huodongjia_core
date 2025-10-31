@@ -151,34 +151,37 @@ const MatchingConfiguration: React.FC = () => {
               loading={isGeneratingRules}
               onGenerateRules={handleGenerateRules}
               onSaveRules={handleSaveRules}
-              onNext={() => setActiveTab("console")}
+              onNext={handleStartMatching}
             />
           </Tabs.Tab>
 
+          {/* 🔥 临时修改：Mock 生产环境下隐藏匹配控制台 Tab */}
           {/* Tab 2: 匹配控制台 */}
-          <Tabs.Tab
-            title={
-              <div className="flex items-center gap-1">
-                <PlayOutline />
-                <span>匹配控制台</span>
-              </div>
-            }
-            key="console"
-          >
-            <MatchingConsoleTab
-              rules={rules}
-              constraints={constraints}
-              participantCount={participants.length}
-              isMatching={isMatching}
-              matchingProgress={matchingProgress}
-              matchingStage={matchingStage}
-              estimatedTimeRemaining={estimatedTimeRemaining}
-              matchingError={matchingError}
-              hasMatchResult={hasMatchResult}
-              onStartMatching={handleStartMatching}
-              onRematch={handleRematch}
-            />
-          </Tabs.Tab>
+          {import.meta.env.VITE_PRODUCTION_MODE !== "true" && (
+            <Tabs.Tab
+              title={
+                <div className="flex items-center gap-1">
+                  <PlayOutline />
+                  <span>匹配控制台</span>
+                </div>
+              }
+              key="console"
+            >
+              <MatchingConsoleTab
+                rules={rules}
+                constraints={constraints}
+                participantCount={participants.length}
+                isMatching={isMatching}
+                matchingProgress={matchingProgress}
+                matchingStage={matchingStage}
+                estimatedTimeRemaining={estimatedTimeRemaining}
+                matchingError={matchingError}
+                hasMatchResult={hasMatchResult}
+                onStartMatching={handleStartMatching}
+                onRematch={handleRematch}
+              />
+            </Tabs.Tab>
+          )}
 
           {/* Tab 3: 匹配结果 */}
           <Tabs.Tab
