@@ -1,13 +1,13 @@
 /**
  * Vercel API Route - API 代理
  *
- * 路径：/api/proxy
+ * 路径：/api/[...path]
  * 功能：代理所有 API 请求到后端
  */
 
 const BACKEND_URL = "http://47.92.0.104:12345";
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // 设置 CORS 头
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
