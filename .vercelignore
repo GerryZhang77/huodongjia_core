@@ -1,7 +1,7 @@
 # Vercel 部署忽略文件
 
 # API 后端（不需要部署到 Vercel）
-api/
+# api/ ← 已注释：需要部署 Vercel Serverless Functions
 
 # 开发文件
 *.local
