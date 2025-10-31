@@ -3,7 +3,8 @@
  * 包含导入报名信息、筛选、发送通知、导出等功能
  */
 
-import { FC, useState, useEffect, useMemo } from "react";
+// 🔥 临时修改：移除 useEffect（已注释掉自动加载逻辑）
+import { FC, useState, useMemo } from "react";
 import {
   Button,
   Card,
@@ -157,10 +158,11 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
   };
 
   // 初始加载（移除 currentPage 依赖，只加载一次）
-  useEffect(() => {
-    loadEnrollments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activityId]);
+  // 🔥 临时注释：Mock 生产环境专用 - 禁止自动加载报名数据
+  // useEffect(() => {
+  //   loadEnrollments();
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [activityId]);
 
   // 导入报名信息
   const handleImport = () => {

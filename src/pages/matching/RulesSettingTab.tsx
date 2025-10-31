@@ -377,130 +377,133 @@ const RulesSettingTab: React.FC<RulesSettingTabProps> = ({
           }}
         />
 
-        {/* 边界条件设置 */}
-        <Card
-          title="⚙️ 边界条件（可选）"
-          style={{ borderRadius: "12px" } as React.CSSProperties}
-        >
-          <div className="space-y-4">
-            {/* 每组人数 */}
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-medium text-gray-900">
-                  👥 每组人数
-                </span>
-                <div className="px-3 py-1 bg-primary-100 rounded-md">
-                  <span className="text-sm font-semibold text-primary-600">
-                    {constraints.minGroupSize || 3} -{" "}
-                    {constraints.maxGroupSize || 8} 人
+        {/* 🔥 临时修改：Mock 生产环境下隐藏边界条件模块 */}
+        {/* 边界条件设置 - 仅在非生产模式显示 */}
+        {import.meta.env.VITE_PRODUCTION_MODE !== "true" && (
+          <Card
+            title="⚙️ 边界条件（可选）"
+            style={{ borderRadius: "12px" } as React.CSSProperties}
+          >
+            <div className="space-y-4">
+              {/* 每组人数 */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-medium text-gray-900">
+                    👥 每组人数
                   </span>
+                  <div className="px-3 py-1 bg-primary-100 rounded-md">
+                    <span className="text-sm font-semibold text-primary-600">
+                      {constraints.minGroupSize || 3} -{" "}
+                      {constraints.maxGroupSize || 8} 人
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-2">最小人数</div>
+                    <Stepper
+                      value={constraints.minGroupSize || 3}
+                      onChange={(value) =>
+                        onConstraintsChange({
+                          ...constraints,
+                          minGroupSize: value as number,
+                        })
+                      }
+                      min={2}
+                      max={constraints.maxGroupSize || 10}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-2">最大人数</div>
+                    <Stepper
+                      value={constraints.maxGroupSize || 8}
+                      onChange={(value) =>
+                        onConstraintsChange({
+                          ...constraints,
+                          maxGroupSize: value as number,
+                        })
+                      }
+                      min={constraints.minGroupSize || 3}
+                      max={20}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs text-gray-500 mb-2">最小人数</div>
-                  <Stepper
-                    value={constraints.minGroupSize || 3}
-                    onChange={(value) =>
-                      onConstraintsChange({
-                        ...constraints,
-                        minGroupSize: value as number,
-                      })
-                    }
-                    min={2}
-                    max={constraints.maxGroupSize || 10}
-                  />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-2">最大人数</div>
-                  <Stepper
-                    value={constraints.maxGroupSize || 8}
-                    onChange={(value) =>
-                      onConstraintsChange({
-                        ...constraints,
-                        maxGroupSize: value as number,
-                      })
-                    }
-                    min={constraints.minGroupSize || 3}
-                    max={20}
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* 性别比例 */}
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-medium text-gray-900">
-                  ⚖️ 性别比例
-                </span>
-                <div className="px-3 py-1 bg-secondary-100 rounded-md">
-                  <span className="text-sm font-semibold text-secondary-600">
-                    {constraints.genderRatioMin || 40}% -{" "}
-                    {constraints.genderRatioMax || 60}%
+              {/* 性别比例 */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-medium text-gray-900">
+                    ⚖️ 性别比例
                   </span>
+                  <div className="px-3 py-1 bg-secondary-100 rounded-md">
+                    <span className="text-sm font-semibold text-secondary-600">
+                      {constraints.genderRatioMin || 40}% -{" "}
+                      {constraints.genderRatioMax || 60}%
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-2">最小比例</div>
+                    <Stepper
+                      value={constraints.genderRatioMin || 40}
+                      onChange={(value) =>
+                        onConstraintsChange({
+                          ...constraints,
+                          genderRatioMin: value as number,
+                        })
+                      }
+                      min={0}
+                      max={100}
+                      step={5}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-2">最大比例</div>
+                    <Stepper
+                      value={constraints.genderRatioMax || 60}
+                      onChange={(value) =>
+                        onConstraintsChange({
+                          ...constraints,
+                          genderRatioMax: value as number,
+                        })
+                      }
+                      min={0}
+                      max={100}
+                      step={5}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-xs text-gray-500 mb-2">最小比例</div>
-                  <Stepper
-                    value={constraints.genderRatioMin || 40}
-                    onChange={(value) =>
-                      onConstraintsChange({
-                        ...constraints,
-                        genderRatioMin: value as number,
-                      })
-                    }
-                    min={0}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 mb-2">最大比例</div>
-                  <Stepper
-                    value={constraints.genderRatioMax || 60}
-                    onChange={(value) =>
-                      onConstraintsChange({
-                        ...constraints,
-                        genderRatioMax: value as number,
-                      })
-                    }
-                    min={0}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* 同行业上限 */}
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-medium text-gray-900">
-                  🏢 同行业限制
-                </span>
-                <div className="px-3 py-1 bg-accent-100 rounded-md">
-                  <span className="text-sm font-semibold text-accent-600">
-                    最多 {constraints.sameIndustryMax || 2} 人
+              {/* 同行业上限 */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm font-medium text-gray-900">
+                    🏢 同行业限制
                   </span>
+                  <div className="px-3 py-1 bg-accent-100 rounded-md">
+                    <span className="text-sm font-semibold text-accent-600">
+                      最多 {constraints.sameIndustryMax || 2} 人
+                    </span>
+                  </div>
                 </div>
+                <Stepper
+                  value={constraints.sameIndustryMax || 2}
+                  onChange={(value) =>
+                    onConstraintsChange({
+                      ...constraints,
+                      sameIndustryMax: value as number,
+                    })
+                  }
+                  min={1}
+                  max={10}
+                />
               </div>
-              <Stepper
-                value={constraints.sameIndustryMax || 2}
-                onChange={(value) =>
-                  onConstraintsChange({
-                    ...constraints,
-                    sameIndustryMax: value as number,
-                  })
-                }
-                min={1}
-                max={10}
-              />
             </div>
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
 
       {/* 底部操作按钮 - 响应式设计 */}

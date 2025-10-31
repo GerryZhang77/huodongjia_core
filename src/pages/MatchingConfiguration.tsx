@@ -61,7 +61,8 @@ const MatchingConfiguration: React.FC = () => {
     eventId: id || "",
   });
 
-  // 初始化：获取参与者数据和规则配置
+  // 🔥 临时修改：Mock 生产环境专用，后续需回退
+  // 初始化：仅加载规则配置，不自动获取参与者数据（避免 404 错误）
   useEffect(() => {
     console.log("=".repeat(60));
     console.log("[MatchingConfiguration] useEffect 触发");
@@ -71,9 +72,10 @@ const MatchingConfiguration: React.FC = () => {
 
     if (id) {
       console.log("[MatchingConfiguration] ✅ 条件满足，开始加载数据");
-      console.log("[MatchingConfiguration] 即将调用 fetchParticipants");
-      fetchParticipants();
-      console.log("[MatchingConfiguration] fetchParticipants 已调用");
+      // 🔥 临时注释：Mock 生产环境下不自动获取参与者（真实后端接口可能未实现）
+      // console.log("[MatchingConfiguration] 即将调用 fetchParticipants");
+      // fetchParticipants();
+      // console.log("[MatchingConfiguration] fetchParticipants 已调用");
       console.log("[MatchingConfiguration] 即将调用 fetchRules");
       fetchRules(); // 加载已保存的规则
       console.log("[MatchingConfiguration] fetchRules 已调用");
@@ -81,34 +83,36 @@ const MatchingConfiguration: React.FC = () => {
       console.warn("[MatchingConfiguration] ❌ 条件不满足：eventId 为空");
     }
     console.log("=".repeat(60));
-  }, [id, fetchParticipants, fetchRules]);
+  }, [id, fetchRules]); // 🔥 移除 fetchParticipants 依赖
 
-  // Tab 切换监听：切换到匹配控制台时确保有参与者数据
+  // 🔥 临时修改：Mock 生产环境专用，后续需回退
+  // Tab 切换监听：暂时不自动获取参与者数据
   useEffect(() => {
     console.log("[Tab切换监听] useEffect 被触发");
     console.log("[Tab切换监听] activeTab:", activeTab);
     console.log("[Tab切换监听] participants.length:", participants.length);
 
-    if (activeTab === "console" && participants.length === 0) {
-      console.log("=".repeat(60));
-      console.log("[Tab切换] 切换到匹配控制台 Tab");
-      console.log("[Tab切换] 当前参与者数量:", participants.length);
-      console.log("[Tab切换] 需要重新加载参与者数据");
-      console.log("[Tab切换] eventId =", id);
-      console.log(
-        "[Tab切换] fetchParticipants 函数类型:",
-        typeof fetchParticipants
-      );
+    // 🔥 临时注释：Mock 生产环境下不自动获取参与者
+    // if (activeTab === "console" && participants.length === 0) {
+    //   console.log("=".repeat(60));
+    //   console.log("[Tab切换] 切换到匹配控制台 Tab");
+    //   console.log("[Tab切换] 当前参与者数量:", participants.length);
+    //   console.log("[Tab切换] 需要重新加载参与者数据");
+    //   console.log("[Tab切换] eventId =", id);
+    //   console.log(
+    //     "[Tab切换] fetchParticipants 函数类型:",
+    //     typeof fetchParticipants
+    //   );
 
-      if (id) {
-        console.log("[Tab切换] ✅ 条件满足，即将调用 fetchParticipants()");
-        fetchParticipants();
-        console.log("[Tab切换] fetchParticipants() 已调用");
-      } else {
-        console.log("[Tab切换] ❌ 条件不满足：id 为空");
-      }
-      console.log("=".repeat(60));
-    }
+    //   if (id) {
+    //     console.log("[Tab切换] ✅ 条件满足，即将调用 fetchParticipants()");
+    //     fetchParticipants();
+    //     console.log("[Tab切换] fetchParticipants() 已调用");
+    //   } else {
+    //     console.log("[Tab切换] ❌ 条件不满足：id 为空");
+    //   }
+    //   console.log("=".repeat(60));
+    // }
   }, [activeTab, participants.length, id, fetchParticipants]);
 
   return (

@@ -165,6 +165,7 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
 
   /**
    * 生成匹配规则 (AI)
+   * 🔥 临时修改：Mock 生产环境专用，使用简化的请求体结构
    */
   const handleGenerateRules = useCallback(async () => {
     if (!naturalLanguageInput.trim()) {
@@ -174,40 +175,63 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
 
     setIsGeneratingRules(true);
     try {
-      // axios 拦截器会返回 response.data，所以实际返回的是业务数据结构
-      // 定义响应数据结构
-      interface GenerateRulesResponse {
-        success: boolean;
-        message: string;
-        data: {
-          rules: MatchingRule[];
-          suggestedConstraints?: {
-            minGroupSize: number;
-            maxGroupSize: number;
-            genderRatioMin: number;
-            genderRatioMax: number;
-            sameIndustryMax: number;
-          };
-        };
-      }
+      // 🔥 临时修改：真实后端返回结构与 Mock 不同
+      // 真实后端: { success: boolean, message: string, rules: string[] }
+      // Mock: { success: boolean, data: { rules: MatchingRule[], suggestedConstraints?: {...} } }
 
-      const response = await api.post(`/api/match/${eventId}/generate`, {
-        description: naturalLanguageInput,
-        participantCount: participants.length,
-      });
+      // 🔥 临时修改：Mock 生产环境专用，使用简化的请求体
+      // 根据真实后端测试验证，字段名为 expectation（不是 description）
+      const requestBody = {
+        expectation: naturalLanguageInput, // 匹配期望描述（必填）
+        // 可选字段（暂时不传，后端可能未实现）：
+        // participantCount: participants.length,
+        // expectedGroupSize: 5,
+      };
 
-      console.log("[生成规则] API 响应:", response); // 因为拦截器已经返回了 response.data，所以 response 的类型实际上是:
-      // { success: boolean, message: string, data: { rules: [...], suggestedConstraints: {...} } }
-      // 使用 unknown 作为中间类型转换，避免类型断言错误
-      const apiResponse = response as unknown as GenerateRulesResponse;
-      const businessData = apiResponse.data;
+      const response = await api.post(
+        `/api/match/${eventId}/generate`,
+        requestBody
+      );
+
+      console.log("[生成规则] API 响应:", response);
+
+      // 🔥 临时修改：适配真实后端返回结构
+      // 真实后端返回: { success: true, message: '...', rules: [...] }
+      // Mock 返回: { success: true, data: { rules: [...], suggestedConstraints: {...} } }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiResponse = response as any;
+
+      // 判断是真实后端还是 Mock
+      const isRealBackend = apiResponse.rules && !apiResponse.data;
+      const businessData = isRealBackend
+        ? { rules: apiResponse.rules, suggestedConstraints: undefined } // 真实后端：rules 在顶层
+        : apiResponse.data; // Mock：rules 在 data 内
 
       console.log("[生成规则] 业务数据:", businessData);
 
       // 检查业务数据
       if (businessData && businessData.rules && businessData.rules.length > 0) {
-        // 设置生成的规则
-        setRules(businessData.rules);
+        // 🔥 临时修改：适配真实后端返回的字符串数组
+        // 真实后端返回 rules: ['规则1', '规则2', ...]
+        // 需要转换为 MatchingRule[] 对象数组
+        const formattedRules: MatchingRule[] = businessData.rules.map(
+          (rule: string | MatchingRule, index: number) => {
+            if (typeof rule === "string") {
+              // 真实后端返回字符串，转换为 MatchingRule 对象
+              return {
+                id: `rule-${Date.now()}-${index}`,
+                name: rule,
+                weight: 1, // 默认权重
+                type: "similarity" as const,
+                field: "tags",
+              };
+            }
+            // Mock 返回的已经是对象格式
+            return rule;
+          }
+        );
+
+        setRules(formattedRules);
 
         // 如果有建议的约束条件，更新约束条件
         if (businessData.suggestedConstraints) {
@@ -240,7 +264,7 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
     } finally {
       setIsGeneratingRules(false);
     }
-  }, [eventId, naturalLanguageInput, participants]);
+  }, [eventId, naturalLanguageInput]); // 🔥 移除 participants 依赖
 
   /**
    * 保存规则配置

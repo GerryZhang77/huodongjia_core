@@ -115,7 +115,9 @@ export const ActivityManage: FC = () => {
             onChange={(key) => {
               // 如果切换到匹配管理，跳转到完整的匹配配置页面
               if (key === "match") {
-                navigate(`/activity/${id}/matching`);
+                // 🔥 临时修改：Mock 生产环境专用 - 强制使用正确的 event ID
+                const CORRECT_EVENT_ID = "00000000-0000-0000-0000-000000000000";
+                navigate(`/activity/${CORRECT_EVENT_ID}/matching`);
               } else {
                 setActiveTab(key as TabKey);
               }
