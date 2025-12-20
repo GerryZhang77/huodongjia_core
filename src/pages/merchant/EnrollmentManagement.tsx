@@ -33,7 +33,7 @@ import {
   CheckCircleOutline,
   CloseCircleOutline,
 } from "antd-mobile-icons";
-import { useStore } from "../store";
+import { useStore } from "@/store";
 import type { Enrollment, FilterCriteria } from "@/types/enrollment";
 import { DEFAULT_FILTER_CRITERIA, STATUS_LABELS } from "@/types/enrollment";
 import {

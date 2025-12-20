@@ -51,6 +51,30 @@ export default defineConfig(({ mode }) => {
       // }),
       tsconfigPaths(),
     ],
+
+    // ========================================
+    // 构建优化配置
+    // ========================================
+    build: {
+      rollupOptions: {
+        output: {
+          // 手动分割代码块，优化首屏加载
+          manualChunks: {
+            // React 核心库
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            // UI 组件库（最大的依赖）
+            "vendor-antd-mobile": ["antd-mobile", "antd-mobile-icons"],
+            // 数据管理
+            "vendor-data": ["@tanstack/react-query", "zustand", "axios", "zod"],
+            // 工具库
+            "vendor-utils": ["dayjs", "lodash-es", "classnames"],
+          },
+        },
+      },
+      // 提高警告阈值（可选，如果仍有大文件）
+      chunkSizeWarningLimit: 600,
+    },
+
     server: {
       proxy: shouldUseProxy
         ? {

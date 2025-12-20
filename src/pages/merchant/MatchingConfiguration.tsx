@@ -2,10 +2,10 @@ import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { NavBar, Tabs } from "antd-mobile";
 import { EditSOutline, PlayOutline, PieOutline } from "antd-mobile-icons";
-import { useMatchingLogic } from "./matching/useMatchingLogic";
-import RulesSettingTab from "./matching/RulesSettingTab";
-import MatchingConsoleTab from "./matching/MatchingConsoleTab";
-import MatchingResultsTab from "./matching/MatchingResultsTab";
+import { useMatchingLogic } from "../matching/useMatchingLogic";
+import RulesSettingTab from "../matching/RulesSettingTab";
+import MatchingConsoleTab from "../matching/MatchingConsoleTab";
+import MatchingResultsTab from "../matching/MatchingResultsTab";
 
 /**
  * 匹配配置主页面

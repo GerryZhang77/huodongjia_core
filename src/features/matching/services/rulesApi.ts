@@ -33,11 +33,11 @@ export const rulesApi = {
     activityId: string,
     request: GenerateRulesRequest
   ): Promise<GenerateRulesResponse> {
-    const response = await api.post<GenerateRulesResponse>(
+    // 注意: api 响应拦截器已返回 response.data (即完整响应体 { success, message, data })
+    return api.post<GenerateRulesResponse>(
       `/api/match-rules/${activityId}/generate`,
       request
     );
-    return response.data;
   },
 
   /**
@@ -45,10 +45,7 @@ export const rulesApi = {
    * @param activityId - 活动 ID
    */
   async getRules(activityId: string): Promise<GetRulesResponse> {
-    const response = await api.get<GetRulesResponse>(
-      `/api/match-rules/${activityId}`
-    );
-    return response.data;
+    return api.get<GetRulesResponse>(`/api/match-rules/${activityId}`);
   },
 
   /**
@@ -66,11 +63,10 @@ export const rulesApi = {
     activityId: string,
     request: SaveRulesRequest
   ): Promise<SaveRulesResponse> {
-    const response = await api.post<SaveRulesResponse>(
+    return api.post<SaveRulesResponse>(
       `/api/match-rules/${activityId}`,
       request
     );
-    return response.data;
   },
 
   /**
@@ -90,10 +86,9 @@ export const rulesApi = {
    * @param activityId - 活动 ID
    */
   async getConstraints(activityId: string): Promise<GetConstraintsResponse> {
-    const response = await api.get<GetConstraintsResponse>(
+    return api.get<GetConstraintsResponse>(
       `/api/match-rules/${activityId}/constraints`
     );
-    return response.data;
   },
 
   /**
@@ -105,11 +100,10 @@ export const rulesApi = {
     activityId: string,
     request: SaveConstraintsRequest
   ): Promise<SaveConstraintsResponse> {
-    const response = await api.post<SaveConstraintsResponse>(
+    return api.post<SaveConstraintsResponse>(
       `/api/match-rules/${activityId}/constraints`,
       request
     );
-    return response.data;
   },
 
   /**
@@ -133,11 +127,10 @@ export const rulesApi = {
     activityId: string,
     request?: ExecuteMatchingRequest
   ): Promise<ExecuteMatchingResponse> {
-    const response = await api.post<ExecuteMatchingResponse>(
+    return api.post<ExecuteMatchingResponse>(
       `/api/match-rules/${activityId}/execute`,
       request || {}
     );
-    return response.data;
   },
 
   /**
@@ -165,10 +158,7 @@ export const rulesApi = {
    * @param taskId - 任务 ID
    */
   async getTaskStatus(taskId: string): Promise<GetTaskStatusResponse> {
-    const response = await api.get<GetTaskStatusResponse>(
-      `/api/match-rules/task/${taskId}`
-    );
-    return response.data;
+    return api.get<GetTaskStatusResponse>(`/api/match-rules/task/${taskId}`);
   },
 };
 

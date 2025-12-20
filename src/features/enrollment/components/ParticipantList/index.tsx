@@ -46,29 +46,22 @@ export const ParticipantList: FC<ParticipantListProps> = ({
             style={{ marginBottom: "12px", cursor: "pointer" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              {participant.userAvatar ? (
-                <Avatar
-                  src={participant.userAvatar}
-                  style={{ "--size": "48px" }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "50%",
-                    backgroundColor: "var(--adm-color-primary)",
-                    color: "var(--adm-color-white)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "20px",
-                    fontWeight: 600,
-                  }}
-                >
-                  {participant.userName?.charAt(0)}
-                </div>
-              )}
+              <div
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  backgroundColor: "var(--adm-color-primary)",
+                  color: "var(--adm-color-white)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px",
+                  fontWeight: 600,
+                }}
+              >
+                {participant.name?.charAt(0)}
+              </div>
 
               <div style={{ flex: 1 }}>
                 <div
@@ -80,7 +73,7 @@ export const ParticipantList: FC<ParticipantListProps> = ({
                   }}
                 >
                   <span style={{ fontSize: "16px", fontWeight: 600 }}>
-                    {participant.userName}
+                    {participant.name}
                   </span>
                   <Tag color={status.color}>{status.text}</Tag>
                 </div>
@@ -91,15 +84,11 @@ export const ParticipantList: FC<ParticipantListProps> = ({
                     color: "var(--adm-color-text-secondary)",
                   }}
                 >
-                  {participant.userEmail && (
-                    <div>📧 {participant.userEmail}</div>
-                  )}
-                  {participant.userPhone && (
-                    <div>📱 {participant.userPhone}</div>
-                  )}
+                  {participant.email && <div>📧 {participant.email}</div>}
+                  {participant.phone && <div>📱 {participant.phone}</div>}
                   <div>
                     📅 报名时间:{" "}
-                    {new Date(participant.registrationTime).toLocaleString()}
+                    {new Date(participant.enrolledAt).toLocaleString()}
                   </div>
                 </div>
               </div>

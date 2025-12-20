@@ -33,6 +33,7 @@ interface ApiResponse<T = ApiActivityData> {
 export interface GetActivitiesResponse {
   activities: Activity[];
   total: number;
+  hasMore?: boolean; // 是否有更多数据（分页用）
 }
 
 /**

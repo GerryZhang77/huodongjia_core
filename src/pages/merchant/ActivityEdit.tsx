@@ -5,7 +5,7 @@
 import React from "react";
 import { NavBar } from "antd-mobile";
 import { useNavigate, useParams } from "react-router-dom";
-import { ActivityForm, useEditActivity } from "../features/activities";
+import { ActivityForm, useEditActivity } from "@/features/activities";
 
 const ActivityEdit: React.FC = () => {
   const navigate = useNavigate();

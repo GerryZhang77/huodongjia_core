@@ -208,7 +208,7 @@ export const MatchingManageTab: FC<MatchingManageTabProps> = ({
                         key={idx}
                         color="primary"
                         fill="outline"
-                        fontSize={10}
+                        style={{ fontSize: "10px", padding: "0 4px" }}
                       >
                         {tag}
                       </Tag>
@@ -269,7 +269,7 @@ export const MatchingManageTab: FC<MatchingManageTabProps> = ({
                         key={idx}
                         color="default"
                         fill="outline"
-                        fontSize={10}
+                        style={{ fontSize: "10px", padding: "0 4px" }}
                       >
                         {tag}
                       </Tag>
@@ -368,8 +368,8 @@ export const MatchingManageTab: FC<MatchingManageTabProps> = ({
           {
             key: "confirm",
             text: "确认发布",
-            primary: true,
-            loading: publishing,
+            bold: true,
+            disabled: publishing,
             onClick: handlePublish,
           },
         ]}

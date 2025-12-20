@@ -28,9 +28,9 @@ export const useSendNotification = () => {
     try {
       await sendNotification({
         activityId,
-        message,
-        enrollmentIds,
-        sendToAll: !enrollmentIds || enrollmentIds.length === 0,
+        content: message,
+        enrollmentIds: enrollmentIds || [],
+        type: "custom",
       });
 
       const recipientCount = enrollmentIds?.length || "所有";

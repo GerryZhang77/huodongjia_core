@@ -5,8 +5,8 @@
 import React from "react";
 import { NavBar } from "antd-mobile";
 import { useNavigate } from "react-router-dom";
-import { ActivityForm, useCreateActivity } from "../features/activities";
-import type { ActivityFormData } from "../features/activities";
+import { ActivityForm, useCreateActivity } from "@/features/activities";
+import type { ActivityFormData } from "@/features/activities";
 
 const ActivityCreate: React.FC = () => {
   const navigate = useNavigate();

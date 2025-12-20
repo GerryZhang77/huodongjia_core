@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { Toast } from "antd-mobile";
 import { getEnrollments } from "../services";
 import { useEnrollmentStore } from "../stores";
-import type { EnrollmentListQuery } from "../types";
+import type { EnrollmentListQuery, Enrollment } from "../types";
 
 export const useEnrollmentList = (activityId: string | undefined) => {
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ export const useEnrollmentList = (activityId: string | undefined) => {
         ...query,
       });
 
-      setEnrollments(result.data, result.total);
+      setEnrollments(result.data as Enrollment[], result.total);
     } catch (error) {
       console.error("获取报名列表失败:", error);
       Toast.show({

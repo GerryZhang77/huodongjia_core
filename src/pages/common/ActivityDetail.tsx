@@ -22,7 +22,7 @@ import {
   TeamOutline,
   MessageOutline,
 } from "antd-mobile-icons";
-import { useStore } from "../store";
+import { useStore } from "@/store";
 
 interface Activity {
   activity_id: string;
@@ -256,7 +256,7 @@ const ActivityDetail: React.FC = () => {
 
       {/* 基本信息 */}
       <div className="p-4">
-        <Card style={{ "--border-radius": "12px" }}>
+        <Card style={{ "--border-radius": "12px" } as React.CSSProperties}>
           <div className="space-y-4">
             <div>
               <h1 className="text-xl font-bold text-gray-900 mb-2">
@@ -340,7 +340,10 @@ const ActivityDetail: React.FC = () => {
           <Tabs.Tab title="详细信息" key="detail">
             <div className="space-y-4">
               {activity.requirements && (
-                <Card title="参与要求" style={{ "--border-radius": "12px" }}>
+                <Card
+                  title="参与要求"
+                  style={{ "--border-radius": "12px" } as React.CSSProperties}
+                >
                   <p className="text-gray-600 text-sm leading-relaxed">
                     {activity.requirements}
                   </p>
@@ -348,7 +351,10 @@ const ActivityDetail: React.FC = () => {
               )}
 
               {activity.contact_info && (
-                <Card title="联系方式" style={{ "--border-radius": "12px" }}>
+                <Card
+                  title="联系方式"
+                  style={{ "--border-radius": "12px" } as React.CSSProperties}
+                >
                   <div className="flex items-center">
                     <MessageOutline className="mr-2 text-blue-500" />
                     <span className="text-gray-600 text-sm">
@@ -358,7 +364,10 @@ const ActivityDetail: React.FC = () => {
                 </Card>
               )}
 
-              <Card title="活动信息" style={{ "--border-radius": "12px" }}>
+              <Card
+                title="活动信息"
+                style={{ "--border-radius": "12px" } as React.CSSProperties}
+              >
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex justify-between">
                     <span>活动分类：</span>
@@ -393,10 +402,13 @@ const ActivityDetail: React.FC = () => {
                     prefix={
                       <Avatar
                         src={participant.avatar}
-                        style={{ "--size": "40px" }}
-                      >
-                        {participant.name.charAt(0)}
-                      </Avatar>
+                        style={{ "--size": "40px" } as React.CSSProperties}
+                        fallback={
+                          <span className="text-sm font-medium">
+                            {participant.name.charAt(0)}
+                          </span>
+                        }
+                      />
                     }
                     extra={
                       <Badge
@@ -440,10 +452,12 @@ const ActivityDetail: React.FC = () => {
             fill="outline"
             size="large"
             onClick={() => navigate(`/activity/${id}/edit`)}
-            style={{
-              "--border-radius": "12px",
-              flex: 1,
-            }}
+            style={
+              {
+                "--border-radius": "12px",
+                flex: 1,
+              } as React.CSSProperties
+            }
           >
             <EditSOutline className="mr-1" />
             编辑
@@ -453,10 +467,12 @@ const ActivityDetail: React.FC = () => {
             color="primary"
             size="large"
             onClick={() => navigate(`/activity/${id}/enrollment`)}
-            style={{
-              "--border-radius": "12px",
-              flex: 1,
-            }}
+            style={
+              {
+                "--border-radius": "12px",
+                flex: 1,
+              } as React.CSSProperties
+            }
           >
             <TeamOutline className="mr-1" />
             报名管理
@@ -466,10 +482,12 @@ const ActivityDetail: React.FC = () => {
             color="primary"
             size="large"
             onClick={() => navigate(`/activity/${id}/matching`)}
-            style={{
-              "--border-radius": "12px",
-              flex: 1,
-            }}
+            style={
+              {
+                "--border-radius": "12px",
+                flex: 1,
+              } as React.CSSProperties
+            }
           >
             匹配配置
           </Button>

@@ -260,14 +260,14 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       }
     } catch (error) {
       console.error("Generate rules error:", error);
-      
+
       // 🔥 临时修改：Mock 生产环境专用 - 生成规则失败跳转到人群画像页面
-      Toast.show({ 
-        content: "生成规则失败，即将为您展示活动人群画像", 
+      Toast.show({
+        content: "生成规则失败，即将为您展示活动人群画像",
         icon: "fail",
         duration: 2000,
       });
-      
+
       // 延迟跳转到人群画像页面
       setTimeout(() => {
         console.log("🔄 [生成规则失败] 跳转到人群画像页面");
@@ -319,14 +319,14 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       }
     } catch (error) {
       console.error("Save rules error:", error);
-      
+
       // 🔥 临时修改：Mock 生产环境专用 - 保存规则失败跳转到人群画像页面
-      Toast.show({ 
-        content: "保存规则失败，即将为您展示活动人群画像", 
+      Toast.show({
+        content: "保存规则失败，即将为您展示活动人群画像",
         icon: "fail",
         duration: 2000,
       });
-      
+
       // 延迟跳转到人群画像页面
       setTimeout(() => {
         console.log("🔄 [保存规则失败] 跳转到人群画像页面");
@@ -365,7 +365,7 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       // 🔥 临时修改：Mock 生产环境专用，跳过耗时的 execute 接口，直接获取结果
       // 原方案：调用 /api/match/{eventId}/execute（耗时过长）
       // 新方案：直接调用 /api/match/{eventId}/results 获取已有结果
-      
+
       setMatchingProgress(20);
 
       console.log("[开始匹配] 直接获取匹配结果，跳过 execute 接口");
@@ -386,17 +386,19 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
 
         // 处理后端返回的分组数据
         const groups = apiResponse.data.groups || apiResponse.data || [];
-        
+
         // 转换为前端需要的格式
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const matchingGroups: MatchingGroup[] = groups.map((group: any, index: number) => ({
-          id: group.id || `group-${index + 1}`,
-          name: group.name || `第${index + 1}组`,
-          members: group.members || [],
-          score: group.score || 0,
-          reasons: group.reasons || [],
-          isLocked: group.isLocked || false,
-        }));
+        const matchingGroups: MatchingGroup[] = groups.map(
+          (group: any, index: number) => ({
+            id: group.id || `group-${index + 1}`,
+            name: group.name || `第${index + 1}组`,
+            members: group.members || [],
+            score: group.score || 0,
+            reasons: group.reasons || [],
+            isLocked: group.isLocked || false,
+          })
+        );
 
         console.log("[开始匹配] 转换后的分组数据:", matchingGroups);
 
@@ -419,20 +421,20 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
         error instanceof Error ? error.message : "匹配失败，请重试";
       console.error("Execute matching error:", error);
       setMatchingError(errorMessage);
-      
+
       // 🔥 临时修改：Mock 生产环境专用 - 匹配失败跳转到人群画像页面
       Toast.show({
         content: "匹配请求失败，即将为您展示活动人群画像",
         icon: "fail",
         duration: 2000,
       });
-      
+
       // 延迟跳转到人群画像页面
       setTimeout(() => {
         console.log("🔄 [匹配失败] 跳转到人群画像页面");
         window.location.href = "/portrait.html";
       }, 2000);
-      
+
       setMatchingStage("idle");
     } finally {
       setIsMatching(false);
