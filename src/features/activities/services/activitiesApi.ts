@@ -3,7 +3,7 @@
  * 活动 API 服务 - 获取我的活动列表专用
  */
 
-import api from "@/lib/api";
+import api from "@/services/api";
 import type { Activity } from "../types";
 
 /**

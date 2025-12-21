@@ -2,7 +2,7 @@
  * Auth 服务 - API 调用
  */
 
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import type { LoginCredentials, LoginResponse } from "../types";
 
 /**

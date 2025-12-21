@@ -3,7 +3,7 @@
  * 活动模块 - API 服务 (统一版本)
  */
 
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import {
   mapApiActivityToActivity,
   mapApiActivitiesToActivities,

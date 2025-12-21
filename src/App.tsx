@@ -8,7 +8,7 @@ import {
 import { ConfigProvider } from "antd-mobile";
 import { QueryClientProvider } from "@tanstack/react-query";
 import zhCN from "antd-mobile/es/locales/zh-CN";
-import { queryClient } from "./lib/queryClient";
+import { queryClient } from "@/config/queryClient";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // 加载占位组件

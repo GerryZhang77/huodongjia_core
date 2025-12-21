@@ -4,7 +4,7 @@
  * 提供获取和发布匹配结果的 API 调用
  */
 
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import type {
   GetMatchResultResponse,
   PublishMatchResultRequest,

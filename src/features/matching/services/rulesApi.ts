@@ -3,7 +3,7 @@
  * Phase 2 & 3: 匹配规则配置 + 匹配执行
  */
 
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import type {
   GenerateRulesRequest,
   GenerateRulesResponse,

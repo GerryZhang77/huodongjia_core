@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { Button, Toast, Input, Space } from "antd-mobile";
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 
 interface ApiResponse {
   success: boolean;

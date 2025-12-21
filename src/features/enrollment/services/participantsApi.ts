@@ -3,7 +3,7 @@
  * 参与者 API 服务
  */
 
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import {
   CreateParticipantsRequest,
   CreateParticipantsResponse,

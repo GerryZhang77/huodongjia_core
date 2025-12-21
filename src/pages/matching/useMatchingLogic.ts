@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Toast } from "antd-mobile";
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import {
   MatchingRule,
   MatchConstraints,
@@ -46,6 +46,42 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
   const [hasPublished, setHasPublished] = useState(false);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(0); // 预计剩余时间（秒）
   const [matchingError, setMatchingError] = useState<string | null>(null); // 匹配错误信息
+
+  // ==================== 倒计时逻辑 ====================
+
+  // 倒计时定时器
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 当匹配进行中时，启动倒计时
+  useEffect(() => {
+    // 只有在匹配中才启动倒计时
+    if (!isMatching) {
+      return;
+    }
+
+    countdownRef.current = setInterval(() => {
+      setEstimatedTimeRemaining((prev) => {
+        if (prev <= 1) {
+          return 1; // 保持显示 1 秒，直到匹配完成
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+      }
+    };
+  }, [isMatching]); // 只依赖 isMatching
+
+  // 匹配结束时清理倒计时
+  useEffect(() => {
+    if (!isMatching) {
+      setEstimatedTimeRemaining(0);
+    }
+  }, [isMatching]);
 
   // ==================== API 调用函数 ====================
 
@@ -361,6 +397,13 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
     setMatchingStage("matching");
     setMatchingError(null);
 
+    // 设置预估匹配时间（根据参与者数量估算）
+    const estimatedSeconds = Math.max(
+      5,
+      Math.ceil(participants.length / 10) + 3
+    );
+    setEstimatedTimeRemaining(estimatedSeconds);
+
     try {
       // 🔥 临时修改：Mock 生产环境专用，跳过耗时的 execute 接口，直接获取结果
       // 原方案：调用 /api/match/{eventId}/execute（耗时过长）
@@ -388,8 +431,8 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
         const groups = apiResponse.data.groups || apiResponse.data || [];
 
         // 转换为前端需要的格式
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const matchingGroups: MatchingGroup[] = groups.map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (group: any, index: number) => ({
             id: group.id || `group-${index + 1}`,
             name: group.name || `第${index + 1}组`,
@@ -440,7 +483,7 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       setIsMatching(false);
       setTimeout(() => setMatchingProgress(0), 1000);
     }
-  }, [eventId, rules]);
+  }, [eventId, rules, participants.length]);
 
   /**
    * 重新匹配
