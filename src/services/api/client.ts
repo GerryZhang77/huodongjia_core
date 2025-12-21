@@ -1,0 +1,135 @@
+/**
+ * API 客户端配置
+ *
+ * 简化版：
+ * - 开发环境使用 MSW (Mock Service Worker) 拦截请求
+ * - 生产环境直接请求真实后端 API
+ *
+ * MSW 工作原理：
+ * - MSW 在浏览器的 Service Worker 层拦截网络请求
+ * - 无需修改 axios 的 baseURL，MSW 自动拦截匹配的请求
+ * - 请求路径保持一致，如 /api/auth/login
+ */
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
+
+// ========================================
+// 自定义 API 响应类型
+// ========================================
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface CustomAxiosInstance
+  extends Omit<AxiosInstance, "get" | "post" | "put" | "delete" | "patch"> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get<T = any>(url: string, config?: any): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  post<T = any>(url: string, data?: any, config?: any): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  put<T = any>(url: string, data?: any, config?: any): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delete<T = any>(url: string, config?: any): Promise<T>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  patch<T = any>(url: string, data?: any, config?: any): Promise<T>;
+}
+
+// ========================================
+// 获取 API 基础 URL
+// ========================================
+function getApiBaseURL(): string {
+  const useMock = import.meta.env.VITE_USE_MOCK;
+
+  // MSW Mock 模式：使用空字符串（MSW 拦截相对路径请求）
+  if (useMock === "msw" || useMock === "true") {
+    return "";
+  }
+
+  // 生产模式：使用环境变量配置的后端 URL
+  // 如果使用 Vercel 代理，返回空字符串
+  const isProductionMode = import.meta.env.VITE_PRODUCTION_MODE === "true";
+  if (isProductionMode) {
+    return ""; // 使用相对路径，通过 Vercel Serverless Function 代理
+  }
+
+  // 开发环境连接真实后端
+  return import.meta.env.VITE_API_BASE_URL || "";
+}
+
+// ========================================
+// 创建 Axios 实例
+// ========================================
+export const api = axios.create({
+  baseURL: getApiBaseURL(),
+  timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+}) as CustomAxiosInstance;
+
+// ========================================
+// 请求拦截器
+// ========================================
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    // 1. 添加 Authorization 头部（从 localStorage 获取 token）
+    const authStorage = localStorage.getItem("auth-storage");
+    if (authStorage) {
+      try {
+        const authData = JSON.parse(authStorage);
+        const token = authData?.state?.token;
+
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      } catch (error) {
+        console.error("[API] 解析 auth-storage 失败:", error);
+      }
+    }
+
+    // 2. 开发环境日志
+    if (import.meta.env.DEV) {
+      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+    }
+
+    return config;
+  },
+  (error) => {
+    console.error("[API Request Error]", error);
+    return Promise.reject(error);
+  }
+);
+
+// ========================================
+// 响应拦截器
+// ========================================
+api.interceptors.response.use(
+  (response) => {
+    // 开发环境日志
+    if (import.meta.env.DEV) {
+      console.log(`[API] Response ${response.config.url}:`, response.data);
+    }
+
+    // 直接返回 data 部分
+    return response.data;
+  },
+  (error) => {
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.message;
+
+    console.error("[API Error]", { status, message, url: error.config?.url });
+
+    // 401 未授权：清除 token，跳转登录
+    if (status === 401) {
+      localStorage.removeItem("auth-storage");
+
+      // 避免在登录页重复跳转
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// ========================================
+// 导出
+// ========================================
+export default api;
