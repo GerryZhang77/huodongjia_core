@@ -63,13 +63,17 @@ export function useLogin() {
         );
 
         // 延迟跳转，确保通知显示
-        debugLogger.log("[useLogin] 准备跳转到 Dashboard");
-        console.log("🔄 [useLogin] 准备跳转到 Dashboard");
+        debugLogger.log("[useLogin] 准备跳转");
+        console.log("🔄 [useLogin] 准备跳转");
+
+        // 根据用户角色跳转到不同页面
+        const targetPath =
+          response.user.user_type === "user" ? "/u/home" : "/dashboard";
 
         setTimeout(() => {
-          debugLogger.log("[useLogin] 执行跳转到 /dashboard");
-          console.log("➡️  [useLogin] 执行跳转到 /dashboard");
-          navigate("/dashboard", { replace: true });
+          debugLogger.log(`[useLogin] 执行跳转到 ${targetPath}`);
+          console.log(`➡️  [useLogin] 执行跳转到 ${targetPath}`);
+          navigate(targetPath, { replace: true });
         }, 1000); // 延长到 1 秒，确保用户看到成功提示
 
         return true;

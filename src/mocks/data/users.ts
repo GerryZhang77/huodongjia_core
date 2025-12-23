@@ -10,7 +10,7 @@ export interface MockUser {
   phone: string;
   username: string;
   name: string;
-  user_type: "organizer" | "admin" | "participant";
+  user_type: "organizer" | "admin" | "user";
   avatar: string | null;
   age?: number;
   occupation?: string;
@@ -57,7 +57,7 @@ export const mockParticipant: MockUser = {
   phone: "13800138003",
   username: "user1",
   name: "王五（用户）",
-  user_type: "participant",
+  user_type: "user",
   avatar: "https://i.pravatar.cc/150?img=3",
   age: 28,
   occupation: "前端工程师",

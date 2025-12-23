@@ -1,206 +1,214 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
-import { Button, Input, Card, Toast, Collapse } from "antd-mobile";
-import {
-  EyeInvisibleOutline,
-  EyeOutline,
-  UserOutline,
-  LockOutline,
-  InformationCircleOutline,
-} from "antd-mobile-icons";
+import { Card, TextField, Input, Label, Button } from "@heroui/react";
+import { Eye, EyeOff, User, Lock, Info, Sparkles } from "lucide-react";
 import { useLogin } from "../../hooks";
 import { TEST_ACCOUNTS } from "../../utils";
 
 /**
  * 登录表单组件
- * MVP 版本 - 简洁的账号密码登录方式
+ * 现代化设计 - 统一视觉风格 + 渐变背景 + 玻璃态效果
  */
 export const LoginForm: React.FC = () => {
   const { login, loading } = useLogin();
   const [identifier, setIdentifier] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showTestAccounts, setShowTestAccounts] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
 
-  const handleSubmit = () => {
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setError("");
+
     if (!identifier) {
-      Toast.show({
-        icon: "fail",
-        content: "请输入账号",
-      });
+      setError("请输入账号");
       return;
     }
 
     if (!password) {
-      Toast.show({
-        icon: "fail",
-        content: "请输入密码",
-      });
+      setError("请输入密码");
       return;
     }
 
     login({ identifier, password });
   };
 
+  const handleQuickFill = (account: (typeof TEST_ACCOUNTS)[0]) => {
+    setIdentifier(account.value);
+    setPassword("123456");
+    setError("");
+  };
+
   return (
-    <Card
-      className="w-full max-w-md shadow-lg"
-      style={
-        {
-          "--border-radius": "16px",
-          "--body-padding": "32px",
-        } as any
-      }
-    >
-      {/* Logo 区域 */}
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-primary-500 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-          <span className="text-white text-2xl font-bold">活</span>
+    <div className="w-full max-w-md mx-auto px-4">
+      {/* Logo 区域 - 带动画效果 */}
+      <div className="text-center mb-8 animate-fade-in">
+        {/* Logo 图标 - 渐变背景 + 阴影 */}
+        <div className="relative inline-block mb-6">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-400 to-accent-500 rounded-3xl blur-xl opacity-60 animate-pulse-slow" />
+          <div className="relative w-20 h-20 bg-gradient-to-br from-primary-500 to-accent-500 rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-105 transition-transform duration-300">
+            <Sparkles className="w-10 h-10 text-white" strokeWidth={2.5} />
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">活动家平台</h1>
-        <p className="text-gray-500 text-sm mt-2">欢迎回来，请登录您的账号</p>
-        {/* 开发环境提示 - 仅非生产模式显示 */}
+
+        {/* 标题 */}
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+          活动家平台
+        </h1>
+        <p className="text-gray-500 text-sm md:text-base">
+          欢迎回来，开启精彩活动之旅 ✨
+        </p>
+
+        {/* 开发环境提示 */}
         {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
           import.meta.env.DEV && (
-            <div className="mt-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs text-yellow-800">
-                🔧 开发环境 | Chrome 密码警告可忽略
+            <div className="mt-4 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl inline-block">
+              <p className="text-xs text-amber-800 flex items-center gap-1">
+                <Info className="w-3 h-3" />
+                开发环境 | Chrome 密码警告可忽略
               </p>
             </div>
           )}
       </div>
 
-      {/* 登录表单 */}
-      <div className="space-y-4">
-        {/* 账号输入 */}
-        <div>
-          <div className="flex items-center mb-2">
-            <UserOutline className="text-gray-400 mr-2" />
-            <span className="text-gray-700 font-medium text-sm">账号</span>
-          </div>
-          <Input
-            placeholder="请输入账号"
+      {/* 登录卡片 - 玻璃态效果 */}
+      <Card className="backdrop-blur-xl bg-white/90 shadow-2xl border border-white/20 overflow-hidden">
+        <form onSubmit={handleSubmit} className="space-y-5 p-6">
+          {/* 账号输入 */}
+          <TextField
+            className="w-full"
+            name="identifier"
             value={identifier}
             onChange={setIdentifier}
-            onEnterPress={handleSubmit}
-            clearable
-            style={
-              {
-                "--border-radius": "12px",
-                "--border-color": "var(--adm-border-color)",
-                "--font-size": "16px",
-                "--padding-left": "16px",
-                "--padding-right": "16px",
-              } as React.CSSProperties
-            }
-          />
-        </div>
+          >
+            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-1.5">
+              <User className="w-4 h-4 text-primary-500" />
+              <span>账号</span>
+            </Label>
+            <Input
+              type="text"
+              placeholder="请输入账号"
+              autoComplete="username"
+              className="h-11"
+              onKeyDown={(e: React.KeyboardEvent) =>
+                e.key === "Enter" && handleSubmit()
+              }
+            />
+          </TextField>
 
-        {/* 密码输入 */}
-        <div>
-          <div className="flex items-center mb-2">
-            <LockOutline className="text-gray-400 mr-2" />
-            <span className="text-gray-700 font-medium text-sm">密码</span>
-          </div>
-          <Input
-            type={showPassword ? "text" : "password"}
-            placeholder="请输入密码"
+          {/* 密码输入 */}
+          <TextField
+            className="w-full"
+            name="password"
             value={password}
             onChange={setPassword}
-            onEnterPress={handleSubmit}
-            {...({
-              suffix: (
-                <div
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="cursor-pointer"
-                >
-                  {showPassword ? <EyeOutline /> : <EyeInvisibleOutline />}
-                </div>
-              ),
-            } as any)}
-            style={
-              {
-                "--border-radius": "12px",
-                "--border-color": "var(--adm-border-color)",
-                "--font-size": "16px",
-                "--padding-left": "16px",
-                "--padding-right": "16px",
-              } as React.CSSProperties
-            }
-          />
-        </div>
+          >
+            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-1.5">
+              <Lock className="w-4 h-4 text-primary-500" />
+              <span>密码</span>
+            </Label>
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="请输入密码"
+                autoComplete="current-password"
+                className="h-11 pr-11"
+                onKeyDown={(e: React.KeyboardEvent) =>
+                  e.key === "Enter" && handleSubmit()
+                }
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-500 transition-colors p-1 z-10"
+              >
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </TextField>
 
-        {/* 登录按钮 */}
-        <Button
-          block
-          color="primary"
-          size="large"
-          onClick={handleSubmit}
-          loading={loading}
-          disabled={loading}
-          className="mt-6"
-          style={
-            {
-              "--border-radius": "12px",
-              "--background-color": "var(--color-primary-500)",
-            } as any
-          }
-        >
-          登录
-        </Button>
+          {/* 错误提示 */}
+          {error && (
+            <div className="p-3 bg-error-50 border border-error-200 rounded-lg animate-shake">
+              <p className="text-sm text-error-600 flex items-center gap-2">
+                <Info className="w-4 h-4 flex-shrink-0" />
+                <span>{error}</span>
+              </p>
+            </div>
+          )}
 
-        {/* 测试账号提示 - 仅非生产模式显示 */}
-        {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
-          import.meta.env.DEV && (
-            <div className="mt-6">
-              <Collapse>
-                <Collapse.Panel
-                  key="test-accounts"
-                  title={
-                    <div className="flex items-center text-sm text-gray-600">
-                      <InformationCircleOutline className="mr-1" />
-                      <span>查看测试账号</span>
-                    </div>
-                  }
+          {/* 登录按钮 */}
+          <Button
+            type="submit"
+            variant="primary"
+            isDisabled={loading}
+            className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>登录中...</span>
+              </span>
+            ) : (
+              "立即登录"
+            )}
+          </Button>
+
+          {/* 测试账号折叠区域 - 仅开发环境 */}
+          {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
+            import.meta.env.DEV && (
+              <div className="pt-5 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowTestAccounts(!showTestAccounts)}
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary-500 transition-colors mx-auto"
                 >
-                  <div className="space-y-3 pt-2">
+                  <Info className="w-4 h-4" />
+                  <span>{showTestAccounts ? "收起" : "查看"}测试账号</span>
+                </button>
+
+                {showTestAccounts && (
+                  <div className="mt-4 space-y-2.5 animate-fade-in">
                     {TEST_ACCOUNTS.map((account) => (
                       <div
                         key={account.value}
-                        className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        className="p-3.5 bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all duration-200"
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-gray-900">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm font-semibold text-gray-900">
                             {account.label}
                           </span>
                           <Button
-                            size="mini"
-                            fill="outline"
-                            onClick={() => {
-                              setIdentifier(account.value);
-                              setPassword("123456"); // 默认密码
-                              Toast.show({
-                                icon: "success",
-                                content: "已填充测试账号",
-                              });
-                            }}
+                            variant="tertiary"
+                            size="sm"
+                            onPress={() => handleQuickFill(account)}
+                            className="h-7 px-3 text-xs"
                           >
                             快速填充
                           </Button>
                         </div>
                         <p className="text-xs text-gray-500">
-                          账号: {account.value} | {account.description}
+                          账号:{" "}
+                          <code className="px-1 py-0.5 bg-gray-100 rounded">
+                            {account.value}
+                          </code>{" "}
+                          | {account.description}
                         </p>
                       </div>
                     ))}
-                    <div className="text-xs text-gray-400 text-center mt-2">
+                    <p className="text-xs text-gray-400 text-center pt-2">
                       ⚠️ 此区域仅在开发环境显示
-                    </div>
+                    </p>
                   </div>
-                </Collapse.Panel>
-              </Collapse>
-            </div>
-          )}
-      </div>
-    </Card>
+                )}
+              </div>
+            )}
+        </form>
+      </Card>
+    </div>
   );
 };

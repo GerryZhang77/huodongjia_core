@@ -39,8 +39,17 @@ const MatchingConfiguration = lazy(
   () => import("./pages/merchant/MatchingConfiguration")
 );
 
+// C端用户页面 - 懒加载
+const UserHome = lazy(() => import("./pages/user/UserHome"));
+const UserActivityDetail = lazy(
+  () => import("./pages/user/UserActivityDetail")
+);
+const UserNotifications = lazy(() => import("./pages/user/UserNotifications"));
+const UserProfileCards = lazy(() => import("./pages/user/UserProfileCards"));
+
 // 开发调试页面 - 懒加载
 const ComponentShowcase = lazy(() => import("./pages/dev/ComponentShowcase"));
+const HeroUIDemo = lazy(() => import("./pages/dev/HeroUIDemo"));
 
 import "./index.css";
 
@@ -139,21 +148,53 @@ function App() {
                   }
                 />
 
-                {/* ========== C端用户路由 (预留) ========== */}
-                {/* 
-              <Route
-                path="/u/home"
-                element={
-                  <ProtectedRoute requiredRole="user">
-                    <UserHome />
-                  </ProtectedRoute>
-                }
-              />
-              */}
+                {/* ========== C端用户路由 ========== */}
+                {/* 用户首页 */}
+                <Route
+                  path="/u/home"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserHome />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 用户活动详情 */}
+                <Route
+                  path="/u/activities/:id"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserActivityDetail />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 用户通知页 */}
+                <Route
+                  path="/u/notifications"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserNotifications />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 用户名片页 */}
+                <Route
+                  path="/u/cards"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserProfileCards />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* ========== 开发调试路由 ========== */}
                 {isDevelopment && (
-                  <Route path="/components" element={<ComponentShowcase />} />
+                  <>
+                    <Route path="/components" element={<ComponentShowcase />} />
+                    <Route path="/heroui-demo" element={<HeroUIDemo />} />
+                  </>
                 )}
 
                 {/* ========== 兼容旧路由 (重定向) ========== */}

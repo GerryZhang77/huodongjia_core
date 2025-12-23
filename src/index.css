@@ -1,13 +1,160 @@
 /**
  * 主样式入口
  * 
+ * TailwindCSS v4 + HeroUI v3 配置
  * 注意: variables.css 和 base.css 已在 main.tsx 中导入
  */
 
-/* Tailwind CSS */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* TailwindCSS v4 - 必须在最前面 */
+@import "tailwindcss";
+
+/* HeroUI v3 样式 */
+@import "@heroui/styles";
+
+/* ========================================
+ * TailwindCSS v4 自定义主题配置
+ * 使用 CSS 变量定义，替代 tailwind.config.js
+ * ======================================== */
+@theme {
+  /* 品牌色彩系统 */
+  /* 主色 - 晨曦蓝 (Dawn Blue) */
+  --color-primary-50: #f0f7ff;
+  --color-primary-100: #e0edff;
+  --color-primary-200: #c2d9ff;
+  --color-primary-300: #96b8ff;
+  --color-primary-400: #6b96ff;
+  --color-primary-500: #4a78ff;
+  --color-primary-600: #3862e6;
+  --color-primary-700: #2b4dcc;
+  --color-primary-800: #1f39b3;
+  --color-primary-900: #142699;
+
+  /* 辅助色 - 暖桃粉 (Warm Peach) */
+  --color-secondary-50: #fff5f7;
+  --color-secondary-100: #ffe4ec;
+  --color-secondary-200: #ffcad8;
+  --color-secondary-300: #ffb0c5;
+  --color-secondary-400: #ff96b1;
+  --color-secondary-500: #ff7c9e;
+  --color-secondary-600: #e6637e;
+  --color-secondary-700: #cc4a5e;
+  --color-secondary-800: #b3313f;
+  --color-secondary-900: #991821;
+
+  /* 点缀色 - 薄荷绿 (Mint Green) */
+  --color-accent-50: #f0fdf9;
+  --color-accent-100: #d1fae5;
+  --color-accent-200: #a7f3d0;
+  --color-accent-300: #6ee7b7;
+  --color-accent-400: #34d399;
+  --color-accent-500: #10b981;
+  --color-accent-600: #059669;
+  --color-accent-700: #047857;
+  --color-accent-800: #065f46;
+  --color-accent-900: #064e3b;
+
+  /* 功能色 - 成功 */
+  --color-success-50: #f0fdf9;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+
+  /* 功能色 - 信息 */
+  --color-info-50: #f0f7ff;
+  --color-info-100: #e0edff;
+  --color-info-200: #c2d9ff;
+  --color-info-300: #96b8ff;
+  --color-info-400: #6b96ff;
+  --color-info-500: #4a78ff;
+  --color-info-600: #3862e6;
+  --color-info-700: #2b4dcc;
+  --color-info-800: #1f39b3;
+  --color-info-900: #142699;
+
+  /* 功能色 - 警告 */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  /* 功能色 - 错误 */
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-800: #991b1b;
+  --color-error-900: #7f1d1d;
+
+  /* 中性色 */
+  --color-gray-50: #fafbfc;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+
+  /* 字体家族 */
+  --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono: "SF Mono", Consolas, Monaco, "Courier New", monospace;
+
+  /* 字号 */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  /* 圆角 */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.15);
+
+  /* 断点 */
+  --breakpoint-xs: 375px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+
+  /* 动画时长 */
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+  --duration-slow: 500ms;
+}
 
 /* ===== 自定义动画 ===== */
 @keyframes fade-in-up {
@@ -215,6 +362,197 @@ body {
 
 .pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ========================================
+ * 现代化动画效果
+ * ======================================== */
+
+/* 淡入动画 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+/* 漂浮动画 - 用于装饰图标 */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 脉冲慢速 - 用于光晕效果 */
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s ease-in-out infinite;
+}
+
+/* Blob 动画 - 用于背景装饰 */
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s ease-in-out infinite;
+}
+
+/* 抖动动画 - 用于错误提示 */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* 动画延迟类 */
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-3000 {
+  animation-delay: 3s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* ========================================
+ * 现代化动画效果
+ * ======================================== */
+
+/* 进入动画 - 淡入 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 从底部滑入 */
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(var(--slide-amount, 16px));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 从顶部滑入 */
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(calc(-1 * var(--slide-amount, 16px)));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 组合动画类 */
+.animate-in {
+  animation-duration: var(--animation-duration, 300ms);
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-bottom-4 {
+  --slide-amount: 16px;
+  animation-name: fade-in, slide-in-from-bottom;
+}
+
+.slide-in-from-top {
+  --slide-amount: 8px;
+  animation-name: fade-in, slide-in-from-top;
+}
+
+.duration-200 {
+  --animation-duration: 200ms;
+}
+
+.duration-300 {
+  --animation-duration: 300ms;
+}
+
+.duration-500 {
+  --animation-duration: 500ms;
+}
+
+/* ========================================
+ * 滚动条隐藏工具类
+ * ======================================== */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* 响应式设计 */
