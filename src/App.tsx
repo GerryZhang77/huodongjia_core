@@ -51,6 +51,7 @@ const UserProfileCards = lazy(() => import("./pages/user/UserProfileCards"));
 const ComponentShowcase = lazy(() => import("./pages/dev/ComponentShowcase"));
 const TailwindTest = lazy(() => import("./pages/dev/TailwindTest"));
 const SimpleTailwindTest = lazy(() => import("./pages/dev/SimpleTailwindTest"));
+const ButtonTest = lazy(() => import("./pages/dev/ButtonTest"));
 
 import "./index.css";
 
@@ -194,6 +195,7 @@ function App() {
                 {isDevelopment && (
                   <>
                     <Route path="/components" element={<ComponentShowcase />} />
+                    <Route path="/button-test" element={<ButtonTest />} />
                     <Route path="/tailwind-test" element={<TailwindTest />} />
                     <Route
                       path="/simple-test"

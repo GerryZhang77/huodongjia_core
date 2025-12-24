@@ -1,50 +1,36 @@
 /**
- * Button - 按钮组件 (2024 新版设计系统)
+ * Button - 按钮组件
  *
- * 设计规范:
- * - 样式: Pill 圆角 (22px/26px)
- * - 渐变: 135° 渐变背景
- * - 阴影: 彩色阴影 (与按钮颜色匹配)
- * - 尺寸: Large(44px), Medium(40px), Small(32px)
- * - 变体: Primary, Secondary, Accent, Success, Outline, Ghost, Text
- * - 可访问性: 符合 WCAG 2.1 AA 标准
+ * 设计规范 (基于 UI 稿 03-buttons.svg):
+ * - 样式: Pill 圆角
+ * - 尺寸: Large(52px), Medium(44px), Small(36px)
+ * - 变体: Primary(天空蓝), Secondary(活力橙), Accent(梦幻紫), Success(成功绿), Danger(错误红), Outline, Light, Ghost, Text
+ * - 纯 Tailwind v3 类名，无自定义 CSS
  *
  * @example
  * ```tsx
- * // 主按钮 (天空蓝渐变)
- * <Button>立即报名</Button>
- *
- * // 次要按钮 (活力橙渐变)
- * <Button variant="secondary">热门活动</Button>
- *
- * // 强调按钮 (梦幻紫渐变)
+ * <Button>主按钮</Button>
+ * <Button variant="secondary">次要按钮</Button>
  * <Button variant="accent">智能匹配</Button>
- *
- * // 轮廓按钮
- * <Button variant="outline">取消</Button>
- *
- * // 带图标
- * <Button icon={<PlusIcon />}>新增</Button>
- *
- * // 加载状态
- * <Button loading>提交中...</Button>
+ * <Button variant="success">完成</Button>
+ * <Button variant="danger">删除</Button>
+ * <Button variant="outline">轮廓按钮</Button>
+ * <Button size="large" loading>加载中...</Button>
  * ```
  */
 
 import { FC } from "react";
-import { clsx } from "clsx";
 import type { ButtonProps } from "./types";
 
 /**
- * 加载图标组件
+ * 加载图标 (SVG)
  */
-const LoadingIcon: FC<{ className?: string }> = ({ className }) => (
+const LoadingIcon: FC = () => (
   <svg
-    className={clsx("animate-spin", className)}
+    className="animate-spin w-4 h-4"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
-    aria-hidden="true"
   >
     <circle
       className="opacity-25"
@@ -74,216 +60,144 @@ export const Button: FC<ButtonProps> = ({
   block = false,
   icon,
   iconRight,
-  className,
+  className = "",
   onClick,
   type = "button",
-  "aria-label": ariaLabel,
 }) => {
-  // 是否为填充按钮 (带渐变背景)
-  const isSolid = [
-    "primary",
-    "secondary",
-    "accent",
-    "success",
-    "danger",
-  ].includes(variant);
+  // 基础类名 - 所有按钮共享
+  let classes =
+    "inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
-  // 基础样式
-  const baseStyles = clsx(
-    // 布局
-    "inline-flex items-center justify-center gap-2",
-    // 字体
-    "font-semibold",
-    // 过渡动画
-    "transition-all duration-150 ease-out",
-    // 焦点样式
-    "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-    // 块级
-    block && "w-full",
-    // 禁用/加载时禁止点击
-    (disabled || loading) && "cursor-not-allowed",
-    // 填充按钮的悬停上移效果
-    isSolid && !disabled && !loading && "hover:-translate-y-0.5",
-    // 按下效果
-    !disabled && !loading && "active:scale-[0.98]"
-  );
+  // 块级按钮
+  if (block) {
+    classes += " w-full";
+  }
 
-  // 尺寸样式 - Pill 圆角 (根据设计稿 03-buttons.svg)
-  const sizeStyles = {
-    large: clsx(
-      "h-[52px] px-7", // 52px 高度
-      "rounded-[26px]", // 26px 圆角
-      "text-base" // 16px 字号
-    ),
-    medium: clsx(
-      "h-11 px-6", // 44px 高度
-      "rounded-[22px]", // 22px 圆角
-      "text-sm" // 14px 字号
-    ),
-    small: clsx(
-      "h-9 px-5", // 36px 高度
-      "rounded-[18px]", // 18px 圆角
-      "text-[13px]" // 13px 字号
-    ),
-  };
+  // 尺寸类名 (Pill 圆角)
+  if (size === "large") {
+    classes += " h-[52px] px-7 text-base";
+    // Pill 圆角 = 高度的一半
+    classes += " rounded-[26px]";
+  } else if (size === "medium") {
+    classes += " h-11 px-6 text-sm";
+    classes += " rounded-[22px]";
+  } else if (size === "small") {
+    classes += " h-9 px-5 text-[13px]";
+    classes += " rounded-[18px]";
+  }
 
-  // 变体样式
-  const variantStyles = {
-    // 主要按钮 - 天空蓝渐变
-    primary: clsx(
-      // 默认状态
-      "bg-gradient-to-br from-primary-400 to-primary-500 text-white",
-      // 阴影
-      !disabled && "shadow-primary",
-      // 悬停状态
-      !disabled &&
-        !loading &&
-        "hover:from-primary-500 hover:to-primary-600 hover:shadow-primary-hover",
-      // 焦点状态
-      "focus-visible:ring-2 focus-visible:ring-primary-400",
-      // 禁用状态
-      disabled && "from-gray-300 to-gray-400 text-gray-500 shadow-none"
-    ),
-    // 次要按钮 - 活力橙渐变
-    secondary: clsx(
-      // 默认状态
-      "bg-gradient-to-br from-secondary-400 to-secondary-500 text-white",
-      // 阴影
-      !disabled && "shadow-secondary",
-      // 悬停状态
-      !disabled &&
-        !loading &&
-        "hover:from-secondary-500 hover:to-secondary-600 hover:shadow-secondary-hover",
-      // 焦点状态
-      "focus-visible:ring-2 focus-visible:ring-secondary-400",
-      // 禁用状态
-      disabled && "from-gray-300 to-gray-400 text-gray-500 shadow-none"
-    ),
-    // 强调按钮 - 梦幻紫渐变
-    accent: clsx(
-      // 默认状态
-      "bg-gradient-to-br from-accent-400 to-accent-500 text-white",
-      // 阴影
-      !disabled && "shadow-accent",
-      // 悬停状态
-      !disabled &&
-        !loading &&
-        "hover:from-accent-500 hover:to-accent-600 hover:shadow-accent-hover",
-      // 焦点状态
-      "focus-visible:ring-2 focus-visible:ring-accent-400",
-      // 禁用状态
-      disabled && "from-gray-300 to-gray-400 text-gray-500 shadow-none"
-    ),
-    // 成功按钮 - 成功绿渐变
-    success: clsx(
-      // 默认状态
-      "bg-gradient-to-br from-success-400 to-success-500 text-white",
-      // 阴影
-      !disabled && "shadow-success",
-      // 悬停状态
-      !disabled &&
-        !loading &&
-        "hover:from-success-500 hover:to-success-600 hover:shadow-success-hover",
-      // 焦点状态
-      "focus-visible:ring-2 focus-visible:ring-success-400",
-      // 禁用状态
-      disabled && "from-gray-300 to-gray-400 text-gray-500 shadow-none"
-    ),
+  // 变体类名
+  if (variant === "primary") {
+    // 主按钮 - 天空蓝
+    classes += " bg-primary-400 text-white shadow-button";
+    if (!disabled && !loading) {
+      classes +=
+        " hover:bg-primary-500 hover:-translate-y-0.5 active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  } else if (variant === "secondary") {
+    // 次要按钮 - 活力橙
+    classes += " bg-secondary-400 text-white shadow-button";
+    if (!disabled && !loading) {
+      classes +=
+        " hover:bg-secondary-500 hover:-translate-y-0.5 active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  } else if (variant === "accent") {
+    // 强调按钮 - 梦幻紫
+    classes += " bg-accent-400 text-white shadow-button";
+    if (!disabled && !loading) {
+      classes +=
+        " hover:bg-accent-500 hover:-translate-y-0.5 active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  } else if (variant === "success") {
+    // 成功按钮 - 成功绿
+    classes += " bg-success-400 text-white shadow-button";
+    if (!disabled && !loading) {
+      classes +=
+        " hover:bg-success-500 hover:-translate-y-0.5 active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  } else if (variant === "danger") {
+    // 危险按钮 - 错误红
+    classes += " bg-error-400 text-white shadow-button";
+    if (!disabled && !loading) {
+      classes +=
+        " hover:bg-error-500 hover:-translate-y-0.5 active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  } else if (variant === "outline") {
     // 轮廓按钮
-    outline: clsx(
-      // 默认状态
-      "bg-white text-primary-400 border-2 border-primary-400",
-      // 悬停状态
-      !disabled &&
-        !loading &&
-        "hover:bg-primary-50 hover:border-primary-500 hover:text-primary-500",
-      // 焦点状态
-      "focus-visible:ring-primary-400",
-      // 禁用状态
-      disabled && "bg-gray-50 text-gray-400 border-gray-300"
-    ),
+    classes += " bg-white text-primary-400 border-2 border-primary-400";
+    if (!disabled && !loading) {
+      classes += " hover:bg-gray-50 active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  } else if (variant === "light") {
+    // 浅色按钮
+    classes += " bg-gray-100 text-gray-900";
+    if (!disabled && !loading) {
+      classes += " hover:bg-gray-200 active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  } else if (variant === "ghost") {
     // 幽灵按钮
-    ghost: clsx(
-      // 默认状态
-      "bg-transparent text-primary-400",
-      // 悬停状态
-      !disabled && !loading && "hover:bg-primary-50 hover:text-primary-500",
-      // 焦点状态
-      "focus-visible:ring-primary-400",
-      // 禁用状态
-      disabled && "text-gray-400"
-    ),
+    classes += " bg-transparent text-primary-400";
+    if (!disabled && !loading) {
+      classes += " hover:bg-gray-100 active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  } else if (variant === "text") {
     // 文本按钮
-    text: clsx(
-      // 默认状态
-      "bg-transparent text-primary-400 underline-offset-2",
-      // 悬停状态
-      !disabled && !loading && "hover:text-primary-500 hover:underline",
-      // 焦点状态
-      "focus-visible:ring-primary-400",
-      // 禁用状态
-      disabled && "text-gray-400"
-    ),
-    // 淡色按钮 - 淡色背景 + 品牌色文字
-    light: clsx(
-      // 默认状态
-      "bg-primary-50 text-primary-500",
-      // 悬停状态
-      !disabled && !loading && "hover:bg-primary-100 hover:text-primary-600",
-      // 焦点状态
-      "focus-visible:ring-primary-400",
-      // 禁用状态
-      disabled && "bg-gray-100 text-gray-400"
-    ),
-    // 危险按钮 - 红色警告
-    danger: clsx(
-      // 默认状态
-      "bg-gradient-to-br from-error-400 to-error-500 text-white",
-      // 阴影
-      !disabled && "shadow-danger",
-      // 悬停状态
-      !disabled &&
-        !loading &&
-        "hover:from-error-500 hover:to-error-600 hover:shadow-danger-hover",
-      // 焦点状态
-      "focus-visible:ring-2 focus-visible:ring-error-400",
-      // 禁用状态
-      disabled && "from-gray-300 to-gray-400 text-gray-500 shadow-none"
-    ),
-  };
+    classes += " bg-transparent text-primary-400";
+    if (!disabled && !loading) {
+      classes += " hover:underline active:scale-[0.98]";
+    }
+    if (disabled) {
+      classes += " opacity-50 cursor-not-allowed";
+    }
+  }
 
-  // 图标尺寸
-  const iconSizes = {
-    large: "w-5 h-5", // 20px
-    medium: "w-4 h-4", // 16px
-    small: "w-3.5 h-3.5", // 14px
-  };
+  // 加载/禁用状态
+  if (disabled || loading) {
+    classes += " cursor-not-allowed";
+  }
+
+  // 自定义类名
+  if (className) {
+    classes += " " + className;
+  }
 
   return (
     <button
       type={type}
       disabled={disabled || loading}
       onClick={onClick}
-      aria-label={ariaLabel}
-      aria-disabled={disabled || loading}
-      className={clsx(
-        baseStyles,
-        sizeStyles[size],
-        variantStyles[variant],
-        className
-      )}
+      className={classes}
     >
       {/* 加载图标 */}
-      {loading && <LoadingIcon className={iconSizes[size]} />}
+      {loading && <LoadingIcon />}
 
       {/* 左侧图标 */}
       {!loading && icon && (
-        <span
-          className={clsx(
-            iconSizes[size],
-            "shrink-0 inline-flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
-          )}
-        >
+        <span className="w-4 h-4 shrink-0 flex items-center justify-center">
           {icon}
         </span>
       )}
@@ -293,12 +207,7 @@ export const Button: FC<ButtonProps> = ({
 
       {/* 右侧图标 */}
       {!loading && iconRight && (
-        <span
-          className={clsx(
-            iconSizes[size],
-            "shrink-0 inline-flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
-          )}
-        >
+        <span className="w-4 h-4 shrink-0 flex items-center justify-center">
           {iconRight}
         </span>
       )}

@@ -1,0 +1,15 @@
+/**
+ * Tailwind CSS v4 配置
+ *
+ * 最小化配置 - 主题在 src/index.css 的 @theme 中定义
+ */
+
+export default {
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+
+  theme: {
+    extend: {},
+  },
+
+  plugins: [],
+};

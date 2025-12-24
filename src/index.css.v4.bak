@@ -1,0 +1,457 @@
+/**
+ * 主样式入口 - 纯 Tailwind v4
+ * 
+ * 使用 @tailwindcss/vite 插件
+ * 所有主题配置在 @theme 块中定义
+ */
+
+@import "tailwindcss";
+
+/* ========================================
+ * 设计令牌 (Design Tokens)
+ * 基于 UI 稿: ui_design_drafts/UISystem/
+ * ======================================== */
+@theme {
+  /* 品牌色彩 - 需要完整的色阶才能生成 bg-primary-400 这样的类 */
+  --color-primary-400: #3b82f6; /* 天空蓝 */
+  --color-primary-500: #2563eb;
+  --color-primary-600: #1d4ed8;
+
+  --color-secondary-400: #f97316; /* 活力橙 */
+  --color-secondary-500: #ea580c;
+  --color-secondary-600: #c2410c;
+
+  --color-accent-400: #a855f7; /* 梦幻紫 */
+  --color-accent-500: #9333ea;
+  --color-accent-600: #7e22ce;
+
+  /* 功能色 */
+  --color-success-400: #22c55e;
+  --color-success-500: #16a34a;
+  --color-success-600: #15803d;
+
+  --color-warning-400: #f59e0b;
+  --color-warning-500: #d97706;
+  --color-warning-600: #b45309;
+
+  --color-error-400: #ef4444;
+  --color-error-500: #dc2626;
+  --color-error-600: #b91c1c;
+
+  --color-info-400: #3b82f6;
+  --color-info-500: #2563eb;
+  --color-info-600: #1d4ed8;
+
+  /* 中性色 (Slate) */
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #0f172a;
+
+  /* 字体 */
+  --font-sans: "Nunito", -apple-system, "PingFang SC", sans-serif;
+
+  /* 阴影 */
+  --shadow-button: 0 2px 8px rgb(59 130 246 / 0.3);
+  --shadow-card: 0 4px 12px rgb(0 0 0 / 0.06);
+}
+
+/* ===== Ant Design Mobile 主题覆盖 ===== */
+
+/* 按钮组件 */
+.adm-button-primary {
+  --background-color: var(--color-primary-500);
+  --border-color: var(--color-primary-500);
+}
+
+.adm-button-primary:active {
+  --background-color: var(--color-primary-700);
+  --border-color: var(--color-primary-700);
+}
+
+.adm-button-primary:disabled {
+  --background-color: var(--color-gray-300);
+  --border-color: var(--color-gray-300);
+}
+
+/* 标签页 */
+.adm-tabs-tab-active {
+  color: var(--color-primary-500);
+}
+
+.adm-tabs-tab-line {
+  background-color: var(--color-primary-500);
+}
+
+/* 活动管理页面 Tabs 样式 */
+.activity-manage-tabs .adm-tabs-header {
+  background-color: white;
+  padding: 0 20px;
+}
+
+.activity-manage-tabs .adm-tabs-tab {
+  padding: 12px 16px;
+  font-size: 15px;
+}
+
+.activity-manage-tabs .adm-tabs-tab-active {
+  font-weight: 600;
+  color: var(--color-primary-500);
+}
+
+.activity-manage-tabs .adm-tabs-tab-line {
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* 导航栏 */
+.adm-nav-bar {
+  --height: 56px;
+  --border-bottom: 1px solid var(--border-subtle);
+  background-color: var(--bg-container);
+}
+
+/* 卡片 */
+.adm-card {
+  --border-radius: var(--radius-lg);
+  --body-padding: var(--spacing-card-padding);
+  box-shadow: var(--shadow-base);
+}
+
+/* 输入框 */
+.adm-input {
+  --border-radius: var(--radius-md);
+  --border-color: var(--border-default);
+  --color: var(--text-primary);
+  --placeholder-color: var(--text-placeholder);
+}
+
+.adm-input:focus {
+  --border-color: var(--border-focus);
+}
+
+/* 开关 */
+.adm-switch {
+  --checked-color: var(--color-primary-500);
+}
+
+/* 复选框 */
+.adm-checkbox {
+  --icon-size: 20px;
+  --border-radius: var(--radius-sm);
+}
+
+.adm-checkbox-checked {
+  --background-color: var(--color-primary-500);
+  --border-color: var(--color-primary-500);
+}
+
+/* Toast */
+.adm-toast {
+  --background-color: rgba(0, 0, 0, 0.8);
+  --border-radius: var(--radius-md);
+}
+
+/* Modal */
+.adm-modal {
+  --border-radius: var(--radius-xl);
+}
+
+.adm-modal-header {
+  --font-size: var(--font-size-lg);
+  --font-weight: var(--font-weight-semibold);
+}
+
+.adm-text-area {
+  --border-radius: 8px;
+}
+
+.adm-selector-item {
+  --border-radius: 8px;
+}
+
+.adm-tag {
+  --border-radius: 16px;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 页面背景 */
+body {
+  background-color: #f5f5f5;
+}
+
+/* 卡片悬停效果 */
+.hover-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.hover-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 渐变背景 */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ========================================
+ * 现代化动画效果
+ * ======================================== */
+
+/* 淡入动画 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+/* 漂浮动画 - 用于装饰图标 */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 脉冲慢速 - 用于光晕效果 */
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s ease-in-out infinite;
+}
+
+/* Blob 动画 - 用于背景装饰 */
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s ease-in-out infinite;
+}
+
+/* 抖动动画 - 用于错误提示 */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* 动画延迟类 */
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-3000 {
+  animation-delay: 3s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* ========================================
+ * 现代化动画效果
+ * ======================================== */
+
+/* 进入动画 - 淡入 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 从底部滑入 */
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(var(--slide-amount, 16px));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 从顶部滑入 */
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(calc(-1 * var(--slide-amount, 16px)));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* 组合动画类 */
+.animate-in {
+  animation-duration: var(--animation-duration, 300ms);
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-bottom-4 {
+  --slide-amount: 16px;
+  animation-name: fade-in, slide-in-from-bottom;
+}
+
+.slide-in-from-top {
+  --slide-amount: 8px;
+  animation-name: fade-in, slide-in-from-top;
+}
+
+.duration-200 {
+  --animation-duration: 200ms;
+}
+
+.duration-300 {
+  --animation-duration: 300ms;
+}
+
+.duration-500 {
+  --animation-duration: 500ms;
+}
+
+/* ========================================
+ * 滚动条隐藏工具类
+ * ======================================== */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .adm-card {
+    --body-padding: 12px;
+  }
+
+  .adm-nav-bar {
+    --height: 44px;
+  }
+}

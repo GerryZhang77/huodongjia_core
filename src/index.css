@@ -1,305 +1,266 @@
 /**
- * 主样式入口
+ * 主样式入口 - Tailwind v3
  * 
- * TailwindCSS v4 配置
- * 使用 @tailwindcss/vite 插件 (不需要 PostCSS 插件)
+ * 基于设计系统: docs-private/design-system/
+ * UI 设计稿: ui_design_drafts/UISystem/
  */
 
-/* TailwindCSS v4 */
-@import "tailwindcss";
-
-/* Tailwind 主题配置 - 这会生成工具类！ */
-@import "./styles/theme.css";
+/* ========================================
+ * Tailwind 基础层
+ * ======================================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ========================================
- * TailwindCSS v4 自定义主题配置
- * 2024 新版设计系统 - 与 tailwind.config.js 保持同步
+ * CSS 变量定义 (可选，用于 JS 访问)
  * ======================================== */
-@theme {
-  /* ===== 品牌色彩系统 (2024 新版) ===== */
+@layer base {
+  :root {
+    /* 品牌色 */
+    --color-primary-400: #3b82f6;
+    --color-primary-500: #2563eb;
+    --color-primary-600: #1d4ed8;
 
-  /* 主色 - 天空蓝 (Sky Blue) */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #3b82f6;
-  --color-primary-500: #2563eb;
-  --color-primary-600: #1d4ed8;
-  --color-primary-700: #1e40af;
-  --color-primary-800: #1e3a8a;
-  --color-primary-900: #172554;
+    --color-secondary-400: #f97316;
+    --color-secondary-500: #ea580c;
+    --color-secondary-600: #c2410c;
 
-  /* 辅助色 - 活力橙 (Vibrant Orange) */
-  --color-secondary-50: #fff7ed;
-  --color-secondary-100: #ffedd5;
-  --color-secondary-200: #fed7aa;
-  --color-secondary-300: #fdba74;
-  --color-secondary-400: #f97316;
-  --color-secondary-500: #ea580c;
-  --color-secondary-600: #c2410c;
-  --color-secondary-700: #9a3412;
-  --color-secondary-800: #7c2d12;
-  --color-secondary-900: #6c2711;
+    --color-accent-400: #a855f7;
+    --color-accent-500: #9333ea;
+    --color-accent-600: #7e22ce;
 
-  /* 强调色 - 梦幻紫 (Dream Purple) */
-  --color-accent-50: #faf5ff;
-  --color-accent-100: #f3e8ff;
-  --color-accent-200: #e9d5ff;
-  --color-accent-300: #d8b4fe;
-  --color-accent-400: #a855f7;
-  --color-accent-500: #9333ea;
-  --color-accent-600: #7e22ce;
-  --color-accent-700: #6b21a8;
-  --color-accent-800: #581c87;
-  --color-accent-900: #4c1d95;
+    /* 功能色 */
+    --color-success-400: #22c55e;
+    --color-warning-400: #f59e0b;
+    --color-error-400: #ef4444;
+    --color-info-400: #3b82f6;
 
-  /* 功能色 - 成功 */
-  --color-success-50: #f0fdf4;
-  --color-success-100: #dcfce7;
-  --color-success-200: #bbf7d0;
-  --color-success-300: #86efac;
-  --color-success-400: #22c55e;
-  --color-success-500: #16a34a;
-  --color-success-600: #15803d;
-  --color-success-700: #166534;
-  --color-success-800: #14532d;
-  --color-success-900: #052e16;
+    /* 中性色 */
+    --color-gray-50: #f8fafc;
+    --color-gray-100: #f1f5f9;
+    --color-gray-200: #e2e8f0;
+    --color-gray-500: #64748b;
+    --color-gray-900: #0f172a;
 
-  /* 功能色 - 信息 (与主色一致) */
-  --color-info-50: #eff6ff;
-  --color-info-100: #dbeafe;
-  --color-info-200: #bfdbfe;
-  --color-info-300: #93c5fd;
-  --color-info-400: #3b82f6;
-  --color-info-500: #2563eb;
-  --color-info-600: #1d4ed8;
-  --color-info-700: #1e40af;
-  --color-info-800: #1e3a8a;
-  --color-info-900: #172554;
-
-  /* 功能色 - 警告 */
-  --color-warning-50: #fffbeb;
-  --color-warning-100: #fef3c7;
-  --color-warning-200: #fde68a;
-  --color-warning-300: #fcd34d;
-  --color-warning-400: #f59e0b;
-  --color-warning-500: #d97706;
-  --color-warning-600: #b45309;
-  --color-warning-700: #92400e;
-  --color-warning-800: #78350f;
-  --color-warning-900: #653208;
-
-  /* 功能色 - 错误 */
-  --color-error-50: #fef2f2;
-  --color-error-100: #fee2e2;
-  --color-error-200: #fecaca;
-  --color-error-300: #fca5a5;
-  --color-error-400: #ef4444;
-  --color-error-500: #dc2626;
-  --color-error-600: #b91c1c;
-  --color-error-700: #991b1b;
-  --color-error-800: #7f1d1d;
-  --color-error-900: #651a1a;
-
-  /* 中性色 - 石板灰 (Slate) */
-  --color-gray-50: #f8fafc;
-  --color-gray-100: #f1f5f9;
-  --color-gray-200: #e2e8f0;
-  --color-gray-300: #cbd5e1;
-  --color-gray-400: #94a3b8;
-  --color-gray-500: #64748b;
-  --color-gray-600: #475569;
-  --color-gray-700: #334155;
-  --color-gray-800: #1e293b;
-  --color-gray-900: #0f172a;
-
-  /* ===== 彩色阴影 (按钮) ===== */
-  --shadow-primary: 0 2px 8px rgba(59, 130, 246, 0.3);
-  --shadow-primary-hover: 0 4px 12px rgba(59, 130, 246, 0.4);
-  --shadow-secondary: 0 2px 8px rgba(249, 115, 22, 0.3);
-  --shadow-secondary-hover: 0 4px 12px rgba(249, 115, 22, 0.4);
-  --shadow-accent: 0 2px 8px rgba(168, 85, 247, 0.3);
-  --shadow-accent-hover: 0 4px 12px rgba(168, 85, 247, 0.4);
-  --shadow-success: 0 2px 8px rgba(34, 197, 94, 0.3);
-  --shadow-success-hover: 0 4px 12px rgba(34, 197, 94, 0.4);
-  --shadow-danger: 0 2px 8px rgba(239, 68, 68, 0.3);
-  --shadow-danger-hover: 0 4px 12px rgba(239, 68, 68, 0.4);
-
-  /* ===== 字体系统 ===== */
-  --font-sans: "Nunito", -apple-system, BlinkMacSystemFont, "PingFang SC",
-    "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-mono: "SF Mono", Monaco, Consolas, "Courier New", monospace;
-
-  /* 字号 */
-  --text-xs: 0.6875rem; /* 11px */
-  --text-sm: 0.75rem; /* 12px */
-  --text-base: 0.875rem; /* 14px */
-  --text-lg: 1rem; /* 16px */
-  --text-xl: 1.25rem; /* 20px */
-  --text-2xl: 1.5rem; /* 24px */
-  --text-3xl: 2rem; /* 32px */
-  --text-4xl: 2.5rem; /* 40px */
-
-  /* 圆角 */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-  --radius-full: 9999px;
-
-  /* 阴影 */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.15);
-
-  /* 断点 */
-  --breakpoint-xs: 375px;
-  --breakpoint-sm: 640px;
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1440px;
-
-  /* 动画时长 */
-  --duration-fast: 150ms;
-  --duration-base: 300ms;
-  --duration-slow: 500ms;
-}
-
-/* ===== 自定义动画 ===== */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+    /* 阴影 */
+    --shadow-button: 0 2px 8px rgba(59, 130, 246, 0.3);
+    --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --shadow-card-hover: 0 8px 16px rgba(59, 130, 246, 0.12);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  /* 全局字体 */
+  body {
+    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "PingFang SC",
+      "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #f5f5f5;
+  }
+
+  /* 代码字体 */
+  code,
+  pre {
+    font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
   }
 }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s ease-out both;
+/* ========================================
+ * Ant Design Mobile 主题覆盖
+ * ======================================== */
+@layer components {
+  /* 按钮组件 */
+  .adm-button-primary {
+    --background-color: var(--color-primary-500);
+    --border-color: var(--color-primary-500);
+  }
+
+  .adm-button-primary:active {
+    --background-color: var(--color-primary-600);
+    --border-color: var(--color-primary-600);
+  }
+
+  .adm-button-primary:disabled {
+    --background-color: var(--color-gray-300);
+    --border-color: var(--color-gray-300);
+  }
+
+  /* 标签页 */
+  .adm-tabs-tab-active {
+    color: var(--color-primary-500);
+  }
+
+  .adm-tabs-tab-line {
+    background-color: var(--color-primary-500);
+  }
+
+  /* 活动管理页面 Tabs 样式 */
+  .activity-manage-tabs .adm-tabs-header {
+    background-color: white;
+    padding: 0 20px;
+  }
+
+  .activity-manage-tabs .adm-tabs-tab {
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #666;
+  }
+
+  .activity-manage-tabs .adm-tabs-tab-active {
+    font-weight: 600;
+    color: var(--color-primary-500);
+  }
+
+  .activity-manage-tabs .adm-tabs-tab-line {
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  /* Swiper 样式覆盖 */
+  .adm-swiper-indicator {
+    bottom: 12px;
+  }
+
+  .adm-swiper-indicator .adm-page-indicator-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .adm-swiper-indicator .adm-page-indicator-dot-active {
+    background-color: #fff;
+    width: 16px;
+    border-radius: 3px;
+  }
+
+  /* 卡片样式覆盖 */
+  .adm-card {
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .adm-card-body {
+    padding: 16px;
+  }
+
+  /* Popup 样式覆盖 */
+  .adm-popup-body {
+    border-radius: 16px 16px 0 0;
+  }
+
+  /* SearchBar 样式覆盖 */
+  .adm-search-bar {
+    padding: 12px 16px;
+    background-color: transparent;
+  }
+
+  .adm-search-bar-input-box {
+    background-color: var(--color-gray-100);
+    border-radius: 10px;
+  }
+
+  /* 开关 */
+  .adm-switch {
+    --checked-color: var(--color-primary-500);
+  }
+
+  /* 复选框 */
+  .adm-checkbox {
+    --icon-size: 20px;
+    --border-radius: 4px;
+  }
+
+  .adm-checkbox-checked {
+    --background-color: var(--color-primary-500);
+    --border-color: var(--color-primary-500);
+  }
+
+  /* Toast */
+  .adm-toast {
+    --background-color: rgba(0, 0, 0, 0.8);
+    --border-radius: 10px;
+  }
+
+  /* Modal */
+  .adm-modal {
+    --border-radius: 16px;
+  }
+
+  .adm-text-area {
+    --border-radius: 8px;
+  }
+
+  .adm-selector-item {
+    --border-radius: 8px;
+  }
+
+  .adm-tag {
+    --border-radius: 16px;
+  }
 }
 
-/* ===== Ant Design Mobile 主题覆盖 ===== */
+/* ========================================
+ * 自定义工具类
+ * ======================================== */
+@layer utilities {
+  /* 文本渐变 */
+  .text-gradient-primary {
+    @apply bg-gradient-to-br from-primary-400 to-primary-600 bg-clip-text text-transparent;
+  }
 
-/* 按钮组件 */
-.adm-button-primary {
-  --background-color: var(--color-primary-500);
-  --border-color: var(--color-primary-500);
-}
+  .text-gradient-secondary {
+    @apply bg-gradient-to-br from-secondary-400 to-secondary-600 bg-clip-text text-transparent;
+  }
 
-.adm-button-primary:active {
-  --background-color: var(--color-primary-700);
-  --border-color: var(--color-primary-700);
-}
+  /* 安全区域适配 */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
 
-.adm-button-primary:disabled {
-  --background-color: var(--color-gray-300);
-  --border-color: var(--color-gray-300);
-}
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 
-/* 标签页 */
-.adm-tabs-tab-active {
-  color: var(--color-primary-500);
-}
+  /* 隐藏滚动条 */
+  .hide-scrollbar,
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 
-.adm-tabs-tab-line {
-  background-color: var(--color-primary-500);
-}
+  .hide-scrollbar::-webkit-scrollbar,
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 
-/* 活动管理页面 Tabs 样式 */
-.activity-manage-tabs .adm-tabs-header {
-  background-color: white;
-  padding: 0 20px;
-}
+  /* 文本省略 */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
-.activity-manage-tabs .adm-tabs-tab {
-  padding: 12px 16px;
-  font-size: 15px;
-}
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
-.activity-manage-tabs .adm-tabs-tab-active {
-  font-weight: 600;
-  color: var(--color-primary-500);
-}
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 
-.activity-manage-tabs .adm-tabs-tab-line {
-  height: 3px;
-  border-radius: 2px;
-}
-
-/* 导航栏 */
-.adm-nav-bar {
-  --height: 56px;
-  --border-bottom: 1px solid var(--border-subtle);
-  background-color: var(--bg-container);
-}
-
-/* 卡片 */
-.adm-card {
-  --border-radius: var(--radius-lg);
-  --body-padding: var(--spacing-card-padding);
-  box-shadow: var(--shadow-base);
-}
-
-/* 输入框 */
-.adm-input {
-  --border-radius: var(--radius-md);
-  --border-color: var(--border-default);
-  --color: var(--text-primary);
-  --placeholder-color: var(--text-placeholder);
-}
-
-.adm-input:focus {
-  --border-color: var(--border-focus);
-}
-
-/* 开关 */
-.adm-switch {
-  --checked-color: var(--color-primary-500);
-}
-
-/* 复选框 */
-.adm-checkbox {
-  --icon-size: 20px;
-  --border-radius: var(--radius-sm);
-}
-
-.adm-checkbox-checked {
-  --background-color: var(--color-primary-500);
-  --border-color: var(--color-primary-500);
-}
-
-/* Toast */
-.adm-toast {
-  --background-color: rgba(0, 0, 0, 0.8);
-  --border-radius: var(--radius-md);
-}
-
-/* Modal */
-.adm-modal {
-  --border-radius: var(--radius-xl);
-}
-
-.adm-modal-header {
-  --font-size: var(--font-size-lg);
-  --font-weight: var(--font-weight-semibold);
-}
-
-.adm-text-area {
-  --border-radius: 8px;
-}
-
-.adm-selector-item {
-  --border-radius: 8px;
-}
-
-.adm-tag {
-  --border-radius: 16px;
+  /* 卡片悬停效果 */
+  .hover-card {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-hover;
+  }
 }
 
 /* 自定义滚动条 */
@@ -320,251 +281,6 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
-}
-
-/* 页面背景 */
-body {
-  background-color: #f5f5f5;
-}
-
-/* 卡片悬停效果 */
-.hover-card {
-  transition: all 0.2s ease-in-out;
-}
-
-.hover-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-/* 渐变背景 */
-.gradient-bg {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.gradient-blue {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-}
-
-/* 动画效果 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* ========================================
- * 现代化动画效果
- * ======================================== */
-
-/* 淡入动画 */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out;
-}
-
-/* 漂浮动画 - 用于装饰图标 */
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-/* 脉冲慢速 - 用于光晕效果 */
-@keyframes pulse-slow {
-  0%,
-  100% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.05);
-  }
-}
-
-.animate-pulse-slow {
-  animation: pulse-slow 4s ease-in-out infinite;
-}
-
-/* Blob 动画 - 用于背景装饰 */
-@keyframes blob {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-}
-
-.animate-blob {
-  animation: blob 7s ease-in-out infinite;
-}
-
-/* 抖动动画 - 用于错误提示 */
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  10%,
-  30%,
-  50%,
-  70%,
-  90% {
-    transform: translateX(-5px);
-  }
-  20%,
-  40%,
-  60%,
-  80% {
-    transform: translateX(5px);
-  }
-}
-
-.animate-shake {
-  animation: shake 0.5s ease-in-out;
-}
-
-/* 动画延迟类 */
-.animation-delay-1000 {
-  animation-delay: 1s;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-3000 {
-  animation-delay: 3s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-
-/* ========================================
- * 现代化动画效果
- * ======================================== */
-
-/* 进入动画 - 淡入 */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* 从底部滑入 */
-@keyframes slide-in-from-bottom {
-  from {
-    transform: translateY(var(--slide-amount, 16px));
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-/* 从顶部滑入 */
-@keyframes slide-in-from-top {
-  from {
-    transform: translateY(calc(-1 * var(--slide-amount, 16px)));
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-/* 组合动画类 */
-.animate-in {
-  animation-duration: var(--animation-duration, 300ms);
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  animation-fill-mode: both;
-}
-
-.fade-in {
-  animation-name: fade-in;
-}
-
-.slide-in-from-bottom-4 {
-  --slide-amount: 16px;
-  animation-name: fade-in, slide-in-from-bottom;
-}
-
-.slide-in-from-top {
-  --slide-amount: 8px;
-  animation-name: fade-in, slide-in-from-top;
-}
-
-.duration-200 {
-  --animation-duration: 200ms;
-}
-
-.duration-300 {
-  --animation-duration: 300ms;
-}
-
-.duration-500 {
-  --animation-duration: 500ms;
-}
-
-/* ========================================
- * 滚动条隐藏工具类
- * ======================================== */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
 }
 
 /* 响应式设计 */
