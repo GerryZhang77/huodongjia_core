@@ -3,6 +3,7 @@
  */
 
 import { FC } from "react";
+import { Lightbulb, Check, AlertTriangle } from "lucide-react";
 
 const ColorShowcase: FC = () => {
   // 色彩数据
@@ -244,16 +245,38 @@ color: var(--color-${group.name.split(" ")[0].toLowerCase()}-400);`}</code>
 
       {/* 使用指南 */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-blue-900 mb-2">
-          💡 使用指南
+        <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-1.5">
+          <Lightbulb size={16} className="text-blue-600" />
+          使用指南
         </h4>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>✅ 主色(天空蓝): 品牌标识、主按钮、链接、选中状态</li>
-          <li>✅ 辅助色(活力橙): 热门/推荐、次要 CTA、强调</li>
-          <li>✅ 强调色(梦幻紫): 智能功能、VIP、特殊标记</li>
-          <li>✅ 语义色仅用于对应状态 (成功/警告/错误/信息)</li>
-          <li>✅ 文本对比度 ≥4.5:1 (WCAG AA 标准)</li>
-          <li>⚠️ 避免硬编码颜色值，优先使用 Tailwind 类名或 CSS 变量</li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>主色(天空蓝): 品牌标识、主按钮、链接、选中状态</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>辅助色(活力橙): 热门/推荐、次要 CTA、强调</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>强调色(梦幻紫): 智能功能、VIP、特殊标记</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>语义色仅用于对应状态 (成功/警告/错误/信息)</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>文本对比度 大于等于 4.5:1 (WCAG AA 标准)</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <AlertTriangle
+              size={14}
+              className="text-amber-600 mt-0.5 flex-shrink-0"
+            />
+            <span>避免硬编码颜色值，优先使用 Tailwind 类名或 CSS 变量</span>
+          </li>
         </ul>
       </div>
     </div>

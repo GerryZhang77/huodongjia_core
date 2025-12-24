@@ -3,6 +3,7 @@
  */
 
 import { FC } from "react";
+import { Lightbulb, Check, AlertTriangle } from "lucide-react";
 
 const TypographyShowcase: FC = () => {
   const typographyScale = [
@@ -233,16 +234,40 @@ const TypographyShowcase: FC = () => {
 
       {/* 使用指南 */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-blue-900 mb-2">
-          💡 使用指南
+        <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-1.5">
+          <Lightbulb size={16} className="text-blue-600" />
+          使用指南
         </h4>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>✅ 正文默认使用 14px (text-base)</li>
-          <li>✅ 标题使用 SemiBold 或 Bold 字重</li>
-          <li>✅ 行高确保 1.5 倍以上，提升可读性</li>
-          <li>✅ 中英文混排时，Nunito 优先用于英文/数字</li>
-          <li>✅ 文本对比度 ≥4.5:1 (正文) 或 ≥3:1 (大字号)</li>
-          <li>⚠️ 避免使用过多字重变化，保持一致性</li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>正文默认使用 14px (text-base)</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>标题使用 SemiBold 或 Bold 字重</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>行高确保 1.5 倍以上，提升可读性</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>中英文混排时，Nunito 优先用于英文/数字</span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <Check size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+            <span>
+              文本对比度 大于等于 4.5:1 (正文) 或 大于等于 3:1 (大字号)
+            </span>
+          </li>
+          <li className="flex items-start gap-1.5">
+            <AlertTriangle
+              size={14}
+              className="text-amber-600 mt-0.5 flex-shrink-0"
+            />
+            <span>避免使用过多字重变化，保持一致性</span>
+          </li>
         </ul>
       </div>
     </div>

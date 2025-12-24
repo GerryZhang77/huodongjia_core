@@ -29,14 +29,14 @@ const ComponentShowcase: FC = () => {
 
   // 导航标签配置
   const tabs = [
-    { id: "colors", label: "色彩系统", icon: "🎨" },
-    { id: "typography", label: "字体排版", icon: "✏️" },
-    { id: "buttons", label: "按钮组件", icon: "🔘" },
-    { id: "tags", label: "标签组件", icon: "🏷️" },
-    { id: "inputs", label: "表单组件", icon: "📝" },
-    { id: "cards", label: "卡片组件", icon: "🃏" },
-    { id: "layout", label: "布局组件", icon: "📐" },
-    { id: "tokens", label: "设计令牌", icon: "🔧" },
+    { id: "colors", label: "色彩系统" },
+    { id: "typography", label: "字体排版" },
+    { id: "buttons", label: "按钮组件" },
+    { id: "tags", label: "标签组件" },
+    { id: "inputs", label: "表单组件" },
+    { id: "cards", label: "卡片组件" },
+    { id: "layout", label: "布局组件" },
+    { id: "tokens", label: "设计令牌" },
   ];
 
   // 渲染当前激活的展示模块
@@ -103,7 +103,6 @@ const ComponentShowcase: FC = () => {
                     }
                   `}
                 >
-                  <span className="mr-2">{tab.icon}</span>
                   {tab.label}
                 </button>
               ))}

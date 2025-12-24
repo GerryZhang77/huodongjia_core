@@ -141,3 +141,22 @@ export const getActivitiesByStatus = (
 export const getActivityById = (id: string): UserActivity | undefined => {
   return mockUserActivities.find((a) => a.id === id);
 };
+
+// 获取上一个活动
+export const getPreviousActivity = (
+  currentId: string
+): UserActivity | undefined => {
+  const currentIndex = mockUserActivities.findIndex((a) => a.id === currentId);
+  if (currentIndex <= 0) return undefined;
+  return mockUserActivities[currentIndex - 1];
+};
+
+// 获取下一个活动
+export const getNextActivity = (
+  currentId: string
+): UserActivity | undefined => {
+  const currentIndex = mockUserActivities.findIndex((a) => a.id === currentId);
+  if (currentIndex < 0 || currentIndex >= mockUserActivities.length - 1)
+    return undefined;
+  return mockUserActivities[currentIndex + 1];
+};

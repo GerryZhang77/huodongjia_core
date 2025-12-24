@@ -13,7 +13,7 @@ import {
   Calendar,
   AlertCircle,
 } from "lucide-react";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, Checkbox } from "@/components/ui";
 import { getActivityById } from "@/mocks/data/user-activities";
 import dayjs from "dayjs";
 
@@ -311,35 +311,23 @@ const UserRegistration: FC = () => {
           </div>
 
           {/* 协议勾选 */}
-          <div className="flex items-start gap-2 mb-6">
-            <button
-              onClick={() => handleInputChange("agreed", !formData.agreed)}
-              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
-                formData.agreed
-                  ? "bg-primary-400 border-primary-400"
-                  : "bg-white border-gray-300 hover:border-primary-300"
-              }`}
+          <div className="mb-6">
+            <Checkbox
+              checked={formData.agreed}
+              onChange={(checked) => handleInputChange("agreed", checked)}
+              size="medium"
             >
-              {formData.agreed && (
-                <svg
-                  className="w-3 h-3 text-white"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="2 6 5 9 10 3" />
-                </svg>
-              )}
-            </button>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              我已阅读并同意
-              <span className="text-primary-500 font-medium">《活动须知》</span>
-              和
-              <span className="text-primary-500 font-medium">《免责声明》</span>
-            </p>
+              <span className="text-gray-500">
+                我已阅读并同意
+                <span className="text-primary-500 font-medium">
+                  《活动须知》
+                </span>
+                和
+                <span className="text-primary-500 font-medium">
+                  《免责声明》
+                </span>
+              </span>
+            </Checkbox>
           </div>
         </div>
 

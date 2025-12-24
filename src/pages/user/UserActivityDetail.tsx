@@ -15,10 +15,14 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import {
   getActivityById,
+  getPreviousActivity,
+  getNextActivity,
   UserActivityStatus,
 } from "@/mocks/data/user-activities";
 import dayjs from "dayjs";
@@ -72,6 +76,22 @@ const UserActivityDetail: FC = () => {
   const [isFavorited, setIsFavorited] = useState(false);
 
   const activity = id ? getActivityById(id) : undefined;
+  const prevActivity = id ? getPreviousActivity(id) : undefined;
+  const nextActivity = id ? getNextActivity(id) : undefined;
+
+  // 切换到上一个活动
+  const goToPrevious = () => {
+    if (prevActivity) {
+      navigate(`/u/activities/${prevActivity.id}`);
+    }
+  };
+
+  // 切换到下一个活动
+  const goToNext = () => {
+    if (nextActivity) {
+      navigate(`/u/activities/${nextActivity.id}`);
+    }
+  };
 
   if (!activity) {
     return (
@@ -93,8 +113,66 @@ const UserActivityDetail: FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 md:py-6 lg:py-8">
+      {/* 左右切换按钮 - 桌面端显示在内容区域两侧 */}
+      {prevActivity && (
+        <button
+          onClick={goToPrevious}
+          className="hidden lg:flex fixed top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-white shadow-lg border border-gray-100 items-center justify-center hover:bg-primary-50 hover:border-primary-200 hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+          style={{ left: "max(24px, calc(50% - 580px))" }}
+          aria-label="上一个活动"
+          title="上一个活动"
+        >
+          <ChevronLeft
+            size={24}
+            className="text-gray-400 group-hover:text-primary-500 transition-colors"
+          />
+          {/* 悬停提示 */}
+          <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            上一个
+          </span>
+        </button>
+      )}
+      {nextActivity && (
+        <button
+          onClick={goToNext}
+          className="hidden lg:flex fixed top-1/2 -translate-y-1/2 z-40 w-12 h-12 rounded-full bg-white shadow-lg border border-gray-100 items-center justify-center hover:bg-primary-50 hover:border-primary-200 hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+          style={{ right: "max(24px, calc(50% - 580px))" }}
+          aria-label="下一个活动"
+          title="下一个活动"
+        >
+          <ChevronRight
+            size={24}
+            className="text-gray-400 group-hover:text-primary-500 transition-colors"
+          />
+          {/* 悬停提示 */}
+          <span className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            下一个
+          </span>
+        </button>
+      )}
+
       {/* 响应式容器 - 桌面版增加上下边距和圆角 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen md:min-h-0 pb-32 md:pb-24 shadow-sm md:shadow-xl md:rounded-2xl md:mb-6">
+      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen md:min-h-0 pb-32 md:pb-24 shadow-sm md:shadow-xl md:rounded-2xl md:mb-6 relative">
+        {/* 移动端切换按钮 - 显示在封面图中间两侧 */}
+        {prevActivity && (
+          <button
+            onClick={goToPrevious}
+            className="lg:hidden absolute left-3 top-[calc(50vw-24px)] md:top-[200px] z-30 w-11 h-11 rounded-full bg-white/95 shadow-md flex items-center justify-center hover:bg-white hover:shadow-lg active:scale-95 transition-all duration-150"
+            aria-label="上一个活动"
+          >
+            <ChevronLeft size={24} className="text-gray-600" />
+          </button>
+        )}
+        {nextActivity && (
+          <button
+            onClick={goToNext}
+            className="lg:hidden absolute right-3 top-[calc(50vw-24px)] md:top-[200px] z-30 w-11 h-11 rounded-full bg-white/95 shadow-md flex items-center justify-center hover:bg-white hover:shadow-lg active:scale-95 transition-all duration-150"
+            aria-label="下一个活动"
+          >
+            <ChevronRight size={24} className="text-gray-600" />
+          </button>
+        )}
+
         {/* 封面区域 */}
         <div className="relative aspect-[4/3] lg:aspect-[21/9] md:rounded-t-2xl overflow-hidden">
           <img
@@ -131,9 +209,9 @@ const UserActivityDetail: FC = () => {
             </div>
           </div>
 
-          {/* 状态标签 - 调整位置到导航栏下方，避免重叠 */}
+          {/* 状态标签 - 移动到右下角，避免与返回按钮重叠 */}
           <div
-            className={`absolute top-[72px] md:top-[80px] left-4 px-3 py-1 rounded-full text-xs font-medium text-white ${config.color}`}
+            className={`absolute bottom-3 right-4 px-3 py-1 rounded-full text-xs font-medium text-white ${config.color}`}
           >
             {config.label}
           </div>

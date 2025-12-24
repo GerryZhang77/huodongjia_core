@@ -38,6 +38,9 @@ export type {
   InputStatus,
 } from "./Input/types";
 
+export { Checkbox } from "./Checkbox";
+export type { CheckboxProps, CheckboxSize } from "./Checkbox/types";
+
 // 数据展示组件
 export { Tag, TagGroup } from "./Tag";
 export type {
