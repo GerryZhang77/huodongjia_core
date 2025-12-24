@@ -46,6 +46,13 @@ const UserActivityDetail = lazy(
 );
 const UserNotifications = lazy(() => import("./pages/user/UserNotifications"));
 const UserProfileCards = lazy(() => import("./pages/user/UserProfileCards"));
+const UserRegistration = lazy(() => import("./pages/user/UserRegistration"));
+const UserMatchResult = lazy(() => import("./pages/user/UserMatchResult"));
+const UserDiscover = lazy(() => import("./pages/user/UserDiscover"));
+const UserSettings = lazy(() => import("./pages/user/UserSettings"));
+const UserFavorites = lazy(() => import("./pages/user/UserFavorites"));
+const UserFriends = lazy(() => import("./pages/user/UserFriends"));
+const UserEditProfile = lazy(() => import("./pages/user/UserEditProfile"));
 
 // 开发调试页面 - 懒加载
 const ComponentShowcase = lazy(() => import("./pages/dev/ComponentShowcase"));
@@ -187,6 +194,76 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserProfileCards />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 活动报名页 */}
+                <Route
+                  path="/u/activities/:id/register"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserRegistration />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 匹配结果页 */}
+                <Route
+                  path="/u/activities/:id/match-result"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserMatchResult />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 发现/活动列表页 */}
+                <Route
+                  path="/u/discover"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserDiscover />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 设置页 */}
+                <Route
+                  path="/u/settings"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserSettings />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 收藏页 */}
+                <Route
+                  path="/u/favorites"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserFavorites />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 好友页 */}
+                <Route
+                  path="/u/friends"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserFriends />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 编辑名片页 */}
+                <Route
+                  path="/u/cards/edit"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserEditProfile />
                     </ProtectedRoute>
                   }
                 />

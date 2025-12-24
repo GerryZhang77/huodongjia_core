@@ -93,7 +93,7 @@ const UserActivityDetail: FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 响应式容器 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen pb-24 shadow-sm md:shadow-xl">
+      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen pb-28 shadow-sm md:shadow-xl">
         {/* 封面区域 */}
         <div className="relative aspect-[4/3] lg:aspect-[21/9]">
           <img
@@ -104,35 +104,35 @@ const UserActivityDetail: FC = () => {
           {/* 渐变遮罩 */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
 
-          {/* 顶部导航 */}
-          <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 pt-12">
+          {/* 顶部导航 - 增加顶部安全区域 */}
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 pt-14 md:pt-16">
             <button
               onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
             >
-              <ArrowLeft size={18} className="text-white" />
+              <ArrowLeft size={20} className="text-white" />
             </button>
             <div className="flex gap-2">
               <button
                 onClick={() => setIsFavorited(!isFavorited)}
-                className="w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
               >
                 <Heart
-                  size={18}
+                  size={20}
                   className={
                     isFavorited ? "text-red-400 fill-red-400" : "text-white"
                   }
                 />
               </button>
-              <button className="w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
-                <Share2 size={18} className="text-white" />
+              <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
+                <Share2 size={20} className="text-white" />
               </button>
             </div>
           </div>
 
-          {/* 状态标签 */}
+          {/* 状态标签 - 调整位置 */}
           <div
-            className={`absolute top-14 left-4 px-2.5 py-1 rounded-full text-xs font-medium text-white ${config.color}`}
+            className={`absolute top-16 md:top-[72px] left-4 px-3 py-1 rounded-full text-xs font-medium text-white ${config.color}`}
           >
             {config.label}
           </div>
@@ -257,14 +257,14 @@ const UserActivityDetail: FC = () => {
 
         {/* 底部操作栏 */}
         <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white border-t border-gray-100 px-4 py-3 md:px-6">
+          <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white border-t border-gray-100 px-4 py-4 md:px-6">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsFavorited(!isFavorited)}
-                className="w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center"
+                className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center"
               >
                 <Heart
-                  size={20}
+                  size={22}
                   className={
                     isFavorited ? "text-red-500 fill-red-500" : "text-gray-400"
                   }
@@ -272,7 +272,14 @@ const UserActivityDetail: FC = () => {
               </button>
               <button
                 disabled={config.disabled}
-                className={`flex-1 h-11 rounded-xl font-medium text-sm transition-all ${
+                onClick={() => {
+                  if (activity.userStatus === "recruiting") {
+                    navigate(`/u/activities/${id}/register`);
+                  } else if (activity.userStatus === "approved") {
+                    navigate(`/u/activities/${id}/match-result`);
+                  }
+                }}
+                className={`flex-1 h-12 rounded-[22px] font-semibold text-sm transition-all ${
                   config.btnStyle
                 } ${
                   config.disabled ? "cursor-not-allowed" : "active:scale-[0.98]"
@@ -281,7 +288,8 @@ const UserActivityDetail: FC = () => {
                 {config.btnLabel}
               </button>
             </div>
-            <div className="h-safe-area-bottom" />
+            {/* 底部安全区域 */}
+            <div className="h-6 md:h-4" />
           </div>
         </div>
       </div>
