@@ -35,22 +35,22 @@ const statusConfig: Record<
 > = {
   recruiting: {
     label: "报名中",
-    color: "bg-green-500",
+    color: "bg-success-500",
     btnLabel: "立即报名",
-    btnStyle: "bg-primary-500 text-white hover:bg-primary-600",
+    btnStyle: "bg-primary-400 text-white hover:bg-primary-500",
   },
   pending: {
     label: "待审核",
-    color: "bg-yellow-500",
+    color: "bg-warning-500",
     btnLabel: "审核中",
     btnStyle: "bg-gray-200 text-gray-500",
     disabled: true,
   },
   approved: {
     label: "已通过",
-    color: "bg-primary-500",
+    color: "bg-primary-400",
     btnLabel: "查看分组",
-    btnStyle: "bg-green-500 text-white hover:bg-green-600",
+    btnStyle: "bg-success-500 text-white hover:bg-success-600",
   },
   completed: {
     label: "已结束",
@@ -93,9 +93,9 @@ const UserActivityDetail: FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 响应式容器 */}
-      <div className="max-w-lg mx-auto bg-white min-h-screen pb-24 shadow-sm md:shadow-xl">
+      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen pb-24 shadow-sm md:shadow-xl">
         {/* 封面区域 */}
-        <div className="relative aspect-[4/3]">
+        <div className="relative aspect-[4/3] lg:aspect-[21/9]">
           <img
             src={activity.coverImage}
             alt={activity.title}
@@ -151,18 +151,18 @@ const UserActivityDetail: FC = () => {
         </div>
 
         {/* 内容区 */}
-        <div className="px-4 py-5">
+        <div className="px-4 py-5 md:px-6 lg:px-8">
           {/* 标题 */}
-          <h1 className="text-xl font-bold text-gray-900 leading-tight">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
             {activity.title}
           </h1>
 
-          {/* 信息卡片 */}
-          <div className="mt-5 space-y-4">
+          {/* 信息卡片 - 桌面端网格布局 */}
+          <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* 时间 */}
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
-                <Calendar size={16} className="text-primary-500" />
+                <Calendar size={16} className="text-primary-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">活动时间</p>
@@ -175,8 +175,8 @@ const UserActivityDetail: FC = () => {
 
             {/* 地点 */}
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-                <MapPin size={16} className="text-green-500" />
+              <div className="w-9 h-9 rounded-lg bg-success-50 flex items-center justify-center flex-shrink-0">
+                <MapPin size={16} className="text-success-500" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">活动地点</p>
@@ -188,14 +188,16 @@ const UserActivityDetail: FC = () => {
 
             {/* 人数 */}
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-                <Users size={16} className="text-orange-500" />
+              <div className="w-9 h-9 rounded-lg bg-secondary-50 flex items-center justify-center flex-shrink-0">
+                <Users size={16} className="text-secondary-500" />
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-900">参与人数</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {activity.currentParticipants}/{activity.maxParticipants}人
-                  {isFull && <span className="ml-1 text-orange-500">已满</span>}
+                  {isFull && (
+                    <span className="ml-1 text-secondary-500">已满</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -235,24 +237,27 @@ const UserActivityDetail: FC = () => {
 
           {/* 状态提示 */}
           {activity.userStatus === "approved" && (
-            <div className="mt-5 p-3 bg-green-50 rounded-xl flex items-center gap-2">
-              <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
-              <p className="text-xs text-green-700">
+            <div className="mt-5 p-3 bg-success-50 rounded-xl flex items-center gap-2">
+              <CheckCircle
+                size={16}
+                className="text-success-500 flex-shrink-0"
+              />
+              <p className="text-xs text-success-700">
                 报名已通过，点击下方查看分组结果
               </p>
             </div>
           )}
           {activity.userStatus === "pending" && (
-            <div className="mt-5 p-3 bg-yellow-50 rounded-xl flex items-center gap-2">
-              <Clock size={16} className="text-yellow-600 flex-shrink-0" />
-              <p className="text-xs text-yellow-700">报名审核中，请耐心等待</p>
+            <div className="mt-5 p-3 bg-warning-50 rounded-xl flex items-center gap-2">
+              <Clock size={16} className="text-warning-600 flex-shrink-0" />
+              <p className="text-xs text-warning-700">报名审核中，请耐心等待</p>
             </div>
           )}
         </div>
 
         {/* 底部操作栏 */}
         <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-lg mx-auto bg-white border-t border-gray-100 px-4 py-3">
+          <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white border-t border-gray-100 px-4 py-3 md:px-6">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsFavorited(!isFavorited)}

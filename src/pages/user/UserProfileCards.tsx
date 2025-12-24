@@ -67,7 +67,7 @@ const UserProfileCards: FC = () => {
   return (
     <UserLayout bgColor="bg-gray-100">
       {/* 顶部背景 */}
-      <div className="bg-gradient-to-br from-primary-500 to-primary-600 pt-4 pb-20 px-4">
+      <div className="bg-gradient-to-br from-primary-400 to-primary-500 pt-4 pb-20 px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-white">我的名片</h1>
           <button className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
@@ -77,7 +77,7 @@ const UserProfileCards: FC = () => {
       </div>
 
       {/* 个人卡片 */}
-      <div className="px-4 -mt-16 relative z-10">
+      <div className="px-4 md:px-6 lg:px-8 -mt-16 relative z-10 max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {/* 头像和基本信息 */}
           <div className="p-4">
@@ -139,7 +139,7 @@ const UserProfileCards: FC = () => {
       </div>
 
       {/* 兴趣标签 */}
-      <div className="px-4 mt-4">
+      <div className="px-4 md:px-6 lg:px-8 mt-4 max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">兴趣标签</h3>
@@ -156,7 +156,7 @@ const UserProfileCards: FC = () => {
       </div>
 
       {/* 功能菜单 */}
-      <div className="px-4 mt-4 mb-6">
+      <div className="px-4 md:px-6 lg:px-8 mt-4 mb-6 max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100">
           <MenuItem
             icon={Calendar}

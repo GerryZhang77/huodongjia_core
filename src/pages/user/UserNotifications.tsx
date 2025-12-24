@@ -69,7 +69,7 @@ const NotificationItem: FC<{
   return (
     <button
       onClick={() => onClick(notification)}
-      className={`w-full flex items-start gap-3 p-4 text-left transition-colors ${
+      className={`w-full flex items-start gap-3 p-4 md:p-5 text-left transition-colors ${
         notification.isRead ? "bg-white" : "bg-primary-50/50"
       } hover:bg-gray-50 active:bg-gray-100`}
     >
@@ -136,7 +136,7 @@ const UserNotifications: FC = () => {
     <UserLayout bgColor="bg-white">
       {/* 标题栏 */}
       <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 md:px-6 lg:px-8 max-w-3xl mx-auto">
           <div>
             <h1 className="text-lg font-bold text-gray-900">消息</h1>
             {unreadCount > 0 && (
@@ -156,7 +156,7 @@ const UserNotifications: FC = () => {
       </header>
 
       {/* 通知列表 */}
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-gray-100 max-w-3xl mx-auto">
         {notifications.length > 0 ? (
           notifications.map((notification) => (
             <NotificationItem

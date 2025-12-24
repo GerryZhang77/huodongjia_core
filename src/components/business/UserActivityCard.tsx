@@ -27,21 +27,21 @@ const statusConfig: Record<
 > = {
   recruiting: {
     label: "报名中",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-emerald-200",
+    color: "text-success-600",
+    bgColor: "bg-success-50",
+    borderColor: "border-success-200",
   },
   pending: {
     label: "待审核",
-    color: "text-amber-600",
-    bgColor: "bg-amber-50",
-    borderColor: "border-amber-200",
+    color: "text-warning-600",
+    bgColor: "bg-warning-50",
+    borderColor: "border-warning-200",
   },
   approved: {
     label: "已通过",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-    borderColor: "border-blue-200",
+    color: "text-primary-600",
+    bgColor: "bg-primary-50",
+    borderColor: "border-primary-200",
   },
   completed: {
     label: "已结束",
@@ -149,7 +149,7 @@ export const UserActivityCard: FC<UserActivityCardProps> = ({
       </div>
 
       {/* 内容区域 */}
-      <div className="p-4 sm:p-5">
+      <div className="p-4 sm:p-5 md:p-6">
         {/* 标题 */}
         <h3 className="text-base sm:text-lg font-bold text-gray-900 line-clamp-2 leading-snug mb-3 group-hover:text-primary-600 transition-colors duration-200">
           {activity.title}

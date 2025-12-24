@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { Card, TextField, Input, Label, Button } from "@heroui/react";
 import { Eye, EyeOff, User, Lock, Info, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 import { useLogin } from "../../hooks";
 import { TEST_ACCOUNTS } from "../../utils";
 
@@ -72,64 +74,58 @@ export const LoginForm: React.FC = () => {
       </div>
 
       {/* 登录卡片 - 玻璃态效果 */}
-      <Card className="backdrop-blur-xl bg-white/90 shadow-2xl border border-white/20 overflow-hidden">
-        <form onSubmit={handleSubmit} className="space-y-5 p-6">
+      <Card className="backdrop-blur-xl bg-white/90 shadow-2xl border border-white/20 overflow-hidden p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* 账号输入 */}
-          <TextField
-            className="w-full"
-            name="identifier"
-            value={identifier}
-            onChange={setIdentifier}
-          >
-            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-1.5">
+          <div className="w-full">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-1.5">
               <User className="w-4 h-4 text-primary-500" />
               <span>账号</span>
-            </Label>
+            </label>
             <Input
               type="text"
+              name="identifier"
               placeholder="请输入账号"
               autoComplete="username"
-              className="h-11"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               onKeyDown={(e: React.KeyboardEvent) =>
                 e.key === "Enter" && handleSubmit()
               }
             />
-          </TextField>
+          </div>
 
           {/* 密码输入 */}
-          <TextField
-            className="w-full"
-            name="password"
-            value={password}
-            onChange={setPassword}
-          >
-            <Label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-1.5">
+          <div className="w-full">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-1.5">
               <Lock className="w-4 h-4 text-primary-500" />
               <span>密码</span>
-            </Label>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="请输入密码"
-                autoComplete="current-password"
-                className="h-11 pr-11"
-                onKeyDown={(e: React.KeyboardEvent) =>
-                  e.key === "Enter" && handleSubmit()
-                }
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-500 transition-colors p-1 z-10"
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </TextField>
+            </label>
+            <Input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="请输入密码"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              suffix={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-gray-400 hover:text-primary-500 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              }
+              onKeyDown={(e: React.KeyboardEvent) =>
+                e.key === "Enter" && handleSubmit()
+              }
+            />
+          </div>
 
           {/* 错误提示 */}
           {error && (
@@ -144,18 +140,11 @@ export const LoginForm: React.FC = () => {
           {/* 登录按钮 */}
           <Button
             type="submit"
-            variant="primary"
-            isDisabled={loading}
-            className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl"
+            disabled={loading}
+            loading={loading}
+            className="w-full"
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>登录中...</span>
-              </span>
-            ) : (
-              "立即登录"
-            )}
+            立即登录
           </Button>
 
           {/* 测试账号折叠区域 - 仅开发环境 */}
@@ -183,9 +172,9 @@ export const LoginForm: React.FC = () => {
                             {account.label}
                           </span>
                           <Button
-                            variant="tertiary"
-                            size="sm"
-                            onPress={() => handleQuickFill(account)}
+                            variant="outline"
+                            size="small"
+                            onClick={() => handleQuickFill(account)}
                             className="h-7 px-3 text-xs"
                           >
                             快速填充

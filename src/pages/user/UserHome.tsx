@@ -21,12 +21,12 @@ import { useAuthStore } from "@/features/auth/stores";
 const statusFilters: {
   key: UserActivityStatus | "all";
   label: string;
-  emoji?: string;
+  icon?: React.ElementType;
 }[] = [
   { key: "all", label: "全部" },
-  { key: "recruiting", label: "报名中", emoji: "🔥" },
-  { key: "approved", label: "已通过", emoji: "✅" },
-  { key: "completed", label: "已结束", emoji: "📋" },
+  { key: "recruiting", label: "报名中" },
+  { key: "approved", label: "已通过" },
+  { key: "completed", label: "已结束" },
 ];
 
 const UserHome: FC = () => {
@@ -58,7 +58,7 @@ const UserHome: FC = () => {
       {/* 顶部导航区域 - 毛玻璃效果 */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100/50">
         {/* 主标题栏 */}
-        <div className="px-5 pt-4 pb-3 sm:px-6">
+        <div className="px-5 pt-4 pb-3 sm:px-6 md:px-8 lg:px-10">
           <div className="flex items-center justify-between">
             {/* 左侧：Logo + 标题 */}
             <div className="flex items-center gap-3.5">
@@ -74,7 +74,7 @@ const UserHome: FC = () => {
                   我的活动
                 </h1>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {user?.name ? `Hi, ${user.name} 👋` : "发现精彩活动"}
+                  {user?.name ? `Hi, ${user.name}` : "发现精彩活动"}
                 </p>
               </div>
             </div>
@@ -104,7 +104,7 @@ const UserHome: FC = () => {
 
         {/* 搜索栏 - 动画展开 */}
         {showSearch && (
-          <div className="px-5 pb-3 sm:px-6 animate-in slide-in-from-top duration-200">
+          <div className="px-5 pb-3 sm:px-6 md:px-8 lg:px-10 animate-in slide-in-from-top duration-200">
             <SearchBar
               placeholder="搜索活动名称..."
               value={searchValue}
@@ -120,7 +120,7 @@ const UserHome: FC = () => {
         )}
 
         {/* 筛选标签栏 */}
-        <div className="px-5 pb-4 sm:px-6">
+        <div className="px-5 pb-4 sm:px-6 md:px-8 lg:px-10">
           <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1">
             {statusFilters.map((filter) => {
               const isActive = activeFilter === filter.key;
@@ -138,12 +138,7 @@ const UserHome: FC = () => {
                     }
                   `}
                 >
-                  <span className="flex items-center gap-1.5">
-                    {filter.emoji && (
-                      <span className="text-sm">{filter.emoji}</span>
-                    )}
-                    {filter.label}
-                  </span>
+                  {filter.label}
                 </button>
               );
             })}
@@ -152,7 +147,7 @@ const UserHome: FC = () => {
       </header>
 
       {/* 活动列表区域 */}
-      <section className="px-5 py-5 sm:px-6 sm:py-6">
+      <section className="px-5 py-5 sm:px-6 sm:py-6 md:px-8 lg:px-10">
         {/* 结果统计 */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -169,7 +164,7 @@ const UserHome: FC = () => {
 
         {/* 活动卡片列表 */}
         {filteredActivities.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 lg:gap-6">
             {filteredActivities.map((activity, index) => (
               <div
                 key={activity.id}
