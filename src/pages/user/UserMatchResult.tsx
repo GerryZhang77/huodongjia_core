@@ -228,9 +228,7 @@ const UserMatchResult: FC = () => {
 
           {/* 小组交流 */}
           <div className="mt-6">
-            <h3 className="text-base font-bold text-gray-900 mb-3">
-              小组交流
-            </h3>
+            <h3 className="text-base font-bold text-gray-900 mb-3">小组交流</h3>
             <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-accent-400 flex items-center justify-center flex-shrink-0">
                 <MessageCircle size={22} className="text-white" />
@@ -251,9 +249,7 @@ const UserMatchResult: FC = () => {
 
           {/* 温馨提示 */}
           <div className="mt-6 p-4 bg-purple-50 rounded-2xl">
-            <p className="text-sm font-bold text-purple-700 mb-2">
-              温馨提示
-            </p>
+            <p className="text-sm font-bold text-purple-700 mb-2">温馨提示</p>
             <ul className="text-xs text-purple-700 space-y-1">
               <li>• 活动当天请于8:50前到达集合点</li>
               <li>• 请穿着舒适运动鞋，携带防晒用品</li>

@@ -59,7 +59,10 @@ const UserEditProfile: FC = () => {
 
   // 添加兴趣标签
   const addInterest = (interest: string) => {
-    if (!formData.interests.includes(interest) && formData.interests.length < 6) {
+    if (
+      !formData.interests.includes(interest) &&
+      formData.interests.length < 6
+    ) {
       updateField("interests", [...formData.interests, interest]);
     }
   };
@@ -95,10 +98,7 @@ const UserEditProfile: FC = () => {
               </button>
               <h1 className="text-lg font-bold text-gray-900">编辑名片</h1>
             </div>
-                        <Button
-              onClick={handleSubmit}
-              size="small"
-            >
+            <Button onClick={handleSubmit} size="small">
               保存
             </Button>
           </div>
@@ -124,7 +124,7 @@ const UserEditProfile: FC = () => {
           {/* 基本信息 */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-slate-900">基本信息</h3>
-            
+
             {/* 姓名 */}
             <Input
               placeholder="姓名"
@@ -161,7 +161,7 @@ const UserEditProfile: FC = () => {
           {/* 联系方式 */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-slate-900">联系方式</h3>
-            
+
             {/* 手机 */}
             <Input
               type="tel"
@@ -247,11 +247,7 @@ const UserEditProfile: FC = () => {
         {/* 底部保存按钮 */}
         <div className="fixed bottom-0 left-0 right-0 z-50">
           <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 pt-4 pb-6 md:px-6 md:pb-4">
-            <Button
-              onClick={handleSubmit}
-              block
-              className="h-12"
-            >
+            <Button onClick={handleSubmit} block className="h-12">
               保存名片
             </Button>
             <div className="h-safe-bottom" />

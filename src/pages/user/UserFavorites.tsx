@@ -5,13 +5,7 @@
 
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Heart,
-  Calendar,
-  MapPin,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Heart, Calendar, MapPin, Trash2 } from "lucide-react";
 import { mockUserActivities, UserActivity } from "@/mocks/data/user-activities";
 import dayjs from "dayjs";
 
@@ -65,9 +59,7 @@ const UserFavorites: FC = () => {
 
         {/* 收藏数量 */}
         <div className="px-4 md:px-6 py-3 bg-slate-50">
-          <p className="text-xs text-slate-400">
-            共 {favorites.length} 个收藏
-          </p>
+          <p className="text-xs text-slate-400">共 {favorites.length} 个收藏</p>
         </div>
 
         {/* 收藏列表 */}
@@ -150,9 +142,7 @@ const FavoriteCard: FC<FavoriteCardProps> = ({
           </div>
         </div>
         <div className="flex items-center justify-between mt-2">
-          <span className="text-sm font-bold text-primary-500">
-            免费
-          </span>
+          <span className="text-sm font-bold text-primary-500">免费</span>
           <span className="text-[10px] text-slate-400">
             {activity.currentParticipants}/{activity.maxParticipants}人
           </span>

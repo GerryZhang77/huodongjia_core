@@ -11,7 +11,6 @@ import {
   Phone,
   MapPin,
   Calendar,
-  CheckCircle,
   AlertCircle,
 } from "lucide-react";
 import { Button, Input } from "@/components/ui";
@@ -49,6 +48,15 @@ const UserRegistration: FC = () => {
   const navigate = useNavigate();
 
   const activity = id ? getActivityById(id) : undefined;
+
+  // 返回上一页，如果没有历史记录则返回活动详情页
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate(`/u/activities/${id}`);
+    }
+  };
 
   // 表单状态
   const [formData, setFormData] = useState({
@@ -92,7 +100,12 @@ const UserRegistration: FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.phone || !formData.gender || !formData.agreed) {
+    if (
+      !formData.name ||
+      !formData.phone ||
+      !formData.gender ||
+      !formData.agreed
+    ) {
       return;
     }
 
@@ -100,7 +113,7 @@ const UserRegistration: FC = () => {
     // 模拟提交
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsSubmitting(false);
-    
+
     // 跳转到活动详情页
     navigate(`/u/activities/${id}`, { replace: true });
   };
@@ -116,7 +129,8 @@ const UserRegistration: FC = () => {
         <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
           <div className="flex items-center h-[52px] px-4">
             <button
-              onClick={() => navigate(-1)}
+              type="button"
+              onClick={handleGoBack}
               className="w-9 h-9 -ml-2 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
             >
               <ArrowLeft size={20} className="text-gray-600" />
@@ -144,9 +158,7 @@ const UserRegistration: FC = () => {
                 <MapPin size={12} />
                 {activity.location.split(" ")[0]}
               </p>
-              <p className="text-sm font-bold text-primary-500 mt-1">
-                ¥68/人
-              </p>
+              <p className="text-sm font-bold text-primary-500 mt-1">¥68/人</p>
             </div>
             <div className="flex items-start">
               <span className="px-2 py-1 bg-success-50 text-success-600 text-[10px] font-medium rounded-full">
@@ -302,14 +314,24 @@ const UserRegistration: FC = () => {
           <div className="flex items-start gap-2 mb-6">
             <button
               onClick={() => handleInputChange("agreed", !formData.agreed)}
-              className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${
                 formData.agreed
-                  ? "bg-primary-400"
-                  : "bg-white border-2 border-gray-300"
+                  ? "bg-primary-400 border-primary-400"
+                  : "bg-white border-gray-300 hover:border-primary-300"
               }`}
             >
               {formData.agreed && (
-                <CheckCircle size={14} className="text-white" />
+                <svg
+                  className="w-3 h-3 text-white"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="2 6 5 9 10 3" />
+                </svg>
               )}
             </button>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -330,7 +352,7 @@ const UserRegistration: FC = () => {
                 <p className="text-xs text-gray-400">合计</p>
                 <p className="text-xl font-bold text-gray-900">¥68</p>
               </div>
-              
+
               {/* 提交按钮 */}
               <Button
                 onClick={handleSubmit}

@@ -171,20 +171,18 @@ const UserFriends: FC = () => {
                 ))}
               </div>
             )
+          ) : /* 好友申请 */
+          mockRequests.length === 0 ? (
+            <div className="py-16 text-center">
+              <UserPlus size={40} className="text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 text-sm">暂无好友申请</p>
+            </div>
           ) : (
-            /* 好友申请 */
-            mockRequests.length === 0 ? (
-              <div className="py-16 text-center">
-                <UserPlus size={40} className="text-slate-200 mx-auto mb-3" />
-                <p className="text-slate-400 text-sm">暂无好友申请</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {mockRequests.map((request) => (
-                  <RequestCard key={request.id} request={request} />
-                ))}
-              </div>
-            )
+            <div className="space-y-3">
+              {mockRequests.map((request) => (
+                <RequestCard key={request.id} request={request} />
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -276,7 +274,9 @@ const RequestCard: FC<RequestCardProps> = ({ request }) => {
 
         {/* 信息 */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900">{request.name}</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            {request.name}
+          </h3>
           <p className="text-xs text-slate-500 mt-0.5">{request.occupation}</p>
           <p className="text-xs text-slate-400 mt-1 italic">
             &quot;{request.message}&quot;

@@ -42,7 +42,7 @@ interface SettingGroup {
 const UserSettings: FC = () => {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  
+
   // 本地状态
   const [notifications, setNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -196,20 +196,22 @@ const UserSettings: FC = () => {
                       key={item.id}
                       onClick={item.onClick}
                       className={`flex items-center px-4 py-3.5 ${
-                        item.type !== "toggle" ? "cursor-pointer hover:bg-slate-50" : ""
+                        item.type !== "toggle"
+                          ? "cursor-pointer hover:bg-slate-50"
+                          : ""
                       } transition-colors`}
                     >
                       {/* 图标 */}
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center mr-3 ${
-                          item.danger
-                            ? "bg-red-50"
-                            : "bg-slate-100"
+                          item.danger ? "bg-red-50" : "bg-slate-100"
                         }`}
                       >
                         <Icon
                           size={18}
-                          className={item.danger ? "text-red-500" : "text-slate-600"}
+                          className={
+                            item.danger ? "text-red-500" : "text-slate-600"
+                          }
                         />
                       </div>
 

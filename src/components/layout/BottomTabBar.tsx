@@ -47,7 +47,14 @@ export const BottomTabBar: FC<BottomTabBarProps> = ({ unreadCount = 0 }) => {
     const path = location.pathname;
     if (path.startsWith("/u/discover")) return "discover";
     if (path.startsWith("/u/notifications")) return "notifications";
-    if (path.startsWith("/u/cards") || path.startsWith("/u/profile") || path.startsWith("/u/settings") || path.startsWith("/u/friends") || path.startsWith("/u/favorites")) return "profile";
+    if (
+      path.startsWith("/u/cards") ||
+      path.startsWith("/u/profile") ||
+      path.startsWith("/u/settings") ||
+      path.startsWith("/u/friends") ||
+      path.startsWith("/u/favorites")
+    )
+      return "profile";
     return "home";
   };
 

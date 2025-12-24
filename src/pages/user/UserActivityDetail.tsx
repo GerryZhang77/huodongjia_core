@@ -92,9 +92,9 @@ const UserActivityDetail: FC = () => {
   const isFull = activity.currentParticipants >= activity.maxParticipants;
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-safe-top">
-      {/* 响应式容器 - 增加顶部边距 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen pb-32 shadow-sm md:shadow-xl md:mt-4 lg:mt-6 md:rounded-t-2xl">
+    <div className="min-h-screen bg-gray-100 md:py-6 lg:py-8">
+      {/* 响应式容器 - 桌面版增加上下边距和圆角 */}
+      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen md:min-h-0 pb-32 md:pb-24 shadow-sm md:shadow-xl md:rounded-2xl md:mb-6">
         {/* 封面区域 */}
         <div className="relative aspect-[4/3] lg:aspect-[21/9] md:rounded-t-2xl overflow-hidden">
           <img
@@ -131,9 +131,9 @@ const UserActivityDetail: FC = () => {
             </div>
           </div>
 
-          {/* 状态标签 - 调整位置 */}
+          {/* 状态标签 - 调整位置到导航栏下方，避免重叠 */}
           <div
-            className={`absolute top-16 md:top-[72px] left-4 px-3 py-1 rounded-full text-xs font-medium text-white ${config.color}`}
+            className={`absolute top-[72px] md:top-[80px] left-4 px-3 py-1 rounded-full text-xs font-medium text-white ${config.color}`}
           >
             {config.label}
           </div>

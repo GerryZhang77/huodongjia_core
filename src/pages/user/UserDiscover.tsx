@@ -5,12 +5,7 @@
 
 import { FC, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Search,
-  SlidersHorizontal,
-  MapPin,
-  Calendar,
-} from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, Calendar } from "lucide-react";
 import { mockUserActivities, UserActivity } from "@/mocks/data/user-activities";
 import dayjs from "dayjs";
 
@@ -77,16 +72,12 @@ const UserDiscover: FC = () => {
           break;
         case "outdoor":
           result = result.filter(
-            (a) =>
-              a.tags.includes("户外") ||
-              a.tags.includes("运动")
+            (a) => a.tags.includes("户外") || a.tags.includes("运动")
           );
           break;
         case "social":
           result = result.filter(
-            (a) =>
-              a.tags.includes("社交") ||
-              a.tags.includes("交友")
+            (a) => a.tags.includes("社交") || a.tags.includes("交友")
           );
           break;
         case "weekend":
@@ -271,8 +262,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
   colorIndex,
   onClick,
 }) => {
-  const isHot =
-    activity.currentParticipants / activity.maxParticipants > 0.8;
+  const isHot = activity.currentParticipants / activity.maxParticipants > 0.8;
   const isUpcoming =
     dayjs(activity.eventStartTime).diff(dayjs(), "day") <= 3 &&
     dayjs(activity.eventStartTime).isAfter(dayjs());
@@ -310,9 +300,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
           <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-sm">
             <span
               className={`text-[10px] font-semibold ${
-                isHot
-                  ? "text-secondary-500"
-                  : "text-secondary-500"
+                isHot ? "text-secondary-500" : "text-secondary-500"
               }`}
             >
               {isHot ? "热门" : "即将开始"}
@@ -359,9 +347,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
         {/* 价格和人数 */}
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-primary-500">
-              免费
-            </span>
+            <span className="text-sm font-bold text-primary-500">免费</span>
             <span className="text-[10px] text-slate-400">
               {activity.currentParticipants}/{activity.maxParticipants}人
             </span>
