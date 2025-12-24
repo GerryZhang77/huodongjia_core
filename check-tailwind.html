@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Tailwind 配置测试</title>
+</head>
+<body class="p-8 bg-gray-50">
+  <h1 class="text-2xl font-bold mb-4">检查 Tailwind 自定义类</h1>
+  
+  <div class="space-y-4">
+    <!-- 测试自定义阴影类 -->
+    <button class="h-11 px-6 rounded-[22px] bg-blue-500 text-white shadow-primary">
+      使用 shadow-primary 类
+    </button>
+    
+    <!-- 测试渐变 -->
+    <button class="h-11 px-6 rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 text-white">
+      使用自定义颜色渐变
+    </button>
+  </div>
+  
+  <script>
+    // 检查元素是否有正确的样式
+    window.addEventListener('load', () => {
+      const btn = document.querySelector('.shadow-primary');
+      const computed = window.getComputedStyle(btn);
+      console.log('Box Shadow:', computed.boxShadow);
+      console.log('Background:', computed.background);
+    });
+  </script>
+</body>
+</html>

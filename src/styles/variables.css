@@ -1,5 +1,5 @@
 /**
- * 设计系统 - CSS Variables
+ * 设计系统 - CSS Variables (2024 新版)
  * 
  * 用途:
  * 1. 支持主题切换（亮色/暗色模式）
@@ -12,101 +12,101 @@
 :root {
   /* ===== 品牌色彩系统 ===== */
 
-  /* 主色 - 晨曦蓝 (Dawn Blue) */
-  --color-primary-50: #f0f7ff;
-  --color-primary-100: #e0edff;
-  --color-primary-200: #c2d9ff;
-  --color-primary-300: #96b8ff;
-  --color-primary-400: #6b96ff;
-  --color-primary-500: #4a78ff;
-  --color-primary-600: #3862e6;
-  --color-primary-700: #2b4dcc;
-  --color-primary-800: #1f39b3;
-  --color-primary-900: #142699;
+  /* 主色 - 天空蓝 (Sky Blue) */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #3b82f6;
+  --color-primary-500: #2563eb;
+  --color-primary-600: #1d4ed8;
+  --color-primary-700: #1e40af;
+  --color-primary-800: #1e3a8a;
+  --color-primary-900: #172554;
 
-  /* 辅助色 - 暖桃粉 (Warm Peach) */
-  --color-secondary-50: #fff5f7;
-  --color-secondary-100: #ffe4ec;
-  --color-secondary-200: #ffcad8;
-  --color-secondary-300: #ffb0c5;
-  --color-secondary-400: #ff96b1;
-  --color-secondary-500: #ff7c9e;
-  --color-secondary-600: #e6637e;
-  --color-secondary-700: #cc4a5e;
-  --color-secondary-800: #b3313f;
-  --color-secondary-900: #991821;
+  /* 辅助色 - 活力橙 (Vibrant Orange) */
+  --color-secondary-50: #fff7ed;
+  --color-secondary-100: #ffedd5;
+  --color-secondary-200: #fed7aa;
+  --color-secondary-300: #fdba74;
+  --color-secondary-400: #f97316;
+  --color-secondary-500: #ea580c;
+  --color-secondary-600: #c2410c;
+  --color-secondary-700: #9a3412;
+  --color-secondary-800: #7c2d12;
+  --color-secondary-900: #6c2711;
 
-  /* 点缀色 - 薄荷绿 (Mint Green) */
-  --color-accent-50: #f0fdf9;
-  --color-accent-100: #d1fae5;
-  --color-accent-200: #a7f3d0;
-  --color-accent-300: #6ee7b7;
-  --color-accent-400: #34d399;
-  --color-accent-500: #10b981;
-  --color-accent-600: #059669;
-  --color-accent-700: #047857;
-  --color-accent-800: #065f46;
-  --color-accent-900: #064e3b;
+  /* 强调色 - 梦幻紫 (Dream Purple) */
+  --color-accent-50: #faf5ff;
+  --color-accent-100: #f3e8ff;
+  --color-accent-200: #e9d5ff;
+  --color-accent-300: #d8b4fe;
+  --color-accent-400: #a855f7;
+  --color-accent-500: #9333ea;
+  --color-accent-600: #7e22ce;
+  --color-accent-700: #6b21a8;
+  --color-accent-800: #581c87;
+  --color-accent-900: #4c1d95;
 
   /* 功能色 - 成功 */
-  --color-success-50: #f0fdf9;
-  --color-success-100: #d1fae5;
-  --color-success-200: #a7f3d0;
-  --color-success-300: #6ee7b7;
-  --color-success-400: #34d399;
-  --color-success-500: #10b981;
-  --color-success-600: #059669;
-  --color-success-700: #047857;
-  --color-success-800: #065f46;
-  --color-success-900: #064e3b;
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #22c55e;
+  --color-success-500: #16a34a;
+  --color-success-600: #15803d;
+  --color-success-700: #166534;
+  --color-success-800: #14532d;
+  --color-success-900: #052e16;
 
-  /* 功能色 - 信息 */
-  --color-info-50: #f0f7ff;
-  --color-info-100: #e0edff;
-  --color-info-200: #c2d9ff;
-  --color-info-300: #96b8ff;
-  --color-info-400: #6b96ff;
-  --color-info-500: #4a78ff;
-  --color-info-600: #3862e6;
-  --color-info-700: #2b4dcc;
-  --color-info-800: #1f39b3;
-  --color-info-900: #142699;
+  /* 功能色 - 信息 (与主色一致) */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #3b82f6;
+  --color-info-500: #2563eb;
+  --color-info-600: #1d4ed8;
+  --color-info-700: #1e40af;
+  --color-info-800: #1e3a8a;
+  --color-info-900: #172554;
 
   /* 功能色 - 警告 */
   --color-warning-50: #fffbeb;
   --color-warning-100: #fef3c7;
   --color-warning-200: #fde68a;
   --color-warning-300: #fcd34d;
-  --color-warning-400: #fbbf24;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
-  --color-warning-700: #b45309;
-  --color-warning-800: #92400e;
-  --color-warning-900: #78350f;
+  --color-warning-400: #f59e0b;
+  --color-warning-500: #d97706;
+  --color-warning-600: #b45309;
+  --color-warning-700: #92400e;
+  --color-warning-800: #78350f;
+  --color-warning-900: #653208;
 
   /* 功能色 - 错误 */
   --color-error-50: #fef2f2;
   --color-error-100: #fee2e2;
   --color-error-200: #fecaca;
   --color-error-300: #fca5a5;
-  --color-error-400: #f87171;
-  --color-error-500: #ef4444;
-  --color-error-600: #dc2626;
-  --color-error-700: #b91c1c;
-  --color-error-800: #991b1b;
-  --color-error-900: #7f1d1d;
+  --color-error-400: #ef4444;
+  --color-error-500: #dc2626;
+  --color-error-600: #b91c1c;
+  --color-error-700: #991b1b;
+  --color-error-800: #7f1d1d;
+  --color-error-900: #651a1a;
 
-  /* 中性色 */
-  --color-gray-50: #fafbfc;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
+  /* 中性色 - 石板灰 (Slate) */
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #0f172a;
 
   /* 黑白色 */
   --color-white: #ffffff;
@@ -116,61 +116,62 @@
 
   /* 文本颜色 */
   --text-primary: var(--color-gray-900);
-  --text-secondary: var(--color-gray-700);
-  --text-tertiary: var(--color-gray-600);
+  --text-secondary: var(--color-gray-600);
+  --text-tertiary: var(--color-gray-500);
   --text-disabled: var(--color-gray-400);
   --text-placeholder: var(--color-gray-400);
-  --text-link: var(--color-primary-500);
-  --text-link-hover: var(--color-primary-600);
+  --text-link: var(--color-primary-400);
+  --text-link-hover: var(--color-primary-500);
   --text-inverse: var(--color-white);
 
   /* 背景颜色 */
   --bg-body: var(--color-gray-50);
   --bg-container: var(--color-white);
   --bg-elevated: var(--color-white);
-  --bg-overlay: rgba(0, 0, 0, 0.5);
+  --bg-overlay: rgba(15, 23, 42, 0.5);
   --bg-disabled: var(--color-gray-200);
   --bg-hover: var(--color-gray-100);
   --bg-active: var(--color-gray-200);
 
   /* 边框颜色 */
-  --border-default: var(--color-gray-300);
-  --border-strong: var(--color-gray-400);
-  --border-subtle: var(--color-gray-200);
-  --border-focus: var(--color-primary-500);
+  --border-default: var(--color-gray-200);
+  --border-strong: var(--color-gray-300);
+  --border-subtle: var(--color-gray-100);
+  --border-focus: var(--color-primary-400);
 
   /* ===== 字体排版系统 ===== */
 
-  /* 字体家族 */
-  --font-family-sans: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue",
-    Arial, sans-serif;
-  --font-family-latin: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+  /* 字体家族 - Nunito 主字体 */
+  --font-family-sans: "Nunito", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-family-latin: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI",
     "Roboto", "Helvetica Neue", Arial, sans-serif;
   --font-family-chinese: "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
     -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-family-mono: "SF Mono", "Consolas", "Monaco", "Courier New", monospace;
+  --font-family-mono: "SF Mono", "Monaco", "Consolas", "Courier New", monospace;
 
   /* 字号 */
-  --font-size-xs: 0.75rem; /* 12px */
-  --font-size-sm: 0.875rem; /* 14px */
-  --font-size-base: 1rem; /* 16px */
-  --font-size-lg: 1.125rem; /* 18px */
-  --font-size-xl: 1.25rem; /* 20px */
-  --font-size-2xl: 1.5rem; /* 24px */
-  --font-size-3xl: 1.875rem; /* 30px */
-  --font-size-4xl: 2.25rem; /* 36px */
+  --font-size-xs: 0.6875rem; /* 11px - Overline */
+  --font-size-sm: 0.75rem; /* 12px - Caption */
+  --font-size-base: 0.875rem; /* 14px - Body */
+  --font-size-lg: 1rem; /* 16px - Body Large / H3 */
+  --font-size-xl: 1.25rem; /* 20px - H2 */
+  --font-size-2xl: 1.5rem; /* 24px - H1 */
+  --font-size-3xl: 2rem; /* 32px - Display */
+  --font-size-4xl: 2.5rem; /* 40px - Large Display */
 
   /* 字重 */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
 
   /* 行高 */
   --line-height-tight: 1.25;
+  --line-height-snug: 1.33;
   --line-height-normal: 1.5;
-  --line-height-relaxed: 1.75;
+  --line-height-relaxed: 1.625;
   --line-height-loose: 2;
 
   /* 字间距 */
@@ -178,10 +179,12 @@
   --letter-spacing-normal: 0;
   --letter-spacing-wide: 0.02em;
   --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;
 
   /* ===== 间距系统 (8px 网格) ===== */
 
   --spacing-0: 0;
+  --spacing-0-5: 0.125rem; /* 2px */
   --spacing-1: 0.25rem; /* 4px */
   --spacing-2: 0.5rem; /* 8px */
   --spacing-3: 0.75rem; /* 12px */
@@ -193,6 +196,7 @@
   --spacing-12: 3rem; /* 48px */
   --spacing-16: 4rem; /* 64px */
   --spacing-20: 5rem; /* 80px */
+  --spacing-24: 6rem; /* 96px */
 
   /* 语义化间距 */
   --spacing-page-x: var(--spacing-4); /* 16px 页面左右 */
@@ -206,30 +210,47 @@
   /* 容器最大宽度 */
   --container-max-width: 1200px;
   --container-narrow-width: 680px;
+  --container-content-width: 720px;
 
   /* 断点 */
   --breakpoint-xs: 375px;
-  --breakpoint-sm: 640px;
+  --breakpoint-sm: 576px;
   --breakpoint-md: 768px;
-  --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1440px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+  --breakpoint-2xl: 1440px;
 
   /* ===== 圆角 ===== */
 
   --radius-sm: 0.25rem; /* 4px */
-  --radius-md: 0.5rem; /* 8px */
-  --radius-lg: 0.75rem; /* 12px */
-  --radius-xl: 1rem; /* 16px */
-  --radius-2xl: 1.5rem; /* 24px */
+  --radius-md: 0.625rem; /* 10px - 输入框 */
+  --radius-lg: 0.75rem; /* 12px - 小卡片 */
+  --radius-xl: 1rem; /* 16px - 卡片 */
+  --radius-2xl: 1.375rem; /* 22px - Pill 按钮 */
+  --radius-3xl: 1.625rem; /* 26px - 大按钮 */
   --radius-full: 9999px;
 
   /* ===== 阴影 ===== */
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-base: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.15);
+  --shadow-base: 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 16px 32px rgba(0, 0, 0, 0.12);
+
+  /* 卡片阴影 */
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 8px 16px rgba(59, 130, 246, 0.12);
+
+  /* 彩色阴影 (按钮) */
+  --shadow-primary: 0 2px 8px rgba(59, 130, 246, 0.3);
+  --shadow-secondary: 0 2px 8px rgba(249, 115, 22, 0.3);
+  --shadow-accent: 0 2px 8px rgba(168, 85, 247, 0.3);
+  --shadow-success: 0 2px 8px rgba(34, 197, 94, 0.3);
+
+  /* 输入框焦点阴影 */
+  --shadow-input-focus: 0 0 0 4px rgba(59, 130, 246, 0.25);
 
   /* ===== 动画 ===== */
 
@@ -242,6 +263,15 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* ===== 渐变 ===== */
+
+  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --gradient-secondary: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  --gradient-accent: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+  --gradient-success: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  --gradient-header: linear-gradient(135deg, #eff6ff 0%, #fff7ed 100%);
 
   /* ===== Z-index 层级 ===== */
 
@@ -252,37 +282,52 @@
   --z-modal: 1050;
   --z-popover: 1060;
   --z-tooltip: 1070;
+  --z-toast: 1080;
 }
 
 /* ===== 暗色模式 ===== */
 
 .dark {
   /* 主色 - 暗色模式调整 */
-  --color-primary-500: #5b8bff;
-  --color-primary-600: #4a78ff;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
 
-  /* 中性色反转 */
-  --color-gray-50: #111827;
-  --color-gray-100: #1f2937;
-  --color-gray-200: #374151;
-  --color-gray-300: #4b5563;
-  --color-gray-400: #6b7280;
-  --color-gray-500: #9ca3af;
-  --color-gray-600: #d1d5db;
-  --color-gray-700: #e5e7eb;
-  --color-gray-800: #f3f4f6;
-  --color-gray-900: #fafbfc;
+  /* 辅助色 - 暗色模式调整 */
+  --color-secondary-400: #fb923c;
+  --color-secondary-500: #f97316;
+
+  /* 强调色 - 暗色模式调整 */
+  --color-accent-400: #c084fc;
+  --color-accent-500: #a855f7;
+
+  /* 中性色反转 (Slate) */
+  --color-gray-50: #0f172a;
+  --color-gray-100: #1e293b;
+  --color-gray-200: #334155;
+  --color-gray-300: #475569;
+  --color-gray-400: #64748b;
+  --color-gray-500: #94a3b8;
+  --color-gray-600: #cbd5e1;
+  --color-gray-700: #e2e8f0;
+  --color-gray-800: #f1f5f9;
+  --color-gray-900: #f8fafc;
 
   /* 语义化颜色 - 暗色模式 */
   --text-primary: var(--color-gray-900);
   --text-secondary: var(--color-gray-700);
   --text-tertiary: var(--color-gray-600);
 
-  --bg-body: #0f1419;
+  --bg-body: #0c1220;
   --bg-container: var(--color-gray-100);
   --bg-elevated: var(--color-gray-200);
   --bg-overlay: rgba(0, 0, 0, 0.7);
 
   --border-default: var(--color-gray-300);
   --border-subtle: var(--color-gray-200);
+
+  /* 暗色模式阴影调整 */
+  --shadow-card-hover: 0 8px 16px rgba(59, 130, 246, 0.2);
+  --shadow-primary: 0 2px 8px rgba(96, 165, 250, 0.4);
+  --shadow-secondary: 0 2px 8px rgba(251, 146, 60, 0.4);
+  --shadow-accent: 0 2px 8px rgba(192, 132, 252, 0.4);
 }

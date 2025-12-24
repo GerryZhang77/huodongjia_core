@@ -1,9 +1,27 @@
-/** @type {import('tailwindcss').Config} */
+/**
+ * TailwindCSS v4 配置文件
+ *
+ * 重要说明：
+ * - TailwindCSS v4 使用 CSS @theme 块作为主要主题配置方式
+ * - 颜色、字体、间距等主题变量已在 src/index.css 的 @theme 中定义
+ * - 此文件仅用于配置 content 路径和 plugins
+ *
+ * @see src/index.css - @theme 主题配置
+ * @see docs-private/design-system/ - 设计系统文档
+ */
 
+/** @type {import('tailwindcss').Config} */
 export default {
+  // 深色模式配置
   darkMode: "class",
+
+  // 内容扫描路径 - 告诉 Tailwind 扫描哪些文件
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+
+  // 主题扩展 - v4 中大部分配置移到了 @theme
+  // 这里只保留无法在 @theme 中定义的内容
   theme: {
+    // Container 配置
     container: {
       center: true,
       padding: {
@@ -11,247 +29,63 @@ export default {
         sm: "1.5rem",
         lg: "2rem",
       },
-      screens: {
-        sm: "640px",
-        md: "768px",
-        lg: "1024px",
-        xl: "1200px",
-      },
     },
+    // 扩展主题
     extend: {
-      // 品牌色彩系统
+      // 🆕 颜色定义 - 确保渐变类可以生成
       colors: {
-        // 主色 - 晨曦蓝 (Dawn Blue)
         primary: {
-          50: "#F0F7FF",
-          100: "#E0EDFF",
-          200: "#C2D9FF",
-          300: "#96B8FF",
-          400: "#6B96FF",
-          500: "#4A78FF",
-          600: "#3862E6",
-          700: "#2B4DCC",
-          800: "#1F39B3",
-          900: "#142699",
+          400: "#3b82f6",
+          500: "#2563eb",
+          600: "#1d4ed8",
         },
-        // 辅助色 - 暖桃粉 (Warm Peach)
         secondary: {
-          50: "#FFF5F7",
-          100: "#FFE4EC",
-          200: "#FFCAD8",
-          300: "#FFB0C5",
-          400: "#FF96B1",
-          500: "#FF7C9E",
-          600: "#E6637E",
-          700: "#CC4A5E",
-          800: "#B3313F",
-          900: "#991821",
+          400: "#f97316",
+          500: "#ea580c",
+          600: "#c2410c",
         },
-        // 点缀色 - 薄荷绿 (Mint Green)
         accent: {
-          50: "#F0FDF9",
-          100: "#D1FAE5",
-          200: "#A7F3D0",
-          300: "#6EE7B7",
-          400: "#34D399",
-          500: "#10B981",
-          600: "#059669",
-          700: "#047857",
-          800: "#065F46",
-          900: "#064E3B",
+          400: "#a855f7",
+          500: "#9333ea",
+          600: "#7e22ce",
         },
-        // 功能色 - 成功 (薄荷绿)
         success: {
-          50: "#F0FDF9",
-          100: "#D1FAE5",
-          200: "#A7F3D0",
-          300: "#6EE7B7",
-          400: "#34D399",
-          500: "#10B981",
-          600: "#059669",
-          700: "#047857",
-          800: "#065F46",
-          900: "#064E3B",
+          400: "#22c55e",
+          500: "#16a34a",
+          600: "#15803d",
         },
-        // 功能色 - 信息 (晨曦蓝)
-        info: {
-          50: "#F0F7FF",
-          100: "#E0EDFF",
-          200: "#C2D9FF",
-          300: "#96B8FF",
-          400: "#6B96FF",
-          500: "#4A78FF",
-          600: "#3862E6",
-          700: "#2B4DCC",
-          800: "#1F39B3",
-          900: "#142699",
+        danger: {
+          400: "#ef4444",
+          500: "#dc2626",
+          600: "#b91c1c",
         },
-        // 功能色 - 警告
-        warning: {
-          50: "#FFFBEB",
-          100: "#FEF3C7",
-          200: "#FDE68A",
-          300: "#FCD34D",
-          400: "#FBBF24",
-          500: "#F59E0B",
-          600: "#D97706",
-          700: "#B45309",
-          800: "#92400E",
-          900: "#78350F",
-        },
-        // 功能色 - 错误
-        error: {
-          50: "#FEF2F2",
-          100: "#FEE2E2",
-          200: "#FECACA",
-          300: "#FCA5A5",
-          400: "#F87171",
-          500: "#EF4444",
-          600: "#DC2626",
-          700: "#B91C1C",
-          800: "#991B1B",
-          900: "#7F1D1D",
-        },
-        // 中性色
         gray: {
-          50: "#FAFBFC",
-          100: "#F3F4F6",
-          200: "#E5E7EB",
-          300: "#D1D5DB",
-          400: "#9CA3AF",
-          500: "#6B7280",
-          600: "#4B5563",
-          700: "#374151",
-          800: "#1F2937",
-          900: "#111827",
+          50: "#f8fafc",
+          100: "#f1f5f9",
+          200: "#e2e8f0",
+          300: "#cbd5e1",
+          400: "#94a3b8",
+          500: "#64748b",
+          600: "#475569",
+          900: "#0f172a",
         },
       },
-
-      // 字体家族
-      fontFamily: {
-        // 默认字体栈（中西文混合，Inter 优先用于英文/数字）
-        sans: [
-          "Inter",
-          "PingFang SC",
-          "Microsoft YaHei",
-          "Noto Sans SC",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
-          "Helvetica Neue",
-          "Arial",
-          "sans-serif",
-        ],
-        // 等宽字体（代码、数据）
-        mono: ["SF Mono", "Consolas", "Monaco", "Courier New", "monospace"],
-      },
-
-      // 字号体系 (4px 递增)
-      fontSize: {
-        xs: ["0.75rem", { lineHeight: "1.5" }], // 12px
-        sm: ["0.875rem", { lineHeight: "1.5" }], // 14px
-        base: ["1rem", { lineHeight: "1.6" }], // 16px
-        lg: ["1.125rem", { lineHeight: "1.75" }], // 18px
-        xl: ["1.25rem", { lineHeight: "1.5" }], // 20px
-        "2xl": ["1.5rem", { lineHeight: "1.4" }], // 24px
-        "3xl": ["1.875rem", { lineHeight: "1.3" }], // 30px
-        "4xl": ["2.25rem", { lineHeight: "1.2" }], // 36px
-      },
-
-      // 字重
-      fontWeight: {
-        normal: "400",
-        medium: "500",
-        semibold: "600",
-        bold: "700",
-      },
-
-      // 行高
-      lineHeight: {
-        tight: "1.25",
-        normal: "1.5",
-        relaxed: "1.75",
-        loose: "2",
-      },
-
-      // 字间距
-      letterSpacing: {
-        tight: "-0.02em",
-        normal: "0",
-        wide: "0.02em",
-        wider: "0.05em",
-      },
-
-      // 间距系统 (8px 网格)
-      spacing: {
-        0: "0",
-        1: "0.25rem", // 4px
-        2: "0.5rem", // 8px
-        3: "0.75rem", // 12px
-        4: "1rem", // 16px
-        5: "1.25rem", // 20px
-        6: "1.5rem", // 24px
-        8: "2rem", // 32px
-        10: "2.5rem", // 40px
-        12: "3rem", // 48px
-        16: "4rem", // 64px
-        20: "5rem", // 80px
-        24: "6rem", // 96px
-      },
-
-      // 最大宽度
-      maxWidth: {
-        container: "1200px",
-        narrow: "680px",
-      },
-
-      // 圆角
-      borderRadius: {
-        none: "0",
-        sm: "0.25rem", // 4px
-        DEFAULT: "0.5rem", // 8px
-        md: "0.5rem", // 8px
-        lg: "0.75rem", // 12px
-        xl: "1rem", // 16px
-        "2xl": "1.5rem", // 24px
-        full: "9999px",
-      },
-
-      // 阴影
+      // 彩色阴影 - 与设计稿保持一致
       boxShadow: {
-        sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-        DEFAULT: "0 2px 8px rgba(0, 0, 0, 0.08)",
-        md: "0 4px 12px rgba(0, 0, 0, 0.1)",
-        lg: "0 8px 24px rgba(0, 0, 0, 0.12)",
-        xl: "0 12px 32px rgba(0, 0, 0, 0.15)",
-        inner: "inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)",
-        none: "none",
-      },
-
-      // 断点 (响应式)
-      screens: {
-        xs: "375px",
-        sm: "640px",
-        md: "768px",
-        lg: "1024px",
-        xl: "1440px",
-      },
-
-      // 动画时长
-      transitionDuration: {
-        fast: "150ms",
-        base: "300ms",
-        slow: "500ms",
-      },
-
-      // 缓动函数
-      transitionTimingFunction: {
-        "in-out": "cubic-bezier(0.4, 0, 0.2, 1)",
-        out: "cubic-bezier(0, 0, 0.2, 1)",
-        in: "cubic-bezier(0.4, 0, 1, 1)",
+        primary: "0 2px 8px rgba(59, 130, 246, 0.3)",
+        "primary-hover": "0 4px 12px rgba(59, 130, 246, 0.4)",
+        secondary: "0 2px 8px rgba(249, 115, 22, 0.3)",
+        "secondary-hover": "0 4px 12px rgba(249, 115, 22, 0.4)",
+        accent: "0 2px 8px rgba(168, 85, 247, 0.3)",
+        "accent-hover": "0 4px 12px rgba(168, 85, 247, 0.4)",
+        success: "0 2px 8px rgba(34, 197, 94, 0.3)",
+        "success-hover": "0 4px 12px rgba(34, 197, 94, 0.4)",
+        danger: "0 2px 8px rgba(239, 68, 68, 0.3)",
+        "danger-hover": "0 4px 12px rgba(239, 68, 68, 0.4)",
       },
     },
   },
+
+  // 插件
   plugins: [],
 };

@@ -1,5 +1,5 @@
 /**
- * Card 组件类型定义
+ * Card 组件类型定义 (2024 新版设计系统)
  */
 
 import { ReactNode, HTMLAttributes } from "react";
@@ -21,14 +21,24 @@ export interface CardProps
   /** 是否显示边框 */
   bordered?: boolean;
 
-  /** 是否显示阴影 */
-  shadow?: "none" | "sm" | "md" | "lg";
+  /**
+   * 阴影大小
+   * - none: 无阴影
+   * - sm: 小阴影
+   * - default: 默认卡片阴影 (推荐)
+   * - md: 中等阴影
+   * - lg: 大阴影
+   */
+  shadow?: "none" | "sm" | "default" | "md" | "lg";
 
-  /** 是否可悬停（显示悬停效果） */
+  /** 是否可悬停（显示悬停效果: 阴影增强 + 蓝色光晕 + 上移） */
   hoverable?: boolean;
 
-  /** 圆角大小 */
-  radius?: "none" | "sm" | "md" | "lg" | "xl";
+  /**
+   * 圆角大小
+   * @default 'xl' (16px)
+   */
+  radius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl";
 
   /** 自定义类名 */
   className?: string;

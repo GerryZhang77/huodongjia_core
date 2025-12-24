@@ -49,7 +49,8 @@ const UserProfileCards = lazy(() => import("./pages/user/UserProfileCards"));
 
 // 开发调试页面 - 懒加载
 const ComponentShowcase = lazy(() => import("./pages/dev/ComponentShowcase"));
-const HeroUIDemo = lazy(() => import("./pages/dev/HeroUIDemo"));
+const TailwindTest = lazy(() => import("./pages/dev/TailwindTest"));
+const SimpleTailwindTest = lazy(() => import("./pages/dev/SimpleTailwindTest"));
 
 import "./index.css";
 
@@ -193,7 +194,11 @@ function App() {
                 {isDevelopment && (
                   <>
                     <Route path="/components" element={<ComponentShowcase />} />
-                    <Route path="/heroui-demo" element={<HeroUIDemo />} />
+                    <Route path="/tailwind-test" element={<TailwindTest />} />
+                    <Route
+                      path="/simple-test"
+                      element={<SimpleTailwindTest />}
+                    />
                   </>
                 )}
 

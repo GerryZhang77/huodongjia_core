@@ -1,13 +1,13 @@
 /**
- * Card - 卡片组件
+ * Card - 卡片组件 (2024 新版设计系统)
  *
  * 用途: 内容分组展示的容器
  *
- * 特性:
- * - 支持标题和额外内容
- * - 可配置内边距、边框、阴影
- * - 支持悬停效果
- * - 可配置圆角大小
+ * 设计规范:
+ * - 圆角: 16px (统一)
+ * - 阴影: 柔和阴影，悬停时增强 + 蓝色光晕
+ * - 边框: 1px #E2E8F0 (Slate-200)
+ * - 背景: 白色
  *
  * @example
  * ```tsx
@@ -18,7 +18,7 @@
  */
 
 import { FC } from "react";
-import classNames from "classnames";
+import { clsx } from "clsx";
 import type { CardProps, CardHeaderProps, CardBodyProps } from "./types";
 
 /**
@@ -29,7 +29,7 @@ const CardHeader: FC<CardHeaderProps> = ({ title, extra, className }) => {
 
   return (
     <div
-      className={classNames(
+      className={clsx(
         "flex items-center justify-between",
         "px-4 py-3",
         "border-b border-gray-200",
@@ -54,15 +54,13 @@ const CardBody: FC<CardBodyProps> = ({
 }) => {
   const paddingClasses = {
     none: "",
-    small: "p-2",
+    small: "p-3",
     medium: "p-4",
     large: "p-6",
   };
 
   return (
-    <div className={classNames(paddingClasses[padding], className)}>
-      {children}
-    </div>
+    <div className={clsx(paddingClasses[padding], className)}>{children}</div>
   );
 };
 
@@ -75,9 +73,9 @@ export const Card: FC<CardProps> = ({
   extra,
   padding = "medium",
   bordered = true,
-  shadow = "sm",
+  shadow = "default",
   hoverable = false,
-  radius = "lg",
+  radius = "xl",
   className,
   onClick,
   ...rest
@@ -85,6 +83,7 @@ export const Card: FC<CardProps> = ({
   const shadowClasses = {
     none: "",
     sm: "shadow-sm",
+    default: "shadow-card", // 新的卡片阴影
     md: "shadow-md",
     lg: "shadow-lg",
   };
@@ -94,21 +93,23 @@ export const Card: FC<CardProps> = ({
     sm: "rounded-sm",
     md: "rounded-md",
     lg: "rounded-lg",
-    xl: "rounded-xl",
+    xl: "rounded-xl", // 16px - 默认
+    "2xl": "rounded-2xl",
   };
 
   const hasHeader = title || extra;
 
   return (
     <div
-      className={classNames(
+      className={clsx(
         "bg-white",
         radiusClasses[radius],
         shadowClasses[shadow],
         {
           "border border-gray-200": bordered,
-          "hover:shadow-md transition-shadow duration-150 cursor-pointer":
-            hoverable,
+          // 悬停效果: 阴影增强 + 蓝色光晕 + 轻微上移
+          "transition-all duration-200 ease-out cursor-pointer": hoverable,
+          "hover:shadow-card-hover hover:-translate-y-0.5": hoverable,
         },
         className
       )}

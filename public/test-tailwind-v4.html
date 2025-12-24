@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tailwind v4 配置测试</title>
+    <!-- 直接引用 Vite 处理的 CSS -->
+    <link rel="stylesheet" href="/src/index.css" />
+  </head>
+  <body class="p-8 bg-gray-50">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Tailwind v4 配置测试</h1>
+
+    <div class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4">
+        1. 标准 Tailwind 颜色
+      </h2>
+      <div class="flex gap-4">
+        <div class="w-24 h-24 bg-blue-500 rounded-lg"></div>
+        <div class="w-24 h-24 bg-red-500 rounded-lg"></div>
+        <div class="w-24 h-24 bg-green-500 rounded-lg"></div>
+      </div>
+
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 mt-8">
+        2. 自定义颜色（@theme 配置）
+      </h2>
+      <div class="flex gap-4">
+        <div class="w-24 h-24 bg-primary-400 rounded-lg"></div>
+        <div class="w-24 h-24 bg-secondary-400 rounded-lg"></div>
+        <div class="w-24 h-24 bg-accent-400 rounded-lg"></div>
+      </div>
+
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 mt-8">
+        3. 自定义阴影
+      </h2>
+      <div class="flex gap-4">
+        <div class="w-24 h-24 bg-white rounded-lg shadow-primary"></div>
+        <div class="w-24 h-24 bg-white rounded-lg shadow-secondary"></div>
+        <div class="w-24 h-24 bg-white rounded-lg shadow-accent"></div>
+      </div>
+
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 mt-8">4. 渐变背景</h2>
+      <div class="flex gap-4">
+        <div
+          class="w-24 h-24 bg-gradient-to-br from-primary-400 to-primary-500 rounded-lg"
+        ></div>
+        <div
+          class="w-24 h-24 bg-gradient-to-br from-secondary-400 to-secondary-500 rounded-lg"
+        ></div>
+        <div
+          class="w-24 h-24 bg-gradient-to-br from-accent-400 to-accent-500 rounded-lg"
+        ></div>
+      </div>
+
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 mt-8">5. 按钮测试</h2>
+      <div class="flex gap-4">
+        <button
+          class="px-6 py-3 bg-gradient-to-br from-primary-400 to-primary-500 text-white rounded-[22px] shadow-primary hover:shadow-primary-hover transition-all"
+        >
+          Primary Button
+        </button>
+        <button
+          class="px-6 py-3 bg-gradient-to-br from-secondary-400 to-secondary-500 text-white rounded-[22px] shadow-secondary hover:shadow-secondary-hover transition-all"
+        >
+          Secondary Button
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+      <p class="text-sm text-gray-700">
+        <strong>检查说明：</strong><br />
+        - 如果第 1 组（蓝红绿）显示正常 → Tailwind 基础工作正常<br />
+        - 如果第 2 组显示白色 → @theme 配置未生效<br />
+        - 如果第 3 组没有阴影 → 自定义阴影未生成<br />
+        - 如果第 4 组显示单色 → 渐变未工作<br />
+      </p>
+    </div>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
