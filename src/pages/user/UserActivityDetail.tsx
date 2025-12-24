@@ -16,6 +16,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import { Button } from "@/components/ui";
 import {
   getActivityById,
   UserActivityStatus,
@@ -91,11 +92,11 @@ const UserActivityDetail: FC = () => {
   const isFull = activity.currentParticipants >= activity.maxParticipants;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 响应式容器 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen pb-28 shadow-sm md:shadow-xl">
+    <div className="min-h-screen bg-gray-50 pt-safe-top">
+      {/* 响应式容器 - 增加顶部边距 */}
+      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen pb-32 shadow-sm md:shadow-xl md:mt-4 lg:mt-6 md:rounded-t-2xl">
         {/* 封面区域 */}
-        <div className="relative aspect-[4/3] lg:aspect-[21/9]">
+        <div className="relative aspect-[4/3] lg:aspect-[21/9] md:rounded-t-2xl overflow-hidden">
           <img
             src={activity.coverImage}
             alt={activity.title}
@@ -255,13 +256,13 @@ const UserActivityDetail: FC = () => {
           )}
         </div>
 
-        {/* 底部操作栏 */}
+        {/* 底部操作栏 - 增加底部安全距离 */}
         <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white border-t border-gray-100 px-4 py-4 md:px-6">
+          <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white border-t border-gray-100 px-4 pt-4 pb-6 md:px-6 md:pb-4">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsFavorited(!isFavorited)}
-                className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center"
+                className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
               >
                 <Heart
                   size={22}
@@ -270,7 +271,14 @@ const UserActivityDetail: FC = () => {
                   }
                 />
               </button>
-              <button
+              <Button
+                variant={
+                  activity.userStatus === "approved"
+                    ? "success"
+                    : activity.userStatus === "pending"
+                    ? "light"
+                    : "primary"
+                }
                 disabled={config.disabled}
                 onClick={() => {
                   if (activity.userStatus === "recruiting") {
@@ -279,17 +287,13 @@ const UserActivityDetail: FC = () => {
                     navigate(`/u/activities/${id}/match-result`);
                   }
                 }}
-                className={`flex-1 h-12 rounded-[22px] font-semibold text-sm transition-all ${
-                  config.btnStyle
-                } ${
-                  config.disabled ? "cursor-not-allowed" : "active:scale-[0.98]"
-                }`}
+                className="flex-1 h-12"
               >
                 {config.btnLabel}
-              </button>
+              </Button>
             </div>
-            {/* 底部安全区域 */}
-            <div className="h-6 md:h-4" />
+            {/* 底部安全区域 - iOS 底部条适配 */}
+            <div className="h-safe-bottom" />
           </div>
         </div>
       </div>

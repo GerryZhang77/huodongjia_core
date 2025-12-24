@@ -14,6 +14,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import { Button, Input } from "@/components/ui";
 import { getActivityById } from "@/mocks/data/user-activities";
 import dayjs from "dayjs";
 
@@ -166,43 +167,32 @@ const UserRegistration: FC = () => {
 
           {/* 姓名 */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              姓名 <span className="text-error-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                <User size={18} className="text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="请输入您的姓名"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                className="w-full h-12 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
-              />
-            </div>
+            <Input
+              label="姓名"
+              placeholder="请输入您的姓名"
+              value={formData.name}
+              onChange={(e) => handleInputChange("name", e.target.value)}
+              prefix={<User size={18} />}
+              required
+            />
           </div>
 
           {/* 手机号 */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              手机号 <span className="text-error-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                <Phone size={18} className="text-gray-400" />
-              </div>
-              <input
-                type="tel"
-                placeholder="请输入您的手机号"
-                value={formData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
-                className="w-full h-12 pl-10 pr-20 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
-              />
-              <button className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-primary-50 text-primary-500 text-xs font-medium rounded-full">
-                获取验证码
-              </button>
-            </div>
+            <Input
+              label="手机号"
+              type="tel"
+              placeholder="请输入您的手机号"
+              value={formData.phone}
+              onChange={(e) => handleInputChange("phone", e.target.value)}
+              prefix={<Phone size={18} />}
+              suffix={
+                <button className="px-3 py-1.5 bg-primary-50 text-primary-500 text-xs font-medium rounded-full whitespace-nowrap">
+                  获取验证码
+                </button>
+              }
+              required
+            />
           </div>
 
           {/* 性别 */}
@@ -297,17 +287,14 @@ const UserRegistration: FC = () => {
 
           {/* 紧急联系人 */}
           <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              紧急联系人（选填）
-            </label>
-            <input
+            <Input
+              label="紧急联系人（选填）"
               type="tel"
               placeholder="请输入紧急联系人电话"
               value={formData.emergencyContact}
               onChange={(e) =>
                 handleInputChange("emergencyContact", e.target.value)
               }
-              className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
             />
           </div>
 
@@ -336,7 +323,7 @@ const UserRegistration: FC = () => {
 
         {/* 底部操作栏 */}
         <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 py-3 md:px-6">
+          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 pt-3 pb-6 md:px-6 md:pb-4">
             <div className="flex items-center gap-4">
               {/* 价格信息 */}
               <div className="flex-shrink-0">
@@ -345,19 +332,16 @@ const UserRegistration: FC = () => {
               </div>
               
               {/* 提交按钮 */}
-              <button
+              <Button
                 onClick={handleSubmit}
-                disabled={!isFormValid || isSubmitting}
-                className={`flex-1 h-12 rounded-[22px] font-semibold text-sm transition-all ${
-                  isFormValid && !isSubmitting
-                    ? "bg-gradient-to-r from-primary-400 to-primary-500 text-white shadow-lg shadow-primary-400/30 hover:shadow-xl hover:shadow-primary-400/40 active:scale-[0.98]"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                }`}
+                disabled={!isFormValid}
+                loading={isSubmitting}
+                className="flex-1 h-12"
               >
-                {isSubmitting ? "提交中..." : "确认报名"}
-              </button>
+                确认报名
+              </Button>
             </div>
-            <div className="h-safe-area-bottom" />
+            <div className="h-safe-bottom" />
           </div>
         </div>
       </div>

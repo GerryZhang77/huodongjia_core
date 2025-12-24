@@ -17,6 +17,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { Button, Input, Textarea } from "@/components/ui";
 import { mockUserProfile } from "@/mocks/data/user-profile";
 
 // 兴趣标签选项
@@ -94,12 +95,12 @@ const UserEditProfile: FC = () => {
               </button>
               <h1 className="text-lg font-bold text-gray-900">编辑名片</h1>
             </div>
-            <button
+                        <Button
               onClick={handleSubmit}
-              className="px-4 py-1.5 bg-primary-500 text-white text-sm font-medium rounded-full"
+              size="small"
             >
               保存
-            </button>
+            </Button>
           </div>
         </header>
 
@@ -125,52 +126,36 @@ const UserEditProfile: FC = () => {
             <h3 className="text-sm font-semibold text-slate-900">基本信息</h3>
             
             {/* 姓名 */}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-              <User size={18} className="text-slate-400" />
-              <input
-                type="text"
-                placeholder="姓名"
-                value={formData.name}
-                onChange={(e) => updateField("name", e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-slate-400 outline-none"
-              />
-            </div>
+            <Input
+              placeholder="姓名"
+              value={formData.name}
+              onChange={(e) => updateField("name", e.target.value)}
+              prefix={<User size={18} />}
+            />
 
             {/* 职业 */}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-              <Briefcase size={18} className="text-slate-400" />
-              <input
-                type="text"
-                placeholder="职业"
-                value={formData.occupation}
-                onChange={(e) => updateField("occupation", e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-slate-400 outline-none"
-              />
-            </div>
+            <Input
+              placeholder="职业"
+              value={formData.occupation}
+              onChange={(e) => updateField("occupation", e.target.value)}
+              prefix={<Briefcase size={18} />}
+            />
 
             {/* 公司 */}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-              <Building2 size={18} className="text-slate-400" />
-              <input
-                type="text"
-                placeholder="公司"
-                value={formData.company}
-                onChange={(e) => updateField("company", e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-slate-400 outline-none"
-              />
-            </div>
+            <Input
+              placeholder="公司"
+              value={formData.company}
+              onChange={(e) => updateField("company", e.target.value)}
+              prefix={<Building2 size={18} />}
+            />
 
             {/* 城市 */}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-              <MapPin size={18} className="text-slate-400" />
-              <input
-                type="text"
-                placeholder="城市"
-                value={formData.city}
-                onChange={(e) => updateField("city", e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-slate-400 outline-none"
-              />
-            </div>
+            <Input
+              placeholder="城市"
+              value={formData.city}
+              onChange={(e) => updateField("city", e.target.value)}
+              prefix={<MapPin size={18} />}
+            />
           </div>
 
           {/* 联系方式 */}
@@ -178,40 +163,33 @@ const UserEditProfile: FC = () => {
             <h3 className="text-sm font-semibold text-slate-900">联系方式</h3>
             
             {/* 手机 */}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-              <Phone size={18} className="text-slate-400" />
-              <input
-                type="tel"
-                placeholder="手机号码"
-                value={formData.phone}
-                onChange={(e) => updateField("phone", e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-slate-400 outline-none"
-              />
-            </div>
+            <Input
+              type="tel"
+              placeholder="手机号码"
+              value={formData.phone}
+              onChange={(e) => updateField("phone", e.target.value)}
+              prefix={<Phone size={18} />}
+            />
 
             {/* 邮箱 */}
-            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-              <Mail size={18} className="text-slate-400" />
-              <input
-                type="email"
-                placeholder="邮箱地址"
-                value={formData.email}
-                onChange={(e) => updateField("email", e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-slate-400 outline-none"
-              />
-            </div>
+            <Input
+              type="email"
+              placeholder="邮箱地址"
+              value={formData.email}
+              onChange={(e) => updateField("email", e.target.value)}
+              prefix={<Mail size={18} />}
+            />
           </div>
 
           {/* 个人简介 */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-slate-900">个人简介</h3>
-            <textarea
+            <Textarea
               placeholder="介绍一下自己..."
               value={formData.bio}
               onChange={(e) => updateField("bio", e.target.value)}
               rows={3}
               maxLength={200}
-              className="w-full p-3 bg-slate-50 rounded-xl text-sm text-gray-900 placeholder:text-slate-400 outline-none resize-none"
             />
             <p className="text-xs text-slate-400 text-right">
               {formData.bio.length}/200
@@ -268,14 +246,15 @@ const UserEditProfile: FC = () => {
 
         {/* 底部保存按钮 */}
         <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 py-4 md:px-6">
-            <button
+          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 pt-4 pb-6 md:px-6 md:pb-4">
+            <Button
               onClick={handleSubmit}
-              className="w-full h-12 rounded-[22px] bg-gradient-to-r from-primary-400 to-primary-500 text-white font-semibold text-sm shadow-lg shadow-primary-400/30 hover:shadow-xl active:scale-[0.98] transition-all"
+              block
+              className="h-12"
             >
               保存名片
-            </button>
-            <div className="h-6 md:h-4" />
+            </Button>
+            <div className="h-safe-bottom" />
           </div>
         </div>
       </div>
