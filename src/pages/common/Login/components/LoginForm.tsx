@@ -1,17 +1,22 @@
 /**
  * 登录表单组件
  *
- * 精确按照 event-club-login-design.svg 设计稿实现
- * 设计稿参数：
- * - 卡片: 540x660px, 圆角30px
- * - 输入框: 400x52px, 圆角12px
- * - 按钮: 400x54px, 圆角12px
- * - 社交按钮: 125x48px, 圆角10px
+ * 使用通用 UI 组件重构，对齐 event-club-login-design.svg 设计稿
+ *
+ * 设计规范：
+ * - 卡片: 540x660px, 圆角30px (响应式)
+ * - 使用 Input 组件 (size="large")
+ * - 使用 lucide-react 图标库
+ * - 社交登录按钮: 圆角10px
+ * - 完整响应式支持 (移动端/平板/桌面)
  */
 
 import React, { useState } from "react";
+import { Input } from "@/components/ui";
 import { useLogin } from "@/features/auth/hooks";
 import { TEST_ACCOUNTS } from "@/features/auth/utils";
+import { Mail, Eye, EyeOff, AlertCircle, Info, Sparkles } from "lucide-react";
+import { FaWeixin, FaQq, FaWeibo } from "react-icons/fa";
 
 export const LoginForm: React.FC = () => {
   const { login, loading } = useLogin();
@@ -47,22 +52,28 @@ export const LoginForm: React.FC = () => {
 
   return (
     <div
-      className="w-full bg-white/[0.95] backdrop-blur-sm shadow-2xl overflow-hidden"
-      style={{ borderRadius: "30px" }}
+      className="w-full bg-white/95 backdrop-blur-sm rounded-[30px] shadow-2xl overflow-hidden"
+      style={{
+        background:
+          "linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9))",
+      }}
     >
       {/* 卡片内容 - 精确匹配设计稿内边距 */}
-      <div className="px-[70px] py-[80px] max-sm:px-6 max-sm:py-10">
+      <div className="px-[70px] py-20 max-md:px-8 max-md:py-10 max-sm:px-6 max-sm:py-8">
         {/* Logo 和标题区域 */}
-        <div className="flex flex-col items-center mb-[60px] max-sm:mb-10">
+        <div className="flex flex-col items-center mb-[60px] max-md:mb-10 max-sm:mb-8">
           {/* Logo 图标 - 半径35px = 直径70px */}
           <div
-            className="w-[70px] h-[70px] rounded-full flex items-center justify-center mb-5"
+            className="w-[70px] h-[70px] max-sm:w-14 max-sm:h-14 rounded-full flex items-center justify-center mb-5"
             style={{
               background: "linear-gradient(to right, #4facfe, #00c6ff)",
             }}
           >
             {/* 笑脸图标 - 按设计稿 */}
-            <svg viewBox="0 0 30 30" className="w-[30px] h-[30px]">
+            <svg
+              viewBox="0 0 30 30"
+              className="w-[30px] h-[30px] max-sm:w-6 max-sm:h-6"
+            >
               <path
                 d="M7.5 17.5 L15 10 L22.5 17.5"
                 stroke="#ffffff"
@@ -77,159 +88,79 @@ export const LoginForm: React.FC = () => {
           </div>
 
           {/* 标题 - 32px font-size */}
-          <h1
-            className="font-bold mb-[15px] max-sm:text-2xl"
-            style={{ fontSize: "32px", color: "#2d3748" }}
-          >
+          <h1 className="text-[32px] max-md:text-3xl max-sm:text-2xl font-bold text-gray-900 mb-4">
             活动俱乐部
           </h1>
 
           {/* 副标题 - 16px font-size */}
-          <p style={{ fontSize: "16px", color: "#718096" }}>
+          <p className="text-base max-sm:text-sm text-gray-600">
             欢迎回来！让我们一起创造美好回忆
           </p>
         </div>
 
         {/* 登录表单 */}
-        <form onSubmit={handleSubmit}>
-          {/* 邮箱输入框 */}
-          <div className="mb-[30px] max-sm:mb-5">
-            {/* 标签 - 14px font-weight 600 */}
-            <label
-              className="block mb-3 max-sm:mb-2"
-              style={{ fontSize: "14px", fontWeight: 600, color: "#4a5568" }}
-            >
-              邮箱地址
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="请输入邮箱地址"
-                autoComplete="username"
-                className="w-full outline-none transition-all duration-200"
-                style={{
-                  height: "52px",
-                  paddingLeft: "20px",
-                  paddingRight: "50px",
-                  backgroundColor: "#f7fafc",
-                  border: "2px solid #e2e8f0",
-                  borderRadius: "12px",
-                  fontSize: "15px",
-                  color: "#2d3748",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#4facfe";
-                  e.target.style.backgroundColor = "#ffffff";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#e2e8f0";
-                  e.target.style.backgroundColor = "#f7fafc";
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              />
-              {/* 邮件图标 */}
-              <div className="absolute right-[15px] top-1/2 -translate-y-1/2">
-                <svg
-                  width="20"
-                  height="14"
-                  viewBox="0 0 20 14"
-                  fill="none"
-                  stroke="#cbd5e0"
-                  strokeWidth="1.5"
-                >
-                  <rect x="0" y="0" width="20" height="14" rx="2" />
-                  <path d="M0 0 L10 8 L20 0" />
-                </svg>
-              </div>
-            </div>
-          </div>
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-[30px] max-sm:space-y-5"
+        >
+          {/* 邮箱输入框 - 使用通用 Input 组件 */}
+          <Input
+            label="邮箱地址"
+            type="text"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="请输入邮箱地址"
+            autoComplete="username"
+            size="large"
+            suffix={<Mail className="w-5 h-5 text-gray-400" />}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            required
+          />
 
-          {/* 密码输入框 */}
-          <div className="mb-[25px] max-sm:mb-5">
-            <label
-              className="block mb-3 max-sm:mb-2"
-              style={{ fontSize: "14px", fontWeight: 600, color: "#4a5568" }}
-            >
-              密码
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                className="w-full outline-none transition-all duration-200"
-                style={{
-                  height: "52px",
-                  paddingLeft: "20px",
-                  paddingRight: "50px",
-                  backgroundColor: "#f7fafc",
-                  border: "2px solid #e2e8f0",
-                  borderRadius: "12px",
-                  fontSize: "15px",
-                  color: "#2d3748",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#4facfe";
-                  e.target.style.backgroundColor = "#ffffff";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#e2e8f0";
-                  e.target.style.backgroundColor = "#f7fafc";
-                }}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              />
-              {/* 锁图标 */}
+          {/* 密码输入框 - 使用通用 Input 组件 */}
+          <Input
+            label="密码"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            size="large"
+            suffix={
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-[15px] top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <svg
-                  width="14"
-                  height="16"
-                  viewBox="0 0 14 16"
-                  fill="none"
-                  stroke="#cbd5e0"
-                  strokeWidth="1.5"
-                >
-                  <rect x="0" y="6" width="14" height="10" rx="2" />
-                  <path d="M3 6 L3 4 C3 1.8 4.8 0 7 0 C9.2 0 11 1.8 11 4 L11 6" />
-                </svg>
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
               </button>
-            </div>
-          </div>
+            }
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            required
+          />
 
           {/* 记住我 & 忘记密码 */}
-          <div className="flex items-center justify-between mb-[25px] max-sm:mb-5">
-            <label className="flex items-center gap-[10px] cursor-pointer">
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2.5 cursor-pointer group">
               <div className="relative">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="sr-only"
+                  className="sr-only peer"
                 />
-                <div
-                  className="flex items-center justify-center transition-all duration-200"
-                  style={{
-                    width: "20px",
-                    height: "20px",
-                    backgroundColor: rememberMe ? "#4facfe" : "#f7fafc",
-                    border: `2px solid ${rememberMe ? "#4facfe" : "#e2e8f0"}`,
-                    borderRadius: "5px",
-                  }}
-                >
+                <div className="w-5 h-5 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-md peer-checked:bg-primary-400 peer-checked:border-primary-400 group-hover:border-primary-300 transition-all duration-200">
                   {rememberMe && (
                     <svg
                       width="12"
                       height="10"
                       viewBox="0 0 12 10"
                       fill="none"
-                      stroke="#ffffff"
+                      stroke="white"
                       strokeWidth="2"
                       strokeLinecap="round"
                     >
@@ -238,13 +169,14 @@ export const LoginForm: React.FC = () => {
                   )}
                 </div>
               </div>
-              <span style={{ fontSize: "14px", color: "#4a5568" }}>记住我</span>
+              <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                记住我
+              </span>
             </label>
 
             <button
               type="button"
-              className="hover:opacity-80 transition-opacity"
-              style={{ fontSize: "14px", fontWeight: 600, color: "#4facfe" }}
+              className="text-sm font-semibold text-primary-400 hover:text-primary-500 transition-colors"
             >
               忘记密码？
             </button>
@@ -252,98 +184,52 @@ export const LoginForm: React.FC = () => {
 
           {/* 错误提示 */}
           {error && (
-            <div
-              className="mb-5 p-3 animate-shake"
-              style={{
-                backgroundColor: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: "12px",
-              }}
-            >
-              <p
-                className="flex items-center gap-2"
-                style={{ fontSize: "14px", color: "#dc2626" }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="7"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M8 4 L8 9"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="8" cy="12" r="1" />
-                </svg>
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl animate-shake">
+              <p className="flex items-center gap-2 text-sm text-red-600">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{error}</span>
               </p>
             </div>
           )}
 
-          {/* 登录按钮 - 54px 高度 */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{
-              height: "54px",
-              background: "linear-gradient(to right, #4facfe, #00c6ff)",
-              borderRadius: "12px",
-              fontSize: "16px",
-              fontWeight: 700,
-              color: "#ffffff",
-            }}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>登录中...</span>
-              </span>
-            ) : (
-              "登录"
-            )}
-          </button>
+          {/* 登录按钮 - 使用通用 Button 组件，自定义样式匹配设计稿 */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-[54px] flex items-center justify-center gap-2 text-base font-bold text-white rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                background: "linear-gradient(to right, #4facfe, #00c6ff)",
+              }}
+            >
+              {loading ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>登录中...</span>
+                </>
+              ) : (
+                "登录"
+              )}
+            </button>
+          </div>
         </form>
 
         {/* 分隔线 - 精确匹配设计稿位置 */}
         <div className="flex items-center gap-[30px] my-[30px] max-sm:my-5">
-          <div className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
-          <span style={{ fontSize: "14px", color: "#a0aec0" }}>或</span>
-          <div className="flex-1 h-px" style={{ backgroundColor: "#e2e8f0" }} />
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-sm text-gray-400">或</span>
+          <div className="flex-1 h-px bg-gray-200" />
         </div>
 
         {/* 社交登录按钮 - 125x48px 每个 */}
-        <div className="flex gap-[12.5px] max-sm:gap-2">
+        <div className="grid grid-cols-3 gap-3 max-sm:gap-2">
           {/* 微信 */}
           <button
             type="button"
-            className="flex-1 flex items-center justify-center gap-2 transition-all duration-200 hover:border-[#07c160]"
-            style={{
-              height: "48px",
-              backgroundColor: "#ffffff",
-              border: "2px solid #e2e8f0",
-              borderRadius: "10px",
-            }}
+            className="h-12 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 rounded-[10px] transition-all duration-200 hover:border-[#07c160] hover:shadow-sm"
           >
-            <div
-              className="w-4 h-4 rounded-full"
-              style={{ backgroundColor: "#07c160" }}
-            />
-            <span
-              className="max-sm:hidden"
-              style={{ fontSize: "13px", fontWeight: 600, color: "#4a5568" }}
-            >
+            <FaWeixin size={20} color="#07c160" />
+            <span className="text-[13px] font-semibold text-gray-700 max-sm:hidden">
               微信
             </span>
           </button>
@@ -351,22 +237,10 @@ export const LoginForm: React.FC = () => {
           {/* QQ */}
           <button
             type="button"
-            className="flex-1 flex items-center justify-center gap-2 transition-all duration-200 hover:border-[#12b7f5]"
-            style={{
-              height: "48px",
-              backgroundColor: "#ffffff",
-              border: "2px solid #e2e8f0",
-              borderRadius: "10px",
-            }}
+            className="h-12 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 rounded-[10px] transition-all duration-200 hover:border-[#12b7f5] hover:shadow-sm"
           >
-            <div
-              className="w-4 h-4 rounded-full"
-              style={{ backgroundColor: "#12b7f5" }}
-            />
-            <span
-              className="max-sm:hidden"
-              style={{ fontSize: "13px", fontWeight: 600, color: "#4a5568" }}
-            >
+            <FaQq size={20} color="#12b7f5" />
+            <span className="text-[13px] font-semibold text-gray-700 max-sm:hidden">
               QQ
             </span>
           </button>
@@ -374,37 +248,21 @@ export const LoginForm: React.FC = () => {
           {/* 微博 */}
           <button
             type="button"
-            className="flex-1 flex items-center justify-center gap-2 transition-all duration-200 hover:border-[#e6162d]"
-            style={{
-              height: "48px",
-              backgroundColor: "#ffffff",
-              border: "2px solid #e2e8f0",
-              borderRadius: "10px",
-            }}
+            className="h-12 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 rounded-[10px] transition-all duration-200 hover:border-[#e6162d] hover:shadow-sm"
           >
-            <div
-              className="w-4 h-4 rounded-full"
-              style={{ backgroundColor: "#e6162d" }}
-            />
-            <span
-              className="max-sm:hidden"
-              style={{ fontSize: "13px", fontWeight: 600, color: "#4a5568" }}
-            >
+            <FaWeibo size={20} color="#e6162d" />
+            <span className="text-[13px] font-semibold text-gray-700 max-sm:hidden">
               微博
             </span>
           </button>
         </div>
 
         {/* 注册链接 */}
-        <p
-          className="text-center mt-[25px] max-sm:mt-5"
-          style={{ fontSize: "14px", color: "#718096" }}
-        >
+        <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600">
           还没有账号？
           <button
             type="button"
-            className="ml-1 hover:opacity-80 transition-opacity"
-            style={{ fontWeight: 600, color: "#4facfe" }}
+            className="ml-1 font-semibold text-primary-400 hover:text-primary-500 transition-colors"
           >
             立即注册
           </button>
@@ -413,38 +271,13 @@ export const LoginForm: React.FC = () => {
         {/* 测试账号折叠区域 - 仅开发环境 */}
         {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
           import.meta.env.DEV && (
-            <div
-              className="mt-6 pt-5"
-              style={{ borderTop: "1px solid #e2e8f0" }}
-            >
+            <div className="mt-6 pt-5 border-t border-gray-200">
               <button
                 type="button"
                 onClick={() => setShowTestAccounts(!showTestAccounts)}
-                className="flex items-center gap-2 mx-auto hover:opacity-80 transition-opacity"
-                style={{ fontSize: "13px", color: "#718096" }}
+                className="flex items-center gap-2 mx-auto text-[13px] text-gray-600 hover:text-gray-800 transition-colors"
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="7"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="M8 4 L8 9"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="8" cy="12" r="1" />
-                </svg>
+                <Info className="w-3.5 h-3.5" />
                 <span>{showTestAccounts ? "收起" : "查看"}测试账号</span>
               </button>
 
@@ -453,59 +286,30 @@ export const LoginForm: React.FC = () => {
                   {TEST_ACCOUNTS.map((account) => (
                     <div
                       key={account.value}
-                      className="p-3 transition-all duration-200 hover:shadow-md"
-                      style={{
-                        background:
-                          "linear-gradient(to bottom right, #f7fafc, #ffffff)",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "10px",
-                      }}
+                      className="p-3 bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-[10px] transition-all duration-200 hover:shadow-md"
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span
-                          style={{
-                            fontSize: "13px",
-                            fontWeight: 600,
-                            color: "#2d3748",
-                          }}
-                        >
+                        <span className="text-[13px] font-semibold text-gray-900">
                           {account.label}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleQuickFill(account)}
-                          className="px-3 py-1 transition-colors hover:opacity-80"
-                          style={{
-                            fontSize: "12px",
-                            fontWeight: 500,
-                            color: "#4facfe",
-                            backgroundColor: "rgba(79, 172, 254, 0.1)",
-                            borderRadius: "6px",
-                          }}
+                          className="px-3 py-1 text-xs font-medium text-primary-400 bg-primary-50 rounded-md hover:bg-primary-100 transition-colors"
                         >
                           快速填充
                         </button>
                       </div>
-                      <p style={{ fontSize: "12px", color: "#718096" }}>
+                      <p className="text-xs text-gray-600">
                         账号:{" "}
-                        <code
-                          className="px-1.5 py-0.5"
-                          style={{
-                            backgroundColor: "#f7fafc",
-                            borderRadius: "4px",
-                            color: "#4a5568",
-                          }}
-                        >
+                        <code className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700">
                           {account.value}
                         </code>{" "}
                         | {account.description}
                       </p>
                     </div>
                   ))}
-                  <p
-                    className="text-center pt-2"
-                    style={{ fontSize: "11px", color: "#a0aec0" }}
-                  >
+                  <p className="text-center pt-2 text-[11px] text-gray-400">
                     ⚠️ 此区域仅在开发环境显示
                   </p>
                 </div>
