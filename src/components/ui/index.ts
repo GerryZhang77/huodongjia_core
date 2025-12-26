@@ -50,3 +50,13 @@ export type {
   TagVariant,
   TagSize,
 } from "./Tag/types";
+
+// 反馈组件
+export { Modal } from "./Modal";
+export type { ModalProps } from "./Modal/types";
+
+export { Dialog } from "./Dialog";
+export type { DialogProps, DialogType, DialogConfig } from "./Dialog/types";
+
+export { Drawer } from "./Drawer";
+export type { DrawerProps, DrawerPlacement } from "./Drawer/types";

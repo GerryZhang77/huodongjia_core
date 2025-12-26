@@ -3,7 +3,8 @@
  * 简洁现代的个人资料展示
  */
 
-import { FC } from "react";
+import { FC, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Edit3,
   MapPin,
@@ -18,9 +19,12 @@ import {
 import { UserLayout } from "@/components/layout/UserLayout";
 import {
   getUserProfile,
+  updateUserProfile,
   tagColorMap,
   InterestTag,
+  UserProfile,
 } from "@/mocks/data/user-profile";
+import { EditInterestsModal } from "./EditInterestsModal";
 
 // 标签组件
 const TagChip: FC<{ tag: InterestTag }> = ({ tag }) => {
@@ -61,8 +65,77 @@ const MenuItem: FC<{
   </button>
 );
 
+// 标签颜色类型池（用于随机分配）
+const TAG_COLOR_TYPES: InterestTag["colorType"][] = [
+  "primary",
+  "secondary",
+  "accent",
+  "warning",
+  "default",
+];
+
+// 获取随机颜色类型
+const getRandomColorType = (): InterestTag["colorType"] => {
+  return TAG_COLOR_TYPES[Math.floor(Math.random() * TAG_COLOR_TYPES.length)];
+};
+
 const UserProfileCards: FC = () => {
-  const profile = getUserProfile();
+  const navigate = useNavigate();
+
+  // 本地状态：存储用户资料数据
+  const [profile, setProfile] = useState<UserProfile>(getUserProfile());
+  const [showEditInterests, setShowEditInterests] = useState(false);
+
+  // 保存兴趣标签
+  const handleSaveInterests = (tags: string[]) => {
+    // 1. 构建新的标签数据（添加 id 和颜色类型）
+    const newInterestTags: InterestTag[] = tags.map((name, index) => ({
+      id: `tag_${Date.now()}_${index}`, // 生成唯一 ID
+      name,
+      colorType: getRandomColorType(), // 随机分配颜色
+    }));
+
+    // 2. 更新本地 state（立即响应 UI）
+    const updatedProfile = {
+      ...profile,
+      interestTags: newInterestTags,
+    };
+    setProfile(updatedProfile);
+
+    // 3. 同步更新 mock 数据（保持数据一致性）
+    updateUserProfile({ interestTags: newInterestTags });
+
+    // TODO: 迁移到真实 API 时的替换步骤
+    // ============================================
+    // 第一步：引入 API 服务
+    // import { userApi } from '@/services/api/user';
+    //
+    // 第二步：替换上面的 updateUserProfile 调用为：
+    // try {
+    //   const response = await userApi.updateInterestTags({
+    //     userId: profile.id,
+    //     tags: tags, // 只传标签名称数组即可
+    //   });
+    //
+    //   // API 返回完整的标签数据（包含 id 和 colorType）
+    //   setProfile({
+    //     ...profile,
+    //     interestTags: response.data.interestTags,
+    //   });
+    //
+    //   // 可选：显示成功提示
+    //   // toast.success('兴趣标签更新成功');
+    // } catch (error) {
+    //   console.error('更新兴趣标签失败:', error);
+    //   // 显示错误提示
+    //   // toast.error('更新失败，请重试');
+    //   // 恢复原始数据
+    //   // setProfile(profile);
+    // }
+    // ============================================
+
+    console.log("已保存兴趣标签:", newInterestTags);
+  };
 
   return (
     <UserLayout bgColor="bg-gray-100">
@@ -70,7 +143,10 @@ const UserProfileCards: FC = () => {
       <div className="bg-gradient-to-br from-primary-400 to-primary-500 pt-4 pb-20 px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-white">我的名片</h1>
-          <button className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+          <button
+            onClick={() => navigate("/u/settings")}
+            className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 active:bg-white/40 transition-colors"
+          >
             <Settings size={18} className="text-white" />
           </button>
         </div>
@@ -114,7 +190,10 @@ const UserProfileCards: FC = () => {
 
             {/* 操作按钮 */}
             <div className="flex gap-2 mt-4">
-              <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary-500 text-white rounded-xl text-sm font-medium hover:bg-primary-600 transition-colors">
+              <button
+                onClick={() => navigate("/u/cards/edit")}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary-500 text-white rounded-xl text-sm font-medium hover:bg-primary-600 transition-colors"
+              >
                 <Edit3 size={14} />
                 编辑名片
               </button>
@@ -143,7 +222,10 @@ const UserProfileCards: FC = () => {
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-900">兴趣标签</h3>
-            <button className="text-xs text-primary-500 font-medium">
+            <button
+              onClick={() => setShowEditInterests(true)}
+              className="text-xs text-primary-500 font-medium"
+            >
               编辑
             </button>
           </div>
@@ -162,12 +244,35 @@ const UserProfileCards: FC = () => {
             icon={Calendar}
             label="我的活动记录"
             color="text-primary-500"
+            onClick={() => navigate("/u/activities/history")}
           />
-          <MenuItem icon={Users} label="我的好友" color="text-green-500" />
-          <MenuItem icon={Heart} label="我的收藏" color="text-pink-500" />
-          <MenuItem icon={Settings} label="账号设置" />
+          <MenuItem
+            icon={Users}
+            label="我的好友"
+            color="text-green-500"
+            onClick={() => navigate("/u/friends")}
+          />
+          <MenuItem
+            icon={Heart}
+            label="我的收藏"
+            color="text-pink-500"
+            onClick={() => navigate("/u/favorites")}
+          />
+          <MenuItem
+            icon={Settings}
+            label="账号设置"
+            onClick={() => navigate("/u/settings")}
+          />
         </div>
       </div>
+
+      {/* 编辑兴趣标签弹窗 */}
+      <EditInterestsModal
+        open={showEditInterests}
+        onClose={() => setShowEditInterests(false)}
+        currentTags={profile.interestTags}
+        onSave={handleSaveInterests}
+      />
     </UserLayout>
   );
 };

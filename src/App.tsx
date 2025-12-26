@@ -53,6 +53,9 @@ const UserSettings = lazy(() => import("./pages/user/UserSettings"));
 const UserFavorites = lazy(() => import("./pages/user/UserFavorites"));
 const UserFriends = lazy(() => import("./pages/user/UserFriends"));
 const UserEditProfile = lazy(() => import("./pages/user/UserEditProfile"));
+const UserActivityHistory = lazy(
+  () => import("./pages/user/UserActivityHistory")
+);
 
 // 开发调试页面 - 懒加载
 const ComponentShowcase = lazy(() => import("./pages/dev/ComponentShowcase"));
@@ -264,6 +267,16 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserEditProfile />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 活动记录页 */}
+                <Route
+                  path="/u/activities/history"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserActivityHistory />
                     </ProtectedRoute>
                   }
                 />
