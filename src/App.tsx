@@ -261,6 +261,12 @@ function App() {
                   }
                 />
 
+                {/* 个人资料 - 重定向到名片页 */}
+                <Route
+                  path="/u/profile"
+                  element={<Navigate to="/u/cards" replace />}
+                />
+
                 {/* 编辑名片页 */}
                 <Route
                   path="/u/cards/edit"

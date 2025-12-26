@@ -3,7 +3,7 @@
  * 简洁现代的个人资料展示
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Edit3,
@@ -25,6 +25,7 @@ import {
   UserProfile,
 } from "@/mocks/data/user-profile";
 import { EditInterestsModal } from "./EditInterestsModal";
+import { eventBus, EVENTS } from "@/utils/eventBus";
 
 // 标签组件
 const TagChip: FC<{ tag: InterestTag }> = ({ tag }) => {
@@ -85,6 +86,24 @@ const UserProfileCards: FC = () => {
   // 本地状态：存储用户资料数据
   const [profile, setProfile] = useState<UserProfile>(getUserProfile());
   const [showEditInterests, setShowEditInterests] = useState(false);
+
+  // 监听资料更新事件 - 实现跨页面数据同步
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      // 重新获取最新数据
+      const updatedProfile = getUserProfile();
+      setProfile(updatedProfile);
+      console.log("资料已更新，重新加载数据");
+    };
+
+    // 注册事件监听
+    eventBus.on(EVENTS.PROFILE_UPDATED, handleProfileUpdate);
+
+    // 清理函数：组件卸载时移除监听
+    return () => {
+      eventBus.off(EVENTS.PROFILE_UPDATED, handleProfileUpdate);
+    };
+  }, []);
 
   // 保存兴趣标签
   const handleSaveInterests = (tags: string[]) => {

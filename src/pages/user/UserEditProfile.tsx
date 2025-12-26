@@ -16,9 +16,15 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { Toast } from "antd-mobile";
 import { Button, Input, Textarea } from "@/components/ui";
-import { mockUserProfile } from "@/mocks/data/user-profile";
+import {
+  mockUserProfile,
+  updateUserProfile,
+  InterestTag,
+} from "@/mocks/data/user-profile";
 import { UserLayout } from "@/components/layout/UserLayout";
+import { eventBus, EVENTS } from "@/utils/eventBus";
 
 // 兴趣标签选项
 const interestOptions = [
@@ -77,9 +83,95 @@ const UserEditProfile: FC = () => {
 
   // 提交表单
   const handleSubmit = () => {
-    // TODO: 调用API保存数据
-    console.log("保存表单数据:", formData);
-    navigate(-1);
+    try {
+      // 1. 构建新的兴趣标签数据（添加 id 和随机颜色）
+      const TAG_COLOR_TYPES: InterestTag["colorType"][] = [
+        "primary",
+        "secondary",
+        "accent",
+        "warning",
+        "default",
+      ];
+      const newInterestTags: InterestTag[] = formData.interests.map(
+        (name, index) => ({
+          id: `tag_${Date.now()}_${index}`,
+          name,
+          colorType:
+            TAG_COLOR_TYPES[Math.floor(Math.random() * TAG_COLOR_TYPES.length)],
+        })
+      );
+
+      // 2. 更新 mock 数据（Mock 模式）
+      updateUserProfile({
+        name: formData.name,
+        occupation: formData.occupation,
+        company: formData.company,
+        city: formData.city,
+        bio: formData.bio,
+        interestTags: newInterestTags,
+        contact: {
+          phone: formData.phone,
+          email: formData.email,
+        },
+      });
+
+      // 3. 触发全局事件，通知其他组件刷新数据
+      eventBus.emit(EVENTS.PROFILE_UPDATED, {
+        timestamp: Date.now(),
+      });
+
+      // 4. 显示成功提示
+      Toast.show({
+        icon: "success",
+        content: "保存成功",
+      });
+
+      // 5. 返回上一页
+      setTimeout(() => {
+        navigate(-1);
+      }, 300);
+
+      // TODO: 迁移到真实 API 时的替换步骤
+      // ============================================
+      // 第一步：引入 API hooks
+      // import { useUpdateProfile } from '@/features/user/profile/hooks';
+      //
+      // 第二步：在组件中使用 mutation
+      // const { mutate: updateProfile, isPending } = useUpdateProfile();
+      //
+      // 第三步：替换上面的同步代码为：
+      // updateProfile(
+      //   {
+      //     name: formData.name,
+      //     occupation: formData.occupation,
+      //     company: formData.company,
+      //     city: formData.city,
+      //     bio: formData.bio,
+      //     interests: formData.interests, // 只传标签名称
+      //     contact: {
+      //       phone: formData.phone,
+      //       email: formData.email,
+      //     },
+      //   },
+      //   {
+      //     onSuccess: () => {
+      //       Toast.show({ icon: 'success', content: '保存成功' });
+      //       setTimeout(() => navigate(-1), 300);
+      //     },
+      //     onError: (error) => {
+      //       Toast.show({ icon: 'fail', content: '保存失败，请重试' });
+      //       console.error('更新失败:', error);
+      //     },
+      //   }
+      // );
+      // ============================================
+    } catch (error) {
+      console.error("保存失败:", error);
+      Toast.show({
+        icon: "fail",
+        content: "保存失败，请重试",
+      });
+    }
   };
 
   return (
@@ -89,7 +181,7 @@ const UserEditProfile: FC = () => {
       showBreadcrumb={true}
       breadcrumbItems={[
         { label: "首页", path: "/u/home" },
-        { label: "个人资料", path: "/u/profile" },
+        { label: "个人名片", path: "/u/cards" },
         { label: "编辑名片" },
       ]}
       topBarRightContent={
@@ -98,7 +190,8 @@ const UserEditProfile: FC = () => {
         </Button>
       }
     >
-      <div className="md:py-6 lg:py-8 pb-24">
+      {/* 页面内容 - 桌面端限制宽度并居中 */}
+      <div className="lg:max-w-2xl lg:mx-auto">
         {/* 头像区域 */}
         <div className="flex flex-col items-center py-6 bg-gradient-to-b from-slate-50 to-white">
           <div className="relative">
@@ -237,15 +330,12 @@ const UserEditProfile: FC = () => {
                 ))}
             </div>
           </div>
-        </div>
 
-        {/* 底部保存按钮 */}
-        <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 pt-4 pb-6 md:px-6 md:pb-4">
+          {/* 底部保存按钮 - 在表单内容流中，自然对齐 */}
+          <div className="mt-8 pt-4 border-t border-gray-100">
             <Button onClick={handleSubmit} block className="h-12">
               保存名片
             </Button>
-            <div className="h-safe-bottom" />
           </div>
         </div>
       </div>
