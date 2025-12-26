@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build:mock",
+  "buildCommand": "npm run build:staging",
   "rewrites": [
     {
       "source": "/api/:path*",
