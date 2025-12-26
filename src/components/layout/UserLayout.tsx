@@ -8,13 +8,23 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Home, CreditCard, Bell } from "lucide-react";
 import { getUnreadCount } from "@/mocks/data/user-notifications";
 import { DesktopSidebar } from "./DesktopSidebar";
+import { TopBar } from "./TopBar";
+import { BreadcrumbItem } from "./types";
 
 interface UserLayoutProps {
   children: ReactNode;
   /** 是否显示导航 (移动端 TabBar / 桌面端 Sidebar) */
   showTabBar?: boolean;
+  /** 是否显示顶部栏 */
+  showTopBar?: boolean;
+  /** 是否显示面包屑 */
+  showBreadcrumb?: boolean;
+  /** 面包屑数据 */
+  breadcrumbItems?: BreadcrumbItem[];
   /** 页面背景色 */
   bgColor?: string;
+  /** 自定义 TopBar 右侧内容 */
+  topBarRightContent?: ReactNode;
 }
 
 interface TabItem {
@@ -34,7 +44,11 @@ interface TabItem {
 export const UserLayout: FC<UserLayoutProps> = ({
   children,
   showTabBar = true,
+  showTopBar = false,
+  showBreadcrumb = false,
+  breadcrumbItems = [],
   bgColor = "bg-gray-50",
+  topBarRightContent,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,7 +92,18 @@ export const UserLayout: FC<UserLayoutProps> = ({
         {/* 桌面端内容区 */}
         <div className="flex-1 min-h-screen">
           <div className="max-w-7xl mx-auto">
-            <main className="bg-white min-h-screen">{children}</main>
+            <main className="bg-white min-h-screen">
+              {/* 顶部栏 */}
+              {showTopBar && (
+                <TopBar
+                  showBreadcrumb={showBreadcrumb}
+                  breadcrumbItems={breadcrumbItems}
+                  showNotification={true}
+                  rightContent={topBarRightContent}
+                />
+              )}
+              {children}
+            </main>
           </div>
         </div>
       </div>
@@ -87,6 +112,16 @@ export const UserLayout: FC<UserLayoutProps> = ({
       <div className="lg:hidden">
         {/* 响应式容器 - 移动端全宽，平板居中 */}
         <div className="max-w-lg md:max-w-2xl mx-auto min-h-screen flex flex-col bg-white shadow-sm md:shadow-xl">
+          {/* 顶部栏 */}
+          {showTopBar && (
+            <TopBar
+              showBreadcrumb={showBreadcrumb}
+              breadcrumbItems={breadcrumbItems}
+              showNotification={true}
+              rightContent={topBarRightContent}
+            />
+          )}
+
           {/* 主内容区域 */}
           <main className={`flex-1 ${showTabBar ? "pb-16" : ""}`}>
             {children}

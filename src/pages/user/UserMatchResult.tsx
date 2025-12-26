@@ -13,6 +13,7 @@ import {
   MessageCircle,
   AlertCircle,
 } from "lucide-react";
+import { UserLayout } from "@/components/layout/UserLayout";
 import { getActivityById } from "@/mocks/data/user-activities";
 import dayjs from "dayjs";
 
@@ -98,33 +99,37 @@ const UserMatchResult: FC = () => {
 
   if (!activity) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <AlertCircle size={40} className="text-gray-300 mb-3" />
-        <p className="text-gray-500 text-sm mb-4">活动不存在</p>
-        <button
-          onClick={() => navigate("/u/home")}
-          className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
-        >
-          返回首页
-        </button>
-      </div>
+      <UserLayout showTabBar={true} showTopBar={true}>
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+          <AlertCircle size={40} className="text-gray-300 mb-3" />
+          <p className="text-gray-500 text-sm mb-4">活动不存在</p>
+          <button
+            onClick={() => navigate("/u/home")}
+            className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
+          >
+            返回首页
+          </button>
+        </div>
+      </UserLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 响应式容器 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-5xl mx-auto bg-white min-h-screen shadow-sm md:shadow-xl">
+    <UserLayout
+      showTabBar={true}
+      showTopBar={true}
+      showBreadcrumb={true}
+      breadcrumbItems={[
+        { label: "首页", path: "/u/home" },
+        { label: activity.title, path: `/u/activities/${id}` },
+        { label: "匹配结果" },
+      ]}
+      bgColor="bg-gray-50"
+    >
+      {/* 页面内容 */}
+      <div className="min-h-screen">
         {/* 紫色渐变头部 */}
-        <header className="bg-gradient-to-br from-accent-400 to-accent-500 pt-12 pb-24 px-4 md:px-6 relative">
-          {/* 返回按钮 */}
-          <button
-            onClick={() => navigate(-1)}
-            className="absolute top-12 left-4 w-9 h-9 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center"
-          >
-            <ArrowLeft size={18} className="text-white" />
-          </button>
-
+        <header className="bg-gradient-to-br from-accent-400 to-accent-500 pt-6 pb-24 px-4 md:px-6 relative">
           {/* 标题 */}
           <div className="text-center">
             <h1 className="text-lg font-bold text-white">我的分组</h1>
@@ -295,7 +300,7 @@ const UserMatchResult: FC = () => {
           <div className="h-safe-area-bottom" />
         </div>
       </div>
-    </div>
+    </UserLayout>
   );
 };
 

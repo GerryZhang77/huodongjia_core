@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Button, Input, Checkbox } from "@/components/ui";
+import { UserLayout } from "@/components/layout/UserLayout";
 import { getActivityById } from "@/mocks/data/user-activities";
 import dayjs from "dayjs";
 
@@ -73,16 +74,18 @@ const UserRegistration: FC = () => {
 
   if (!activity) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <AlertCircle size={40} className="text-gray-300 mb-3" />
-        <p className="text-gray-500 text-sm mb-4">活动不存在</p>
-        <button
-          onClick={() => navigate("/u/home")}
-          className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
-        >
-          返回首页
-        </button>
-      </div>
+      <UserLayout showTabBar={true} showTopBar={true}>
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+          <AlertCircle size={40} className="text-gray-300 mb-3" />
+          <p className="text-gray-500 text-sm mb-4">活动不存在</p>
+          <button
+            onClick={() => navigate("/u/home")}
+            className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
+          >
+            返回首页
+          </button>
+        </div>
+      </UserLayout>
     );
   }
 
@@ -122,25 +125,19 @@ const UserRegistration: FC = () => {
     formData.name && formData.phone && formData.gender && formData.agreed;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 响应式容器 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white min-h-screen shadow-sm md:shadow-xl">
-        {/* 顶部导航 */}
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-          <div className="flex items-center h-[52px] px-4">
-            <button
-              type="button"
-              onClick={handleGoBack}
-              className="w-9 h-9 -ml-2 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
-            >
-              <ArrowLeft size={20} className="text-gray-600" />
-            </button>
-            <h1 className="flex-1 text-center text-base font-bold text-gray-900 -ml-9">
-              活动报名
-            </h1>
-          </div>
-        </header>
-
+    <UserLayout
+      showTabBar={true}
+      showTopBar={true}
+      showBreadcrumb={true}
+      breadcrumbItems={[
+        { label: "首页", path: "/u/home" },
+        { label: activity.title, path: `/u/activities/${id}` },
+        { label: "报名" },
+      ]}
+      bgColor="bg-gray-50"
+    >
+      {/* 页面内容 */}
+      <div className="min-h-screen">
         {/* 活动预览卡片 */}
         <div className="px-4 pt-4 md:px-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-3 flex gap-3 shadow-sm">
@@ -355,7 +352,7 @@ const UserRegistration: FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </UserLayout>
   );
 };
 

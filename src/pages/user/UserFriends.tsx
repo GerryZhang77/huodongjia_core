@@ -6,13 +6,13 @@
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   Search,
   UserPlus,
   MessageCircle,
   Users,
   MoreHorizontal,
 } from "lucide-react";
+import { UserLayout } from "@/components/layout/UserLayout";
 
 // Mock 好友数据
 const mockFriends = [
@@ -87,27 +87,18 @@ const UserFriends: FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* 响应式容器 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen shadow-sm md:shadow-lg">
-        {/* 顶部导航栏 */}
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-          <div className="flex items-center justify-between px-4 md:px-6 pt-12 md:pt-6 pb-4">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate(-1)}
-                className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mr-3"
-              >
-                <ArrowLeft size={18} className="text-gray-600" />
-              </button>
-              <h1 className="text-lg font-bold text-gray-900">我的好友</h1>
-            </div>
-            <button className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center">
-              <UserPlus size={18} className="text-primary-500" />
-            </button>
-          </div>
-        </header>
-
+    <UserLayout
+      showTabBar={true}
+      showTopBar={true}
+      showBreadcrumb={true}
+      breadcrumbItems={[{ label: "首页", path: "/u/home" }, { label: "好友" }]}
+      topBarRightContent={
+        <button className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center hover:bg-primary-100 transition-colors">
+          <UserPlus size={18} className="text-primary-400" />
+        </button>
+      }
+    >
+      <div className="md:py-6 lg:py-8">
         {/* 搜索框 */}
         <div className="px-4 md:px-6 py-3 bg-white">
           <div className="h-10 rounded-full bg-slate-100 flex items-center px-4 gap-2">
@@ -186,7 +177,7 @@ const UserFriends: FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </UserLayout>
   );
 };
 

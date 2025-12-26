@@ -54,12 +54,18 @@ export const DesktopSidebar: FC = () => {
     <aside className="hidden lg:flex lg:flex-col w-64 bg-white border-r border-gray-100 h-screen sticky top-0">
       {/* Logo 和用户信息 */}
       <div className="p-6 border-b border-gray-100">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-accent-400 rounded-xl flex items-center justify-center">
+        <button
+          onClick={() => navigate("/u/home")}
+          className="flex items-center gap-3 mb-4 group transition-transform duration-150 active:scale-95"
+          aria-label="返回首页"
+        >
+          <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-accent-400 rounded-xl flex items-center justify-center group-hover:shadow-lg group-hover:shadow-primary-400/30 transition-shadow duration-200">
             <span className="text-white font-bold text-lg">活</span>
           </div>
-          <h1 className="text-lg font-bold text-gray-900">活动家</h1>
-        </div>
+          <h1 className="text-lg font-bold text-gray-900 group-hover:text-primary-400 transition-colors duration-200">
+            活动家
+          </h1>
+        </button>
         {user && (
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-100 to-accent-100 rounded-full flex items-center justify-center">

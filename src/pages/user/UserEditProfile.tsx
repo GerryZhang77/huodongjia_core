@@ -6,7 +6,6 @@
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   Camera,
   User,
   Briefcase,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button, Input, Textarea } from "@/components/ui";
 import { mockUserProfile } from "@/mocks/data/user-profile";
+import { UserLayout } from "@/components/layout/UserLayout";
 
 // 兴趣标签选项
 const interestOptions = [
@@ -83,27 +83,22 @@ const UserEditProfile: FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* 响应式容器 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white min-h-screen shadow-sm md:shadow-lg pb-24">
-        {/* 顶部导航栏 */}
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-          <div className="flex items-center justify-between px-4 md:px-6 pt-12 md:pt-6 pb-4">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate(-1)}
-                className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mr-3"
-              >
-                <ArrowLeft size={18} className="text-gray-600" />
-              </button>
-              <h1 className="text-lg font-bold text-gray-900">编辑名片</h1>
-            </div>
-            <Button onClick={handleSubmit} size="small">
-              保存
-            </Button>
-          </div>
-        </header>
-
+    <UserLayout
+      showTabBar={true}
+      showTopBar={true}
+      showBreadcrumb={true}
+      breadcrumbItems={[
+        { label: "首页", path: "/u/home" },
+        { label: "个人资料", path: "/u/profile" },
+        { label: "编辑名片" },
+      ]}
+      topBarRightContent={
+        <Button onClick={handleSubmit} size="small">
+          保存
+        </Button>
+      }
+    >
+      <div className="md:py-6 lg:py-8 pb-24">
         {/* 头像区域 */}
         <div className="flex flex-col items-center py-6 bg-gradient-to-b from-slate-50 to-white">
           <div className="relative">
@@ -254,7 +249,7 @@ const UserEditProfile: FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </UserLayout>
   );
 };
 

@@ -19,6 +19,7 @@ import {
   Moon,
   Volume2,
 } from "lucide-react";
+import { UserLayout } from "@/components/layout/UserLayout";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 
 // 设置项类型
@@ -163,22 +164,13 @@ const UserSettings: FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* 响应式容器 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white min-h-screen shadow-sm md:shadow-lg">
-        {/* 顶部导航栏 */}
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-          <div className="flex items-center px-4 md:px-6 pt-12 md:pt-6 pb-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mr-3"
-            >
-              <ArrowLeft size={18} className="text-gray-600" />
-            </button>
-            <h1 className="text-lg font-bold text-gray-900">设置</h1>
-          </div>
-        </header>
-
+    <UserLayout
+      showTabBar={true}
+      showTopBar={true}
+      showBreadcrumb={true}
+      breadcrumbItems={[{ label: "首页", path: "/u/home" }, { label: "设置" }]}
+    >
+      <div className="md:py-6 lg:py-8">
         {/* 设置列表 */}
         <div className="px-4 md:px-6 py-4 space-y-6">
           {settingGroups.map((group, groupIndex) => (
@@ -265,7 +257,7 @@ const UserSettings: FC = () => {
           <p className="text-xs text-slate-300">活动家 v1.0.0</p>
         </div>
       </div>
-    </div>
+    </UserLayout>
   );
 };
 

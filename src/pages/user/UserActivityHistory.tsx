@@ -5,8 +5,9 @@
 
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { ActivityCard } from "@/components/business/ActivityCard";
+import { UserLayout } from "@/components/layout/UserLayout";
 import {
   mockUserActivities,
   UserActivity,
@@ -59,24 +60,16 @@ const UserActivityHistory: FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* 响应式容器 */}
-      <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen shadow-sm md:shadow-lg">
-        {/* 顶部导航栏 */}
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-          <div className="flex items-center justify-between px-4 md:px-6 pt-12 md:pt-6 pb-4">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate(-1)}
-                className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mr-3"
-              >
-                <ArrowLeft size={18} className="text-gray-600" />
-              </button>
-              <h1 className="text-lg font-bold text-gray-900">我的活动记录</h1>
-            </div>
-          </div>
-        </header>
-
+    <UserLayout
+      showTabBar={true}
+      showTopBar={true}
+      showBreadcrumb={true}
+      breadcrumbItems={[
+        { label: "首页", path: "/u/home" },
+        { label: "活动记录" },
+      ]}
+    >
+      <div className="md:py-6 lg:py-8">
         {/* Tab 切换 */}
         <div className="px-4 md:px-6 py-2 bg-white border-b border-slate-100">
           <div className="flex gap-6 overflow-x-auto scrollbar-hide">
@@ -129,7 +122,7 @@ const UserActivityHistory: FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </UserLayout>
   );
 };
 
