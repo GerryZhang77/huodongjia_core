@@ -136,8 +136,8 @@ const UserRegistration: FC = () => {
       ]}
       bgColor="bg-gray-50"
     >
-      {/* 页面内容 */}
-      <div className="min-h-screen">
+      {/* 页面内容 - 添加底部padding避免被按钮遮挡 */}
+      <div className="min-h-screen pb-[180px] md:pb-32">
         {/* 活动预览卡片 */}
         <div className="px-4 pt-4 md:px-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-3 flex gap-3 shadow-sm">
@@ -328,9 +328,9 @@ const UserRegistration: FC = () => {
           </div>
         </div>
 
-        {/* 底部操作栏 */}
-        <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 pt-3 pb-6 md:px-6 md:pb-4">
+        {/* 底部操作栏 - 适配 TabBar，在其上方显示 */}
+        <div className="fixed bottom-14 left-0 right-0 z-40 md:bottom-0">
+          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
             <div className="flex items-center gap-4">
               {/* 价格信息 */}
               <div className="flex-shrink-0">
@@ -343,12 +343,11 @@ const UserRegistration: FC = () => {
                 onClick={handleSubmit}
                 disabled={!isFormValid}
                 loading={isSubmitting}
-                className="flex-1 h-12"
+                className="flex-1 h-12 text-base"
               >
                 确认报名
               </Button>
             </div>
-            <div className="h-safe-bottom" />
           </div>
         </div>
       </div>
