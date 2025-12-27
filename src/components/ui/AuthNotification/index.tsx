@@ -64,27 +64,27 @@ export const AuthNotification: FC<AuthNotificationProps> = ({
   const config = {
     success: {
       icon: CheckCircleFill,
-      bgColor: "bg-primary-50", // 晨曦蓝浅色背景
-      borderColor: "border-primary-200",
-      iconColor: "text-primary-500", // 主色 #4A78FF
-      titleColor: "text-primary-900",
-      descColor: "text-primary-700",
+      bgColor: "bg-primary-50 dark:bg-primary-900/20", // 晨曦蓝浅色背景
+      borderColor: "border-primary-200 dark:border-primary-800",
+      iconColor: "text-primary-500 dark:text-primary-400", // 主色 #4A78FF
+      titleColor: "text-primary-900 dark:text-primary-200",
+      descColor: "text-primary-700 dark:text-primary-300",
     },
     error: {
       icon: CloseCircleFill,
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      iconColor: "text-red-500",
-      titleColor: "text-red-900",
-      descColor: "text-red-700",
+      bgColor: "bg-red-50 dark:bg-red-900/20",
+      borderColor: "border-red-200 dark:border-red-800",
+      iconColor: "text-red-500 dark:text-red-400",
+      titleColor: "text-red-900 dark:text-red-200",
+      descColor: "text-red-700 dark:text-red-300",
     },
     warning: {
       icon: ExclamationCircleFill,
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      iconColor: "text-yellow-500",
-      titleColor: "text-yellow-900",
-      descColor: "text-yellow-700",
+      bgColor: "bg-yellow-50 dark:bg-yellow-900/20",
+      borderColor: "border-yellow-200 dark:border-yellow-800",
+      iconColor: "text-yellow-500 dark:text-yellow-400",
+      titleColor: "text-yellow-900 dark:text-yellow-200",
+      descColor: "text-yellow-700 dark:text-yellow-300",
     },
   };
 

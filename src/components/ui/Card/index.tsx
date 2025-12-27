@@ -32,12 +32,12 @@ const CardHeader: FC<CardHeaderProps> = ({ title, extra, className }) => {
       className={clsx(
         "flex items-center justify-between",
         "px-4 py-3",
-        "border-b border-gray-200",
+        "border-b border-gray-200 dark:border-gray-700",
         className
       )}
     >
       {title && (
-        <div className="text-lg font-semibold text-gray-900">{title}</div>
+        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</div>
       )}
       {extra && <div className="flex items-center gap-2">{extra}</div>}
     </div>
@@ -102,11 +102,11 @@ export const Card: FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        "bg-white",
+        "bg-white dark:bg-gray-800",
         radiusClasses[radius],
         shadowClasses[shadow],
         {
-          "border border-gray-200": bordered,
+          "border border-gray-200 dark:border-gray-700": bordered,
           // 悬停效果: 阴影增强 + 蓝色光晕 + 轻微上移
           "transition-all duration-200 ease-out cursor-pointer": hoverable,
           "hover:shadow-card-hover hover:-translate-y-0.5": hoverable,

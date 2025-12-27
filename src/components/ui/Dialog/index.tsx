@@ -40,28 +40,28 @@ import type { DialogProps } from "./types";
 const typeConfig = {
   info: {
     icon: Info,
-    iconColor: "text-primary-500",
-    bgColor: "bg-primary-50",
+    iconColor: "text-primary-500 dark:text-primary-400",
+    bgColor: "bg-primary-50 dark:bg-primary-900/20",
   },
   success: {
     icon: CheckCircle,
-    iconColor: "text-success-500",
-    bgColor: "bg-success-50",
+    iconColor: "text-success-500 dark:text-success-400",
+    bgColor: "bg-success-50 dark:bg-success-900/20",
   },
   warning: {
     icon: AlertTriangle,
-    iconColor: "text-warning-500",
-    bgColor: "bg-warning-50",
+    iconColor: "text-warning-500 dark:text-warning-400",
+    bgColor: "bg-warning-50 dark:bg-warning-900/20",
   },
   error: {
     icon: XCircle,
-    iconColor: "text-error-500",
-    bgColor: "bg-error-50",
+    iconColor: "text-error-500 dark:text-error-400",
+    bgColor: "bg-error-50 dark:bg-error-900/20",
   },
   confirm: {
     icon: AlertCircle,
-    iconColor: "text-primary-500",
-    bgColor: "bg-primary-50",
+    iconColor: "text-primary-500 dark:text-primary-400",
+    bgColor: "bg-primary-50 dark:bg-primary-900/20",
   },
 };
 
@@ -115,12 +115,12 @@ export const Dialog: FC<DialogProps> = ({
 
         {/* 标题 */}
         {title && (
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
         )}
 
         {/* 内容 */}
         {content && (
-          <div className="text-sm text-gray-600 leading-relaxed mb-6">
+          <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
             {content}
           </div>
         )}
@@ -134,7 +134,7 @@ export const Dialog: FC<DialogProps> = ({
                 onClose();
               }}
               disabled={okLoading}
-              className="flex-1 h-11 rounded-[22px] bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 h-11 rounded-[22px] bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {cancelText}
             </button>

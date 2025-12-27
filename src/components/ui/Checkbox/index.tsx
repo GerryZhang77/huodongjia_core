@@ -73,11 +73,11 @@ export const Checkbox: FC<CheckboxProps> = ({
           flex-shrink-0
           mt-0.5
           transition-all duration-150
-          focus:outline-none focus:ring-2 focus:ring-primary-200 focus:ring-offset-1
+          focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-700 focus:ring-offset-1 dark:focus:ring-offset-gray-800
           ${
             checked
-              ? "bg-primary-400 border-primary-400"
-              : "bg-gray-50 border-gray-400 hover:border-primary-300 hover:bg-gray-100"
+              ? "bg-primary-400 dark:bg-primary-500 border-primary-400 dark:border-primary-500"
+              : "bg-gray-50 dark:bg-gray-700 border-gray-400 dark:border-gray-600 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-100 dark:hover:bg-gray-600"
           }
           ${disabled ? "cursor-not-allowed" : "cursor-pointer"}
         `}
@@ -98,7 +98,7 @@ export const Checkbox: FC<CheckboxProps> = ({
       </button>
       {children && (
         <span
-          className={`${config.text} text-gray-600 leading-relaxed select-none`}
+          className={`${config.text} text-gray-600 dark:text-gray-400 leading-relaxed select-none`}
         >
           {children}
         </span>

@@ -143,7 +143,7 @@ export const Modal: FC<ModalProps> = ({
         <div
           ref={modalRef}
           className={clsx(
-            "relative w-full bg-white rounded-2xl shadow-xl",
+            "relative w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl",
             "transform transition-all",
             typeof width === "string" &&
               widthClasses[width as keyof typeof widthClasses]
@@ -165,11 +165,11 @@ export const Modal: FC<ModalProps> = ({
         >
           {/* 头部 */}
           {(title || closable) && (
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               {title && (
                 <h3
                   id="modal-title"
-                  className="text-lg font-semibold text-gray-900"
+                  className="text-lg font-semibold text-gray-900 dark:text-gray-100"
                 >
                   {title}
                 </h3>
@@ -177,10 +177,10 @@ export const Modal: FC<ModalProps> = ({
               {closable && (
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   aria-label="关闭"
                 >
-                  <X size={18} className="text-gray-400" />
+                  <X size={18} className="text-gray-400 dark:text-gray-500" />
                 </button>
               )}
             </div>
@@ -191,7 +191,7 @@ export const Modal: FC<ModalProps> = ({
 
           {/* 底部操作区 */}
           {(footer !== undefined || showFooter) && (
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
               {footer !== undefined ? (
                 footer
               ) : (
