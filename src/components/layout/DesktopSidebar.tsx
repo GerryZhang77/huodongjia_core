@@ -51,9 +51,9 @@ export const DesktopSidebar: FC = () => {
   };
 
   return (
-    <aside className="hidden lg:flex lg:flex-col w-64 bg-white border-r border-gray-100 h-screen sticky top-0">
+    <aside className="hidden lg:flex lg:flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 h-screen sticky top-0">
       {/* Logo 和用户信息 */}
-      <div className="p-6 border-b border-gray-100">
+      <div className="p-6 border-b border-gray-100 dark:border-gray-700">
         <button
           onClick={() => navigate("/u/home")}
           className="flex items-center gap-3 mb-4 group transition-transform duration-150 active:scale-95"
@@ -62,22 +62,22 @@ export const DesktopSidebar: FC = () => {
           <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-accent-400 rounded-xl flex items-center justify-center group-hover:shadow-lg group-hover:shadow-primary-400/30 transition-shadow duration-200">
             <span className="text-white font-bold text-lg">活</span>
           </div>
-          <h1 className="text-lg font-bold text-gray-900 group-hover:text-primary-400 transition-colors duration-200">
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-primary-400 transition-colors duration-200">
             活动家
           </h1>
         </button>
         {user && (
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-100 to-accent-100 rounded-full flex items-center justify-center">
               <span className="text-primary-600 font-semibold text-sm">
                 {user.name?.charAt(0) || "U"}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {user.name || "用户"}
               </p>
-              <p className="text-xs text-gray-500">C端用户</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">C端用户</p>
             </div>
           </div>
         )}
@@ -99,8 +99,8 @@ export const DesktopSidebar: FC = () => {
                   transition-all duration-200
                   ${
                     isActive
-                      ? "bg-primary-50 text-primary-600"
-                      : "text-gray-600 hover:bg-gray-50"
+                      ? "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   }
                 `}
               >
@@ -124,17 +124,17 @@ export const DesktopSidebar: FC = () => {
       </nav>
 
       {/* 底部操作 */}
-      <div className="p-4 border-t border-gray-100">
+      <div className="p-4 border-t border-gray-100 dark:border-gray-700">
         <button
           onClick={() => navigate("/u/settings")}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors mb-2"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors mb-2"
         >
           <Settings size={20} />
           <span className="text-sm font-medium">设置</span>
         </button>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-error-600 hover:bg-error-50 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors"
         >
           <LogOut size={20} />
           <span className="text-sm font-medium">退出登录</span>

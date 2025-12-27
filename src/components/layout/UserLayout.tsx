@@ -83,7 +83,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
   };
 
   return (
-    <div className={`min-h-screen ${bgColor}`}>
+    <div className={`min-h-screen ${bgColor} dark:bg-gray-900`}>
       {/* 桌面端布局：侧边栏 + 内容区 */}
       <div className="hidden lg:flex">
         {/* 桌面端侧边栏 */}
@@ -92,7 +92,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
         {/* 桌面端内容区 */}
         <div className="flex-1 min-h-screen">
           <div className="max-w-7xl mx-auto">
-            <main className="bg-white min-h-screen">
+            <main className="bg-white dark:bg-gray-800 min-h-screen">
               {/* 顶部栏 */}
               {showTopBar && (
                 <TopBar
@@ -111,7 +111,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
       {/* 移动端/平板布局：居中容器 + 底部 TabBar */}
       <div className="lg:hidden">
         {/* 响应式容器 - 移动端全宽，平板居中 */}
-        <div className="max-w-lg md:max-w-2xl mx-auto min-h-screen flex flex-col bg-white shadow-sm md:shadow-xl">
+        <div className="max-w-lg md:max-w-2xl mx-auto min-h-screen flex flex-col bg-white dark:bg-gray-800 shadow-sm md:shadow-xl">
           {/* 顶部栏 */}
           {showTopBar && (
             <TopBar
@@ -130,7 +130,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
           {/* 底部 TabBar - 仅移动端和平板显示 */}
           {showTabBar && (
             <nav className="fixed bottom-0 left-0 right-0 z-50">
-              <div className="max-w-lg md:max-w-2xl mx-auto bg-white/95 backdrop-blur-md border-t border-gray-100">
+              <div className="max-w-lg md:max-w-2xl mx-auto bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-t border-gray-100 dark:border-gray-700">
                 <div className="flex items-center h-14">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;

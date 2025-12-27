@@ -42,7 +42,7 @@ export const TopBar: FC<TopBarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-700">
       <div className="px-4 md:px-6 lg:px-8 py-3 md:py-4">
         <div className="flex items-center justify-between gap-4">
           {/* 左侧：Logo + 面包屑 */}
@@ -60,7 +60,7 @@ export const TopBar: FC<TopBarProps> = ({
                 {/* 装饰光点 */}
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-accent-400 rounded-full border-2 border-white" />
               </div>
-              <h1 className="text-base md:text-lg font-bold text-gray-900 tracking-tight group-hover:text-primary-400 transition-colors duration-200 hidden sm:block">
+              <h1 className="text-base md:text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight group-hover:text-primary-400 transition-colors duration-200 hidden sm:block">
                 活动家
               </h1>
             </button>
@@ -80,10 +80,10 @@ export const TopBar: FC<TopBarProps> = ({
             ) : showNotification ? (
               <button
                 onClick={handleNotificationClick}
-                className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100/80 active:bg-gray-200/80 transition-all duration-200"
+                className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-700/80 active:bg-gray-200/80 dark:active:bg-gray-600/80 transition-all duration-200"
                 aria-label="通知"
               >
-                <Bell size={20} className="text-gray-600" />
+                <Bell size={20} className="text-gray-600 dark:text-gray-300" />
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 rounded-full shadow-sm">
                     {unreadCount > 99 ? "99+" : unreadCount}
@@ -94,9 +94,9 @@ export const TopBar: FC<TopBarProps> = ({
           </div>
         </div>
 
-        {/* 移动端面包屑（第二行） */}
-        {showBreadcrumb && breadcrumbItems.length > 0 && (
-          <div className="md:hidden mt-3 pt-3 border-t border-gray-100">
+        {/* 移动端面包屑（第二行）- 仅在桌面端隐藏Logo时显示，避免重复 */}
+        {showBreadcrumb && breadcrumbItems.length > 1 && (
+          <div className="sm:hidden mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
             <Breadcrumb items={breadcrumbItems} />
           </div>
         )}

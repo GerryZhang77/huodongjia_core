@@ -46,13 +46,13 @@ export const Breadcrumb: FC<BreadcrumbProps> = ({ items }) => {
             {isClickable ? (
               <button
                 onClick={() => handleClick(item)}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-400 transition-colors duration-150 active:scale-95"
+                className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors duration-150 active:scale-95"
               >
                 {Icon && <Icon size={14} />}
                 <span>{item.label}</span>
               </button>
             ) : (
-              <div className="flex items-center gap-1.5 text-sm text-gray-900 font-medium">
+              <div className="flex items-center gap-1.5 text-sm text-gray-900 dark:text-gray-100 font-medium">
                 {Icon && <Icon size={14} />}
                 <span>{item.label}</span>
               </div>
@@ -60,7 +60,7 @@ export const Breadcrumb: FC<BreadcrumbProps> = ({ items }) => {
 
             {/* 分隔符 */}
             {!isLast && (
-              <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
+              <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />
             )}
           </div>
         );

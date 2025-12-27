@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useAuthStore } from "@/features/auth/stores/authStore";
+import { useThemeStore } from "@/store/themeStore";
 
 // 设置项类型
 interface SettingItem {
@@ -43,11 +44,11 @@ interface SettingGroup {
 const UserSettings: FC = () => {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const { isDark, toggleTheme } = useThemeStore();
 
   // 本地状态
   const [notifications, setNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
 
   // 设置组数据
   const settingGroups: SettingGroup[] = [
@@ -110,8 +111,8 @@ const UserSettings: FC = () => {
           label: "深色模式",
           description: "减少眼睛疲劳",
           type: "toggle",
-          value: darkMode,
-          onClick: () => setDarkMode(!darkMode),
+          value: isDark,
+          onClick: toggleTheme,
         },
         {
           id: "language",

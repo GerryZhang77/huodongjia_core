@@ -3,7 +3,7 @@
  * 简洁现代的详情展示
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -75,10 +75,21 @@ const UserActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isFavorited, setIsFavorited] = useState(false);
+  const [showBreadcrumb, setShowBreadcrumb] = useState(window.innerWidth >= 1024);
 
   const activity = id ? getActivityById(id) : undefined;
   const prevActivity = id ? getPreviousActivity(id) : undefined;
   const nextActivity = id ? getNextActivity(id) : undefined;
+
+  // 监听窗口大小变化，动态控制面包屑显示（桌面端显示，移动端隐藏）
+  useEffect(() => {
+    const handleResize = () => {
+      setShowBreadcrumb(window.innerWidth >= 1024);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 切换到上一个活动
   const goToPrevious = () => {
@@ -118,31 +129,31 @@ const UserActivityDetail: FC = () => {
     <UserLayout
       showTabBar={true}
       showTopBar={true}
-      showBreadcrumb={true}
+      showBreadcrumb={showBreadcrumb}
       breadcrumbItems={[
         { label: "首页", path: "/u/home" },
         { label: activity.title },
       ]}
-      bgColor="bg-gray-100"
+      bgColor="bg-gray-100 dark:bg-gray-900"
     >
       {/* 页面内容 */}
       <div className="md:py-6 lg:py-8">
         {/* 响应式容器 - 桌面版增加上下边距和圆角 */}
-        <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen md:min-h-0 pb-32 md:pb-24 shadow-sm md:shadow-xl md:rounded-2xl md:mb-6 relative">
+        <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white dark:bg-gray-800 min-h-screen md:min-h-0 pb-32 md:pb-24 shadow-sm md:shadow-xl md:rounded-2xl md:mb-6 relative">
           {/* 桌面端左右切换按钮 - 相对于卡片定位 */}
           {prevActivity && (
             <button
               onClick={goToPrevious}
-              className="hidden lg:flex absolute top-1/2 -translate-y-1/2 -left-16 z-40 w-12 h-12 rounded-full bg-white shadow-lg border border-gray-100 items-center justify-center hover:bg-primary-50 hover:border-primary-200 hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+              className="hidden lg:flex absolute top-1/2 -translate-y-1/2 -left-16 z-40 w-12 h-12 rounded-full bg-white dark:bg-gray-700 shadow-lg border border-gray-100 dark:border-gray-600 items-center justify-center hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:border-primary-200 dark:hover:border-primary-700 hover:shadow-xl hover:scale-105 transition-all duration-200 group"
               aria-label="上一个活动"
               title="上一个活动"
             >
               <ChevronLeft
                 size={24}
-                className="text-gray-400 group-hover:text-primary-500 transition-colors"
+                className="text-gray-400 dark:text-gray-300 group-hover:text-primary-500 dark:group-hover:text-primary-400 transition-colors"
               />
               {/* 悬停提示 */}
-              <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+              <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                 上一个
               </span>
             </button>
@@ -150,16 +161,16 @@ const UserActivityDetail: FC = () => {
           {nextActivity && (
             <button
               onClick={goToNext}
-              className="hidden lg:flex absolute top-1/2 -translate-y-1/2 -right-16 z-40 w-12 h-12 rounded-full bg-white shadow-lg border border-gray-100 items-center justify-center hover:bg-primary-50 hover:border-primary-200 hover:shadow-xl hover:scale-105 transition-all duration-200 group"
+              className="hidden lg:flex absolute top-1/2 -translate-y-1/2 -right-16 z-40 w-12 h-12 rounded-full bg-white dark:bg-gray-700 shadow-lg border border-gray-100 dark:border-gray-600 items-center justify-center hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:border-primary-200 dark:hover:border-primary-700 hover:shadow-xl hover:scale-105 transition-all duration-200 group"
               aria-label="下一个活动"
               title="下一个活动"
             >
               <ChevronRight
                 size={24}
-                className="text-gray-400 group-hover:text-primary-500 transition-colors"
+                className="text-gray-400 dark:text-gray-300 group-hover:text-primary-500 dark:group-hover:text-primary-400 transition-colors"
               />
               {/* 悬停提示 */}
-              <span className="absolute right-full mr-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+              <span className="absolute right-full mr-2 px-2 py-1 bg-gray-800 dark:bg-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                 下一个
               </span>
             </button>
@@ -244,7 +255,7 @@ const UserActivityDetail: FC = () => {
           {/* 内容区 */}
           <div className="px-4 py-5 md:px-6 lg:px-8">
             {/* 标题 */}
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
               {activity.title}
             </h1>
 
@@ -256,8 +267,8 @@ const UserActivityDetail: FC = () => {
                   <Calendar size={16} className="text-primary-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">活动时间</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">活动时间</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {formatDate(activity.eventStartTime)} -{" "}
                     {formatDate(activity.eventEndTime)}
                   </p>
@@ -266,12 +277,12 @@ const UserActivityDetail: FC = () => {
 
               {/* 地点 */}
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-success-50 flex items-center justify-center flex-shrink-0">
-                  <MapPin size={16} className="text-success-500" />
+                <div className="w-9 h-9 rounded-lg bg-success-50 dark:bg-success-900/20 flex items-center justify-center flex-shrink-0">
+                  <MapPin size={16} className="text-success-500 dark:text-success-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">活动地点</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">活动地点</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {activity.location}
                   </p>
                 </div>
@@ -279,15 +290,15 @@ const UserActivityDetail: FC = () => {
 
               {/* 人数 */}
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-secondary-50 flex items-center justify-center flex-shrink-0">
-                  <Users size={16} className="text-secondary-500" />
+                <div className="w-9 h-9 rounded-lg bg-secondary-50 dark:bg-secondary-900/20 flex items-center justify-center flex-shrink-0">
+                  <Users size={16} className="text-secondary-500 dark:text-secondary-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">参与人数</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">参与人数</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {activity.currentParticipants}/{activity.maxParticipants}人
                     {isFull && (
-                      <span className="ml-1 text-secondary-500">已满</span>
+                      <span className="ml-1 text-secondary-500 dark:text-secondary-400">已满</span>
                     )}
                   </p>
                 </div>
@@ -295,7 +306,7 @@ const UserActivityDetail: FC = () => {
             </div>
 
             {/* 分隔线 */}
-            <div className="h-px bg-gray-100 my-5" />
+            <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />
 
             {/* 主办方 */}
             <div className="flex items-center gap-3">
@@ -305,22 +316,22 @@ const UserActivityDetail: FC = () => {
                 className="w-10 h-10 rounded-full object-cover"
               />
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {activity.organizer.name}
                 </p>
-                <p className="text-xs text-gray-500">主办方</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">主办方</p>
               </div>
             </div>
 
             {/* 分隔线 */}
-            <div className="h-px bg-gray-100 my-5" />
+            <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />
 
             {/* 活动简介 */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 活动简介
               </h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                 探索前沿科技，结识行业精英。本次活动将邀请多位重量级嘉宾分享最新行业动态，
                 并通过智能匹配系统帮助参与者快速建立高质量人脉连接。
               </p>
@@ -328,20 +339,20 @@ const UserActivityDetail: FC = () => {
 
             {/* 状态提示 */}
             {activity.userStatus === "approved" && (
-              <div className="mt-5 p-3 bg-success-50 rounded-xl flex items-center gap-2">
+              <div className="mt-5 p-3 bg-success-50 dark:bg-success-900/20 rounded-xl flex items-center gap-2">
                 <CheckCircle
                   size={16}
-                  className="text-success-500 flex-shrink-0"
+                  className="text-success-500 dark:text-success-400 flex-shrink-0"
                 />
-                <p className="text-xs text-success-700">
+                <p className="text-xs text-success-700 dark:text-success-400">
                   报名已通过，点击下方查看分组结果
                 </p>
               </div>
             )}
             {activity.userStatus === "pending" && (
-              <div className="mt-5 p-3 bg-warning-50 rounded-xl flex items-center gap-2">
-                <Clock size={16} className="text-warning-600 flex-shrink-0" />
-                <p className="text-xs text-warning-700">
+              <div className="mt-5 p-3 bg-warning-50 dark:bg-warning-900/20 rounded-xl flex items-center gap-2">
+                <Clock size={16} className="text-warning-600 dark:text-warning-500 flex-shrink-0" />
+                <p className="text-xs text-warning-700 dark:text-warning-400">
                   报名审核中，请耐心等待
                 </p>
               </div>
@@ -350,11 +361,11 @@ const UserActivityDetail: FC = () => {
 
           {/* 底部操作栏 - 相对于卡片容器定位 */}
           <div className="absolute bottom-0 left-0 right-0 z-50 md:rounded-b-2xl overflow-hidden">
-            <div className="bg-white border-t border-gray-100 px-4 pt-3 pb-4 lg:pb-6">
+            <div className="bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-4 lg:pb-6">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsFavorited(!isFavorited)}
-                  className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  className="w-12 h-12 rounded-xl border border-gray-200 dark:border-gray-600 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <Heart
                     size={22}

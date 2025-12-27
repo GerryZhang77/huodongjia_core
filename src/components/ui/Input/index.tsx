@@ -113,29 +113,29 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     // 状态边框颜色 - 优化聚焦状态
     const statusClasses = {
       default: clsx(
-        "border-gray-200",
-        "focus-within:bg-white focus-within:border-primary-400 focus-within:ring-4 focus-within:ring-primary-100"
+        "border-gray-200 dark:border-gray-600",
+        "focus-within:bg-white dark:focus-within:bg-gray-800 focus-within:border-primary-400 focus-within:ring-4 focus-within:ring-primary-100 dark:focus-within:ring-primary-900/30"
       ),
       error: clsx(
-        "bg-error-50/50 border-error-300",
-        "focus-within:bg-white focus-within:border-error-400 focus-within:ring-4 focus-within:ring-error-100"
+        "bg-error-50/50 dark:bg-error-900/20 border-error-300 dark:border-error-700",
+        "focus-within:bg-white dark:focus-within:bg-gray-800 focus-within:border-error-400 focus-within:ring-4 focus-within:ring-error-100 dark:focus-within:ring-error-900/30"
       ),
       success: clsx(
-        "border-success-300",
-        "focus-within:bg-white focus-within:border-success-400 focus-within:ring-4 focus-within:ring-success-100"
+        "border-success-300 dark:border-success-700",
+        "focus-within:bg-white dark:focus-within:bg-gray-800 focus-within:border-success-400 focus-within:ring-4 focus-within:ring-success-100 dark:focus-within:ring-success-900/30"
       ),
       warning: clsx(
-        "border-warning-300",
-        "focus-within:bg-white focus-within:border-warning-400 focus-within:ring-4 focus-within:ring-warning-100"
+        "border-warning-300 dark:border-warning-700",
+        "focus-within:bg-white dark:focus-within:bg-gray-800 focus-within:border-warning-400 focus-within:ring-4 focus-within:ring-warning-100 dark:focus-within:ring-warning-900/30"
       ),
     };
 
     // 帮助文本颜色
     const helperTextColors = {
-      default: "text-gray-500",
-      error: "text-error-500",
-      success: "text-success-500",
-      warning: "text-warning-500",
+      default: "text-gray-500 dark:text-gray-400",
+      error: "text-error-500 dark:text-error-400",
+      success: "text-success-500 dark:text-success-400",
+      warning: "text-warning-500 dark:text-warning-400",
     };
 
     return (
@@ -144,7 +144,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={id}
-            className="block text-sm font-medium text-gray-700 mb-1.5"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
           >
             {label}
             {required && <span className="text-error-400 ml-0.5">*</span>}
@@ -156,11 +156,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           className={clsx(
             "flex items-center gap-2.5",
             "px-4", // 增加水平内边距
-            "bg-gray-50/80 border rounded-xl", // 更柔和的背景色，12px 圆角
+            "bg-gray-50/80 dark:bg-gray-700/50 border rounded-xl", // 更柔和的背景色，12px 圆角
             "transition-all duration-200",
             sizeClasses[size],
             statusClasses[status],
-            disabled && "bg-gray-100 cursor-not-allowed opacity-60"
+            disabled && "bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-60"
           )}
         >
           {/* 左侧图标 */}
@@ -179,9 +179,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               "flex-1 min-w-0 py-0.5",
               "bg-transparent",
               "outline-none border-none focus:outline-none focus:ring-0", // 彻底移除默认聚焦样式
-              "placeholder:text-gray-400",
+              "placeholder:text-gray-400 dark:placeholder:text-gray-500",
               textSizes[size],
-              "text-gray-900",
+              "text-gray-900 dark:text-gray-100",
               disabled && "cursor-not-allowed",
               inputClassName
             )}

@@ -139,27 +139,27 @@ export const Button: FC<ButtonProps> = ({
     }
   } else if (variant === "outline") {
     // 轮廓按钮
-    classes += " bg-white text-primary-400 border-2 border-primary-400";
+    classes += " bg-white dark:bg-gray-800 text-primary-400 dark:text-primary-400 border-2 border-primary-400 dark:border-primary-400";
     if (!disabled && !loading) {
-      classes += " hover:bg-gray-50 active:scale-[0.98]";
+      classes += " hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98]";
     }
     if (disabled) {
       classes += " opacity-50 cursor-not-allowed";
     }
   } else if (variant === "light") {
     // 浅色按钮
-    classes += " bg-gray-100 text-gray-900";
+    classes += " bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100";
     if (!disabled && !loading) {
-      classes += " hover:bg-gray-200 active:scale-[0.98]";
+      classes += " hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-[0.98]";
     }
     if (disabled) {
       classes += " opacity-50 cursor-not-allowed";
     }
   } else if (variant === "ghost") {
     // 幽灵按钮
-    classes += " bg-transparent text-primary-400";
+    classes += " bg-transparent text-primary-400 dark:text-primary-400";
     if (!disabled && !loading) {
-      classes += " hover:bg-gray-100 active:scale-[0.98]";
+      classes += " hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-[0.98]";
     }
     if (disabled) {
       classes += " opacity-50 cursor-not-allowed";
