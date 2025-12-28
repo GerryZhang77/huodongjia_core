@@ -82,7 +82,8 @@ export const Tag: FC<TagProps> = ({
     primary: {
       filled: "bg-primary-500 dark:bg-primary-600 text-white shadow-sm",
       soft: "bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300",
-      outline: "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 ring-1 ring-inset ring-primary-300 dark:ring-primary-700",
+      outline:
+        "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 ring-1 ring-inset ring-primary-300 dark:ring-primary-700",
     },
     secondary: {
       filled: "bg-secondary-500 dark:bg-secondary-600 text-white shadow-sm",
@@ -93,27 +94,32 @@ export const Tag: FC<TagProps> = ({
     accent: {
       filled: "bg-accent-500 dark:bg-accent-600 text-white shadow-sm",
       soft: "bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300",
-      outline: "bg-white dark:bg-gray-800 text-accent-600 dark:text-accent-400 ring-1 ring-inset ring-accent-300 dark:ring-accent-700",
+      outline:
+        "bg-white dark:bg-gray-800 text-accent-600 dark:text-accent-400 ring-1 ring-inset ring-accent-300 dark:ring-accent-700",
     },
     success: {
       filled: "bg-success-500 dark:bg-success-600 text-white shadow-sm",
       soft: "bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-300",
-      outline: "bg-white dark:bg-gray-800 text-success-600 dark:text-success-400 ring-1 ring-inset ring-success-300 dark:ring-success-700",
+      outline:
+        "bg-white dark:bg-gray-800 text-success-600 dark:text-success-400 ring-1 ring-inset ring-success-300 dark:ring-success-700",
     },
     warning: {
       filled: "bg-warning-500 dark:bg-warning-600 text-white shadow-sm",
       soft: "bg-warning-100 dark:bg-warning-900/30 text-warning-800 dark:text-warning-300",
-      outline: "bg-white dark:bg-gray-800 text-warning-700 dark:text-warning-400 ring-1 ring-inset ring-warning-300 dark:ring-warning-700",
+      outline:
+        "bg-white dark:bg-gray-800 text-warning-700 dark:text-warning-400 ring-1 ring-inset ring-warning-300 dark:ring-warning-700",
     },
     error: {
       filled: "bg-error-500 dark:bg-error-600 text-white shadow-sm",
       soft: "bg-error-100 dark:bg-error-900/30 text-error-700 dark:text-error-300",
-      outline: "bg-white dark:bg-gray-800 text-error-600 dark:text-error-400 ring-1 ring-inset ring-error-300 dark:ring-error-700",
+      outline:
+        "bg-white dark:bg-gray-800 text-error-600 dark:text-error-400 ring-1 ring-inset ring-error-300 dark:ring-error-700",
     },
     gray: {
       filled: "bg-gray-600 dark:bg-gray-700 text-white shadow-sm",
       soft: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
-      outline: "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-600",
+      outline:
+        "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-600",
     },
   };
 

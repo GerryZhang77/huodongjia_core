@@ -75,7 +75,9 @@ const UserActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isFavorited, setIsFavorited] = useState(false);
-  const [showBreadcrumb, setShowBreadcrumb] = useState(window.innerWidth >= 1024);
+  const [showBreadcrumb, setShowBreadcrumb] = useState(
+    window.innerWidth >= 1024
+  );
 
   const activity = id ? getActivityById(id) : undefined;
   const prevActivity = id ? getPreviousActivity(id) : undefined;
@@ -87,8 +89,8 @@ const UserActivityDetail: FC = () => {
       setShowBreadcrumb(window.innerWidth >= 1024);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // 切换到上一个活动
@@ -267,7 +269,9 @@ const UserActivityDetail: FC = () => {
                   <Calendar size={16} className="text-primary-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">活动时间</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    活动时间
+                  </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {formatDate(activity.eventStartTime)} -{" "}
                     {formatDate(activity.eventEndTime)}
@@ -278,10 +282,15 @@ const UserActivityDetail: FC = () => {
               {/* 地点 */}
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-lg bg-success-50 dark:bg-success-900/20 flex items-center justify-center flex-shrink-0">
-                  <MapPin size={16} className="text-success-500 dark:text-success-400" />
+                  <MapPin
+                    size={16}
+                    className="text-success-500 dark:text-success-400"
+                  />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">活动地点</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    活动地点
+                  </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {activity.location}
                   </p>
@@ -291,14 +300,21 @@ const UserActivityDetail: FC = () => {
               {/* 人数 */}
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-lg bg-secondary-50 dark:bg-secondary-900/20 flex items-center justify-center flex-shrink-0">
-                  <Users size={16} className="text-secondary-500 dark:text-secondary-400" />
+                  <Users
+                    size={16}
+                    className="text-secondary-500 dark:text-secondary-400"
+                  />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">参与人数</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    参与人数
+                  </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {activity.currentParticipants}/{activity.maxParticipants}人
                     {isFull && (
-                      <span className="ml-1 text-secondary-500 dark:text-secondary-400">已满</span>
+                      <span className="ml-1 text-secondary-500 dark:text-secondary-400">
+                        已满
+                      </span>
                     )}
                   </p>
                 </div>
@@ -319,7 +335,9 @@ const UserActivityDetail: FC = () => {
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {activity.organizer.name}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">主办方</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  主办方
+                </p>
               </div>
             </div>
 
@@ -351,7 +369,10 @@ const UserActivityDetail: FC = () => {
             )}
             {activity.userStatus === "pending" && (
               <div className="mt-5 p-3 bg-warning-50 dark:bg-warning-900/20 rounded-xl flex items-center gap-2">
-                <Clock size={16} className="text-warning-600 dark:text-warning-500 flex-shrink-0" />
+                <Clock
+                  size={16}
+                  className="text-warning-600 dark:text-warning-500 flex-shrink-0"
+                />
                 <p className="text-xs text-warning-700 dark:text-warning-400">
                   报名审核中，请耐心等待
                 </p>

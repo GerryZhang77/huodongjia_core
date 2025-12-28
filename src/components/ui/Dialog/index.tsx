@@ -115,7 +115,9 @@ export const Dialog: FC<DialogProps> = ({
 
         {/* 标题 */}
         {title && (
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            {title}
+          </h3>
         )}
 
         {/* 内容 */}

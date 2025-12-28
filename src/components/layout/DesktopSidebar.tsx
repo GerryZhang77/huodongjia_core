@@ -77,7 +77,9 @@ export const DesktopSidebar: FC = () => {
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {user.name || "用户"}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">C端用户</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                C端用户
+              </p>
             </div>
           </div>
         )}

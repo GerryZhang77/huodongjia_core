@@ -60,7 +60,10 @@ export const Breadcrumb: FC<BreadcrumbProps> = ({ items }) => {
 
             {/* 分隔符 */}
             {!isLast && (
-              <ChevronRight size={14} className="text-gray-300 dark:text-gray-600 flex-shrink-0" />
+              <ChevronRight
+                size={14}
+                className="text-gray-300 dark:text-gray-600 flex-shrink-0"
+              />
             )}
           </div>
         );

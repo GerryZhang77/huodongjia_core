@@ -160,7 +160,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             "transition-all duration-200",
             sizeClasses[size],
             statusClasses[status],
-            disabled && "bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-60"
+            disabled &&
+              "bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-60"
           )}
         >
           {/* 左侧图标 */}

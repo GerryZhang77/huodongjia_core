@@ -3,10 +3,10 @@
  * 使用 Zustand 管理全局主题状态（亮色/暗色模式）
  */
 
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-export type Theme = 'light' | 'dark';
+export type Theme = "light" | "dark";
 
 interface ThemeState {
   /** 当前主题 */
@@ -24,7 +24,7 @@ interface ThemeState {
  */
 const applyTheme = (theme: Theme) => {
   const root = document.documentElement;
-  root.classList.remove('light', 'dark');
+  root.classList.remove("light", "dark");
   root.classList.add(theme);
 };
 
@@ -35,30 +35,30 @@ const applyTheme = (theme: Theme) => {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
-      theme: 'light',
+      theme: "light",
       isDark: false,
-      
+
       setTheme: (theme: Theme) => {
         applyTheme(theme);
-        set({ theme, isDark: theme === 'dark' });
+        set({ theme, isDark: theme === "dark" });
       },
-      
+
       toggleTheme: () => {
         const currentTheme = get().theme;
-        const newTheme: Theme = currentTheme === 'light' ? 'dark' : 'light';
+        const newTheme: Theme = currentTheme === "light" ? "dark" : "light";
         applyTheme(newTheme);
-        set({ theme: newTheme, isDark: newTheme === 'dark' });
+        set({ theme: newTheme, isDark: newTheme === "dark" });
       },
     }),
     {
-      name: 'theme-storage',
+      name: "theme-storage",
       // 仅持久化 theme 字段
       partialize: (state) => ({ theme: state.theme }),
       // 恢复时重新应用主题
       onRehydrateStorage: () => (state) => {
         if (state) {
           applyTheme(state.theme);
-          state.isDark = state.theme === 'dark';
+          state.isDark = state.theme === "dark";
         }
       },
     }

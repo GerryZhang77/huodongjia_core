@@ -37,7 +37,9 @@ const CardHeader: FC<CardHeaderProps> = ({ title, extra, className }) => {
       )}
     >
       {title && (
-        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</div>
+        <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {title}
+        </div>
       )}
       {extra && <div className="flex items-center gap-2">{extra}</div>}
     </div>
