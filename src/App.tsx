@@ -288,9 +288,12 @@ function App() {
                 />
 
                 {/* ========== 开发调试路由 ========== */}
+                {/* 组件展示页面 - 在所有环境可访问，用于演示和测试 */}
+                <Route path="/components" element={<ComponentShowcase />} />
+                
+                {/* 其他开发页面 - 仅开发环境 */}
                 {isDevelopment && (
                   <>
-                    <Route path="/components" element={<ComponentShowcase />} />
                     <Route path="/button-test" element={<ButtonTest />} />
                     <Route path="/tailwind-test" element={<TailwindTest />} />
                     <Route
