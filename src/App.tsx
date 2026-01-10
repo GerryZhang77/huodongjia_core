@@ -16,6 +16,8 @@ import { Loading } from "./components/Loading";
 
 // 公共页面 - 懒加载
 const Login = lazy(() => import("./pages/common/Login"));
+const Register = lazy(() => import("./pages/common/Register"));
+const ForgotPassword = lazy(() => import("./pages/common/ForgotPassword"));
 const ActivityDetail = lazy(() => import("./pages/common/ActivityDetail"));
 const ActivityDetailTemp = lazy(
   () => import("./pages/common/ActivityDetailTemp")
@@ -78,6 +80,8 @@ function App() {
               <Routes>
                 {/* ========== 公开路由 ========== */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
 
                 {/* ========== B端商家路由 ========== */}
                 {/* 商家后台首页 */}
@@ -290,7 +294,7 @@ function App() {
                 {/* ========== 开发调试路由 ========== */}
                 {/* 组件展示页面 - 在所有环境可访问，用于演示和测试 */}
                 <Route path="/components" element={<ComponentShowcase />} />
-                
+
                 {/* 其他开发页面 - 仅开发环境 */}
                 {isDevelopment && (
                   <>

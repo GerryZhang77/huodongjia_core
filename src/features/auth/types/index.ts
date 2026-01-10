@@ -65,3 +65,72 @@ export interface AccountOption {
   value: string;
   description: string;
 }
+
+/**
+ * 发送短信验证码请求
+ */
+export interface SendSmsCodeRequest {
+  phone: string;
+  type: "register" | "login" | "reset_password";
+}
+
+/**
+ * 发送短信验证码响应
+ */
+export interface SendSmsCodeResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * 验证短信验证码请求
+ */
+export interface VerifySmsCodeRequest {
+  phone: string;
+  code: string;
+}
+
+/**
+ * 验证短信验证码响应
+ */
+export interface VerifySmsCodeResponse {
+  success: boolean;
+  message: string;
+  verified?: boolean;
+}
+
+/**
+ * 注册凭证
+ */
+export interface RegisterCredentials {
+  phone: string;
+  sms_code: string;
+  password: string;
+}
+
+/**
+ * 注册响应
+ */
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  token?: string;
+  user?: User;
+}
+
+/**
+ * 重置密码凭证
+ */
+export interface ResetPasswordCredentials {
+  phone: string;
+  sms_code: string;
+  new_password: string;
+}
+
+/**
+ * 重置密码响应
+ */
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}

@@ -120,3 +120,166 @@ export async function getCurrentUser(): Promise<LoginResponse> {
     message: "未实现",
   };
 }
+
+/**
+ * 发送短信验证码
+ */
+export async function sendSmsCode(
+  phone: string,
+  type: "register" | "login" | "reset_password" = "register"
+): Promise<{ success: boolean; message: string }> {
+  try {
+    console.log("📱 [authApi] 发送短信验证码:", { phone, type });
+
+    // 🔧 临时 Mock：模拟发送成功
+    // 验证手机号格式
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      return {
+        success: false,
+        message: "手机号格式不正确",
+      };
+    }
+
+    // 模拟网络延迟
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    console.log("✅ [authApi] 短信验证码发送成功 (Mock)");
+    return {
+      success: true,
+      message: "验证码已发送",
+    };
+
+    /* 🔧 真实 API 调用 (已禁用)
+    const response = await api.post("/api/auth/send-sms", { phone, type });
+    return response;
+    */
+  } catch (error) {
+    console.error("❌ [authApi] 发送验证码失败:", error);
+    return {
+      success: false,
+      message: "发送验证码失败，请稍后重试",
+    };
+  }
+}
+
+/**
+ * 验证短信验证码
+ */
+export async function verifySmsCode(
+  phone: string,
+  code: string
+): Promise<{ success: boolean; message: string; verified?: boolean }> {
+  try {
+    console.log("🔍 [authApi] 验证短信验证码:", { phone, code });
+
+    // 🔧 临时 Mock：验证码为 123456 时通过
+    if (code === "123456") {
+      console.log("✅ [authApi] 验证码验证成功 (Mock)");
+      return {
+        success: true,
+        message: "验证成功",
+        verified: true,
+      };
+    }
+
+    return {
+      success: false,
+      message: "验证码错误或已过期",
+      verified: false,
+    };
+
+    /* 🔧 真实 API 调用 (已禁用)
+    const response = await api.post("/api/auth/verify-sms", { phone, code });
+    return response;
+    */
+  } catch (error) {
+    console.error("❌ [authApi] 验证码验证失败:", error);
+    return {
+      success: false,
+      message: "验证失败，请稍后重试",
+      verified: false,
+    };
+  }
+}
+
+/**
+ * 用户注册
+ */
+export async function register(credentials: {
+  phone: string;
+  sms_code: string;
+  password: string;
+}): Promise<LoginResponse> {
+  try {
+    console.log("📝 [authApi] 用户注册:", { phone: credentials.phone });
+
+    // 🔧 临时 Mock：模拟注册成功
+    // 模拟网络延迟
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const mockResponse: LoginResponse = {
+      success: true,
+      message: "注册成功",
+      token: "mock_token_" + Date.now(),
+      user: {
+        id: "user_" + Date.now(),
+        name: "新用户",
+        phone: credentials.phone,
+        user_type: "user",
+        tags: [],
+      },
+    };
+
+    console.log("✅ [authApi] 注册成功 (Mock):", {
+      success: mockResponse.success,
+      hasUser: !!mockResponse.user,
+    });
+
+    return mockResponse;
+
+    /* 🔧 真实 API 调用 (已禁用)
+    const response = await api.post("/api/auth/register", credentials);
+    return response;
+    */
+  } catch (error) {
+    console.error("❌ [authApi] 注册失败:", error);
+    return {
+      success: false,
+      message: "注册失败，请稍后重试",
+    };
+  }
+}
+
+/**
+ * 重置密码
+ */
+export async function resetPassword(credentials: {
+  phone: string;
+  sms_code: string;
+  new_password: string;
+}): Promise<{ success: boolean; message: string }> {
+  try {
+    console.log("🔑 [authApi] 重置密码:", { phone: credentials.phone });
+
+    // 🔧 临时 Mock：模拟重置成功
+    // 模拟网络延迟
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    console.log("✅ [authApi] 密码重置成功 (Mock)");
+    return {
+      success: true,
+      message: "密码重置成功",
+    };
+
+    /* 🔧 真实 API 调用 (已禁用)
+    const response = await api.post("/api/auth/reset-password", credentials);
+    return response;
+    */
+  } catch (error) {
+    console.error("❌ [authApi] 重置密码失败:", error);
+    return {
+      success: false,
+      message: "重置密码失败，请稍后重试",
+    };
+  }
+}

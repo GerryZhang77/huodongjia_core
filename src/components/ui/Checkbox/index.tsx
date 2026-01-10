@@ -49,12 +49,40 @@ export const Checkbox: FC<CheckboxProps> = ({
     }
   };
 
+  // 基础样式
+  const baseStyles = [
+    config.box,
+    "rounded",
+    "flex",
+    "items-center",
+    "justify-center",
+    "flex-shrink-0",
+    "transition-all",
+    "duration-150",
+    "border-2",
+    "focus:outline-none",
+    "focus:ring-2",
+    "focus:ring-primary-200",
+    "focus:ring-offset-1",
+  ];
+
+  // 状态样式
+  const stateStyles = checked
+    ? ["bg-primary-400", "border-primary-400"]
+    : ["bg-gray-200", "border-gray-400", "hover:border-primary-400"];
+
+  // 禁用样式
+  const disabledStyles = disabled ? "cursor-not-allowed" : "cursor-pointer";
+
+  const buttonClassName = [...baseStyles, ...stateStyles, disabledStyles].join(
+    " "
+  );
+
   return (
     <label
-      className={`inline-flex items-start gap-2 cursor-pointer ${
+      className={`inline-flex items-center gap-2 cursor-pointer select-none ${
         disabled ? "cursor-not-allowed opacity-50" : ""
       } ${className}`}
-      onClick={(e) => e.stopPropagation()}
     >
       <button
         type="button"
@@ -62,25 +90,16 @@ export const Checkbox: FC<CheckboxProps> = ({
         aria-checked={checked}
         aria-disabled={disabled}
         id={id}
-        onClick={handleClick}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!disabled && onChange) {
+            onChange(!checked);
+          }
+        }}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`
-          ${config.box}
-          rounded
-          border-2
-          flex items-center justify-center
-          flex-shrink-0
-          mt-0.5
-          transition-all duration-150
-          focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-700 focus:ring-offset-1 dark:focus:ring-offset-gray-800
-          ${
-            checked
-              ? "bg-primary-400 dark:bg-primary-500 border-primary-400 dark:border-primary-500"
-              : "bg-gray-50 dark:bg-gray-700 border-gray-400 dark:border-gray-600 hover:border-primary-300 dark:hover:border-primary-600 hover:bg-gray-100 dark:hover:bg-gray-600"
-          }
-          ${disabled ? "cursor-not-allowed" : "cursor-pointer"}
-        `}
+        className={buttonClassName}
       >
         {checked && (
           <svg

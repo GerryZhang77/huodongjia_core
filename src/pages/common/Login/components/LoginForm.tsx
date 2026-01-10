@@ -12,20 +12,28 @@
  */
 
 import React, { useState } from "react";
-import { Input } from "@/components/ui";
+import { useNavigate } from "react-router-dom";
+import { Input, Modal, Checkbox } from "@/components/ui";
 import { useLogin } from "@/features/auth/hooks";
 import { TEST_ACCOUNTS } from "@/features/auth/utils";
+import { UserAgreement, PrivacyPolicy } from "@/components/legal";
 import { Mail, Eye, EyeOff, AlertCircle, Info, Sparkles } from "lucide-react";
 import { FaWeixin, FaQq, FaWeibo } from "react-icons/fa";
 
 export const LoginForm: React.FC = () => {
+  const navigate = useNavigate();
   const { login, loading } = useLogin();
   const [identifier, setIdentifier] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
+  const [agreeTerms, setAgreeTerms] = useState<boolean>(false);
   const [showTestAccounts, setShowTestAccounts] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+
+  // 协议弹窗状态
+  const [showUserAgreement, setShowUserAgreement] = useState<boolean>(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState<boolean>(false);
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -38,6 +46,11 @@ export const LoginForm: React.FC = () => {
 
     if (!password) {
       setError("请输入密码");
+      return;
+    }
+
+    if (!agreeTerms) {
+      setError("请先阅读并同意用户协议和隐私政策");
       return;
     }
 
@@ -145,41 +158,56 @@ export const LoginForm: React.FC = () => {
 
           {/* 记住我 & 忘记密码 */}
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2.5 cursor-pointer group">
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-5 h-5 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-md peer-checked:bg-primary-400 peer-checked:border-primary-400 group-hover:border-primary-300 transition-all duration-200">
-                  {rememberMe && (
-                    <svg
-                      width="12"
-                      height="10"
-                      viewBox="0 0 12 10"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    >
-                      <path d="M1 5 L4 8 L11 1" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              <span className="text-sm text-gray-700 group-hover:text-gray-900">
-                记住我
-              </span>
-            </label>
+            <Checkbox
+              checked={rememberMe}
+              onChange={(checked) => setRememberMe(checked)}
+              size="medium"
+            >
+              <span className="text-sm text-gray-700">记住我</span>
+            </Checkbox>
 
             <button
               type="button"
+              onClick={() => navigate("/forgot-password")}
               className="text-sm font-semibold text-primary-400 hover:text-primary-500 transition-colors"
             >
               忘记密码？
             </button>
+          </div>
+
+          {/* 用户协议勾选 */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={agreeTerms}
+              onChange={(checked) => setAgreeTerms(checked)}
+              size="medium"
+            />
+            <span className="text-xs text-gray-500 leading-relaxed">
+              我已阅读并同意
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowUserAgreement(true);
+                }}
+                className="text-primary-400 hover:text-primary-500 mx-0.5"
+              >
+                《用户协议》
+              </button>
+              和
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowPrivacyPolicy(true);
+                }}
+                className="text-primary-400 hover:text-primary-500 mx-0.5"
+              >
+                《隐私政策》
+              </button>
+            </span>
           </div>
 
           {/* 错误提示 */}
@@ -262,6 +290,7 @@ export const LoginForm: React.FC = () => {
           还没有账号？
           <button
             type="button"
+            onClick={() => navigate("/register")}
             className="ml-1 font-semibold text-primary-400 hover:text-primary-500 transition-colors"
           >
             立即注册
@@ -310,13 +339,39 @@ export const LoginForm: React.FC = () => {
                     </div>
                   ))}
                   <p className="text-center pt-2 text-[11px] text-gray-400">
-                    ⚠️ 此区域仅在开发环境显示
+                    此区域仅在开发环境显示
                   </p>
                 </div>
               )}
             </div>
           )}
       </div>
+
+      {/* 用户协议弹窗 */}
+      <Modal
+        open={showUserAgreement}
+        onClose={() => setShowUserAgreement(false)}
+        title="用户服务协议"
+        width="large"
+        closable
+      >
+        <div className="max-h-[60vh] overflow-y-auto">
+          <UserAgreement />
+        </div>
+      </Modal>
+
+      {/* 隐私政策弹窗 */}
+      <Modal
+        open={showPrivacyPolicy}
+        onClose={() => setShowPrivacyPolicy(false)}
+        title="隐私政策"
+        width="large"
+        closable
+      >
+        <div className="max-h-[60vh] overflow-y-auto">
+          <PrivacyPolicy />
+        </div>
+      </Modal>
     </div>
   );
 };
