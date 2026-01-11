@@ -335,39 +335,49 @@ const UserHome: FC = () => {
     (advancedFilters.priceRange && advancedFilters.priceRange !== "all");
 
   return (
-    <UserLayout showTabBar={true} showTopBar={false} bgColor="bg-slate-50">
+    <UserLayout
+      showTabBar={true}
+      showTopBar={false}
+      bgColor="bg-slate-50 dark:bg-gray-900"
+    >
       {/* 顶部搜索区域 - 固定 */}
-      <header className="sticky top-0 z-40 bg-white shadow-sm">
+      <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 shadow-sm">
         {/* 搜索框 */}
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center gap-3">
             {/* 城市选择 */}
             <button
               onClick={() => setShowCitySelector(true)}
-              className="flex items-center gap-0.5 text-sm font-medium text-gray-700 flex-shrink-0"
+              className="flex items-center gap-0.5 text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0"
             >
               <MapPin size={16} className="text-primary-500" />
               <span>{selectedCity}</span>
-              <ChevronDown size={14} className="text-gray-400" />
+              <ChevronDown
+                size={14}
+                className="text-gray-400 dark:text-gray-500"
+              />
             </button>
 
             {/* 搜索框 */}
-            <div className="flex-1 h-10 bg-slate-100 rounded-full flex items-center px-4 gap-2">
-              <Search size={18} className="text-slate-400 flex-shrink-0" />
+            <div className="flex-1 h-10 bg-slate-100 dark:bg-gray-700 rounded-full flex items-center px-4 gap-2">
+              <Search
+                size={18}
+                className="text-slate-400 dark:text-gray-500 flex-shrink-0"
+              />
               <input
                 ref={searchInputRef}
                 type="text"
                 placeholder="搜索活动、地点、标签..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-slate-400 outline-none"
+                className="flex-1 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-slate-400 dark:placeholder:text-gray-500 outline-none"
               />
               {searchText && (
                 <button
                   onClick={clearSearch}
-                  className="p-0.5 rounded-full hover:bg-slate-200"
+                  className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-gray-600"
                 >
-                  <X size={14} className="text-slate-400" />
+                  <X size={14} className="text-slate-400 dark:text-gray-500" />
                 </button>
               )}
             </div>
@@ -381,7 +391,7 @@ const UserHome: FC = () => {
                 ${
                   hasActiveFilters
                     ? "bg-primary-500 hover:bg-primary-600"
-                    : "bg-primary-50 hover:bg-primary-100"
+                    : "bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/50"
                 }
               `}
             >
@@ -464,7 +474,7 @@ const UserHome: FC = () => {
               {/* 清除全部按钮 */}
               <button
                 onClick={handleFilterReset}
-                className="text-xs text-gray-500 hover:text-primary-500 transition-colors px-2"
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-500 transition-colors px-2"
               >
                 清除全部
               </button>
@@ -487,8 +497,8 @@ const UserHome: FC = () => {
                     transition-all duration-200
                     ${
                       isActive
-                        ? "bg-gray-900 text-white shadow-sm"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-sm"
+                        : "bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 hover:bg-slate-200 dark:hover:bg-gray-600"
                     }
                   `}
                 >
@@ -508,7 +518,9 @@ const UserHome: FC = () => {
           <div className="px-4 flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Flame size={18} className="text-secondary-500" />
-              <h2 className="text-base font-bold text-gray-900">热门活动</h2>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+                热门活动
+              </h2>
             </div>
             <button
               onClick={() => setSortBy("hot")}
@@ -534,17 +546,19 @@ const UserHome: FC = () => {
         <section className="px-4">
           {/* 标题、视图切换和排序 */}
           <div className="flex items-center justify-between py-3">
-            <h2 className="text-base font-bold text-gray-900">全部活动</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+              全部活动
+            </h2>
 
             <div className="flex items-center gap-3">
               {/* 视图切换 */}
-              <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+              <div className="flex items-center bg-slate-100 dark:bg-gray-700 rounded-lg p-0.5">
                 <button
                   onClick={() => toggleViewMode("grid")}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === "grid"
-                      ? "bg-white text-primary-500 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
+                      ? "bg-white dark:bg-gray-600 text-primary-500 shadow-sm"
+                      : "text-slate-400 dark:text-gray-400 hover:text-slate-600 dark:hover:text-gray-300"
                   }`}
                   aria-label="网格视图"
                 >
@@ -554,8 +568,8 @@ const UserHome: FC = () => {
                   onClick={() => toggleViewMode("list")}
                   className={`p-1.5 rounded-md transition-all ${
                     viewMode === "list"
-                      ? "bg-white text-primary-500 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
+                      ? "bg-white dark:bg-gray-600 text-primary-500 shadow-sm"
+                      : "text-slate-400 dark:text-gray-400 hover:text-slate-600 dark:hover:text-gray-300"
                   }`}
                   aria-label="列表视图"
                 >
@@ -567,12 +581,12 @@ const UserHome: FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowSortMenu(!showSortMenu)}
-                  className="text-xs text-slate-600 flex items-center gap-1"
+                  className="text-xs text-slate-600 dark:text-gray-400 flex items-center gap-1"
                 >
                   {sortOptions.find((s) => s.value === sortBy)?.label}
                   <ChevronDown
                     size={12}
-                    className={`text-slate-400 transition-transform ${
+                    className={`text-slate-400 dark:text-gray-500 transition-transform ${
                       showSortMenu ? "rotate-180" : ""
                     }`}
                   />
@@ -583,7 +597,7 @@ const UserHome: FC = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setShowSortMenu(false)}
                     />
-                    <div className="absolute right-0 top-6 w-24 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+                    <div className="absolute right-0 top-6 w-24 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
                       {sortOptions.map((option) => (
                         <button
                           key={option.value}
@@ -591,10 +605,10 @@ const UserHome: FC = () => {
                             setSortBy(option.value);
                             setShowSortMenu(false);
                           }}
-                          className={`w-full px-3 py-2.5 text-xs text-left hover:bg-slate-50 ${
+                          className={`w-full px-3 py-2.5 text-xs text-left hover:bg-slate-50 dark:hover:bg-gray-700 ${
                             sortBy === option.value
                               ? "text-primary-500 font-semibold"
-                              : "text-slate-600"
+                              : "text-slate-600 dark:text-gray-300"
                           }`}
                         >
                           {option.label}
@@ -608,15 +622,20 @@ const UserHome: FC = () => {
           </div>
 
           {/* 结果计数 */}
-          <p className="text-xs text-slate-400 mb-3">
+          <p className="text-xs text-slate-400 dark:text-gray-500 mb-3">
             共 {filteredActivities.length} 个活动
           </p>
 
           {/* 活动列表 - 根据视图模式渲染 */}
           {filteredActivities.length === 0 ? (
             <div className="py-16 text-center">
-              <Search size={40} className="text-slate-200 mx-auto mb-3" />
-              <p className="text-slate-400 text-sm">没有找到相关活动</p>
+              <Search
+                size={40}
+                className="text-slate-200 dark:text-gray-600 mx-auto mb-3"
+              />
+              <p className="text-slate-400 dark:text-gray-500 text-sm">
+                没有找到相关活动
+              </p>
               <button
                 onClick={() => {
                   setSearchText("");

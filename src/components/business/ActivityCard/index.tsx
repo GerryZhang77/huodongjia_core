@@ -78,7 +78,7 @@ export const ActivityCard: FC<ActivityCardProps> = ({
   return (
     <div
       className={clsx(
-        "relative bg-white rounded-2xl shadow-card overflow-hidden",
+        "relative bg-white dark:bg-gray-800 rounded-2xl shadow-card overflow-hidden",
         "transition-all duration-200",
         !editMode &&
           "hover:shadow-card-hover hover:-translate-y-0.5 cursor-pointer",
@@ -133,21 +133,21 @@ export const ActivityCard: FC<ActivityCardProps> = ({
       {/* 内容区 */}
       <div className="p-4">
         {/* 标题 */}
-        <h3 className="text-base font-semibold text-gray-900 line-clamp-2 mb-2">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-2">
           {title}
         </h3>
 
         {/* 信息 */}
         <div className="space-y-1.5 mb-3">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <Calendar size={14} className="flex-shrink-0" />
             <span className="truncate">{formatDate(eventStartTime)}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <MapPin size={14} className="flex-shrink-0" />
             <span className="truncate">{location}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <Users size={14} className="flex-shrink-0" />
             <span>
               {currentParticipants}/{maxParticipants} 人
@@ -167,13 +167,15 @@ export const ActivityCard: FC<ActivityCardProps> = ({
         )}
 
         {/* 组织者 */}
-        <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
           <img
             src={organizer.avatar}
             alt={organizer.name}
             className="w-6 h-6 rounded-full object-cover"
           />
-          <span className="text-xs text-gray-500">{organizer.name}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {organizer.name}
+          </span>
         </div>
       </div>
     </div>

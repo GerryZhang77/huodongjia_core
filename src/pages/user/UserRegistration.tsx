@@ -75,9 +75,14 @@ const UserRegistration: FC = () => {
   if (!activity) {
     return (
       <UserLayout showTabBar={true} showTopBar={true}>
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-          <AlertCircle size={40} className="text-gray-300 mb-3" />
-          <p className="text-gray-500 text-sm mb-4">活动不存在</p>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
+          <AlertCircle
+            size={40}
+            className="text-gray-300 dark:text-gray-600 mb-3"
+          />
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+            活动不存在
+          </p>
           <button
             onClick={() => navigate("/u/home")}
             className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
@@ -134,31 +139,33 @@ const UserRegistration: FC = () => {
         { label: activity.title, path: `/u/activities/${id}` },
         { label: "报名" },
       ]}
-      bgColor="bg-gray-50"
+      bgColor="bg-gray-50 dark:bg-gray-900"
     >
       {/* 页面内容 - 添加底部padding避免被按钮遮挡 */}
       <div className="min-h-screen pb-[180px] md:pb-32">
         {/* 活动预览卡片 */}
         <div className="px-4 pt-4 md:px-6">
-          <div className="bg-white rounded-2xl border border-gray-100 p-3 flex gap-3 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-3 flex gap-3 shadow-sm">
             <div className="w-[60px] h-[60px] rounded-xl bg-gradient-to-br from-primary-400 to-primary-500 flex items-center justify-center flex-shrink-0">
               <Calendar size={24} className="text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold text-gray-900 truncate">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
                 {activity.title}
               </h3>
-              <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
                 <Calendar size={12} />
                 {formatDate(activity.eventStartTime)}
                 <span className="mx-1">·</span>
                 <MapPin size={12} />
                 {activity.location.split(" ")[0]}
               </p>
-              <p className="text-sm font-bold text-primary-500 mt-1">¥68/人</p>
+              <p className="text-sm font-bold text-primary-500 dark:text-primary-400 mt-1">
+                ¥68/人
+              </p>
             </div>
             <div className="flex items-start">
-              <span className="px-2 py-1 bg-success-50 text-success-600 text-[10px] font-medium rounded-full">
+              <span className="px-2 py-1 bg-success-50 dark:bg-success-900/30 text-success-600 dark:text-success-400 text-[10px] font-medium rounded-full">
                 报名中
               </span>
             </div>
@@ -168,9 +175,11 @@ const UserRegistration: FC = () => {
         {/* 表单区域 */}
         <div className="px-4 py-5 md:px-6">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-base font-bold text-gray-900">填写报名信息</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+              填写报名信息
+            </h2>
           </div>
-          <p className="text-xs text-gray-400 mb-5">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">
             请准确填写以下信息，以便我们为您提供更好的服务
           </p>
 
@@ -206,7 +215,7 @@ const UserRegistration: FC = () => {
 
           {/* 性别 */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               性别 <span className="text-error-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -216,15 +225,15 @@ const UserRegistration: FC = () => {
                   onClick={() => handleInputChange("gender", gender)}
                   className={`h-12 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${
                     formData.gender === gender
-                      ? "border-primary-400 bg-primary-50"
-                      : "border-gray-200 bg-gray-50"
+                      ? "border-primary-400 bg-primary-50 dark:bg-primary-900/30"
+                      : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800"
                   }`}
                 >
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                       formData.gender === gender
                         ? "border-primary-400 bg-primary-400"
-                        : "border-gray-300"
+                        : "border-gray-300 dark:border-gray-500"
                     }`}
                   >
                     {formData.gender === gender && (
@@ -234,8 +243,8 @@ const UserRegistration: FC = () => {
                   <span
                     className={`text-sm font-medium ${
                       formData.gender === gender
-                        ? "text-primary-500"
-                        : "text-gray-600"
+                        ? "text-primary-500 dark:text-primary-400"
+                        : "text-gray-600 dark:text-gray-400"
                     }`}
                   >
                     {gender === "male" ? "男" : "女"}
@@ -247,13 +256,13 @@ const UserRegistration: FC = () => {
 
           {/* 年龄段 */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               年龄段
             </label>
             <select
               value={formData.ageGroup}
               onChange={(e) => handleInputChange("ageGroup", e.target.value)}
-              className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all appearance-none"
+              className="w-full h-12 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all appearance-none"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
                 backgroundPosition: "right 12px center",
@@ -271,7 +280,7 @@ const UserRegistration: FC = () => {
 
           {/* 兴趣标签 */}
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               兴趣标签（多选）
             </label>
             <div className="flex flex-wrap gap-2">
@@ -284,7 +293,7 @@ const UserRegistration: FC = () => {
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                       isSelected
                         ? "bg-primary-400 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                     }`}
                   >
                     {option.label}
@@ -330,12 +339,14 @@ const UserRegistration: FC = () => {
 
         {/* 底部操作栏 - 适配 TabBar，在其上方显示 */}
         <div className="fixed bottom-14 left-0 right-0 z-40 md:bottom-0">
-          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white border-t border-gray-100 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
+          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_12px_rgba(0,0,0,0.3)]">
             <div className="flex items-center gap-4">
               {/* 价格信息 */}
               <div className="flex-shrink-0">
-                <p className="text-xs text-gray-400">合计</p>
-                <p className="text-xl font-bold text-gray-900">¥68</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">合计</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  ¥68
+                </p>
               </div>
 
               {/* 提交按钮 */}

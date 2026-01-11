@@ -69,7 +69,13 @@ export const Checkbox: FC<CheckboxProps> = ({
   // 状态样式
   const stateStyles = checked
     ? ["bg-primary-400", "border-primary-400"]
-    : ["bg-gray-200", "border-gray-400", "hover:border-primary-400"];
+    : [
+        "bg-gray-200",
+        "dark:bg-gray-700",
+        "border-gray-400",
+        "dark:border-gray-500",
+        "hover:border-primary-400",
+      ];
 
   // 禁用样式
   const disabledStyles = disabled ? "cursor-not-allowed" : "cursor-pointer";

@@ -32,17 +32,38 @@ dayjs.locale("zh-cn");
 // 通知图标和颜色配置
 const notificationConfig: Record<
   NotificationType,
-  { icon: React.ElementType; color: string; bg: string }
+  { icon: React.ElementType; color: string; bg: string; darkBg: string }
 > = {
-  approval: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
-  matching: { icon: Users, color: "text-amber-600", bg: "bg-amber-50" },
-  greeting: { icon: MessageCircle, color: "text-pink-600", bg: "bg-pink-50" },
+  approval: {
+    icon: CheckCircle,
+    color: "text-green-600 dark:text-green-400",
+    bg: "bg-green-50",
+    darkBg: "dark:bg-green-900/30",
+  },
+  matching: {
+    icon: Users,
+    color: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-50",
+    darkBg: "dark:bg-amber-900/30",
+  },
+  greeting: {
+    icon: MessageCircle,
+    color: "text-pink-600 dark:text-pink-400",
+    bg: "bg-pink-50",
+    darkBg: "dark:bg-pink-900/30",
+  },
   activity_change: {
     icon: AlertCircle,
-    color: "text-red-600",
+    color: "text-red-600 dark:text-red-400",
     bg: "bg-red-50",
+    darkBg: "dark:bg-red-900/30",
   },
-  waitlist: { icon: Clock, color: "text-gray-600", bg: "bg-gray-100" },
+  waitlist: {
+    icon: Clock,
+    color: "text-gray-600 dark:text-gray-400",
+    bg: "bg-gray-100",
+    darkBg: "dark:bg-gray-700",
+  },
 };
 
 // 格式化时间
@@ -70,12 +91,14 @@ const NotificationItem: FC<{
     <button
       onClick={() => onClick(notification)}
       className={`w-full flex items-start gap-3 p-4 md:p-5 text-left transition-colors ${
-        notification.isRead ? "bg-white" : "bg-primary-50/50"
-      } hover:bg-gray-50 active:bg-gray-100`}
+        notification.isRead
+          ? "bg-white dark:bg-gray-800"
+          : "bg-primary-50/50 dark:bg-primary-900/20"
+      } hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600`}
     >
       {/* 图标 */}
       <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${config.bg}`}
+        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${config.bg} ${config.darkBg}`}
       >
         <Icon size={18} className={config.color} />
       </div>
@@ -86,21 +109,21 @@ const NotificationItem: FC<{
           <h3
             className={`text-sm leading-snug ${
               notification.isRead
-                ? "text-gray-700"
-                : "text-gray-900 font-medium"
+                ? "text-gray-700 dark:text-gray-300"
+                : "text-gray-900 dark:text-gray-100 font-medium"
             }`}
           >
             {notification.title}
           </h3>
-          <span className="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">
+          <span className="text-[11px] text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5">
             {formatTime(notification.createdAt)}
           </span>
         </div>
-        <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
           {notification.content}
         </p>
         {notification.activityName && (
-          <span className="inline-block mt-2 px-2 py-0.5 bg-gray-100 text-xs text-gray-600 rounded">
+          <span className="inline-block mt-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 rounded">
             {notification.activityName}
           </span>
         )}
@@ -133,20 +156,24 @@ const UserNotifications: FC = () => {
   };
 
   return (
-    <UserLayout bgColor="bg-white">
+    <UserLayout bgColor="bg-white dark:bg-gray-800">
       {/* 标题栏 */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
+      <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between px-4 py-3 md:px-6 lg:px-8 max-w-3xl mx-auto">
           <div>
-            <h1 className="text-lg font-bold text-gray-900">消息</h1>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              消息
+            </h1>
             {unreadCount > 0 && (
-              <p className="text-xs text-gray-500">{unreadCount} 条未读</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {unreadCount} 条未读
+              </p>
             )}
           </div>
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs text-primary-600 font-medium rounded-full bg-primary-50 hover:bg-primary-100 transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-primary-600 dark:text-primary-400 font-medium rounded-full bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
             >
               <CheckCheck size={14} />
               全部已读
@@ -156,7 +183,7 @@ const UserNotifications: FC = () => {
       </header>
 
       {/* 通知列表 */}
-      <div className="divide-y divide-gray-100 max-w-3xl mx-auto">
+      <div className="divide-y divide-gray-100 dark:divide-gray-700 max-w-3xl mx-auto">
         {notifications.length > 0 ? (
           notifications.map((notification) => (
             <NotificationItem
@@ -167,10 +194,10 @@ const UserNotifications: FC = () => {
           ))
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Inbox size={28} className="text-gray-300" />
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+              <Inbox size={28} className="text-gray-300 dark:text-gray-500" />
             </div>
-            <p className="text-gray-500 text-sm">暂无消息</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">暂无消息</p>
           </div>
         )}
       </div>

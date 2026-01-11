@@ -71,7 +71,7 @@ const UserActivityHistory: FC = () => {
     >
       <div className="md:py-6 lg:py-8">
         {/* Tab 切换 */}
-        <div className="px-4 md:px-6 py-2 bg-white border-b border-slate-100">
+        <div className="px-4 md:px-6 py-2 bg-white dark:bg-gray-800 border-b border-slate-100 dark:border-gray-700">
           <div className="flex gap-6 overflow-x-auto scrollbar-hide">
             {tabsWithCount.map((tab) => (
               <button
@@ -80,7 +80,7 @@ const UserActivityHistory: FC = () => {
                 className={`pb-2 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.key
                     ? "text-primary-500 border-primary-500"
-                    : "text-slate-400 border-transparent"
+                    : "text-slate-400 dark:text-gray-400 border-transparent"
                 }`}
               >
                 {tab.label} ({tab.count})
@@ -93,8 +93,11 @@ const UserActivityHistory: FC = () => {
         <div className="px-4 md:px-6 py-4">
           {filteredActivities.length === 0 ? (
             <div className="py-16 text-center">
-              <Calendar size={40} className="text-slate-200 mx-auto mb-3" />
-              <p className="text-slate-400 text-sm">
+              <Calendar
+                size={40}
+                className="text-slate-200 dark:text-gray-600 mx-auto mb-3"
+              />
+              <p className="text-slate-400 dark:text-gray-500 text-sm">
                 {activeTab === "all"
                   ? "还没有参与任何活动"
                   : `没有${

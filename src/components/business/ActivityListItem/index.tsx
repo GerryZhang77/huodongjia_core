@@ -102,7 +102,7 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
     <article
       onClick={handleClick}
       className={clsx(
-        "bg-white rounded-2xl shadow-card overflow-hidden flex cursor-pointer",
+        "bg-white dark:bg-gray-800 rounded-2xl shadow-card overflow-hidden flex cursor-pointer",
         "transition-all duration-200 ease-out",
         "hover:shadow-card-hover hover:-translate-y-0.5",
         "active:scale-[0.99]",
@@ -164,7 +164,7 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
         {/* 标题 */}
         <h3
           className={clsx(
-            "font-bold text-gray-900 line-clamp-2 leading-snug",
+            "font-bold text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug",
             sizes.title
           )}
         >
@@ -176,7 +176,7 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
           {/* 时间 */}
           <div
             className={clsx(
-              "flex items-center gap-1.5 text-gray-500",
+              "flex items-center gap-1.5 text-gray-500 dark:text-gray-400",
               sizes.info
             )}
           >
@@ -190,7 +190,7 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
           {/* 地点 */}
           <div
             className={clsx(
-              "flex items-center gap-1.5 text-gray-500",
+              "flex items-center gap-1.5 text-gray-500 dark:text-gray-400",
               sizes.info
             )}
           >
@@ -203,12 +203,14 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
         </div>
 
         {/* 底部信息 */}
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-2">
             {/* 价格 */}
             <span className="text-sm font-bold text-primary-500">免费</span>
             {/* 人数 */}
-            <span className={clsx("text-gray-400", sizes.info)}>
+            <span
+              className={clsx("text-gray-400 dark:text-gray-500", sizes.info)}
+            >
               {currentParticipants}/{maxParticipants}人
             </span>
           </div>

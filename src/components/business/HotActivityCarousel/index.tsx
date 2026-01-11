@@ -171,8 +171,8 @@ export const HotActivityCarousel: FC<HotActivityCarouselProps> = ({
             onClick={handlePrev}
             className="hidden lg:flex absolute left-3 top-1/2 -translate-y-1/2 z-20
                        w-10 h-10 items-center justify-center rounded-full
-                       bg-white/90 backdrop-blur-sm shadow-lg
-                       text-gray-600 hover:text-gray-900 hover:bg-white
+                       bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg
+                       text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white dark:hover:bg-gray-700
                        opacity-0 group-hover/carousel:opacity-100
                        transition-all duration-300
                        hover:scale-110"
@@ -184,8 +184,8 @@ export const HotActivityCarousel: FC<HotActivityCarouselProps> = ({
             onClick={handleNext}
             className="hidden lg:flex absolute right-3 top-1/2 -translate-y-1/2 z-20
                        w-10 h-10 items-center justify-center rounded-full
-                       bg-white/90 backdrop-blur-sm shadow-lg
-                       text-gray-600 hover:text-gray-900 hover:bg-white
+                       bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg
+                       text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white dark:hover:bg-gray-700
                        opacity-0 group-hover/carousel:opacity-100
                        transition-all duration-300
                        hover:scale-110"

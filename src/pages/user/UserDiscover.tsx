@@ -135,33 +135,36 @@ const UserDiscover: FC = () => {
       showTabBar={true}
       showTopBar={true}
       showBreadcrumb={false}
-      bgColor="bg-slate-50"
+      bgColor="bg-slate-50 dark:bg-gray-900"
     >
       {/* 页面内容 */}
       <div className="min-h-screen">
         {/* 搜索区域 */}
-        <div className="px-4 md:px-6 py-4 bg-white sticky top-16 md:top-14 z-30">
+        <div className="px-4 md:px-6 py-4 bg-white dark:bg-gray-800 sticky top-16 md:top-14 z-30">
           <div className="flex gap-3">
             {/* 搜索框 */}
-            <div className="flex-1 h-11 rounded-full bg-slate-100 flex items-center px-4 gap-2">
-              <Search size={18} className="text-slate-400 flex-shrink-0" />
+            <div className="flex-1 h-11 rounded-full bg-slate-100 dark:bg-gray-700 flex items-center px-4 gap-2">
+              <Search
+                size={18}
+                className="text-slate-400 dark:text-gray-500 flex-shrink-0"
+              />
               <input
                 type="text"
                 placeholder="搜索活动..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-slate-400 outline-none"
+                className="flex-1 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-slate-400 dark:placeholder:text-gray-500 outline-none"
               />
             </div>
             {/* 筛选按钮 */}
-            <button className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
+            <button className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-primary-900/30 flex items-center justify-center">
               <SlidersHorizontal size={18} className="text-primary-500" />
             </button>
           </div>
         </div>
 
         {/* 筛选标签 */}
-        <div className="px-4 md:px-6 pb-3 bg-white overflow-x-auto hide-scrollbar">
+        <div className="px-4 md:px-6 pb-3 bg-white dark:bg-gray-800 overflow-x-auto hide-scrollbar">
           <div className="flex gap-2 min-w-max">
             {filterTags.map((tag) => {
               const Icon = tag.icon;
@@ -172,7 +175,7 @@ const UserDiscover: FC = () => {
                   className={`h-8 px-4 rounded-full flex items-center gap-1.5 text-xs font-semibold transition-all ${
                     activeFilter === tag.id
                       ? "bg-primary-500 text-white"
-                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      : "bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-gray-600"
                   }`}
                 >
                   {Icon && <Icon size={14} />}
@@ -184,14 +187,14 @@ const UserDiscover: FC = () => {
         </div>
 
         {/* 结果计数和排序 */}
-        <div className="px-4 md:px-6 py-3 flex items-center justify-between bg-slate-50">
-          <span className="text-xs text-slate-400">
+        <div className="px-4 md:px-6 py-3 flex items-center justify-between bg-slate-50 dark:bg-gray-900">
+          <span className="text-xs text-slate-400 dark:text-gray-500">
             共 {filteredActivities.length} 个活动
           </span>
           <div className="relative">
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
-              className="text-xs text-slate-600 flex items-center gap-1"
+              className="text-xs text-slate-600 dark:text-gray-400 flex items-center gap-1"
             >
               {sortOptions.find((s) => s.value === sortBy)?.label}
               <span className="text-[10px]">▼</span>
@@ -202,7 +205,7 @@ const UserDiscover: FC = () => {
                   className="fixed inset-0 z-40"
                   onClick={() => setShowSortMenu(false)}
                 />
-                <div className="absolute right-0 top-6 w-28 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+                <div className="absolute right-0 top-6 w-28 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 z-50 overflow-hidden">
                   {sortOptions.map((option) => (
                     <button
                       key={option.value}
@@ -210,10 +213,10 @@ const UserDiscover: FC = () => {
                         setSortBy(option.value);
                         setShowSortMenu(false);
                       }}
-                      className={`w-full px-3 py-2.5 text-xs text-left hover:bg-slate-50 ${
+                      className={`w-full px-3 py-2.5 text-xs text-left hover:bg-slate-50 dark:hover:bg-gray-700 ${
                         sortBy === option.value
                           ? "text-primary-500 font-semibold"
-                          : "text-slate-600"
+                          : "text-slate-600 dark:text-gray-400"
                       }`}
                     >
                       {option.label}
@@ -229,7 +232,9 @@ const UserDiscover: FC = () => {
         <div className="px-4 md:px-6 py-4 space-y-4">
           {filteredActivities.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-slate-400 text-sm">没有找到相关活动</p>
+              <p className="text-slate-400 dark:text-gray-500 text-sm">
+                没有找到相关活动
+              </p>
             </div>
           ) : (
             filteredActivities.map((activity, index) => (
@@ -267,7 +272,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
   return (
     <div
       onClick={() => onClick(activity.id)}
-      className="bg-white rounded-2xl shadow-sm shadow-slate-200/60 overflow-hidden flex cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm shadow-slate-200/60 dark:shadow-none overflow-hidden flex cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
     >
       {/* 左侧彩色区域 */}
       <div
@@ -309,17 +314,17 @@ const ActivityCard: FC<ActivityCardProps> = ({
       {/* 右侧内容区 */}
       <div className="flex-1 p-3 flex flex-col justify-between min-h-[120px]">
         {/* 标题 */}
-        <h3 className="text-sm font-bold text-gray-900 line-clamp-1">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1">
           {activity.title}
         </h3>
 
         {/* 地点和时间 */}
         <div className="space-y-1 mt-1.5">
-          <p className="text-[11px] text-slate-500 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-gray-400 flex items-center gap-1">
             <MapPin size={12} className="flex-shrink-0" />
             <span className="line-clamp-1">{activity.location}</span>
           </p>
-          <p className="text-[11px] text-slate-500 flex items-center gap-1">
+          <p className="text-[11px] text-slate-500 dark:text-gray-400 flex items-center gap-1">
             <Calendar size={12} className="flex-shrink-0" />
             <span>{formatDate(activity.eventStartTime)}</span>
           </p>
@@ -332,8 +337,8 @@ const ActivityCard: FC<ActivityCardProps> = ({
               key={i}
               className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                 i === 0
-                  ? "bg-blue-50 text-primary-500"
-                  : "bg-purple-50 text-accent-500"
+                  ? "bg-blue-50 dark:bg-primary-900/30 text-primary-500"
+                  : "bg-purple-50 dark:bg-accent-900/30 text-accent-500"
               }`}
             >
               {tag}
@@ -345,12 +350,12 @@ const ActivityCard: FC<ActivityCardProps> = ({
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-primary-500">免费</span>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-slate-400 dark:text-gray-500">
               {activity.currentParticipants}/{activity.maxParticipants}人
             </span>
           </div>
           <button
-            className="px-4 py-1.5 rounded-full bg-blue-50 text-primary-500 text-[11px] font-semibold"
+            className="px-4 py-1.5 rounded-full bg-blue-50 dark:bg-primary-900/30 text-primary-500 text-[11px] font-semibold"
             onClick={(e) => {
               e.stopPropagation();
               onClick(activity.id);

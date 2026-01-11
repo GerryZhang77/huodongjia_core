@@ -177,11 +177,11 @@ const UserSettings: FC = () => {
           {settingGroups.map((group, groupIndex) => (
             <div key={groupIndex}>
               {group.title && (
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                <h3 className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-1">
                   {group.title}
                 </h3>
               )}
-              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-100 dark:border-gray-700 overflow-hidden divide-y divide-slate-100 dark:divide-gray-700">
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -190,20 +190,24 @@ const UserSettings: FC = () => {
                       onClick={item.onClick}
                       className={`flex items-center px-4 py-3.5 ${
                         item.type !== "toggle"
-                          ? "cursor-pointer hover:bg-slate-50"
+                          ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-700"
                           : ""
                       } transition-colors`}
                     >
                       {/* 图标 */}
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center mr-3 ${
-                          item.danger ? "bg-red-50" : "bg-slate-100"
+                          item.danger
+                            ? "bg-red-50 dark:bg-red-900/30"
+                            : "bg-slate-100 dark:bg-gray-700"
                         }`}
                       >
                         <Icon
                           size={18}
                           className={
-                            item.danger ? "text-red-500" : "text-slate-600"
+                            item.danger
+                              ? "text-red-500"
+                              : "text-slate-600 dark:text-gray-400"
                           }
                         />
                       </div>
@@ -212,13 +216,15 @@ const UserSettings: FC = () => {
                       <div className="flex-1 min-w-0">
                         <p
                           className={`text-sm font-medium ${
-                            item.danger ? "text-red-500" : "text-gray-900"
+                            item.danger
+                              ? "text-red-500"
+                              : "text-gray-900 dark:text-gray-100"
                           }`}
                         >
                           {item.label}
                         </p>
                         {item.description && (
-                          <p className="text-xs text-slate-400 mt-0.5">
+                          <p className="text-xs text-slate-400 dark:text-gray-500 mt-0.5">
                             {item.description}
                           </p>
                         )}
@@ -226,7 +232,10 @@ const UserSettings: FC = () => {
 
                       {/* 右侧操作 */}
                       {item.type === "link" && (
-                        <ChevronRight size={18} className="text-slate-300" />
+                        <ChevronRight
+                          size={18}
+                          className="text-slate-300 dark:text-gray-600"
+                        />
                       )}
                       {item.type === "toggle" && (
                         <button
@@ -235,7 +244,9 @@ const UserSettings: FC = () => {
                             item.onClick?.();
                           }}
                           className={`w-12 h-7 rounded-full relative transition-colors ${
-                            item.value ? "bg-primary-500" : "bg-slate-200"
+                            item.value
+                              ? "bg-primary-500"
+                              : "bg-slate-200 dark:bg-gray-600"
                           }`}
                         >
                           <span
@@ -255,7 +266,9 @@ const UserSettings: FC = () => {
 
         {/* 版本信息 */}
         <div className="px-4 md:px-6 py-6 text-center">
-          <p className="text-xs text-slate-300">活动家 v1.0.0</p>
+          <p className="text-xs text-slate-300 dark:text-gray-600">
+            活动家 v1.0.0
+          </p>
         </div>
       </div>
     </UserLayout>

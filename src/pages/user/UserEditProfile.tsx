@@ -193,25 +193,29 @@ const UserEditProfile: FC = () => {
       {/* 页面内容 - 桌面端限制宽度并居中 */}
       <div className="lg:max-w-2xl lg:mx-auto">
         {/* 头像区域 */}
-        <div className="flex flex-col items-center py-6 bg-gradient-to-b from-slate-50 to-white">
+        <div className="flex flex-col items-center py-6 bg-gradient-to-b from-slate-50 to-white dark:from-gray-800 dark:to-gray-900">
           <div className="relative">
             <img
               src={profile.avatar}
               alt="头像"
-              className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+              className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg"
             />
             <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg">
               <Camera size={16} />
             </button>
           </div>
-          <p className="text-xs text-slate-400 mt-2">点击更换头像</p>
+          <p className="text-xs text-slate-400 dark:text-gray-500 mt-2">
+            点击更换头像
+          </p>
         </div>
 
         {/* 表单区域 */}
         <div className="px-4 md:px-6 py-4 space-y-4">
           {/* 基本信息 */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">基本信息</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-gray-100">
+              基本信息
+            </h3>
 
             {/* 姓名 */}
             <Input
@@ -248,7 +252,9 @@ const UserEditProfile: FC = () => {
 
           {/* 联系方式 */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">联系方式</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-gray-100">
+              联系方式
+            </h3>
 
             {/* 手机 */}
             <Input
@@ -271,7 +277,9 @@ const UserEditProfile: FC = () => {
 
           {/* 个人简介 */}
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">个人简介</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-gray-100">
+              个人简介
+            </h3>
             <Textarea
               placeholder="介绍一下自己..."
               value={formData.bio}
@@ -279,7 +287,7 @@ const UserEditProfile: FC = () => {
               rows={3}
               maxLength={200}
             />
-            <p className="text-xs text-slate-400 text-right">
+            <p className="text-xs text-slate-400 dark:text-gray-500 text-right">
               {formData.bio.length}/200
             </p>
           </div>
@@ -287,8 +295,10 @@ const UserEditProfile: FC = () => {
           {/* 兴趣爱好 */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">兴趣爱好</h3>
-              <span className="text-xs text-slate-400">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-gray-100">
+                兴趣爱好
+              </h3>
+              <span className="text-xs text-slate-400 dark:text-gray-500">
                 {formData.interests.length}/6
               </span>
             </div>
@@ -299,12 +309,12 @@ const UserEditProfile: FC = () => {
                 {formData.interests.map((interest) => (
                   <span
                     key={interest}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-500 text-xs font-medium rounded-full"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400 text-xs font-medium rounded-full"
                   >
                     {interest}
                     <button
                       onClick={() => removeInterest(interest)}
-                      className="w-4 h-4 rounded-full bg-primary-100 flex items-center justify-center"
+                      className="w-4 h-4 rounded-full bg-primary-100 dark:bg-primary-800/50 flex items-center justify-center"
                     >
                       <X size={10} />
                     </button>
@@ -322,7 +332,7 @@ const UserEditProfile: FC = () => {
                     key={interest}
                     onClick={() => addInterest(interest)}
                     disabled={formData.interests.length >= 6}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-full hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300 text-xs font-medium rounded-full hover:bg-slate-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Plus size={12} />
                     {interest}
@@ -332,7 +342,7 @@ const UserEditProfile: FC = () => {
           </div>
 
           {/* 底部保存按钮 - 在表单内容流中，自然对齐 */}
-          <div className="mt-8 pt-4 border-t border-gray-100">
+          <div className="mt-8 pt-4 border-t border-gray-100 dark:border-gray-700">
             <Button onClick={handleSubmit} block className="h-12">
               保存名片
             </Button>

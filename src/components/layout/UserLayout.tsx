@@ -140,24 +140,24 @@ export const UserLayout: FC<UserLayoutProps> = ({
                       <button
                         key={tab.key}
                         onClick={() => handleTabClick(tab)}
-                        className="flex-1 flex flex-col items-center justify-center h-full gap-0.5 transition-all duration-200"
+                        className="flex-1 flex flex-col items-center justify-center h-full gap-1 transition-all duration-200"
                       >
-                        <div className="relative">
+                        <div className="relative leading-none">
                           <Icon
                             size={22}
-                            className={`transition-colors ${
+                            className={`block transition-colors ${
                               isActive ? "text-primary-400" : "text-gray-400"
                             }`}
                             strokeWidth={isActive ? 2.5 : 1.8}
                           />
                           {tab.badge && tab.badge > 0 && (
-                            <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-error-500 rounded-full">
+                            <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-error-500 rounded-full">
                               {tab.badge > 99 ? "99+" : tab.badge}
                             </span>
                           )}
                         </div>
                         <span
-                          className={`text-[11px] font-medium ${
+                          className={`text-[11px] leading-none font-medium ${
                             isActive ? "text-primary-400" : "text-gray-400"
                           }`}
                         >

@@ -100,9 +100,14 @@ const UserMatchResult: FC = () => {
   if (!activity) {
     return (
       <UserLayout showTabBar={true} showTopBar={true}>
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-          <AlertCircle size={40} className="text-gray-300 mb-3" />
-          <p className="text-gray-500 text-sm mb-4">活动不存在</p>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
+          <AlertCircle
+            size={40}
+            className="text-gray-300 dark:text-gray-600 mb-3"
+          />
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+            活动不存在
+          </p>
           <button
             onClick={() => navigate("/u/home")}
             className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
@@ -142,7 +147,7 @@ const UserMatchResult: FC = () => {
         {/* 主卡片区域 */}
         <div className="px-4 md:px-6 -mt-20 relative z-10">
           {/* 主卡片 */}
-          <div className="bg-white rounded-2xl shadow-lg shadow-accent-500/15 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg shadow-accent-500/15 overflow-hidden">
             {/* 分组徽章 */}
             <div className="flex justify-center -mt-4">
               <div className="px-6 py-2 bg-accent-400 rounded-full shadow-lg">
@@ -154,14 +159,14 @@ const UserMatchResult: FC = () => {
 
             {/* 匹配度得分 */}
             <div className="text-center py-6">
-              <p className="text-sm font-medium text-gray-500 mb-2">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                 小组匹配度
               </p>
               <p className="text-5xl font-bold text-accent-500">
                 {result.matchScore}%
               </p>
               {/* 进度条 */}
-              <div className="mx-auto mt-4 w-56 h-2 bg-purple-100 rounded-full overflow-hidden">
+              <div className="mx-auto mt-4 w-56 h-2 bg-purple-100 dark:bg-purple-900/30 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-accent-400 to-accent-500 rounded-full transition-all duration-500"
                   style={{ width: `${result.matchScore}%` }}
@@ -183,10 +188,10 @@ const UserMatchResult: FC = () => {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <p className="text-xs font-semibold text-gray-900 mt-2">
+                    <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 mt-2">
                       {member.name}
                     </p>
-                    <p className="text-[10px] text-gray-500">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
                       {member.isCurrentUser ? "你" : member.role}
                     </p>
                   </div>
@@ -197,10 +202,10 @@ const UserMatchResult: FC = () => {
 
           {/* 匹配理由 */}
           <div className="mt-6">
-            <h3 className="text-base font-bold text-gray-900 mb-3">
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">
               为什么我们被分在一组？
             </h3>
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
               {result.reasons.map((reason, index) => {
                 const Icon = reason.icon;
                 return (
@@ -208,20 +213,20 @@ const UserMatchResult: FC = () => {
                     key={reason.id}
                     className={`flex items-center gap-3 p-4 ${
                       index !== result.reasons.length - 1
-                        ? "border-b border-gray-100"
+                        ? "border-b border-gray-100 dark:border-gray-700"
                         : ""
                     }`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-xl ${reason.bgColor} flex items-center justify-center flex-shrink-0`}
+                      className={`w-10 h-10 rounded-xl ${reason.bgColor} dark:bg-opacity-20 flex items-center justify-center flex-shrink-0`}
                     >
                       <Icon size={18} className={reason.iconColor} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {reason.title}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         {reason.description}
                       </p>
                     </div>
@@ -233,16 +238,18 @@ const UserMatchResult: FC = () => {
 
           {/* 小组交流 */}
           <div className="mt-6">
-            <h3 className="text-base font-bold text-gray-900 mb-3">小组交流</h3>
-            <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">
+              小组交流
+            </h3>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-accent-400 flex items-center justify-center flex-shrink-0">
                 <MessageCircle size={22} className="text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {result.groupName}组群聊
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   {result.members.length}人 · 已建立微信群
                 </p>
               </div>
@@ -253,9 +260,11 @@ const UserMatchResult: FC = () => {
           </div>
 
           {/* 温馨提示 */}
-          <div className="mt-6 p-4 bg-purple-50 rounded-2xl">
-            <p className="text-sm font-bold text-purple-700 mb-2">温馨提示</p>
-            <ul className="text-xs text-purple-700 space-y-1">
+          <div className="mt-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-2xl">
+            <p className="text-sm font-bold text-purple-700 dark:text-purple-300 mb-2">
+              温馨提示
+            </p>
+            <ul className="text-xs text-purple-700 dark:text-purple-300 space-y-1">
               <li>• 活动当天请于8:50前到达集合点</li>
               <li>• 请穿着舒适运动鞋，携带防晒用品</li>
             </ul>
@@ -263,19 +272,19 @@ const UserMatchResult: FC = () => {
 
           {/* 其他分组（桌面端显示）*/}
           <div className="mt-6 hidden lg:block">
-            <h3 className="text-base font-bold text-gray-900 mb-3">
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">
               活动其他分组
             </h3>
             <div className="flex gap-3">
               {result.otherGroups.map((group) => (
                 <div
                   key={group.name}
-                  className="flex-1 p-4 bg-gray-50 border border-gray-200 rounded-xl text-center"
+                  className="flex-1 p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-xl text-center"
                 >
-                  <p className="text-sm font-semibold text-gray-600">
+                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">
                     {group.name} 组
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     {group.members}人 · {group.score}%
                   </p>
                 </div>
@@ -285,11 +294,11 @@ const UserMatchResult: FC = () => {
         </div>
 
         {/* 底部操作栏 */}
-        <div className="sticky bottom-0 left-0 right-0 mt-8 bg-white border-t border-gray-100 px-4 py-4 md:px-6">
+        <div className="sticky bottom-0 left-0 right-0 mt-8 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 py-4 md:px-6">
           <div className="flex gap-3">
             <button
               onClick={() => navigate(`/u/activities/${id}`)}
-              className="flex-1 h-12 rounded-[22px] bg-gray-100 text-gray-600 font-semibold text-sm hover:bg-gray-200 transition-all"
+              className="flex-1 h-12 rounded-[22px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-semibold text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
             >
               查看活动详情
             </button>

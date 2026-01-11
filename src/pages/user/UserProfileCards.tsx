@@ -55,13 +55,13 @@ const MenuItem: FC<{
 }> = ({ icon: Icon, label, color = "text-gray-600", onClick }) => (
   <button
     onClick={onClick}
-    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
   >
     <div className="flex items-center gap-3">
       <Icon size={18} className={color} />
-      <span className="text-sm text-gray-700">{label}</span>
+      <span className="text-sm text-gray-700 dark:text-gray-200">{label}</span>
     </div>
-    <ChevronRight size={16} className="text-gray-300" />
+    <ChevronRight size={16} className="text-gray-300 dark:text-gray-500" />
   </button>
 );
 
@@ -90,38 +90,38 @@ const MyActivityCard: FC<{
     { bg: string; text: string; icon: React.ElementType; label: string }
   > = {
     recruiting: {
-      bg: "bg-blue-50",
-      text: "text-blue-600",
+      bg: "bg-blue-50 dark:bg-blue-900/30",
+      text: "text-blue-600 dark:text-blue-400",
       icon: Clock,
       label: "报名中",
     },
     pending: {
-      bg: "bg-yellow-50",
-      text: "text-yellow-600",
+      bg: "bg-yellow-50 dark:bg-yellow-900/30",
+      text: "text-yellow-600 dark:text-yellow-400",
       icon: Clock,
       label: "待审核",
     },
     approved: {
-      bg: "bg-green-50",
-      text: "text-green-600",
+      bg: "bg-green-50 dark:bg-green-900/30",
+      text: "text-green-600 dark:text-green-400",
       icon: CheckCircle,
       label: "已通过",
     },
     rejected: {
-      bg: "bg-red-50",
-      text: "text-red-600",
+      bg: "bg-red-50 dark:bg-red-900/30",
+      text: "text-red-600 dark:text-red-400",
       icon: XCircle,
       label: "未通过",
     },
     completed: {
-      bg: "bg-gray-50",
-      text: "text-gray-500",
+      bg: "bg-gray-50 dark:bg-gray-700",
+      text: "text-gray-500 dark:text-gray-400",
       icon: CheckCircle,
       label: "已结束",
     },
     ended: {
-      bg: "bg-gray-50",
-      text: "text-gray-500",
+      bg: "bg-gray-50 dark:bg-gray-700",
+      text: "text-gray-500 dark:text-gray-400",
       icon: CheckCircle,
       label: "已结束",
     },
@@ -136,10 +136,10 @@ const MyActivityCard: FC<{
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-start gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+      className="w-full flex items-start gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors text-left"
     >
       {/* 活动封面 */}
-      <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+      <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
         <img
           src={activity.coverImage}
           alt={activity.title}
@@ -150,7 +150,7 @@ const MyActivityCard: FC<{
       {/* 活动信息 */}
       <div className="flex-1 min-w-0 py-0.5">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-medium text-gray-900 line-clamp-1">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">
             {activity.title}
           </h4>
           {/* 状态标签 */}
@@ -162,12 +162,12 @@ const MyActivityCard: FC<{
           </span>
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1.5">
+        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-1.5">
           <Calendar size={12} />
           <span>{dayjs(activity.eventStartTime).format("M月D日 HH:mm")}</span>
         </div>
 
-        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
           <MapPin size={12} />
           <span className="truncate">{activity.location}</span>
         </div>
@@ -255,7 +255,7 @@ const UserProfileCards: FC = () => {
   };
 
   return (
-    <UserLayout bgColor="bg-gray-100">
+    <UserLayout bgColor="bg-gray-100 dark:bg-gray-900">
       {/* 顶部背景 */}
       <div className="bg-gradient-to-br from-primary-400 to-primary-500 pt-4 pb-20 px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between">
@@ -271,25 +271,25 @@ const UserProfileCards: FC = () => {
 
       {/* 个人卡片 - 简化版 */}
       <div className="px-4 md:px-6 lg:px-8 -mt-16 relative z-10 max-w-2xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
           {/* 头像和基本信息 */}
           <div className="p-4">
             <div className="flex items-start gap-3">
               <img
                 src={profile.avatar}
                 alt={profile.name}
-                className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white shadow"
+                className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white dark:ring-gray-700 shadow"
               />
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-gray-900">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
                     {profile.name}
                   </h2>
-                  <span className="px-1.5 py-0.5 bg-primary-100 text-primary-600 text-[10px] font-medium rounded">
+                  <span className="px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-[10px] font-medium rounded">
                     {profile.role}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
                   <span className="flex items-center gap-1">
                     <Briefcase size={11} />
                     {profile.occupation}
@@ -303,7 +303,7 @@ const UserProfileCards: FC = () => {
               {/* 编辑按钮 */}
               <button
                 onClick={() => navigate("/u/profile/edit")}
-                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <Edit3 size={16} className="text-gray-400" />
               </button>
@@ -318,7 +318,7 @@ const UserProfileCards: FC = () => {
                 {profile.interestTags.length > 5 && (
                   <button
                     onClick={() => setShowEditInterests(true)}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500"
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                   >
                     +{profile.interestTags.length - 5}
                   </button>
@@ -331,13 +331,15 @@ const UserProfileCards: FC = () => {
 
       {/* 我的活动区域 */}
       <div className="px-4 md:px-6 lg:px-8 mt-4 max-w-2xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden">
           {/* 标题和查看全部 */}
           <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <h3 className="text-sm font-semibold text-gray-900">我的活动</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              我的活动
+            </h3>
             <button
               onClick={() => navigate("/u/activities/history")}
-              className="text-xs text-primary-500 font-medium flex items-center gap-0.5"
+              className="text-xs text-primary-500 dark:text-primary-400 font-medium flex items-center gap-0.5"
             >
               查看全部
               <ChevronRight size={14} />
@@ -353,7 +355,7 @@ const UserProfileCards: FC = () => {
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   activeStatusTab === tab.key
                     ? "bg-primary-500 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                 }`}
               >
                 {tab.label}
@@ -375,7 +377,7 @@ const UserProfileCards: FC = () => {
                 {filteredActivities.length > 3 && (
                   <button
                     onClick={() => navigate("/u/activities/history")}
-                    className="w-full flex items-center justify-center gap-1 py-2.5 text-xs text-gray-500 hover:text-primary-500 transition-colors"
+                    className="w-full flex items-center justify-center gap-1 py-2.5 text-xs text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
                   >
                     <MoreHorizontal size={14} />
                     查看更多 ({filteredActivities.length - 3})
@@ -383,7 +385,7 @@ const UserProfileCards: FC = () => {
                 )}
               </div>
             ) : (
-              <div className="py-8 text-center text-gray-400 text-sm">
+              <div className="py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
                 暂无
                 {statusTabConfig.find((t) => t.key === activeStatusTab)?.label}
                 活动
@@ -395,7 +397,7 @@ const UserProfileCards: FC = () => {
 
       {/* 功能菜单 */}
       <div className="px-4 md:px-6 lg:px-8 mt-4 mb-6 max-w-2xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
           <MenuItem
             icon={Users}
             label="我的好友"

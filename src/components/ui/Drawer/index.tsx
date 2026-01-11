@@ -118,16 +118,19 @@ export const Drawer: FC<DrawerProps> = ({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open, closable, onClose]);
 
-  // 阻止 body 滚动
+  // 阻止 body 滚动 - 使用更可靠的方式
   useEffect(() => {
-    if (open) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
+    const originalOverflow = document.body.style.overflow;
 
-      return () => {
-        document.body.style.overflow = originalOverflow || "";
-      };
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
     }
+
+    return () => {
+      document.body.style.overflow = originalOverflow || "";
+    };
   }, [open]);
 
   // 处理遮罩点击
@@ -137,8 +140,10 @@ export const Drawer: FC<DrawerProps> = ({
     }
   };
 
-  // 不显示时直接返回 null
-  if (!open) return null;
+  // 不显示时返回 null
+  if (!open) {
+    return null;
+  }
 
   const drawerContent = (
     <>
@@ -158,7 +163,7 @@ export const Drawer: FC<DrawerProps> = ({
       <div
         ref={drawerRef}
         className={clsx(
-          "fixed bg-white shadow-2xl flex flex-col",
+          "fixed bg-white dark:bg-gray-800 shadow-2xl flex flex-col",
           "transform transition-transform duration-300 ease-in-out",
           placementClasses[placement],
           animationClasses[placement],
@@ -183,11 +188,11 @@ export const Drawer: FC<DrawerProps> = ({
       >
         {/* 头部 */}
         {(title || closable) && (
-          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             {title && (
               <h3
                 id="drawer-title"
-                className="text-lg font-semibold text-gray-900"
+                className="text-lg font-semibold text-gray-900 dark:text-gray-100"
               >
                 {title}
               </h3>
@@ -195,10 +200,10 @@ export const Drawer: FC<DrawerProps> = ({
             {closable && (
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors ml-auto"
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-auto"
                 aria-label="关闭"
               >
-                <X size={18} className="text-gray-400" />
+                <X size={18} className="text-gray-400 dark:text-gray-500" />
               </button>
             )}
           </div>
@@ -209,7 +214,9 @@ export const Drawer: FC<DrawerProps> = ({
 
         {/* 底部操作区 */}
         {footer && (
-          <div className="flex-shrink-0 border-t border-gray-200">{footer}</div>
+          <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700">
+            {footer}
+          </div>
         )}
       </div>
     </>

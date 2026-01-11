@@ -97,7 +97,7 @@ export const ActivityFilterDrawer: FC<ActivityFilterDrawerProps> = ({
         "px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150",
         isSelected
           ? "bg-primary-500 text-white shadow-sm"
-          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          : "bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-200 dark:hover:bg-gray-600"
       )}
     >
       {label}
@@ -145,7 +145,9 @@ export const ActivityFilterDrawer: FC<ActivityFilterDrawerProps> = ({
       <div className="px-4 py-2 space-y-6 overflow-y-auto max-h-[60vh]">
         {/* 活动类型 */}
         <section>
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">活动类型</h4>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            活动类型
+          </h4>
           <div className="flex flex-wrap gap-2">
             {categoryOptions.map((option) =>
               renderOptionButton(
@@ -159,7 +161,9 @@ export const ActivityFilterDrawer: FC<ActivityFilterDrawerProps> = ({
 
         {/* 时间范围 */}
         <section>
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">时间范围</h4>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            时间范围
+          </h4>
           <div className="flex flex-wrap gap-2">
             {timeRangeOptions.map((option) =>
               renderOptionButton(
@@ -176,7 +180,9 @@ export const ActivityFilterDrawer: FC<ActivityFilterDrawerProps> = ({
 
         {/* 价格范围 */}
         <section>
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">价格范围</h4>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            价格范围
+          </h4>
           <div className="flex flex-wrap gap-2">
             {priceRangeOptions.map((option) =>
               renderOptionButton(
@@ -193,7 +199,9 @@ export const ActivityFilterDrawer: FC<ActivityFilterDrawerProps> = ({
 
         {/* 热门标签 */}
         <section>
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">热门标签</h4>
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            热门标签
+          </h4>
           <div className="flex flex-wrap gap-2">
             {tagOptions.map((tag) =>
               renderOptionButton(tag, filters.tags.includes(tag), () =>

@@ -182,19 +182,25 @@ const UserActivityDetail: FC = () => {
           {prevActivity && (
             <button
               onClick={goToPrevious}
-              className="lg:hidden absolute left-3 top-[calc(50vw-24px)] md:top-[200px] z-30 w-11 h-11 rounded-full bg-white/95 shadow-md flex items-center justify-center hover:bg-white hover:shadow-lg active:scale-95 transition-all duration-150"
+              className="lg:hidden absolute left-3 top-[calc(50vw-24px)] md:top-[200px] z-30 w-11 h-11 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-md flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg active:scale-95 transition-all duration-150"
               aria-label="上一个活动"
             >
-              <ChevronLeft size={24} className="text-gray-600" />
+              <ChevronLeft
+                size={24}
+                className="text-gray-600 dark:text-gray-300"
+              />
             </button>
           )}
           {nextActivity && (
             <button
               onClick={goToNext}
-              className="lg:hidden absolute right-3 top-[calc(50vw-24px)] md:top-[200px] z-30 w-11 h-11 rounded-full bg-white/95 shadow-md flex items-center justify-center hover:bg-white hover:shadow-lg active:scale-95 transition-all duration-150"
+              className="lg:hidden absolute right-3 top-[calc(50vw-24px)] md:top-[200px] z-30 w-11 h-11 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-md flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg active:scale-95 transition-all duration-150"
               aria-label="下一个活动"
             >
-              <ChevronRight size={24} className="text-gray-600" />
+              <ChevronRight
+                size={24}
+                className="text-gray-600 dark:text-gray-300"
+              />
             </button>
           )}
 
@@ -265,7 +271,7 @@ const UserActivityDetail: FC = () => {
             <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
               {/* 时间 */}
               <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0">
                   <Calendar size={16} className="text-primary-400" />
                 </div>
                 <div>
