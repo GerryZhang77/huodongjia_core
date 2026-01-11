@@ -181,7 +181,7 @@ const UserEditProfile: FC = () => {
       showBreadcrumb={true}
       breadcrumbItems={[
         { label: "首页", path: "/u/home" },
-        { label: "个人名片", path: "/u/cards" },
+        { label: "个人中心", path: "/u/profile" },
         { label: "编辑名片" },
       ]}
       topBarRightContent={

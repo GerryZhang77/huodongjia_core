@@ -22,18 +22,15 @@ import {
   HotActivityCarousel,
   ActivityCard,
   ActivityListItem,
+  ActivityFilterDrawer,
 } from "@/components/business";
-import { ActivityFilterDrawer } from "@/components/business/ActivityFilterDrawer";
-import { CitySelector } from "@/components/ui/CitySelector";
-import { Tag } from "@/components/ui";
+import { CitySelector } from "@/components/ui";
 import { mockUserActivities } from "@/mocks/data/user-activities";
-import dayjs from "dayjs";
 import {
-  type ActivityFilters,
   defaultFilters,
-  timeRangeOptions,
-  priceRangeOptions,
+  type ActivityFilters,
 } from "@/components/business/ActivityFilterDrawer/types";
+import dayjs from "dayjs";
 
 // ============ 类型定义 ============
 
@@ -82,8 +79,6 @@ const UserHome: FC = () => {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showCitySelector, setShowCitySelector] = useState(false);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
-
-  // 高级筛选状态
   const [advancedFilters, setAdvancedFilters] =
     useState<ActivityFilters>(defaultFilters);
 
@@ -97,6 +92,17 @@ const UserHome: FC = () => {
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
+
+  // 计算高级筛选数量
+  const advancedFilterCount = useMemo(() => {
+    let count = 0;
+    if (advancedFilters.categories.length > 0)
+      count += advancedFilters.categories.length;
+    if (advancedFilters.timeRange !== "all") count += 1;
+    if (advancedFilters.priceRange !== "all") count += 1;
+    if (advancedFilters.tags.length > 0) count += advancedFilters.tags.length;
+    return count;
+  }, [advancedFilters]);
 
   // 热门活动（取参与率最高的前4个）
   const hotActivities = useMemo(() => {
@@ -130,101 +136,73 @@ const UserHome: FC = () => {
       result = result.filter((a) => a.location.includes(selectedCity));
     }
 
-    // 标签过滤（快捷筛选）
+    // 快捷标签过滤
     if (activeFilter !== "all") {
       switch (activeFilter) {
         case "outdoor":
           result = result.filter(
-            (a) => a.tags.includes("户外") || a.tags.includes("运动")
+            (a) =>
+              a.tags.includes("户外") ||
+              a.tags.includes("运动") ||
+              a.tags.includes("徒步") ||
+              a.tags.includes("骑行")
           );
           break;
         case "social":
           result = result.filter(
-            (a) => a.tags.includes("社交") || a.tags.includes("交友")
+            (a) =>
+              a.tags.includes("社交") ||
+              a.tags.includes("交友") ||
+              a.tags.includes("聚会")
           );
           break;
-        case "weekend": {
-          // 本周末筛选
-          const now = dayjs();
-          const weekEnd = now.endOf("week");
-          const saturday = weekEnd.subtract(1, "day").startOf("day");
+        case "free":
+          result = result.filter((a) => a.tags.includes("免费"));
+          break;
+        case "weekend":
           result = result.filter((a) => {
             const d = dayjs(a.eventStartTime);
-            return d.isAfter(saturday) && d.isBefore(weekEnd.add(1, "day"));
+            const today = dayjs();
+            const weekEnd = today.endOf("week");
+            return d.isBefore(weekEnd) && d.isAfter(today);
           });
-          break;
-        }
-        case "free":
-          // 免费活动筛选 - 由于 UserActivity 类型没有 price 字段，暂时跳过此筛选
-          break;
-        case "nearby":
-          // 附近筛选暂时显示当前城市的活动
-          if (selectedCity !== "全国") {
-            result = result.filter((a) => a.location.includes(selectedCity));
-          }
           break;
         default:
           break;
       }
     }
 
-    // 高级筛选 - 分类
-    if (advancedFilters.categories && advancedFilters.categories.length > 0) {
+    // 高级筛选 - 标签
+    if (advancedFilters.tags.length > 0) {
       result = result.filter((a) =>
-        advancedFilters.categories.some((cat) => a.tags.includes(cat))
+        advancedFilters.tags.some((tag) => a.tags.includes(tag))
       );
     }
 
     // 高级筛选 - 时间范围
-    if (advancedFilters.timeRange && advancedFilters.timeRange !== "all") {
-      const now = dayjs();
-      switch (advancedFilters.timeRange) {
-        case "today":
-          result = result.filter((a) =>
-            dayjs(a.eventStartTime).isSame(now, "day")
-          );
-          break;
-        case "tomorrow":
-          result = result.filter((a) =>
-            dayjs(a.eventStartTime).isSame(now.add(1, "day"), "day")
-          );
-          break;
-        case "weekend": {
-          const weekEnd = now.endOf("week");
-          const saturday = weekEnd.subtract(1, "day").startOf("day");
-          result = result.filter((a) => {
-            const d = dayjs(a.eventStartTime);
-            return d.isAfter(saturday) && d.isBefore(weekEnd.add(1, "day"));
-          });
-          break;
+    if (advancedFilters.timeRange !== "all") {
+      const today = dayjs();
+      const tomorrow = today.add(1, "day");
+      const weekEnd = today.endOf("week");
+      const monthEnd = today.endOf("month");
+
+      result = result.filter((a) => {
+        const d = dayjs(a.eventStartTime);
+        switch (advancedFilters.timeRange) {
+          case "today":
+            return d.isSame(today, "day");
+          case "tomorrow":
+            return d.isSame(tomorrow, "day");
+          case "weekend":
+            return d.day() === 0 || d.day() === 6;
+          case "week":
+            return d.isBefore(weekEnd) && d.isAfter(today);
+          case "month":
+            return d.isBefore(monthEnd) && d.isAfter(today);
+          default:
+            return true;
         }
-        case "week":
-          result = result.filter((a) =>
-            dayjs(a.eventStartTime).isBefore(now.add(7, "day"))
-          );
-          break;
-        case "month":
-          result = result.filter((a) =>
-            dayjs(a.eventStartTime).isBefore(now.add(30, "day"))
-          );
-          break;
-      }
-    }
-
-    // 高级筛选 - 价格范围 (由于 UserActivity 没有 price 字段，暂时只处理 free 筛选)
-    if (
-      advancedFilters.priceRange &&
-      advancedFilters.priceRange !== "all" &&
-      advancedFilters.priceRange === "free"
-    ) {
-      // 免费活动筛选 - 暂时不支持，因为 UserActivity 没有 price 字段
-    }
-
-    // 高级筛选 - 标签
-    if (advancedFilters.tags && advancedFilters.tags.length > 0) {
-      result = result.filter((a) =>
-        advancedFilters.tags!.some((tag) => a.tags.includes(tag))
-      );
+      });
     }
 
     // 排序
@@ -271,68 +249,12 @@ const UserHome: FC = () => {
     setViewMode(mode);
   };
 
-  // 处理高级筛选条件变更（不关闭抽屉）
-  const handleFilterChange = (filters: ActivityFilters) => {
-    setAdvancedFilters(filters);
-  };
-
-  // 确认筛选并关闭抽屉
-  const handleFilterConfirm = () => {
-    setShowFilterDrawer(false);
-  };
-
-  const handleFilterReset = () => {
+  const resetAllFilters = () => {
+    setSearchText("");
+    setActiveFilter("all");
+    setSelectedCity("全国");
     setAdvancedFilters(defaultFilters);
   };
-
-  // 移除单个分类筛选条件
-  const removeCategory = (category: string) => {
-    setAdvancedFilters((prev) => ({
-      ...prev,
-      categories: prev.categories.filter((c) => c !== category),
-    }));
-  };
-
-  // 移除时间范围筛选
-  const removeTimeRange = () => {
-    setAdvancedFilters((prev) => ({
-      ...prev,
-      timeRange: "all",
-    }));
-  };
-
-  // 移除价格范围筛选
-  const removePriceRange = () => {
-    setAdvancedFilters((prev) => ({
-      ...prev,
-      priceRange: "all",
-    }));
-  };
-
-  // 移除单个标签筛选
-  const removeTag = (tag: string) => {
-    setAdvancedFilters((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((t) => t !== tag),
-    }));
-  };
-
-  // 获取时间范围标签文本
-  const getTimeRangeLabel = (value: string) => {
-    return timeRangeOptions.find((opt) => opt.value === value)?.label || value;
-  };
-
-  // 获取价格范围标签文本
-  const getPriceRangeLabel = (value: string) => {
-    return priceRangeOptions.find((opt) => opt.value === value)?.label || value;
-  };
-
-  // 计算是否有活跃的高级筛选
-  const hasActiveFilters =
-    (advancedFilters.categories && advancedFilters.categories.length > 0) ||
-    (advancedFilters.timeRange && advancedFilters.timeRange !== "all") ||
-    (advancedFilters.tags && advancedFilters.tags.length > 0) ||
-    (advancedFilters.priceRange && advancedFilters.priceRange !== "all");
 
   return (
     <UserLayout showTabBar={true} showTopBar={false} bgColor="bg-slate-50">
@@ -347,7 +269,7 @@ const UserHome: FC = () => {
               className="flex items-center gap-0.5 text-sm font-medium text-gray-700 flex-shrink-0"
             >
               <MapPin size={16} className="text-primary-500" />
-              <span>{selectedCity}</span>
+              <span className="max-w-[4em] truncate">{selectedCity}</span>
               <ChevronDown size={14} className="text-gray-400" />
             </button>
 
@@ -375,102 +297,17 @@ const UserHome: FC = () => {
             {/* 筛选按钮 */}
             <button
               onClick={() => setShowFilterDrawer(true)}
-              className={`
-                relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 
-                transition-colors
-                ${
-                  hasActiveFilters
-                    ? "bg-primary-500 hover:bg-primary-600"
-                    : "bg-primary-50 hover:bg-primary-100"
-                }
-              `}
+              className="relative w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0 hover:bg-primary-100 transition-colors"
             >
-              <SlidersHorizontal
-                size={18}
-                className={hasActiveFilters ? "text-white" : "text-primary-500"}
-              />
-              {/* 活跃筛选指示器 */}
-              {hasActiveFilters && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-secondary-500 rounded-full flex items-center justify-center">
-                  <span className="text-[10px] text-white font-bold">
-                    {(advancedFilters.categories?.length || 0) +
-                      (advancedFilters.tags?.length || 0) +
-                      (advancedFilters.timeRange ? 1 : 0)}
-                  </span>
+              <SlidersHorizontal size={18} className="text-primary-500" />
+              {advancedFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {advancedFilterCount}
                 </span>
               )}
             </button>
           </div>
         </div>
-
-        {/* 已选筛选条件标签区 */}
-        {hasActiveFilters && (
-          <div className="px-4 pb-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* 分类标签 */}
-              {advancedFilters.categories.map((cat) => (
-                <Tag
-                  key={`cat-${cat}`}
-                  closable
-                  color="primary"
-                  size="small"
-                  variant="soft"
-                  onClose={() => removeCategory(cat)}
-                >
-                  {cat}
-                </Tag>
-              ))}
-
-              {/* 时间范围标签 */}
-              {advancedFilters.timeRange !== "all" && (
-                <Tag
-                  closable
-                  color="secondary"
-                  size="small"
-                  variant="soft"
-                  onClose={removeTimeRange}
-                >
-                  {getTimeRangeLabel(advancedFilters.timeRange)}
-                </Tag>
-              )}
-
-              {/* 价格范围标签 */}
-              {advancedFilters.priceRange !== "all" && (
-                <Tag
-                  closable
-                  color="accent"
-                  size="small"
-                  variant="soft"
-                  onClose={removePriceRange}
-                >
-                  {getPriceRangeLabel(advancedFilters.priceRange)}
-                </Tag>
-              )}
-
-              {/* 热门标签 */}
-              {advancedFilters.tags.map((tag) => (
-                <Tag
-                  key={`tag-${tag}`}
-                  closable
-                  color="gray"
-                  size="small"
-                  variant="soft"
-                  onClose={() => removeTag(tag)}
-                >
-                  {tag}
-                </Tag>
-              ))}
-
-              {/* 清除全部按钮 */}
-              <button
-                onClick={handleFilterReset}
-                className="text-xs text-gray-500 hover:text-primary-500 transition-colors px-2"
-              >
-                清除全部
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* 筛选标签 */}
         <div className="px-4 pb-3 overflow-x-auto scrollbar-hide">
@@ -618,12 +455,7 @@ const UserHome: FC = () => {
               <Search size={40} className="text-slate-200 mx-auto mb-3" />
               <p className="text-slate-400 text-sm">没有找到相关活动</p>
               <button
-                onClick={() => {
-                  setSearchText("");
-                  setActiveFilter("all");
-                  setSelectedCity("全国");
-                  handleFilterReset();
-                }}
+                onClick={resetAllFilters}
                 className="mt-4 px-6 py-2 bg-primary-500 text-white text-sm font-medium rounded-full hover:bg-primary-600 transition-colors"
               >
                 重置筛选
@@ -661,13 +493,12 @@ const UserHome: FC = () => {
         <div className="h-8" />
       </div>
 
-      {/* 城市选择器 - 使用 antd-mobile 组件 */}
+      {/* 城市选择器 */}
       <CitySelector
         open={showCitySelector}
         onClose={() => setShowCitySelector(false)}
         value={selectedCity}
         onChange={(city) => setSelectedCity(city)}
-        title="选择城市"
       />
 
       {/* 高级筛选抽屉 */}
@@ -675,9 +506,8 @@ const UserHome: FC = () => {
         open={showFilterDrawer}
         onClose={() => setShowFilterDrawer(false)}
         filters={advancedFilters}
-        onFiltersChange={handleFilterChange}
-        onReset={handleFilterReset}
-        onConfirm={handleFilterConfirm}
+        onFiltersChange={setAdvancedFilters}
+        onReset={() => setAdvancedFilters(defaultFilters)}
       />
     </UserLayout>
   );

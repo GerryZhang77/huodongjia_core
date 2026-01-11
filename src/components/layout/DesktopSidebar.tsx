@@ -5,7 +5,7 @@
 
 import { FC } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, CreditCard, Bell, Settings, LogOut } from "lucide-react";
+import { Home, Bell, User, Settings, LogOut } from "lucide-react";
 import { getUnreadCount } from "@/mocks/data/user-notifications";
 import { useAuthStore } from "@/features/auth/stores";
 
@@ -25,9 +25,9 @@ export const DesktopSidebar: FC = () => {
 
   const unreadCount = getUnreadCount();
 
+  // 导航配置 - 3Tab: 首页 | 消息 | 我的
   const navItems: NavItem[] = [
     { key: "home", label: "首页", icon: Home, path: "/u/home" },
-    { key: "cards", label: "名片", icon: CreditCard, path: "/u/cards" },
     {
       key: "notifications",
       label: "消息",
@@ -35,6 +35,7 @@ export const DesktopSidebar: FC = () => {
       path: "/u/notifications",
       badge: unreadCount,
     },
+    { key: "profile", label: "我的", icon: User, path: "/u/profile" },
   ];
 
   const getActiveItem = () => {

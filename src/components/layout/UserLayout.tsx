@@ -5,7 +5,7 @@
 
 import { FC, ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, CreditCard, Bell } from "lucide-react";
+import { Home, Bell, User } from "lucide-react";
 import { getUnreadCount } from "@/mocks/data/user-notifications";
 import { DesktopSidebar } from "./DesktopSidebar";
 import { TopBar } from "./TopBar";
@@ -56,10 +56,9 @@ export const UserLayout: FC<UserLayoutProps> = ({
   // 获取未读消息数
   const unreadCount = getUnreadCount();
 
-  // Tab 配置
+  // Tab 配置 - 3Tab: 首页 | 消息 | 我的
   const tabs: TabItem[] = [
     { key: "home", label: "首页", icon: Home, path: "/u/home" },
-    { key: "cards", label: "名片", icon: CreditCard, path: "/u/cards" },
     {
       key: "notifications",
       label: "消息",
@@ -67,6 +66,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
       path: "/u/notifications",
       badge: unreadCount,
     },
+    { key: "profile", label: "我的", icon: User, path: "/u/profile" },
   ];
 
   // 判断当前激活的 Tab

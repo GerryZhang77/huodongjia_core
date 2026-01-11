@@ -5,7 +5,7 @@
 
 import { FC } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Compass, Bell, User } from "lucide-react";
+import { Home, Bell, User } from "lucide-react";
 
 interface TabItem {
   key: string;
@@ -23,36 +23,36 @@ interface BottomTabBarProps {
 /**
  * 底部 TabBar 导航
  * 响应式设计，仅在移动端和平板端显示
+ * 3Tab 布局: 首页 | 消息 | 我的
  */
 export const BottomTabBar: FC<BottomTabBarProps> = ({ unreadCount = 0 }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tab 配置 - 对应设计稿底部导航
+  // Tab 配置 - 3Tab: 首页 | 消息 | 我的
   const tabs: TabItem[] = [
     { key: "home", label: "首页", icon: Home, path: "/u/home" },
-    { key: "discover", label: "活动", icon: Compass, path: "/u/discover" },
     {
       key: "notifications",
-      label: "通知",
+      label: "消息",
       icon: Bell,
       path: "/u/notifications",
       badge: unreadCount,
     },
-    { key: "profile", label: "我的", icon: User, path: "/u/cards" },
+    { key: "profile", label: "我的", icon: User, path: "/u/profile" },
   ];
 
   // 判断当前激活的 Tab
   const getActiveTab = () => {
     const path = location.pathname;
-    if (path.startsWith("/u/discover")) return "discover";
     if (path.startsWith("/u/notifications")) return "notifications";
     if (
-      path.startsWith("/u/cards") ||
       path.startsWith("/u/profile") ||
+      path.startsWith("/u/cards") || // 兼容旧路径
       path.startsWith("/u/settings") ||
       path.startsWith("/u/friends") ||
-      path.startsWith("/u/favorites")
+      path.startsWith("/u/favorites") ||
+      path.startsWith("/u/activity-history")
     )
       return "profile";
     return "home";

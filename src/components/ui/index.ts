@@ -60,3 +60,7 @@ export type { DialogProps, DialogType, DialogConfig } from "./Dialog/types";
 
 export { Drawer } from "./Drawer";
 export type { DrawerProps, DrawerPlacement } from "./Drawer/types";
+
+// 城市选择器
+export { CitySelector } from "./CitySelector";
+export type { CitySelectorProps } from "./CitySelector/types";

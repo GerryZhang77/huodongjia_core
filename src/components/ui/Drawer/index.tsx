@@ -121,14 +121,13 @@ export const Drawer: FC<DrawerProps> = ({
   // 阻止 body 滚动
   useEffect(() => {
     if (open) {
+      const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
 
-    return () => {
-      document.body.style.overflow = "";
-    };
+      return () => {
+        document.body.style.overflow = originalOverflow || "";
+      };
+    }
   }, [open]);
 
   // 处理遮罩点击
@@ -138,7 +137,8 @@ export const Drawer: FC<DrawerProps> = ({
     }
   };
 
-  if (!open && !drawerRef.current) return null;
+  // 不显示时直接返回 null
+  if (!open) return null;
 
   const drawerContent = (
     <>
@@ -158,7 +158,7 @@ export const Drawer: FC<DrawerProps> = ({
       <div
         ref={drawerRef}
         className={clsx(
-          "fixed bg-white shadow-2xl",
+          "fixed bg-white shadow-2xl flex flex-col",
           "transform transition-transform duration-300 ease-in-out",
           placementClasses[placement],
           animationClasses[placement],
@@ -183,7 +183,7 @@ export const Drawer: FC<DrawerProps> = ({
       >
         {/* 头部 */}
         {(title || closable) && (
-          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 flex-shrink-0">
             {title && (
               <h3
                 id="drawer-title"
@@ -205,11 +205,11 @@ export const Drawer: FC<DrawerProps> = ({
         )}
 
         {/* 内容区 */}
-        <div className="px-4 py-4 overflow-y-auto flex-1">{children}</div>
+        <div className="overflow-y-auto flex-1 min-h-0">{children}</div>
 
         {/* 底部操作区 */}
         {footer && (
-          <div className="px-4 py-4 border-t border-gray-200">{footer}</div>
+          <div className="flex-shrink-0 border-t border-gray-200">{footer}</div>
         )}
       </div>
     </>

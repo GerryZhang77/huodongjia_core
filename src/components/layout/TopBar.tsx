@@ -18,11 +18,13 @@ import { getUnreadCount } from "@/mocks/data/user-notifications";
  * - 边框: border-b border-gray-100
  * - 间距: px-4 py-3 (移动端) / px-6 py-4 (桌面端)
  * - Logo: 渐变圆角方块 from-primary-400 to-accent-400
+ *
+ * 注意: showNotification 默认关闭，因为底部 TabBar 已有消息入口
  */
 export const TopBar: FC<TopBarProps> = ({
   showBreadcrumb = false,
   breadcrumbItems = [],
-  showNotification = true,
+  showNotification = false, // 改为 false，避免与 TabBar 消息入口重复
   onLogoClick,
   rightContent,
 }) => {

@@ -61,7 +61,7 @@ const UserSettings: FC = () => {
           label: "编辑个人资料",
           description: "修改头像、昵称等信息",
           type: "link",
-          onClick: () => navigate("/u/cards/edit"),
+          onClick: () => navigate("/u/profile/edit"),
         },
         {
           id: "privacy",

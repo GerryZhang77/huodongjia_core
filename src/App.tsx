@@ -195,14 +195,20 @@ function App() {
                   }
                 />
 
-                {/* 用户名片页 */}
+                {/* 用户个人中心页（原名片页，现为"我的"） */}
                 <Route
-                  path="/u/cards"
+                  path="/u/profile"
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserProfileCards />
                     </ProtectedRoute>
                   }
+                />
+
+                {/* 兼容旧路径 /u/cards - 重定向到 /u/profile */}
+                <Route
+                  path="/u/cards"
+                  element={<Navigate to="/u/profile" replace />}
                 />
 
                 {/* 活动报名页 */}
@@ -265,20 +271,20 @@ function App() {
                   }
                 />
 
-                {/* 个人资料 - 重定向到名片页 */}
+                {/* 编辑个人资料页 */}
                 <Route
-                  path="/u/profile"
-                  element={<Navigate to="/u/cards" replace />}
-                />
-
-                {/* 编辑名片页 */}
-                <Route
-                  path="/u/cards/edit"
+                  path="/u/profile/edit"
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserEditProfile />
                     </ProtectedRoute>
                   }
+                />
+
+                {/* 兼容旧路径 /u/cards/edit */}
+                <Route
+                  path="/u/cards/edit"
+                  element={<Navigate to="/u/profile/edit" replace />}
                 />
 
                 {/* 活动记录页 */}

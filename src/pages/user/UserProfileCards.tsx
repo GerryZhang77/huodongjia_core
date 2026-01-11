@@ -1,6 +1,6 @@
 /**
- * 用户端名片页面
- * 简洁现代的个人资料展示
+ * 用户端"我的"页面（原名片页）
+ * 整合个人资料卡片 + 我的活动列表 + 功能入口
  */
 
 import { FC, useState, useEffect } from "react";
@@ -14,8 +14,12 @@ import {
   Heart,
   Settings,
   ChevronRight,
-  Share2,
+  Clock,
+  CheckCircle,
+  XCircle,
+  MoreHorizontal,
 } from "lucide-react";
+import dayjs from "dayjs";
 import { UserLayout } from "@/components/layout/UserLayout";
 import {
   getUserProfile,
@@ -24,8 +28,11 @@ import {
   InterestTag,
   UserProfile,
 } from "@/mocks/data/user-profile";
+import { mockUserActivities, UserActivity } from "@/mocks/data/user-activities";
 import { EditInterestsModal } from "./EditInterestsModal";
 import { eventBus, EVENTS } from "@/utils/eventBus";
+
+// ==================== 子组件 ====================
 
 // 标签组件
 const TagChip: FC<{ tag: InterestTag }> = ({ tag }) => {
@@ -38,14 +45,6 @@ const TagChip: FC<{ tag: InterestTag }> = ({ tag }) => {
     </span>
   );
 };
-
-// 统计项组件
-const StatItem: FC<{ value: number; label: string }> = ({ value, label }) => (
-  <div className="text-center">
-    <p className="text-xl font-bold text-gray-900">{value}</p>
-    <p className="text-[11px] text-gray-500 mt-0.5">{label}</p>
-  </div>
-);
 
 // 菜单项组件
 const MenuItem: FC<{
@@ -66,6 +65,117 @@ const MenuItem: FC<{
   </button>
 );
 
+// 活动状态 Tab 类型
+type ActivityStatusTab = "all" | "pending" | "approved" | "ended";
+
+// 状态配置
+const statusTabConfig: {
+  key: ActivityStatusTab;
+  label: string;
+}[] = [
+  { key: "all", label: "全部" },
+  { key: "pending", label: "报名中" },
+  { key: "approved", label: "已通过" },
+  { key: "ended", label: "已结束" },
+];
+
+// 我的活动卡片组件
+const MyActivityCard: FC<{
+  activity: UserActivity;
+  onClick: () => void;
+}> = ({ activity, onClick }) => {
+  // 状态样式映射
+  const statusStyles: Record<
+    string,
+    { bg: string; text: string; icon: React.ElementType; label: string }
+  > = {
+    recruiting: {
+      bg: "bg-blue-50",
+      text: "text-blue-600",
+      icon: Clock,
+      label: "报名中",
+    },
+    pending: {
+      bg: "bg-yellow-50",
+      text: "text-yellow-600",
+      icon: Clock,
+      label: "待审核",
+    },
+    approved: {
+      bg: "bg-green-50",
+      text: "text-green-600",
+      icon: CheckCircle,
+      label: "已通过",
+    },
+    rejected: {
+      bg: "bg-red-50",
+      text: "text-red-600",
+      icon: XCircle,
+      label: "未通过",
+    },
+    completed: {
+      bg: "bg-gray-50",
+      text: "text-gray-500",
+      icon: CheckCircle,
+      label: "已结束",
+    },
+    ended: {
+      bg: "bg-gray-50",
+      text: "text-gray-500",
+      icon: CheckCircle,
+      label: "已结束",
+    },
+  };
+
+  // 判断活动是否已结束
+  const isEnded = dayjs(activity.eventEndTime).isBefore(dayjs());
+  const displayStatus = isEnded ? "ended" : activity.userStatus;
+  const status = statusStyles[displayStatus] || statusStyles.pending;
+  const StatusIcon = status.icon;
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-start gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+    >
+      {/* 活动封面 */}
+      <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+        <img
+          src={activity.coverImage}
+          alt={activity.title}
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* 活动信息 */}
+      <div className="flex-1 min-w-0 py-0.5">
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="text-sm font-medium text-gray-900 line-clamp-1">
+            {activity.title}
+          </h4>
+          {/* 状态标签 */}
+          <span
+            className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}
+          >
+            <StatusIcon size={12} />
+            {status.label}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1.5">
+          <Calendar size={12} />
+          <span>{dayjs(activity.eventStartTime).format("M月D日 HH:mm")}</span>
+        </div>
+
+        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+          <MapPin size={12} />
+          <span className="truncate">{activity.location}</span>
+        </div>
+      </div>
+    </button>
+  );
+};
+
 // 标签颜色类型池（用于随机分配）
 const TAG_COLOR_TYPES: InterestTag["colorType"][] = [
   "primary",
@@ -80,80 +190,68 @@ const getRandomColorType = (): InterestTag["colorType"] => {
   return TAG_COLOR_TYPES[Math.floor(Math.random() * TAG_COLOR_TYPES.length)];
 };
 
+// ==================== 主组件 ====================
+
 const UserProfileCards: FC = () => {
   const navigate = useNavigate();
 
-  // 本地状态：存储用户资料数据
+  // 用户资料状态
   const [profile, setProfile] = useState<UserProfile>(getUserProfile());
   const [showEditInterests, setShowEditInterests] = useState(false);
 
-  // 监听资料更新事件 - 实现跨页面数据同步
+  // 我的活动状态
+  const [activeStatusTab, setActiveStatusTab] =
+    useState<ActivityStatusTab>("all");
+  const [myActivities, setMyActivities] = useState<UserActivity[]>([]);
+
+  // 加载用户活动数据
+  useEffect(() => {
+    setMyActivities(mockUserActivities);
+  }, []);
+
+  // 监听资料更新事件
   useEffect(() => {
     const handleProfileUpdate = () => {
-      // 重新获取最新数据
       const updatedProfile = getUserProfile();
       setProfile(updatedProfile);
-      console.log("资料已更新，重新加载数据");
     };
 
-    // 注册事件监听
     eventBus.on(EVENTS.PROFILE_UPDATED, handleProfileUpdate);
-
-    // 清理函数：组件卸载时移除监听
     return () => {
       eventBus.off(EVENTS.PROFILE_UPDATED, handleProfileUpdate);
     };
   }, []);
 
+  // 过滤活动列表
+  const filteredActivities = myActivities.filter((activity) => {
+    const isEnded = dayjs(activity.eventEndTime).isBefore(dayjs());
+
+    switch (activeStatusTab) {
+      case "pending":
+        return !isEnded && activity.userStatus === "pending";
+      case "approved":
+        return !isEnded && activity.userStatus === "approved";
+      case "ended":
+        return isEnded;
+      default:
+        return true;
+    }
+  });
+
   // 保存兴趣标签
   const handleSaveInterests = (tags: string[]) => {
-    // 1. 构建新的标签数据（添加 id 和颜色类型）
     const newInterestTags: InterestTag[] = tags.map((name, index) => ({
-      id: `tag_${Date.now()}_${index}`, // 生成唯一 ID
+      id: `tag_${Date.now()}_${index}`,
       name,
-      colorType: getRandomColorType(), // 随机分配颜色
+      colorType: getRandomColorType(),
     }));
 
-    // 2. 更新本地 state（立即响应 UI）
     const updatedProfile = {
       ...profile,
       interestTags: newInterestTags,
     };
     setProfile(updatedProfile);
-
-    // 3. 同步更新 mock 数据（保持数据一致性）
     updateUserProfile({ interestTags: newInterestTags });
-
-    // TODO: 迁移到真实 API 时的替换步骤
-    // ============================================
-    // 第一步：引入 API 服务
-    // import { userApi } from '@/services/api/user';
-    //
-    // 第二步：替换上面的 updateUserProfile 调用为：
-    // try {
-    //   const response = await userApi.updateInterestTags({
-    //     userId: profile.id,
-    //     tags: tags, // 只传标签名称数组即可
-    //   });
-    //
-    //   // API 返回完整的标签数据（包含 id 和 colorType）
-    //   setProfile({
-    //     ...profile,
-    //     interestTags: response.data.interestTags,
-    //   });
-    //
-    //   // 可选：显示成功提示
-    //   // toast.success('兴趣标签更新成功');
-    // } catch (error) {
-    //   console.error('更新兴趣标签失败:', error);
-    //   // 显示错误提示
-    //   // toast.error('更新失败，请重试');
-    //   // 恢复原始数据
-    //   // setProfile(profile);
-    // }
-    // ============================================
-
-    console.log("已保存兴趣标签:", newInterestTags);
   };
 
   return (
@@ -161,7 +259,7 @@ const UserProfileCards: FC = () => {
       {/* 顶部背景 */}
       <div className="bg-gradient-to-br from-primary-400 to-primary-500 pt-4 pb-20 px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white">我的名片</h1>
+          <h1 className="text-lg font-bold text-white">我的</h1>
           <button
             onClick={() => navigate("/u/settings")}
             className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 active:bg-white/40 transition-colors"
@@ -171,7 +269,7 @@ const UserProfileCards: FC = () => {
         </div>
       </div>
 
-      {/* 个人卡片 */}
+      {/* 个人卡片 - 简化版 */}
       <div className="px-4 md:px-6 lg:px-8 -mt-16 relative z-10 max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {/* 头像和基本信息 */}
@@ -180,78 +278,117 @@ const UserProfileCards: FC = () => {
               <img
                 src={profile.avatar}
                 alt={profile.name}
-                className="w-16 h-16 rounded-2xl object-cover ring-2 ring-white shadow"
+                className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white shadow"
               />
-              <div className="flex-1 min-w-0 pt-1">
+              <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-gray-900">
+                  <h2 className="text-base font-bold text-gray-900">
                     {profile.name}
                   </h2>
                   <span className="px-1.5 py-0.5 bg-primary-100 text-primary-600 text-[10px] font-medium rounded">
                     {profile.role}
                   </span>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                  <Briefcase size={12} />
-                  <span>{profile.occupation}</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                  <MapPin size={12} />
-                  <span>{profile.city}</span>
+                <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                  <span className="flex items-center gap-1">
+                    <Briefcase size={11} />
+                    {profile.occupation}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin size={11} />
+                    {profile.city}
+                  </span>
                 </div>
               </div>
-            </div>
-
-            {/* 个人简介 */}
-            <p className="text-sm text-gray-600 mt-3 leading-relaxed line-clamp-2">
-              {profile.bio}
-            </p>
-
-            {/* 操作按钮 */}
-            <div className="flex gap-2 mt-4">
+              {/* 编辑按钮 */}
               <button
-                onClick={() => navigate("/u/cards/edit")}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary-500 text-white rounded-xl text-sm font-medium hover:bg-primary-600 transition-colors"
+                onClick={() => navigate("/u/profile/edit")}
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
               >
-                <Edit3 size={14} />
-                编辑名片
-              </button>
-              <button className="w-11 h-11 flex items-center justify-center bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
-                <Share2 size={18} className="text-gray-600" />
+                <Edit3 size={16} className="text-gray-400" />
               </button>
             </div>
-          </div>
 
-          {/* 统计数据 */}
-          <div className="flex items-center justify-around py-4 border-t border-gray-100">
-            <StatItem value={profile.stats.activitiesJoined} label="参与活动" />
-            <div className="w-px h-8 bg-gray-100" />
-            <StatItem value={profile.stats.matchedFriends} label="匹配好友" />
-            <div className="w-px h-8 bg-gray-100" />
-            <StatItem
-              value={profile.stats.favoritedActivities}
-              label="收藏活动"
-            />
+            {/* 兴趣标签 - 折叠显示 */}
+            {profile.interestTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {profile.interestTags.slice(0, 5).map((tag) => (
+                  <TagChip key={tag.id} tag={tag} />
+                ))}
+                {profile.interestTags.length > 5 && (
+                  <button
+                    onClick={() => setShowEditInterests(true)}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500"
+                  >
+                    +{profile.interestTags.length - 5}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 兴趣标签 */}
+      {/* 我的活动区域 */}
       <div className="px-4 md:px-6 lg:px-8 mt-4 max-w-2xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900">兴趣标签</h3>
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          {/* 标题和查看全部 */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <h3 className="text-sm font-semibold text-gray-900">我的活动</h3>
             <button
-              onClick={() => setShowEditInterests(true)}
-              className="text-xs text-primary-500 font-medium"
+              onClick={() => navigate("/u/activities/history")}
+              className="text-xs text-primary-500 font-medium flex items-center gap-0.5"
             >
-              编辑
+              查看全部
+              <ChevronRight size={14} />
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {profile.interestTags.map((tag) => (
-              <TagChip key={tag.id} tag={tag} />
+
+          {/* 状态筛选 Tab */}
+          <div className="flex items-center gap-1 px-4 pb-3">
+            {statusTabConfig.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveStatusTab(tab.key)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  activeStatusTab === tab.key
+                    ? "bg-primary-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {tab.label}
+              </button>
             ))}
+          </div>
+
+          {/* 活动列表 */}
+          <div className="px-3 pb-3">
+            {filteredActivities.length > 0 ? (
+              <div className="space-y-2">
+                {filteredActivities.slice(0, 3).map((activity) => (
+                  <MyActivityCard
+                    key={activity.id}
+                    activity={activity}
+                    onClick={() => navigate(`/u/activities/${activity.id}`)}
+                  />
+                ))}
+                {filteredActivities.length > 3 && (
+                  <button
+                    onClick={() => navigate("/u/activities/history")}
+                    className="w-full flex items-center justify-center gap-1 py-2.5 text-xs text-gray-500 hover:text-primary-500 transition-colors"
+                  >
+                    <MoreHorizontal size={14} />
+                    查看更多 ({filteredActivities.length - 3})
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-gray-400 text-sm">
+                暂无
+                {statusTabConfig.find((t) => t.key === activeStatusTab)?.label}
+                活动
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -259,12 +396,6 @@ const UserProfileCards: FC = () => {
       {/* 功能菜单 */}
       <div className="px-4 md:px-6 lg:px-8 mt-4 mb-6 max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100">
-          <MenuItem
-            icon={Calendar}
-            label="我的活动记录"
-            color="text-primary-500"
-            onClick={() => navigate("/u/activities/history")}
-          />
           <MenuItem
             icon={Users}
             label="我的好友"
