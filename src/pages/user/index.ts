@@ -16,4 +16,3 @@ export { default as UserEditProfile } from "./UserEditProfile";
 export { default as UserActivityHistory } from "./UserActivityHistory";
 export { default as UserPublicProfile } from "./UserPublicProfile";
 export { default as EditInterestsModal } from "./EditInterestsModal";
-export { default as UserPublicProfile } from "./UserPublicProfile";

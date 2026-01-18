@@ -26,7 +26,7 @@ import {
 import { ActivityFilterDrawer } from "@/components/business/ActivityFilterDrawer";
 import { CitySelector } from "@/components/ui/CitySelector";
 import { Tag } from "@/components/ui";
-import { mockUserActivities } from "@/mocks/data/user-activities";
+import { useUserActivities, useRecommendedActivities } from "@/features/user";
 import dayjs from "dayjs";
 import {
   type ActivityFilters,
@@ -98,21 +98,37 @@ const UserHome: FC = () => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
 
+  // 使用 hooks 获取活动数据
+  const { data: activitiesData, isLoading: isLoadingActivities } =
+    useUserActivities();
+  const { data: recommendedData, isLoading: isLoadingRecommended } =
+    useRecommendedActivities();
+
+  // 获取活动列表
+  const allActivities = useMemo(() => {
+    return activitiesData?.data?.activities || [];
+  }, [activitiesData]);
+
   // 热门活动（取参与率最高的前4个）
   const hotActivities = useMemo(() => {
-    return [...mockUserActivities]
+    const recommended = recommendedData?.data?.activities || [];
+    if (recommended.length > 0) {
+      return recommended.slice(0, 4);
+    }
+    // 降级使用普通列表
+    return [...allActivities]
       .filter((a) => a.activityStatus === "recruiting")
       .sort(
         (a, b) =>
           b.currentParticipants / b.maxParticipants -
-          a.currentParticipants / a.maxParticipants
+          a.currentParticipants / a.maxParticipants,
       )
       .slice(0, 4);
-  }, []);
+  }, [recommendedData, allActivities]);
 
   // 过滤和排序活动列表
   const filteredActivities = useMemo(() => {
-    let result = [...mockUserActivities];
+    let result = [...allActivities];
 
     // 搜索过滤
     if (searchText.trim()) {
@@ -121,7 +137,7 @@ const UserHome: FC = () => {
         (a) =>
           a.title.toLowerCase().includes(keyword) ||
           a.location.toLowerCase().includes(keyword) ||
-          a.tags.some((t) => t.toLowerCase().includes(keyword))
+          a.tags.some((t) => t.toLowerCase().includes(keyword)),
       );
     }
 
@@ -135,12 +151,12 @@ const UserHome: FC = () => {
       switch (activeFilter) {
         case "outdoor":
           result = result.filter(
-            (a) => a.tags.includes("户外") || a.tags.includes("运动")
+            (a) => a.tags.includes("户外") || a.tags.includes("运动"),
           );
           break;
         case "social":
           result = result.filter(
-            (a) => a.tags.includes("社交") || a.tags.includes("交友")
+            (a) => a.tags.includes("社交") || a.tags.includes("交友"),
           );
           break;
         case "weekend": {
@@ -171,7 +187,7 @@ const UserHome: FC = () => {
     // 高级筛选 - 分类
     if (advancedFilters.categories && advancedFilters.categories.length > 0) {
       result = result.filter((a) =>
-        advancedFilters.categories.some((cat) => a.tags.includes(cat))
+        advancedFilters.categories.some((cat) => a.tags.includes(cat)),
       );
     }
 
@@ -181,12 +197,12 @@ const UserHome: FC = () => {
       switch (advancedFilters.timeRange) {
         case "today":
           result = result.filter((a) =>
-            dayjs(a.eventStartTime).isSame(now, "day")
+            dayjs(a.eventStartTime).isSame(now, "day"),
           );
           break;
         case "tomorrow":
           result = result.filter((a) =>
-            dayjs(a.eventStartTime).isSame(now.add(1, "day"), "day")
+            dayjs(a.eventStartTime).isSame(now.add(1, "day"), "day"),
           );
           break;
         case "weekend": {
@@ -200,12 +216,12 @@ const UserHome: FC = () => {
         }
         case "week":
           result = result.filter((a) =>
-            dayjs(a.eventStartTime).isBefore(now.add(7, "day"))
+            dayjs(a.eventStartTime).isBefore(now.add(7, "day")),
           );
           break;
         case "month":
           result = result.filter((a) =>
-            dayjs(a.eventStartTime).isBefore(now.add(30, "day"))
+            dayjs(a.eventStartTime).isBefore(now.add(30, "day")),
           );
           break;
       }
@@ -223,7 +239,7 @@ const UserHome: FC = () => {
     // 高级筛选 - 标签
     if (advancedFilters.tags && advancedFilters.tags.length > 0) {
       result = result.filter((a) =>
-        advancedFilters.tags!.some((tag) => a.tags.includes(tag))
+        advancedFilters.tags!.some((tag) => a.tags.includes(tag)),
       );
     }
 
@@ -233,21 +249,21 @@ const UserHome: FC = () => {
         result.sort(
           (a, b) =>
             new Date(b.eventStartTime).getTime() -
-            new Date(a.eventStartTime).getTime()
+            new Date(a.eventStartTime).getTime(),
         );
         break;
       case "hot":
         result.sort(
           (a, b) =>
             b.currentParticipants / b.maxParticipants -
-            a.currentParticipants / a.maxParticipants
+            a.currentParticipants / a.maxParticipants,
         );
         break;
       case "time":
         result.sort(
           (a, b) =>
             new Date(a.eventStartTime).getTime() -
-            new Date(b.eventStartTime).getTime()
+            new Date(b.eventStartTime).getTime(),
         );
         break;
       default:
@@ -256,7 +272,14 @@ const UserHome: FC = () => {
     }
 
     return result;
-  }, [searchText, activeFilter, selectedCity, sortBy, advancedFilters]);
+  }, [
+    allActivities,
+    searchText,
+    activeFilter,
+    selectedCity,
+    sortBy,
+    advancedFilters,
+  ]);
 
   const handleActivityClick = (id: string) => {
     navigate(`/u/activities/${id}`);

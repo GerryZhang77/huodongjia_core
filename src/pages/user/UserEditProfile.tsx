@@ -3,7 +3,7 @@
  * 编辑个人名片信息
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Camera,
@@ -18,11 +18,8 @@ import {
 } from "lucide-react";
 import { Toast } from "antd-mobile";
 import { Button, Input, Textarea } from "@/components/ui";
-import {
-  mockUserProfile,
-  updateUserProfile,
-  InterestTag,
-} from "@/mocks/data/user-profile";
+import { useUserProfile, useUpdateProfile } from "@/features/user";
+import type { InterestTag } from "@/services/userApi";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { eventBus, EVENTS } from "@/utils/eventBus";
 
@@ -44,19 +41,42 @@ const interestOptions = [
 
 const UserEditProfile: FC = () => {
   const navigate = useNavigate();
-  const profile = mockUserProfile;
+
+  // 使用 hooks 获取用户资料
+  const { data: profileData, isLoading } = useUserProfile();
+  const updateProfileMutation = useUpdateProfile();
+
+  const profile = useMemo(() => {
+    return profileData?.profile;
+  }, [profileData]);
 
   // 表单状态
   const [formData, setFormData] = useState({
-    name: profile.name,
-    occupation: profile.occupation,
-    company: profile.company,
-    city: profile.city,
-    email: profile.contact?.email || "",
-    phone: profile.contact?.phone || "",
-    bio: profile.bio,
-    interests: profile.interestTags.map((t) => t.name),
+    name: "",
+    occupation: "",
+    company: "",
+    city: "",
+    email: "",
+    phone: "",
+    bio: "",
+    interests: [] as string[],
   });
+
+  // 当 profile 加载后初始化表单
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        occupation: profile.occupation || "",
+        company: profile.company || "",
+        city: profile.city || "",
+        email: profile.contact?.email || profile.email || "",
+        phone: profile.contact?.phone || profile.phone || "",
+        bio: profile.bio || "",
+        interests: profile.interestTags?.map((t) => t.name) || [],
+      });
+    }
+  }, [profile]);
 
   // 更新表单字段
   const updateField = (field: string, value: string | string[]) => {
@@ -77,7 +97,7 @@ const UserEditProfile: FC = () => {
   const removeInterest = (interest: string) => {
     updateField(
       "interests",
-      formData.interests.filter((i) => i !== interest)
+      formData.interests.filter((i) => i !== interest),
     );
   };
 
@@ -98,73 +118,45 @@ const UserEditProfile: FC = () => {
           name,
           colorType:
             TAG_COLOR_TYPES[Math.floor(Math.random() * TAG_COLOR_TYPES.length)],
-        })
+        }),
       );
 
-      // 2. 更新 mock 数据（Mock 模式）
-      updateUserProfile({
-        name: formData.name,
-        occupation: formData.occupation,
-        company: formData.company,
-        city: formData.city,
-        bio: formData.bio,
-        interestTags: newInterestTags,
-        contact: {
-          phone: formData.phone,
-          email: formData.email,
+      // 2. 使用 mutation 更新用户资料
+      updateProfileMutation.mutate(
+        {
+          name: formData.name,
+          occupation: formData.occupation,
+          company: formData.company,
+          city: formData.city,
+          bio: formData.bio,
+          interestTags: newInterestTags,
         },
-      });
+        {
+          onSuccess: () => {
+            // 3. 触发全局事件，通知其他组件刷新数据
+            eventBus.emit(EVENTS.PROFILE_UPDATED, {
+              timestamp: Date.now(),
+            });
 
-      // 3. 触发全局事件，通知其他组件刷新数据
-      eventBus.emit(EVENTS.PROFILE_UPDATED, {
-        timestamp: Date.now(),
-      });
+            // 4. 显示成功提示
+            Toast.show({
+              icon: "success",
+              content: "保存成功",
+            });
 
-      // 4. 显示成功提示
-      Toast.show({
-        icon: "success",
-        content: "保存成功",
-      });
-
-      // 5. 返回上一页
-      setTimeout(() => {
-        navigate(-1);
-      }, 300);
-
-      // TODO: 迁移到真实 API 时的替换步骤
-      // ============================================
-      // 第一步：引入 API hooks
-      // import { useUpdateProfile } from '@/features/user/profile/hooks';
-      //
-      // 第二步：在组件中使用 mutation
-      // const { mutate: updateProfile, isPending } = useUpdateProfile();
-      //
-      // 第三步：替换上面的同步代码为：
-      // updateProfile(
-      //   {
-      //     name: formData.name,
-      //     occupation: formData.occupation,
-      //     company: formData.company,
-      //     city: formData.city,
-      //     bio: formData.bio,
-      //     interests: formData.interests, // 只传标签名称
-      //     contact: {
-      //       phone: formData.phone,
-      //       email: formData.email,
-      //     },
-      //   },
-      //   {
-      //     onSuccess: () => {
-      //       Toast.show({ icon: 'success', content: '保存成功' });
-      //       setTimeout(() => navigate(-1), 300);
-      //     },
-      //     onError: (error) => {
-      //       Toast.show({ icon: 'fail', content: '保存失败，请重试' });
-      //       console.error('更新失败:', error);
-      //     },
-      //   }
-      // );
-      // ============================================
+            // 5. 返回上一页
+            setTimeout(() => {
+              navigate(-1);
+            }, 300);
+          },
+          onError: () => {
+            Toast.show({
+              icon: "fail",
+              content: "保存失败，请重试",
+            });
+          },
+        },
+      );
     } catch (error) {
       console.error("保存失败:", error);
       Toast.show({
@@ -173,6 +165,26 @@ const UserEditProfile: FC = () => {
       });
     }
   };
+
+  // 加载中状态
+  if (isLoading || !profile) {
+    return (
+      <UserLayout
+        showTabBar={true}
+        showTopBar={true}
+        showBreadcrumb={true}
+        breadcrumbItems={[
+          { label: "首页", path: "/u/home" },
+          { label: "我的", path: "/u/profile" },
+          { label: "编辑资料" },
+        ]}
+      >
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-gray-500">加载中...</div>
+        </div>
+      </UserLayout>
+    );
+  }
 
   return (
     <UserLayout

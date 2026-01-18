@@ -3,7 +3,7 @@
  * 根据设计稿 04-registration.svg 实现
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Button, Input, Checkbox } from "@/components/ui";
 import { UserLayout } from "@/components/layout/UserLayout";
-import { getActivityById } from "@/mocks/data/user-activities";
+import { useActivityDetail } from "@/features/user";
 import dayjs from "dayjs";
 
 // 兴趣标签选项
@@ -48,7 +48,12 @@ const UserRegistration: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const activity = id ? getActivityById(id) : undefined;
+  // 使用 hooks 获取活动详情
+  const { data: activityData, isLoading } = useActivityDetail(id);
+
+  const activity = useMemo(() => {
+    return activityData?.data;
+  }, [activityData]);
 
   // 返回上一页，如果没有历史记录则返回活动详情页
   const handleGoBack = () => {

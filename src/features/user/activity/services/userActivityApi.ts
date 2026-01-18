@@ -3,15 +3,18 @@
  * 业务封装层：只导出 API 函数，类型由 ../types 导出
  */
 
-// 重新导出底层 API（只有函数）
+// 从 userApi 导出 C端专属接口
 export {
-  // 公共接口
-  getActivityDetail,
-  getPublicActivities,
-  // C端专属接口
+  getUserActivities,
   getRecommendedActivities,
   searchActivities,
   getActivityCategories,
-  toggleFavoriteActivity,
-  getFavoriteActivities,
-} from "@/services/activityApi";
+  getUserActivityDetail,
+  getFavorites,
+  addFavorite,
+  removeFavorite,
+  toggleFavorite,
+} from "@/services/userApi";
+
+// 公共接口（B/C端共用）
+export { getActivityDetail, getPublicActivities } from "@/services/activityApi";

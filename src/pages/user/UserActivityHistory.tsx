@@ -3,16 +3,13 @@
  * 展示用户参与/报名的所有活动
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar } from "lucide-react";
 import { ActivityCard } from "@/components/business/ActivityCard";
 import { UserLayout } from "@/components/layout/UserLayout";
-import {
-  mockUserActivities,
-  UserActivity,
-  UserActivityStatus,
-} from "@/mocks/data/user-activities";
+import { useUserActivities } from "@/features/user";
+import type { UserActivity, UserActivityStatus } from "@/services/userApi";
 
 // Tab 配置
 const tabs = [
@@ -28,17 +25,26 @@ const UserActivityHistory: FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>("all");
 
+  // 使用 hooks 获取活动数据
+  const { data: activitiesData, isLoading } = useUserActivities();
+
+  const allActivities = useMemo(() => {
+    return activitiesData?.data?.activities || [];
+  }, [activitiesData]);
+
   // 统计各状态数量
-  const counts = mockUserActivities.reduce(
-    (acc, activity) => {
-      acc.all++;
-      if (activity.userStatus === "recruiting") acc.recruiting++;
-      if (activity.userStatus === "approved") acc.approved++;
-      if (activity.userStatus === "completed") acc.completed++;
-      return acc;
-    },
-    { all: 0, recruiting: 0, approved: 0, completed: 0 }
-  );
+  const counts = useMemo(() => {
+    return allActivities.reduce(
+      (acc, activity) => {
+        acc.all++;
+        if (activity.userStatus === "recruiting") acc.recruiting++;
+        if (activity.userStatus === "approved") acc.approved++;
+        if (activity.userStatus === "completed") acc.completed++;
+        return acc;
+      },
+      { all: 0, recruiting: 0, approved: 0, completed: 0 },
+    );
+  }, [allActivities]);
 
   // 更新 tabs 的 count
   const tabsWithCount = tabs.map((tab) => ({
@@ -47,12 +53,11 @@ const UserActivityHistory: FC = () => {
   }));
 
   // 筛选活动
-  const filteredActivities =
-    activeTab === "all"
-      ? mockUserActivities
-      : mockUserActivities.filter(
-          (activity) => activity.userStatus === activeTab
-        );
+  const filteredActivities = useMemo(() => {
+    return activeTab === "all"
+      ? allActivities
+      : allActivities.filter((activity) => activity.userStatus === activeTab);
+  }, [allActivities, activeTab]);
 
   // 跳转到活动详情
   const handleActivityClick = (id: string) => {

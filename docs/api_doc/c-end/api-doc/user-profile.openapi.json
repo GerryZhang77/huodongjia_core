@@ -1,0 +1,591 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "活动家 - 用户资料 API",
+    "version": "1.0.0",
+    "description": "C端用户个人资料相关接口，包括获取/更新用户资料、上传头像、获取统计数据等功能"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API 基础路径"
+    }
+  ],
+  "tags": [
+    {
+      "name": "用户资料",
+      "description": "用户个人资料管理"
+    }
+  ],
+  "paths": {
+    "/user/profile": {
+      "get": {
+        "summary": "获取用户资料",
+        "description": "获取当前登录用户的完整资料信息，包括基本信息、兴趣标签、统计数据等。",
+        "operationId": "getUserProfile",
+        "tags": ["用户资料"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取用户资料",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                },
+                "example": {
+                  "success": true,
+                  "profile": {
+                    "id": "user_001",
+                    "name": "张小明",
+                    "avatar": "https://i.pravatar.cc/200?img=1",
+                    "role": "产品经理",
+                    "occupation": "产品经理",
+                    "company": "字节跳动",
+                    "city": "北京",
+                    "bio": "热爱社交，喜欢参加各种活动认识新朋友。对创业和投资有浓厚兴趣，希望能在活动中找到志同道合的伙伴。",
+                    "interestTags": [
+                      { "id": "tag_1", "name": "创业", "colorType": "primary" },
+                      {
+                        "id": "tag_2",
+                        "name": "投资",
+                        "colorType": "secondary"
+                      },
+                      { "id": "tag_3", "name": "社交", "colorType": "accent" }
+                    ],
+                    "stats": {
+                      "activitiesJoined": 12,
+                      "matchedFriends": 28,
+                      "favoritedActivities": 5
+                    },
+                    "contact": {
+                      "phone": "138****8888",
+                      "email": "zhang****@example.com",
+                      "wechat": "zhangxm_wx"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "未授权访问"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "更新用户资料",
+        "description": "更新当前登录用户的资料信息，支持部分更新。",
+        "operationId": "updateUserProfile",
+        "tags": ["用户资料"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              },
+              "example": {
+                "name": "张小明",
+                "occupation": "高级产品经理",
+                "company": "字节跳动",
+                "city": "上海",
+                "bio": "热爱社交，喜欢参加各种活动。",
+                "interestTags": [
+                  { "id": "tag_1", "name": "创业", "colorType": "primary" },
+                  { "id": "tag_2", "name": "AI", "colorType": "accent" }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "资料更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateProfileResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "资料更新成功",
+                  "profile": {
+                    "id": "user_001",
+                    "name": "张小明",
+                    "occupation": "高级产品经理"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/profile/avatar": {
+      "post": {
+        "summary": "上传头像",
+        "description": "上传用户头像图片，支持 jpg/png/gif 格式，文件大小限制 5MB。",
+        "operationId": "uploadAvatar",
+        "tags": ["用户资料"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["avatar"],
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "头像图片文件"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "头像上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadAvatarResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "头像上传成功",
+                  "avatarUrl": "https://storage.example.com/avatars/user_001_1234567890.jpg"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/stats": {
+      "get": {
+        "summary": "获取用户统计数据",
+        "description": "获取当前用户的活动参与统计数据，包括报名数、完成数、收藏数、匹配数等。",
+        "operationId": "getUserStats",
+        "tags": ["用户资料"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取统计数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserStatsResponse"
+                },
+                "example": {
+                  "success": true,
+                  "stats": {
+                    "totalEnrollments": 12,
+                    "completedActivities": 8,
+                    "favoriteCount": 5,
+                    "matchingCount": 28
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UserProfile": {
+        "type": "object",
+        "description": "用户资料",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "用户ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "用户名称"
+          },
+          "phone": {
+            "type": "string",
+            "description": "手机号（脱敏）"
+          },
+          "email": {
+            "type": "string",
+            "description": "邮箱（脱敏）"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "头像URL"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female", "other"],
+            "description": "性别"
+          },
+          "age": {
+            "type": "integer",
+            "description": "年龄"
+          },
+          "city": {
+            "type": "string",
+            "description": "所在城市"
+          },
+          "occupation": {
+            "type": "string",
+            "description": "职业"
+          },
+          "company": {
+            "type": "string",
+            "description": "公司"
+          },
+          "industry": {
+            "type": "string",
+            "description": "行业"
+          },
+          "bio": {
+            "type": "string",
+            "description": "个人简介"
+          },
+          "role": {
+            "type": "string",
+            "description": "角色/职位"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "标签列表（字符串形式）"
+          },
+          "interestTags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InterestTag"
+            },
+            "description": "兴趣标签列表"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/UserProfileStats"
+          },
+          "contact": {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "description": "联系电话"
+              },
+              "email": {
+                "type": "string",
+                "description": "联系邮箱"
+              },
+              "wechat": {
+                "type": "string",
+                "description": "微信号"
+              }
+            },
+            "description": "联系方式"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        },
+        "required": ["id", "name"]
+      },
+      "InterestTag": {
+        "type": "object",
+        "description": "兴趣标签",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "标签ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "标签名称"
+          },
+          "colorType": {
+            "type": "string",
+            "enum": ["primary", "secondary", "accent", "warning", "default"],
+            "description": "标签颜色类型"
+          }
+        },
+        "required": ["id", "name", "colorType"]
+      },
+      "UserProfileStats": {
+        "type": "object",
+        "description": "用户统计数据（资料页面）",
+        "properties": {
+          "activitiesJoined": {
+            "type": "integer",
+            "description": "参与活动数"
+          },
+          "matchedFriends": {
+            "type": "integer",
+            "description": "匹配好友数"
+          },
+          "favoritedActivities": {
+            "type": "integer",
+            "description": "收藏活动数"
+          }
+        },
+        "required": [
+          "activitiesJoined",
+          "matchedFriends",
+          "favoritedActivities"
+        ]
+      },
+      "UserStats": {
+        "type": "object",
+        "description": "用户统计数据（统计接口）",
+        "properties": {
+          "totalEnrollments": {
+            "type": "integer",
+            "description": "总报名数"
+          },
+          "completedActivities": {
+            "type": "integer",
+            "description": "已完成活动数"
+          },
+          "favoriteCount": {
+            "type": "integer",
+            "description": "收藏数"
+          },
+          "matchingCount": {
+            "type": "integer",
+            "description": "匹配数"
+          }
+        },
+        "required": [
+          "totalEnrollments",
+          "completedActivities",
+          "favoriteCount",
+          "matchingCount"
+        ]
+      },
+      "UpdateProfileRequest": {
+        "type": "object",
+        "description": "更新用户资料请求",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "用户名称"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "头像URL"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female", "other"],
+            "description": "性别"
+          },
+          "age": {
+            "type": "integer",
+            "description": "年龄"
+          },
+          "city": {
+            "type": "string",
+            "description": "所在城市"
+          },
+          "occupation": {
+            "type": "string",
+            "description": "职业"
+          },
+          "company": {
+            "type": "string",
+            "description": "公司"
+          },
+          "industry": {
+            "type": "string",
+            "description": "行业"
+          },
+          "bio": {
+            "type": "string",
+            "description": "个人简介"
+          },
+          "role": {
+            "type": "string",
+            "description": "角色/职位"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "标签列表"
+          },
+          "interestTags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InterestTag"
+            },
+            "description": "兴趣标签列表"
+          }
+        }
+      },
+      "UserProfileResponse": {
+        "type": "object",
+        "description": "获取用户资料响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfile"
+          }
+        },
+        "required": ["success"]
+      },
+      "UpdateProfileResponse": {
+        "type": "object",
+        "description": "更新用户资料响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UserProfile"
+          }
+        },
+        "required": ["success"]
+      },
+      "UploadAvatarResponse": {
+        "type": "object",
+        "description": "上传头像响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "description": "新头像URL"
+          }
+        },
+        "required": ["success"]
+      },
+      "UserStatsResponse": {
+        "type": "object",
+        "description": "获取用户统计数据响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/UserStats"
+          }
+        },
+        "required": ["success"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "错误响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误消息"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码"
+          }
+        },
+        "required": ["success", "message"]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 认证令牌"
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@
  * 简洁的消息列表设计
  */
 
-import { FC, useState } from "react";
+import { FC, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CheckCircle,
@@ -16,12 +16,11 @@ import {
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import {
-  getAllNotifications,
-  markAsRead,
-  markAllAsRead,
-  NotificationType,
-  Notification,
-} from "@/mocks/data/user-notifications";
+  useNotifications,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+} from "@/features/user";
+import type { Notification } from "@/services/userApi";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/zh-cn";
@@ -29,11 +28,32 @@ import "dayjs/locale/zh-cn";
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
 
+// 通知类型
+type NotificationType = Notification["type"];
+
 // 通知图标和颜色配置
 const notificationConfig: Record<
   NotificationType,
   { icon: React.ElementType; color: string; bg: string; darkBg: string }
 > = {
+  system: {
+    icon: AlertCircle,
+    color: "text-blue-600 dark:text-blue-400",
+    bg: "bg-blue-50",
+    darkBg: "dark:bg-blue-900/30",
+  },
+  activity: {
+    icon: CheckCircle,
+    color: "text-green-600 dark:text-green-400",
+    bg: "bg-green-50",
+    darkBg: "dark:bg-green-900/30",
+  },
+  enrollment: {
+    icon: CheckCircle,
+    color: "text-green-600 dark:text-green-400",
+    bg: "bg-green-50",
+    darkBg: "dark:bg-green-900/30",
+  },
   approval: {
     icon: CheckCircle,
     color: "text-green-600 dark:text-green-400",
@@ -139,20 +159,32 @@ const NotificationItem: FC<{
 
 const UserNotifications: FC = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(getAllNotifications());
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  // 使用 hooks 获取通知数据
+  const { data: notificationsData, isLoading } = useNotifications();
+  const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllNotificationsRead();
+
+  const notifications = useMemo(() => {
+    return notificationsData?.data?.notifications || [];
+  }, [notificationsData]);
+
+  const unreadCount = useMemo(() => {
+    return (
+      notificationsData?.data?.unreadCount ||
+      notifications.filter((n) => !n.isRead).length
+    );
+  }, [notificationsData, notifications]);
 
   const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
-    setNotifications(getAllNotifications());
+    markReadMutation.mutate(notification.id);
     if (notification.activityId) {
       navigate(`/u/activities/${notification.activityId}`);
     }
   };
 
   const handleMarkAllRead = () => {
-    markAllAsRead();
-    setNotifications(getAllNotifications());
+    markAllReadMutation.mutate();
   };
 
   return (

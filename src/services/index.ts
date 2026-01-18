@@ -66,6 +66,12 @@ export type {
   Notification,
   NotificationListResponse,
   UserStats,
+  InterestTag,
+  UserProfileStats,
+  UserActivity,
+  UserActivityStatus,
+  UserActivityListResponse,
+  ActivityCategory,
 } from "./userApi";
 
 // 底层 API 实例 (用于自定义请求)

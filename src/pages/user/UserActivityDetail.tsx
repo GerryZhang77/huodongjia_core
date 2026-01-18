@@ -3,7 +3,7 @@
  * 简洁现代的详情展示
  */
 
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -20,12 +20,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { UserLayout } from "@/components/layout/UserLayout";
-import {
-  getActivityById,
-  getPreviousActivity,
-  getNextActivity,
-  UserActivityStatus,
-} from "@/mocks/data/user-activities";
+import { useActivityDetail, useUserActivities } from "@/features/user";
+import type { UserActivityStatus } from "@/services/userApi";
 import dayjs from "dayjs";
 
 // 状态配置
@@ -76,12 +72,32 @@ const UserActivityDetail: FC = () => {
   const navigate = useNavigate();
   const [isFavorited, setIsFavorited] = useState(false);
   const [showBreadcrumb, setShowBreadcrumb] = useState(
-    window.innerWidth >= 1024
+    window.innerWidth >= 1024,
   );
 
-  const activity = id ? getActivityById(id) : undefined;
-  const prevActivity = id ? getPreviousActivity(id) : undefined;
-  const nextActivity = id ? getNextActivity(id) : undefined;
+  // 使用 hooks 获取活动详情
+  const { data: activityData, isLoading } = useActivityDetail(id);
+  const { data: activitiesData } = useUserActivities();
+
+  const activity = useMemo(() => {
+    return activityData?.data;
+  }, [activityData]);
+
+  // 计算上一个/下一个活动
+  const { prevActivity, nextActivity } = useMemo(() => {
+    const activities = activitiesData?.data?.activities || [];
+    if (!id || activities.length === 0) {
+      return { prevActivity: undefined, nextActivity: undefined };
+    }
+    const currentIndex = activities.findIndex((a) => a.id === id);
+    return {
+      prevActivity: currentIndex > 0 ? activities[currentIndex - 1] : undefined,
+      nextActivity:
+        currentIndex < activities.length - 1
+          ? activities[currentIndex + 1]
+          : undefined,
+    };
+  }, [activitiesData, id]);
 
   // 监听窗口大小变化，动态控制面包屑显示（桌面端显示，移动端隐藏）
   useEffect(() => {
@@ -106,6 +122,17 @@ const UserActivityDetail: FC = () => {
       navigate(`/u/activities/${nextActivity.id}`);
     }
   };
+
+  // 加载中状态
+  if (isLoading) {
+    return (
+      <UserLayout showTabBar={true} showTopBar={true}>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-gray-500">加载中...</div>
+        </div>
+      </UserLayout>
+    );
+  }
 
   if (!activity) {
     return (
@@ -408,8 +435,8 @@ const UserActivityDetail: FC = () => {
                     activity.userStatus === "approved"
                       ? "success"
                       : activity.userStatus === "pending"
-                      ? "light"
-                      : "primary"
+                        ? "light"
+                        : "primary"
                   }
                   disabled={config.disabled}
                   onClick={() => {

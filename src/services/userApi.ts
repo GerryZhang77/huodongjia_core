@@ -20,11 +20,32 @@ export interface UserProfile {
   age?: number;
   city?: string;
   occupation?: string;
+  company?: string;
   industry?: string;
   bio?: string;
+  role?: string;
   tags?: string[];
+  interestTags?: InterestTag[];
+  stats?: UserProfileStats;
+  contact?: {
+    phone?: string;
+    email?: string;
+    wechat?: string;
+  };
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface InterestTag {
+  id: string;
+  name: string;
+  colorType: "primary" | "secondary" | "accent" | "warning" | "default";
+}
+
+export interface UserProfileStats {
+  activitiesJoined: number;
+  matchedFriends: number;
+  favoritedActivities: number;
 }
 
 export interface UpdateProfileRequest {
@@ -34,18 +55,31 @@ export interface UpdateProfileRequest {
   age?: number;
   city?: string;
   occupation?: string;
+  company?: string;
   industry?: string;
   bio?: string;
+  role?: string;
   tags?: string[];
+  interestTags?: InterestTag[];
 }
 
 export interface Notification {
   id: string;
   title: string;
   content: string;
-  type: "system" | "activity" | "enrollment" | "matching";
+  type:
+    | "system"
+    | "activity"
+    | "enrollment"
+    | "matching"
+    | "approval"
+    | "greeting"
+    | "activity_change"
+    | "waitlist";
   isRead: boolean;
   createdAt: string;
+  activityId?: string;
+  activityName?: string;
   data?: Record<string, unknown>;
 }
 
@@ -65,8 +99,52 @@ export interface UserStats {
   matchingCount: number;
 }
 
+// C端活动相关类型
+export type UserActivityStatus =
+  | "recruiting"
+  | "pending"
+  | "approved"
+  | "completed";
+
+export interface UserActivity {
+  id: string;
+  title: string;
+  description?: string;
+  coverImage: string;
+  eventStartTime: string;
+  eventEndTime: string;
+  location: string;
+  maxParticipants: number;
+  currentParticipants: number;
+  tags: string[];
+  userStatus: UserActivityStatus;
+  activityStatus: "recruiting" | "ongoing" | "completed";
+  isFavorite?: boolean;
+  organizer: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+}
+
+export interface UserActivityListResponse {
+  success: boolean;
+  data?: {
+    activities: UserActivity[];
+    total: number;
+    page?: number;
+    pageSize?: number;
+  };
+}
+
+export interface ActivityCategory {
+  id: string;
+  name: string;
+  count: number;
+}
+
 // ============================================
-// API 函数
+// API 函数 - 用户资料
 // ============================================
 
 /**
@@ -108,6 +186,128 @@ export async function uploadAvatar(file: File): Promise<{
 }
 
 /**
+ * 获取用户统计数据
+ * GET /api/user/stats
+ */
+export async function getUserStats(): Promise<{
+  success: boolean;
+  stats?: UserStats;
+}> {
+  return api.get("/api/user/stats");
+}
+
+// ============================================
+// API 函数 - 用户活动
+// ============================================
+
+/**
+ * 获取用户活动列表（我的活动）
+ * GET /api/user/activities
+ */
+export async function getUserActivities(params?: {
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<UserActivityListResponse> {
+  return api.get("/api/user/activities", { params });
+}
+
+/**
+ * 获取推荐活动
+ * GET /api/user/activities/recommended
+ */
+export async function getRecommendedActivities(): Promise<UserActivityListResponse> {
+  return api.get("/api/user/activities/recommended");
+}
+
+/**
+ * 搜索活动
+ * GET /api/user/activities/search
+ */
+export async function searchActivities(params?: {
+  keyword?: string;
+  category?: string;
+  city?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<UserActivityListResponse> {
+  return api.get("/api/user/activities/search", { params });
+}
+
+/**
+ * 获取活动分类
+ * GET /api/user/activities/categories
+ */
+export async function getActivityCategories(): Promise<{
+  success: boolean;
+  data?: {
+    categories: ActivityCategory[];
+  };
+}> {
+  return api.get("/api/user/activities/categories");
+}
+
+/**
+ * 获取活动详情
+ * GET /api/user/activities/:id
+ */
+export async function getUserActivityDetail(id: string): Promise<{
+  success: boolean;
+  data?: UserActivity;
+}> {
+  return api.get(`/api/user/activities/${id}`);
+}
+
+// ============================================
+// API 函数 - 收藏
+// ============================================
+
+/**
+ * 获取收藏列表
+ * GET /api/user/favorites
+ */
+export async function getFavorites(): Promise<UserActivityListResponse> {
+  return api.get("/api/user/favorites");
+}
+
+/**
+ * 添加收藏
+ * POST /api/user/favorites/:id
+ */
+export async function addFavorite(activityId: string): Promise<{
+  success: boolean;
+  isFavorite?: boolean;
+}> {
+  return api.post(`/api/user/favorites/${activityId}`);
+}
+
+/**
+ * 取消收藏
+ * DELETE /api/user/favorites/:id
+ */
+export async function removeFavorite(activityId: string): Promise<{
+  success: boolean;
+  isFavorite?: boolean;
+}> {
+  return api.delete(`/api/user/favorites/${activityId}`);
+}
+
+/**
+ * 切换收藏状态
+ * POST /api/user/activities/:id/favorite
+ */
+export async function toggleFavorite(activityId: string): Promise<{
+  success: boolean;
+  isFavorite?: boolean;
+}> {
+  return api.post(`/api/user/activities/${activityId}/favorite`);
+}
+
+// ============================================
+// API 函数 - 通知
+// ============================================
+
+/**
  * 获取通知列表
  * GET /api/user/notifications
  */
@@ -125,7 +325,7 @@ export async function getNotifications(params?: {
  * POST /api/user/notifications/{id}/read
  */
 export async function markNotificationRead(
-  id: string
+  id: string,
 ): Promise<{ success: boolean }> {
   return api.post(`/api/user/notifications/${id}/read`);
 }
@@ -140,16 +340,9 @@ export async function markAllNotificationsRead(): Promise<{
   return api.post("/api/user/notifications/read-all");
 }
 
-/**
- * 获取用户统计数据
- * GET /api/user/stats
- */
-export async function getUserStats(): Promise<{
-  success: boolean;
-  stats?: UserStats;
-}> {
-  return api.get("/api/user/stats");
-}
+// ============================================
+// API 函数 - 账号
+// ============================================
 
 /**
  * 删除账号

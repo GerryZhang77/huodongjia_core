@@ -10,7 +10,7 @@
  * 5. 用户头像悬浮卡片
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Target,
@@ -30,7 +30,7 @@ import { UserLayout } from "@/components/layout/UserLayout";
 import { Tag } from "@/components/ui";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
 import { NFCTouchModal } from "@/components/business/NFCTouchModal";
-import { getActivityById } from "@/mocks/data/user-activities";
+import { useActivityDetail } from "@/features/user";
 import dayjs from "dayjs";
 
 // ============================================
@@ -458,8 +458,25 @@ const UserMatchResult: FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>("group");
   const [showNFCModal, setShowNFCModal] = useState(false);
 
-  const activity = id ? getActivityById(id) : undefined;
+  // 使用 hooks 获取活动详情
+  const { data: activityData, isLoading } = useActivityDetail(id);
+
+  const activity = useMemo(() => {
+    return activityData?.data;
+  }, [activityData]);
+
   const result = mockMatchResult;
+
+  // 加载中状态
+  if (isLoading) {
+    return (
+      <UserLayout showTabBar={true} showTopBar={true}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-gray-500">加载中...</div>
+        </div>
+      </UserLayout>
+    );
+  }
 
   // 活动不存在
   if (!activity) {

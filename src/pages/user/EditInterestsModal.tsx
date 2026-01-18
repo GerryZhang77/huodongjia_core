@@ -7,7 +7,7 @@ import { FC, useState, useEffect } from "react";
 import { Plus, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui";
-import type { InterestTag } from "@/mocks/data/user-profile";
+import type { InterestTag } from "@/services/userApi";
 
 // 兴趣标签选项
 const interestOptions = [

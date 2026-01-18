@@ -7,7 +7,8 @@ import { FC, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, SlidersHorizontal, MapPin, Calendar } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
-import { mockUserActivities, UserActivity } from "@/mocks/data/user-activities";
+import { useUserActivities } from "@/features/user";
+import type { UserActivity } from "@/services/userApi";
 import dayjs from "dayjs";
 
 // 筛选标签
@@ -50,9 +51,16 @@ const UserDiscover: FC = () => {
   const [sortBy, setSortBy] = useState("latest");
   const [showSortMenu, setShowSortMenu] = useState(false);
 
+  // 使用 hooks 获取活动数据
+  const { data: activitiesData, isLoading } = useUserActivities();
+
+  const allActivities = useMemo(() => {
+    return activitiesData?.data?.activities || [];
+  }, [activitiesData]);
+
   // 过滤活动
   const filteredActivities = useMemo(() => {
-    let result = [...mockUserActivities];
+    let result = [...allActivities];
 
     // 搜索过滤
     if (searchText.trim()) {
@@ -61,7 +69,7 @@ const UserDiscover: FC = () => {
         (a) =>
           a.title.toLowerCase().includes(keyword) ||
           a.location.toLowerCase().includes(keyword) ||
-          a.tags.some((t) => t.toLowerCase().includes(keyword))
+          a.tags.some((t) => t.toLowerCase().includes(keyword)),
       );
     }
 
@@ -73,12 +81,12 @@ const UserDiscover: FC = () => {
           break;
         case "outdoor":
           result = result.filter(
-            (a) => a.tags.includes("户外") || a.tags.includes("运动")
+            (a) => a.tags.includes("户外") || a.tags.includes("运动"),
           );
           break;
         case "social":
           result = result.filter(
-            (a) => a.tags.includes("社交") || a.tags.includes("交友")
+            (a) => a.tags.includes("社交") || a.tags.includes("交友"),
           );
           break;
         case "weekend":
@@ -100,14 +108,14 @@ const UserDiscover: FC = () => {
         result.sort(
           (a, b) =>
             new Date(b.eventStartTime).getTime() -
-            new Date(a.eventStartTime).getTime()
+            new Date(a.eventStartTime).getTime(),
         );
         break;
       case "hot":
         result.sort(
           (a, b) =>
             b.currentParticipants / b.maxParticipants -
-            a.currentParticipants / a.maxParticipants
+            a.currentParticipants / a.maxParticipants,
         );
         break;
       case "price_asc":
@@ -118,13 +126,13 @@ const UserDiscover: FC = () => {
         result.sort(
           (a, b) =>
             new Date(a.eventStartTime).getTime() -
-            new Date(b.eventStartTime).getTime()
+            new Date(b.eventStartTime).getTime(),
         );
         break;
     }
 
     return result;
-  }, [searchText, activeFilter, sortBy]);
+  }, [allActivities, searchText, activeFilter, sortBy]);
 
   const handleActivityClick = (id: string) => {
     navigate(`/u/activities/${id}`);
@@ -290,10 +298,11 @@ const ActivityCard: FC<ActivityCardProps> = ({
             {activity.tags.includes("户外") || activity.tags.includes("运动")
               ? String.fromCodePoint(0x1f3d4)
               : activity.tags.includes("社交") || activity.tags.includes("交友")
-              ? String.fromCodePoint(0x1f389)
-              : activity.tags.includes("读书") || activity.tags.includes("学习")
-              ? String.fromCodePoint(0x1f4da)
-              : String.fromCodePoint(0x1f3c3)}
+                ? String.fromCodePoint(0x1f389)
+                : activity.tags.includes("读书") ||
+                    activity.tags.includes("学习")
+                  ? String.fromCodePoint(0x1f4da)
+                  : String.fromCodePoint(0x1f3c3)}
           </span>
         )}
 

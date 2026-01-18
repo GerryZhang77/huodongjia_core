@@ -1,0 +1,423 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "活动家 - 通知消息 API",
+    "version": "1.0.0",
+    "description": "C端用户通知消息相关接口，包括获取通知列表、标记已读、全部已读等功能。"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API 基础路径"
+    }
+  ],
+  "tags": [
+    {
+      "name": "通知消息",
+      "description": "用户通知消息管理"
+    }
+  ],
+  "paths": {
+    "/user/notifications": {
+      "get": {
+        "summary": "获取通知列表",
+        "description": "获取当前用户的通知消息列表，支持按类型和已读状态筛选，支持分页。",
+        "operationId": "getNotifications",
+        "tags": ["通知消息"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "通知类型筛选",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "system",
+                "activity",
+                "enrollment",
+                "matching",
+                "approval",
+                "greeting",
+                "activity_change",
+                "waitlist"
+              ]
+            }
+          },
+          {
+            "name": "isRead",
+            "in": "query",
+            "description": "已读状态筛选",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取通知列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "notifications": [
+                      {
+                        "id": "notif_001",
+                        "title": "欢迎加入活动家！",
+                        "content": "感谢您注册活动家平台，开始探索精彩活动吧！",
+                        "type": "greeting",
+                        "isRead": true,
+                        "createdAt": "2024-03-01T10:00:00Z"
+                      },
+                      {
+                        "id": "notif_002",
+                        "title": "报名审核通过",
+                        "content": "恭喜！您报名的「2024 创业者年度盛会」已通过审核，请准时参加活动。",
+                        "type": "approval",
+                        "isRead": false,
+                        "createdAt": "2024-03-10T14:30:00Z",
+                        "activityId": "ua_001",
+                        "activityName": "2024 创业者年度盛会"
+                      },
+                      {
+                        "id": "notif_003",
+                        "title": "匹配结果已出",
+                        "content": "「AI 产品经理沙龙」的分组匹配结果已发布，快来查看您的小组成员吧！",
+                        "type": "matching",
+                        "isRead": false,
+                        "createdAt": "2024-03-12T09:00:00Z",
+                        "activityId": "ua_002",
+                        "activityName": "AI 产品经理沙龙",
+                        "data": {
+                          "groupId": "group_001",
+                          "groupName": "创意小组A"
+                        }
+                      },
+                      {
+                        "id": "notif_004",
+                        "title": "活动时间变更通知",
+                        "content": "您报名的「深圳创业者交流会」活动时间已更新，请注意查看最新安排。",
+                        "type": "activity_change",
+                        "isRead": false,
+                        "createdAt": "2024-03-13T16:00:00Z",
+                        "activityId": "ua_003",
+                        "activityName": "深圳创业者交流会"
+                      },
+                      {
+                        "id": "notif_005",
+                        "title": "候补转正通知",
+                        "content": "好消息！「产品经理进阶训练营」有名额释放，您已从候补名单转为正式参与者。",
+                        "type": "waitlist",
+                        "isRead": false,
+                        "createdAt": "2024-03-14T11:00:00Z",
+                        "activityId": "ua_004",
+                        "activityName": "产品经理进阶训练营"
+                      }
+                    ],
+                    "total": 15,
+                    "unreadCount": 4
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/notifications/{id}/read": {
+      "post": {
+        "summary": "标记通知为已读",
+        "description": "将指定通知标记为已读状态。",
+        "operationId": "markNotificationRead",
+        "tags": ["通知消息"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "通知ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "标记成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkReadResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "已标记为已读"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "通知不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "通知不存在"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/notifications/read-all": {
+      "post": {
+        "summary": "标记所有通知为已读",
+        "description": "将当前用户的所有未读通知标记为已读状态。",
+        "operationId": "markAllNotificationsRead",
+        "tags": ["通知消息"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "全部标记成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkAllReadResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "已全部标记为已读",
+                  "count": 4
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Notification": {
+        "type": "object",
+        "description": "通知消息",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "通知ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "通知标题"
+          },
+          "content": {
+            "type": "string",
+            "description": "通知内容"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "system",
+              "activity",
+              "enrollment",
+              "matching",
+              "approval",
+              "greeting",
+              "activity_change",
+              "waitlist"
+            ],
+            "description": "通知类型: system=系统通知, activity=活动通知, enrollment=报名通知, matching=匹配通知, approval=审核通过, greeting=欢迎消息, activity_change=活动变更, waitlist=候补转正"
+          },
+          "isRead": {
+            "type": "boolean",
+            "description": "是否已读"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "activityId": {
+            "type": "string",
+            "description": "关联活动ID（可选）"
+          },
+          "activityName": {
+            "type": "string",
+            "description": "关联活动名称（可选）"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "额外数据（可选），如分组信息等"
+          }
+        },
+        "required": ["id", "title", "content", "type", "isRead", "createdAt"]
+      },
+      "NotificationListResponse": {
+        "type": "object",
+        "description": "通知列表响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "notifications": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Notification"
+                },
+                "description": "通知列表"
+              },
+              "total": {
+                "type": "integer",
+                "description": "总数"
+              },
+              "unreadCount": {
+                "type": "integer",
+                "description": "未读数量"
+              }
+            },
+            "required": ["notifications"]
+          }
+        },
+        "required": ["success"]
+      },
+      "MarkReadResponse": {
+        "type": "object",
+        "description": "标记已读响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息"
+          }
+        },
+        "required": ["success"]
+      },
+      "MarkAllReadResponse": {
+        "type": "object",
+        "description": "全部标记已读响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "message": {
+            "type": "string",
+            "description": "响应消息"
+          },
+          "count": {
+            "type": "integer",
+            "description": "标记的通知数量"
+          }
+        },
+        "required": ["success"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "错误响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误消息"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码"
+          }
+        },
+        "required": ["success", "message"]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 认证令牌"
+      }
+    }
+  }
+}

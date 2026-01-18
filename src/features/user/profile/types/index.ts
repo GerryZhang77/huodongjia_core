@@ -23,6 +23,15 @@ export interface UserProfile {
 }
 
 /**
+ * 兴趣标签
+ */
+export interface InterestTag {
+  id: string;
+  name: string;
+  colorType: "primary" | "secondary" | "accent" | "warning" | "default";
+}
+
+/**
  * 更新用户资料请求
  */
 export interface UpdateProfileRequest {
@@ -35,6 +44,7 @@ export interface UpdateProfileRequest {
   city?: string;
   bio?: string;
   tags?: string[];
+  interestTags?: InterestTag[];
   wechatQr?: string;
 }
 

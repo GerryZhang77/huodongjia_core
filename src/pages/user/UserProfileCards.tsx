@@ -3,7 +3,7 @@
  * 整合个人资料卡片 + 我的活动列表 + 功能入口
  */
 
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Edit3,
@@ -21,16 +21,20 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import { UserLayout } from "@/components/layout/UserLayout";
-import {
-  getUserProfile,
-  updateUserProfile,
-  tagColorMap,
-  InterestTag,
-  UserProfile,
-} from "@/mocks/data/user-profile";
-import { mockUserActivities, UserActivity } from "@/mocks/data/user-activities";
+import { useUserProfile, useUserActivities } from "@/features/user";
+import type { InterestTag, UserProfile } from "@/services/userApi";
+import type { UserActivity } from "@/services/userApi";
 import { EditInterestsModal } from "./EditInterestsModal";
 import { eventBus, EVENTS } from "@/utils/eventBus";
+
+// 标签颜色映射
+const tagColorMap: Record<string, { bg: string; text: string }> = {
+  primary: { bg: "bg-primary-50", text: "text-primary-600" },
+  secondary: { bg: "bg-secondary-50", text: "text-secondary-600" },
+  accent: { bg: "bg-accent-50", text: "text-accent-600" },
+  warning: { bg: "bg-yellow-50", text: "text-yellow-600" },
+  default: { bg: "bg-gray-100", text: "text-gray-600" },
+};
 
 // ==================== 子组件 ====================
 
@@ -195,25 +199,32 @@ const getRandomColorType = (): InterestTag["colorType"] => {
 const UserProfileCards: FC = () => {
   const navigate = useNavigate();
 
-  // 用户资料状态
-  const [profile, setProfile] = useState<UserProfile>(getUserProfile());
-  const [showEditInterests, setShowEditInterests] = useState(false);
+  // 使用 hooks 获取数据
+  const { data: profileData, isLoading: isLoadingProfile } = useUserProfile();
+  const { data: activitiesData, isLoading: isLoadingActivities } =
+    useUserActivities();
+
+  // 用户资料状态（从 API 获取）
+  const profile = useMemo<UserProfile | null>(() => {
+    return profileData?.profile || null;
+  }, [profileData]);
 
   // 我的活动状态
   const [activeStatusTab, setActiveStatusTab] =
     useState<ActivityStatusTab>("all");
-  const [myActivities, setMyActivities] = useState<UserActivity[]>([]);
 
-  // 加载用户活动数据
-  useEffect(() => {
-    setMyActivities(mockUserActivities);
-  }, []);
+  // 活动列表
+  const myActivities = useMemo(() => {
+    return activitiesData?.data?.activities || [];
+  }, [activitiesData]);
 
-  // 监听资料更新事件
+  // 兴趣编辑弹窗
+  const [showEditInterests, setShowEditInterests] = useState(false);
+
+  // 监听资料更新事件（用于本地刷新）
   useEffect(() => {
     const handleProfileUpdate = () => {
-      const updatedProfile = getUserProfile();
-      setProfile(updatedProfile);
+      // TODO: 触发重新获取 profile
     };
 
     eventBus.on(EVENTS.PROFILE_UPDATED, handleProfileUpdate);
@@ -223,36 +234,55 @@ const UserProfileCards: FC = () => {
   }, []);
 
   // 过滤活动列表
-  const filteredActivities = myActivities.filter((activity) => {
-    const isEnded = dayjs(activity.eventEndTime).isBefore(dayjs());
+  const filteredActivities = useMemo(() => {
+    return myActivities.filter((activity) => {
+      const isEnded = dayjs(activity.eventEndTime).isBefore(dayjs());
 
-    switch (activeStatusTab) {
-      case "pending":
-        return !isEnded && activity.userStatus === "pending";
-      case "approved":
-        return !isEnded && activity.userStatus === "approved";
-      case "ended":
-        return isEnded;
-      default:
-        return true;
-    }
-  });
+      switch (activeStatusTab) {
+        case "pending":
+          return !isEnded && activity.userStatus === "pending";
+        case "approved":
+          return !isEnded && activity.userStatus === "approved";
+        case "ended":
+          return isEnded;
+        default:
+          return true;
+      }
+    });
+  }, [myActivities, activeStatusTab]);
 
-  // 保存兴趣标签
+  // 保存兴趣标签 - TODO: 使用 mutation hook
   const handleSaveInterests = (tags: string[]) => {
     const newInterestTags: InterestTag[] = tags.map((name, index) => ({
       id: `tag_${Date.now()}_${index}`,
       name,
       colorType: getRandomColorType(),
     }));
-
-    const updatedProfile = {
-      ...profile,
-      interestTags: newInterestTags,
-    };
-    setProfile(updatedProfile);
-    updateUserProfile({ interestTags: newInterestTags });
+    // TODO: 调用 updateUserProfile API
+    console.log("Save interests:", newInterestTags);
   };
+
+  // 加载中状态
+  if (isLoadingProfile) {
+    return (
+      <UserLayout bgColor="bg-gray-100 dark:bg-gray-900">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-gray-500">加载中...</div>
+        </div>
+      </UserLayout>
+    );
+  }
+
+  // 无数据状态
+  if (!profile) {
+    return (
+      <UserLayout bgColor="bg-gray-100 dark:bg-gray-900">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-gray-500">无法获取用户信息</div>
+        </div>
+      </UserLayout>
+    );
+  }
 
   return (
     <UserLayout bgColor="bg-gray-100 dark:bg-gray-900">

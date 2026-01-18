@@ -3,11 +3,12 @@
  * 展示用户收藏的活动列表
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Heart, Calendar, MapPin, Trash2 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
-import { mockUserActivities, UserActivity } from "@/mocks/data/user-activities";
+import { useFavorites, useRemoveFavorite } from "@/features/user";
+import type { UserActivity } from "@/services/userApi";
 import dayjs from "dayjs";
 
 // 格式化日期
@@ -15,16 +16,20 @@ const formatDate = (dateStr: string): string => {
   return dayjs(dateStr).format("M月D日 HH:mm");
 };
 
-// Mock 收藏数据 - 从 mockUserActivities 中随机选取一些
-const mockFavorites = mockUserActivities.slice(0, 4);
-
 const UserFavorites: FC = () => {
   const navigate = useNavigate();
-  const [favorites, setFavorites] = useState<UserActivity[]>(mockFavorites);
   const [editMode, setEditMode] = useState(false);
 
+  // 使用 hooks 获取收藏数据
+  const { data: favoritesData, isLoading } = useFavorites();
+  const removeFavoriteMutation = useRemoveFavorite();
+
+  const favorites = useMemo(() => {
+    return favoritesData?.data?.activities || [];
+  }, [favoritesData]);
+
   const handleRemove = (id: string) => {
-    setFavorites((prev) => prev.filter((item) => item.id !== id));
+    removeFavoriteMutation.mutate(id);
   };
 
   const handleActivityClick = (id: string) => {

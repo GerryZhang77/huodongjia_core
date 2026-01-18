@@ -9,6 +9,7 @@ import { authHandlers } from "./auth.handlers";
 import { activityHandlers } from "./events.handlers";
 import { enrollmentHandlers } from "./enrollment.handlers";
 import { matchingHandlers } from "./matching.handlers";
+import { userHandlers } from "./user.handlers";
 
 /**
  * 所有 handlers 的聚合
@@ -26,6 +27,9 @@ export const handlers = [
 
   // 匹配模块
   ...matchingHandlers,
+
+  // C端用户模块
+  ...userHandlers,
 ];
 
 // 导出各模块 handlers（用于单独测试）
@@ -33,3 +37,4 @@ export { authHandlers } from "./auth.handlers";
 export { activityHandlers } from "./events.handlers";
 export { enrollmentHandlers } from "./enrollment.handlers";
 export { matchingHandlers } from "./matching.handlers";
+export { userHandlers } from "./user.handlers";

@@ -1,0 +1,593 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "活动家 - 用户活动 API",
+    "version": "1.0.0",
+    "description": "C端用户活动相关接口，包括我的活动、推荐活动、搜索活动、活动分类、活动详情等功能"
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API 基础路径"
+    }
+  ],
+  "tags": [
+    {
+      "name": "用户活动",
+      "description": "用户活动管理"
+    }
+  ],
+  "paths": {
+    "/user/activities": {
+      "get": {
+        "summary": "获取用户活动列表",
+        "description": "获取当前用户的活动列表（我的活动），支持按状态筛选和分页。",
+        "operationId": "getUserActivities",
+        "tags": ["用户活动"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "活动状态筛选",
+            "schema": {
+              "type": "string",
+              "enum": ["all", "recruiting", "pending", "approved", "completed"],
+              "default": "all"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取活动列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserActivityListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "activities": [
+                      {
+                        "id": "ua_001",
+                        "title": "2024 创业者年度盛会",
+                        "coverImage": "https://picsum.photos/400/200?random=1",
+                        "eventStartTime": "2024-03-15T09:00:00Z",
+                        "eventEndTime": "2024-03-15T18:00:00Z",
+                        "location": "北京·国家会议中心",
+                        "maxParticipants": 500,
+                        "currentParticipants": 423,
+                        "tags": ["创业", "投资", "商业"],
+                        "userStatus": "approved",
+                        "activityStatus": "recruiting",
+                        "isFavorite": true,
+                        "organizer": {
+                          "id": "org_001",
+                          "name": "活动家官方",
+                          "avatar": "https://i.pravatar.cc/100?img=10"
+                        }
+                      }
+                    ],
+                    "total": 12,
+                    "page": 1,
+                    "pageSize": 10
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权访问",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/activities/recommended": {
+      "get": {
+        "summary": "获取推荐活动",
+        "description": "获取系统推荐的活动列表，基于用户兴趣和热度推荐。",
+        "operationId": "getRecommendedActivities",
+        "tags": ["用户活动"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取推荐活动",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserActivityListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "activities": [
+                      {
+                        "id": "ua_002",
+                        "title": "AI 产品经理沙龙",
+                        "coverImage": "https://picsum.photos/400/200?random=2",
+                        "eventStartTime": "2024-03-20T14:00:00Z",
+                        "eventEndTime": "2024-03-20T17:00:00Z",
+                        "location": "上海·WeWork共享办公",
+                        "maxParticipants": 50,
+                        "currentParticipants": 42,
+                        "tags": ["AI", "产品", "技术"],
+                        "userStatus": "recruiting",
+                        "activityStatus": "recruiting",
+                        "isFavorite": false,
+                        "organizer": {
+                          "id": "org_002",
+                          "name": "AI产品社群",
+                          "avatar": "https://i.pravatar.cc/100?img=20"
+                        }
+                      }
+                    ],
+                    "total": 6
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/activities/search": {
+      "get": {
+        "summary": "搜索活动",
+        "description": "根据关键词、分类、城市等条件搜索活动。",
+        "operationId": "searchActivities",
+        "tags": ["用户活动"],
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "query",
+            "description": "搜索关键词（标题、地点、标签）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "活动分类",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "description": "城市（\"全国\" 表示不限）",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "页码",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "每页数量",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserActivityListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "activities": [
+                      {
+                        "id": "ua_003",
+                        "title": "深圳创业者交流会",
+                        "coverImage": "https://picsum.photos/400/200?random=3",
+                        "eventStartTime": "2024-03-25T19:00:00Z",
+                        "eventEndTime": "2024-03-25T21:00:00Z",
+                        "location": "深圳·南山科技园",
+                        "maxParticipants": 100,
+                        "currentParticipants": 78,
+                        "tags": ["创业", "交友", "社交"],
+                        "userStatus": "recruiting",
+                        "activityStatus": "recruiting",
+                        "isFavorite": true,
+                        "organizer": {
+                          "id": "org_003",
+                          "name": "深圳创业圈",
+                          "avatar": "https://i.pravatar.cc/100?img=30"
+                        }
+                      }
+                    ],
+                    "total": 15,
+                    "page": 1,
+                    "pageSize": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/activities/categories": {
+      "get": {
+        "summary": "获取活动分类",
+        "description": "获取所有活动分类及各分类的活动数量。",
+        "operationId": "getActivityCategories",
+        "tags": ["用户活动"],
+        "responses": {
+          "200": {
+            "description": "成功获取分类列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityCategoriesResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "categories": [
+                      { "id": "cat_1", "name": "创业", "count": 25 },
+                      { "id": "cat_2", "name": "投资", "count": 18 },
+                      { "id": "cat_3", "name": "社交", "count": 32 },
+                      { "id": "cat_4", "name": "技术", "count": 15 },
+                      { "id": "cat_5", "name": "商业", "count": 20 },
+                      { "id": "cat_6", "name": "AI", "count": 12 }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/activities/{id}": {
+      "get": {
+        "summary": "获取活动详情",
+        "description": "根据活动ID获取活动的详细信息。",
+        "operationId": "getUserActivityDetail",
+        "tags": ["用户活动"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "活动ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取活动详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserActivityDetailResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "id": "ua_001",
+                    "title": "2024 创业者年度盛会",
+                    "description": "一年一度的创业者盛会，汇聚行业精英，共同探讨创业趋势与机遇。本次活动将邀请知名投资人、成功创业者分享经验，提供优质的社交机会。",
+                    "coverImage": "https://picsum.photos/800/400?random=1",
+                    "eventStartTime": "2024-03-15T09:00:00Z",
+                    "eventEndTime": "2024-03-15T18:00:00Z",
+                    "location": "北京·国家会议中心",
+                    "maxParticipants": 500,
+                    "currentParticipants": 423,
+                    "tags": ["创业", "投资", "商业"],
+                    "userStatus": "approved",
+                    "activityStatus": "recruiting",
+                    "isFavorite": true,
+                    "organizer": {
+                      "id": "org_001",
+                      "name": "活动家官方",
+                      "avatar": "https://i.pravatar.cc/100?img=10"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "活动不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "message": "活动不存在"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UserActivity": {
+        "type": "object",
+        "description": "用户活动信息",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "活动ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "活动标题"
+          },
+          "description": {
+            "type": "string",
+            "description": "活动描述"
+          },
+          "coverImage": {
+            "type": "string",
+            "description": "封面图片URL"
+          },
+          "eventStartTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "活动开始时间"
+          },
+          "eventEndTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "活动结束时间"
+          },
+          "location": {
+            "type": "string",
+            "description": "活动地点"
+          },
+          "maxParticipants": {
+            "type": "integer",
+            "description": "最大参与人数"
+          },
+          "currentParticipants": {
+            "type": "integer",
+            "description": "当前参与人数"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "活动标签"
+          },
+          "userStatus": {
+            "type": "string",
+            "enum": ["recruiting", "pending", "approved", "completed"],
+            "description": "用户在此活动的状态: recruiting=可报名, pending=审核中, approved=已通过, completed=已完成"
+          },
+          "activityStatus": {
+            "type": "string",
+            "enum": ["recruiting", "ongoing", "completed"],
+            "description": "活动状态: recruiting=招募中, ongoing=进行中, completed=已结束"
+          },
+          "isFavorite": {
+            "type": "boolean",
+            "description": "是否已收藏"
+          },
+          "organizer": {
+            "$ref": "#/components/schemas/Organizer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "coverImage",
+          "eventStartTime",
+          "eventEndTime",
+          "location",
+          "maxParticipants",
+          "currentParticipants",
+          "tags",
+          "userStatus",
+          "activityStatus",
+          "organizer"
+        ]
+      },
+      "Organizer": {
+        "type": "object",
+        "description": "活动组织者",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "组织者ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "组织者名称"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "组织者头像URL"
+          }
+        },
+        "required": ["id", "name", "avatar"]
+      },
+      "ActivityCategory": {
+        "type": "object",
+        "description": "活动分类",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "分类ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "分类名称"
+          },
+          "count": {
+            "type": "integer",
+            "description": "该分类的活动数量"
+          }
+        },
+        "required": ["id", "name", "count"]
+      },
+      "UserActivityListResponse": {
+        "type": "object",
+        "description": "用户活动列表响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "activities": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/UserActivity"
+                }
+              },
+              "total": {
+                "type": "integer",
+                "description": "总数"
+              },
+              "page": {
+                "type": "integer",
+                "description": "当前页码"
+              },
+              "pageSize": {
+                "type": "integer",
+                "description": "每页数量"
+              }
+            },
+            "required": ["activities", "total"]
+          }
+        },
+        "required": ["success"]
+      },
+      "UserActivityDetailResponse": {
+        "type": "object",
+        "description": "用户活动详情响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UserActivity"
+          }
+        },
+        "required": ["success"]
+      },
+      "ActivityCategoriesResponse": {
+        "type": "object",
+        "description": "活动分类列表响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "是否成功"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "categories": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ActivityCategory"
+                }
+              }
+            },
+            "required": ["categories"]
+          }
+        },
+        "required": ["success"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "错误响应",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "错误消息"
+          },
+          "code": {
+            "type": "string",
+            "description": "错误代码"
+          }
+        },
+        "required": ["success", "message"]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 认证令牌"
+      }
+    }
+  }
+}
