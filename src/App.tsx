@@ -58,6 +58,7 @@ const UserEditProfile = lazy(() => import("./pages/user/UserEditProfile"));
 const UserActivityHistory = lazy(
   () => import("./pages/user/UserActivityHistory")
 );
+const UserPublicProfile = lazy(() => import("./pages/user/UserPublicProfile"));
 
 // 开发调试页面 - 懒加载
 const ComponentShowcase = lazy(() => import("./pages/dev/ComponentShowcase"));
@@ -231,6 +232,16 @@ function App() {
                   }
                 />
 
+                {/* 用户公开资料页 (查看其他用户) */}
+                <Route
+                  path="/u/profile/:userId"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserPublicProfile />
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* 发现/活动列表页 */}
                 <Route
                   path="/u/discover"
@@ -293,6 +304,16 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserActivityHistory />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 查看他人用户资料页 */}
+                <Route
+                  path="/u/profile/:userId"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserPublicProfile />
                     </ProtectedRoute>
                   }
                 />

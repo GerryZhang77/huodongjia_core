@@ -523,7 +523,7 @@ const UserHome: FC = () => {
               </h2>
             </div>
             <button
-              onClick={() => setSortBy("hot")}
+              onClick={() => navigate("/u/discover?sort=hot")}
               className="text-xs text-primary-500 font-medium flex items-center gap-0.5"
             >
               查看更多

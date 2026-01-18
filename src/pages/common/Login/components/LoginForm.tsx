@@ -18,7 +18,8 @@ import { useLogin } from "@/features/auth/hooks";
 import { TEST_ACCOUNTS } from "@/features/auth/utils";
 import { UserAgreement, PrivacyPolicy } from "@/components/legal";
 import { Mail, Eye, EyeOff, AlertCircle, Info, Sparkles } from "lucide-react";
-import { FaWeixin, FaQq, FaWeibo } from "react-icons/fa";
+// TODO: 暂时隐藏社交登录功能
+// import { FaWeixin, FaQq, FaWeibo } from "react-icons/fa";
 
 export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
@@ -64,13 +65,7 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <div
-      className="w-full bg-white/95 backdrop-blur-sm rounded-[30px] shadow-2xl overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9))",
-      }}
-    >
+    <div className="w-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-[30px] shadow-2xl overflow-hidden">
       {/* 卡片内容 - 精确匹配设计稿内边距 */}
       <div className="px-[70px] py-20 max-md:px-8 max-md:py-10 max-sm:px-6 max-sm:py-8">
         {/* Logo 和标题区域 */}
@@ -101,12 +96,12 @@ export const LoginForm: React.FC = () => {
           </div>
 
           {/* 标题 - 32px font-size */}
-          <h1 className="text-[32px] max-md:text-3xl max-sm:text-2xl font-bold text-gray-900 mb-4">
+          <h1 className="text-[32px] max-md:text-3xl max-sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             活动俱乐部
           </h1>
 
           {/* 副标题 - 16px font-size */}
-          <p className="text-base max-sm:text-sm text-gray-600">
+          <p className="text-base max-sm:text-sm text-gray-600 dark:text-gray-300">
             欢迎回来！让我们一起创造美好回忆
           </p>
         </div>
@@ -163,7 +158,9 @@ export const LoginForm: React.FC = () => {
               onChange={(checked) => setRememberMe(checked)}
               size="medium"
             >
-              <span className="text-sm text-gray-700">记住我</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                记住我
+              </span>
             </Checkbox>
 
             <button
@@ -182,7 +179,7 @@ export const LoginForm: React.FC = () => {
               onChange={(checked) => setAgreeTerms(checked)}
               size="medium"
             />
-            <span className="text-xs text-gray-500 leading-relaxed">
+            <span className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               我已阅读并同意
               <button
                 type="button"
@@ -212,8 +209,8 @@ export const LoginForm: React.FC = () => {
 
           {/* 错误提示 */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl animate-shake">
-              <p className="flex items-center gap-2 text-sm text-red-600">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-shake">
+              <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{error}</span>
               </p>
@@ -242,51 +239,49 @@ export const LoginForm: React.FC = () => {
           </div>
         </form>
 
+        {/* TODO: 暂时隐藏社交登录功能 */}
         {/* 分隔线 - 精确匹配设计稿位置 */}
-        <div className="flex items-center gap-[30px] my-[30px] max-sm:my-5">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-sm text-gray-400">或</span>
-          <div className="flex-1 h-px bg-gray-200" />
-        </div>
+        {/* <div className="flex items-center gap-[30px] my-[30px] max-sm:my-5">
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <span className="text-sm text-gray-400 dark:text-gray-500">或</span>
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+        </div> */}
 
         {/* 社交登录按钮 - 125x48px 每个 */}
-        <div className="grid grid-cols-3 gap-3 max-sm:gap-2">
-          {/* 微信 */}
+        {/* <div className="grid grid-cols-3 gap-3 max-sm:gap-2">
           <button
             type="button"
-            className="h-12 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 rounded-[10px] transition-all duration-200 hover:border-[#07c160] hover:shadow-sm"
+            className="h-12 flex items-center justify-center gap-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-[10px] transition-all duration-200 hover:border-[#07c160] hover:shadow-sm"
           >
             <FaWeixin size={20} color="#07c160" />
-            <span className="text-[13px] font-semibold text-gray-700 max-sm:hidden">
+            <span className="text-[13px] font-semibold text-gray-700 dark:text-gray-300 max-sm:hidden">
               微信
             </span>
           </button>
 
-          {/* QQ */}
           <button
             type="button"
-            className="h-12 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 rounded-[10px] transition-all duration-200 hover:border-[#12b7f5] hover:shadow-sm"
+            className="h-12 flex items-center justify-center gap-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-[10px] transition-all duration-200 hover:border-[#12b7f5] hover:shadow-sm"
           >
             <FaQq size={20} color="#12b7f5" />
-            <span className="text-[13px] font-semibold text-gray-700 max-sm:hidden">
+            <span className="text-[13px] font-semibold text-gray-700 dark:text-gray-300 max-sm:hidden">
               QQ
             </span>
           </button>
 
-          {/* 微博 */}
           <button
             type="button"
-            className="h-12 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 rounded-[10px] transition-all duration-200 hover:border-[#e6162d] hover:shadow-sm"
+            className="h-12 flex items-center justify-center gap-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-[10px] transition-all duration-200 hover:border-[#e6162d] hover:shadow-sm"
           >
             <FaWeibo size={20} color="#e6162d" />
-            <span className="text-[13px] font-semibold text-gray-700 max-sm:hidden">
+            <span className="text-[13px] font-semibold text-gray-700 dark:text-gray-300 max-sm:hidden">
               微博
             </span>
           </button>
-        </div>
+        </div> */}
 
         {/* 注册链接 */}
-        <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600">
+        <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600 dark:text-gray-400">
           还没有账号？
           <button
             type="button"
@@ -300,11 +295,11 @@ export const LoginForm: React.FC = () => {
         {/* 测试账号折叠区域 - 仅开发环境 */}
         {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
           import.meta.env.DEV && (
-            <div className="mt-6 pt-5 border-t border-gray-200">
+            <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
                 onClick={() => setShowTestAccounts(!showTestAccounts)}
-                className="flex items-center gap-2 mx-auto text-[13px] text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center gap-2 mx-auto text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               >
                 <Info className="w-3.5 h-3.5" />
                 <span>{showTestAccounts ? "收起" : "查看"}测试账号</span>
@@ -315,10 +310,10 @@ export const LoginForm: React.FC = () => {
                   {TEST_ACCOUNTS.map((account) => (
                     <div
                       key={account.value}
-                      className="p-3 bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-[10px] transition-all duration-200 hover:shadow-md"
+                      className="p-3 bg-gradient-to-br from-gray-50 to-white dark:from-gray-700 dark:to-gray-800 border border-gray-200 dark:border-gray-600 rounded-[10px] transition-all duration-200 hover:shadow-md"
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[13px] font-semibold text-gray-900">
+                        <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
                           {account.label}
                         </span>
                         <button
@@ -329,9 +324,9 @@ export const LoginForm: React.FC = () => {
                           快速填充
                         </button>
                       </div>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
                         账号:{" "}
-                        <code className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-700">
+                        <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 rounded text-gray-700 dark:text-gray-300">
                           {account.value}
                         </code>{" "}
                         | {account.description}

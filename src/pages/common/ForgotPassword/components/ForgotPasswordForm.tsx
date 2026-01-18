@@ -131,7 +131,7 @@ export const ForgotPasswordForm: React.FC = () => {
               className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
                 index <= currentIndex
                   ? "bg-primary-400 text-white"
-                  : "bg-gray-200 text-gray-500"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
               }`}
             >
               {index + 1}
@@ -139,7 +139,9 @@ export const ForgotPasswordForm: React.FC = () => {
             {index < steps.length - 1 && (
               <div
                 className={`w-12 h-1 rounded transition-colors ${
-                  index < currentIndex ? "bg-primary-400" : "bg-gray-200"
+                  index < currentIndex
+                    ? "bg-primary-400"
+                    : "bg-gray-200 dark:bg-gray-700"
                 }`}
               />
             )}
@@ -165,8 +167,8 @@ export const ForgotPasswordForm: React.FC = () => {
       />
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-          <p className="flex items-center gap-2 text-sm text-red-600">
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </p>
@@ -189,7 +191,7 @@ export const ForgotPasswordForm: React.FC = () => {
   // 渲染验证码验证步骤
   const renderVerifyStep = () => (
     <div className="space-y-5">
-      <p className="text-center text-gray-600 text-sm mb-4">
+      <p className="text-center text-gray-600 dark:text-gray-400 text-sm mb-4">
         验证码已发送至 <span className="font-semibold">{phone}</span>
       </p>
 
@@ -211,7 +213,7 @@ export const ForgotPasswordForm: React.FC = () => {
           disabled={countdown > 0 || sendingCode}
           className={`text-sm ${
             countdown > 0
-              ? "text-gray-400 cursor-not-allowed"
+              ? "text-gray-400 dark:text-gray-500 cursor-not-allowed"
               : "text-primary-400 hover:text-primary-500"
           }`}
         >
@@ -220,8 +222,8 @@ export const ForgotPasswordForm: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-          <p className="flex items-center gap-2 text-sm text-red-600">
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </p>
@@ -307,8 +309,8 @@ export const ForgotPasswordForm: React.FC = () => {
       />
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-          <p className="flex items-center gap-2 text-sm text-red-600">
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
           </p>
@@ -331,12 +333,16 @@ export const ForgotPasswordForm: React.FC = () => {
   // 渲染成功步骤
   const renderSuccessStep = () => (
     <div className="text-center space-y-6">
-      <div className="w-20 h-20 bg-success-100 rounded-full flex items-center justify-center mx-auto">
+      <div className="w-20 h-20 bg-success-100 dark:bg-success-900/30 rounded-full flex items-center justify-center mx-auto">
         <CheckCircle2 className="w-10 h-10 text-success-500" />
       </div>
       <div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">密码重置成功</h3>
-        <p className="text-gray-500 text-sm">请使用新密码登录您的账号</p>
+        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          密码重置成功
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">
+          请使用新密码登录您的账号
+        </p>
       </div>
       <Button
         type="button"
@@ -350,20 +356,14 @@ export const ForgotPasswordForm: React.FC = () => {
   );
 
   return (
-    <div
-      className="w-full bg-white/95 backdrop-blur-sm rounded-[30px] shadow-2xl overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9))",
-      }}
-    >
+    <div className="w-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-[30px] shadow-2xl overflow-hidden">
       <div className="px-[50px] py-12 max-md:px-8 max-md:py-10 max-sm:px-6 max-sm:py-8">
         {/* 返回按钮 - 成功页面不显示 */}
         {step !== "success" && (
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-6"
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors mb-6"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="text-sm">返回登录</span>
@@ -381,10 +381,10 @@ export const ForgotPasswordForm: React.FC = () => {
             >
               <KeyRound className="w-8 h-8 max-sm:w-6 max-sm:h-6 text-white" />
             </div>
-            <h1 className="text-2xl max-sm:text-xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl max-sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               找回密码
             </h1>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
               通过手机验证码重置您的账号密码
             </p>
           </div>

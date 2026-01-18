@@ -118,19 +118,13 @@ export const RegisterForm: React.FC = () => {
   };
 
   return (
-    <div
-      className="w-full bg-white/95 backdrop-blur-sm rounded-[30px] shadow-2xl overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9))",
-      }}
-    >
+    <div className="w-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-[30px] shadow-2xl overflow-hidden">
       <div className="px-[50px] py-12 max-md:px-8 max-md:py-10 max-sm:px-6 max-sm:py-8">
         {/* 返回按钮 */}
         <button
           type="button"
           onClick={() => navigate("/login")}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-6"
+          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm">返回登录</span>
@@ -146,10 +140,10 @@ export const RegisterForm: React.FC = () => {
           >
             <Shield className="w-8 h-8 max-sm:w-6 max-sm:h-6 text-white" />
           </div>
-          <h1 className="text-2xl max-sm:text-xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl max-sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             创建账号
           </h1>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
             使用手机号快速注册，开启精彩活动之旅
           </p>
         </div>
@@ -254,7 +248,7 @@ export const RegisterForm: React.FC = () => {
               onChange={(checked) => setAgreeTerms(checked)}
               size="small"
             />
-            <span className="text-xs text-gray-500 leading-relaxed">
+            <span className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               我已阅读并同意
               <button
                 type="button"
@@ -276,8 +270,8 @@ export const RegisterForm: React.FC = () => {
 
           {/* 错误提示 */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-              <p className="flex items-center gap-2 text-sm text-red-600">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{error}</span>
               </p>
@@ -298,7 +292,7 @@ export const RegisterForm: React.FC = () => {
         </form>
 
         {/* 登录链接 */}
-        <p className="text-center mt-6 text-sm text-gray-600">
+        <p className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">
           已有账号？
           <button
             type="button"

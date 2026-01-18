@@ -85,8 +85,13 @@
 
   /* 全局字体 */
   body {
-    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "PingFang SC",
-      "Microsoft YaHei", sans-serif;
+    font-family:
+      "Nunito",
+      -apple-system,
+      BlinkMacSystemFont,
+      "PingFang SC",
+      "Microsoft YaHei",
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: #f5f5f5;
@@ -96,6 +101,48 @@
   code,
   pre {
     font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
+  }
+
+  /* ========================================
+   * 浏览器自动填充 (Autofill) 样式修复
+   * 
+   * 问题：Chrome/Safari 自动填充时会强制应用蓝色/白色背景
+   * 解决：使用 box-shadow 覆盖背景色，使用 -webkit-text-fill-color 控制文字颜色
+   * ======================================== */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  textarea:-webkit-autofill:active,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus,
+  select:-webkit-autofill:active {
+    /* 使用 inset box-shadow 覆盖浏览器默认的背景色 */
+    -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+    box-shadow: 0 0 0 1000px transparent inset !important;
+    /* 保持文字颜色 */
+    -webkit-text-fill-color: inherit !important;
+    /* 去除背景色过渡 */
+    transition: background-color 5000s ease-in-out 0s;
+    background-color: transparent !important;
+  }
+
+  /* 暗黑模式下的 autofill 样式 */
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus,
+  .dark input:-webkit-autofill:active,
+  .dark textarea:-webkit-autofill,
+  .dark textarea:-webkit-autofill:hover,
+  .dark textarea:-webkit-autofill:focus,
+  .dark textarea:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+    box-shadow: 0 0 0 1000px transparent inset !important;
+    -webkit-text-fill-color: #f1f5f9 !important;
   }
 }
 

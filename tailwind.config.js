@@ -285,9 +285,17 @@ export default {
           "0%": { opacity: "0", transform: "translateY(-10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "scale-in": {
+          "0%": { opacity: "0", transform: "translate(-50%, -50%) scale(0.9)" },
+          "100%": { opacity: "1", transform: "translate(-50%, -50%) scale(1)" },
+        },
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
+        },
+        "ping-slow": {
+          "0%": { opacity: "1", transform: "scale(1)" },
+          "75%, 100%": { opacity: "0", transform: "scale(1.3)" },
         },
       },
 
@@ -295,7 +303,9 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "slide-up": "slide-up 0.3s ease-out",
         "slide-down": "slide-down 0.3s ease-out",
+        "scale-in": "scale-in 0.2s ease-out",
         shimmer: "shimmer 2s infinite linear",
+        "ping-slow": "ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite",
       },
 
       // ===== 背景渐变 =====

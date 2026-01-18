@@ -16,3 +16,9 @@ export type {
   ActivityFilterDrawerProps,
   ActivityFilters,
 } from "./ActivityFilterDrawer/types";
+
+export { UserHoverCard } from "./UserHoverCard";
+export type { UserHoverCardProps, UserBrief } from "./UserHoverCard/types";
+
+export { NFCTouchModal } from "./NFCTouchModal";
+export type { NFCTouchModalProps } from "./NFCTouchModal/types";
