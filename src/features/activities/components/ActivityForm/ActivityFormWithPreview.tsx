@@ -1,0 +1,637 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * 带实时预览的活动表单组件
+ * PC端：左侧编辑表单，右侧实时预览
+ * 移动端：全宽表单 + 底部预览按钮
+ */
+
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Form,
+  Input,
+  TextArea,
+  Button,
+  Toast,
+  ImageUploader,
+  Selector,
+  Stepper,
+  Switch,
+  Card,
+  Dialog,
+  Popup,
+} from "antd-mobile";
+import { PictureOutline } from "antd-mobile-icons";
+import { Eye, EyeOff, Smartphone } from "lucide-react";
+import { useActivityDetail } from "../../hooks";
+import { uploadCoverImage } from "../../services";
+import {
+  CATEGORY_OPTIONS,
+  TAG_OPTIONS,
+  validateTitle,
+  validateDescription,
+  validateLocation,
+  validateParticipants,
+  createTimeValidationRules,
+} from "../../utils";
+import type { ActivityFormData, ActivityCategory } from "../../types";
+import { DatePickerField } from "./DatePickerField";
+import { ActivityPreview } from "@/components/business/ActivityPreview";
+import { useAuthStore } from "@/features/auth/stores";
+
+interface ActivityFormWithPreviewProps {
+  /**
+   * 活动 ID (编辑模式需要)
+   */
+  activityId?: string;
+  /**
+   * 提交表单的回调函数
+   */
+  onSubmit: (data: ActivityFormData) => Promise<void>;
+  /**
+   * 是否正在加载
+   */
+  loading?: boolean;
+}
+
+/**
+ * 带实时预览的活动表单组件
+ */
+export const ActivityFormWithPreview: React.FC<
+  ActivityFormWithPreviewProps
+> = ({ activityId, onSubmit, loading = false }) => {
+  const navigate = useNavigate();
+  const [form] = Form.useForm();
+  const [uploading, setUploading] = useState(false);
+  const [fileList, setFileList] = useState<any[]>([]);
+
+  // 预览相关状态
+  const [showPreview, setShowPreview] = useState(true); // PC端默认显示
+  const [showMobilePreview, setShowMobilePreview] = useState(false); // 移动端预览弹窗
+  const [formValues, setFormValues] = useState<Partial<ActivityFormData>>({});
+
+  // 获取用户信息作为主办方
+  const user = useAuthStore((state) => state.user);
+
+  const isEdit = Boolean(activityId);
+  const { activity, loading: detailLoading } = useActivityDetail(
+    isEdit ? activityId : undefined,
+  );
+
+  // 编辑模式：填充表单数据
+  useEffect(() => {
+    if (isEdit && activity) {
+      const initialValues = {
+        title: activity.title,
+        description: activity.description,
+        start_time: new Date(activity.activityStart),
+        end_time: new Date(activity.activityEnd),
+        location: activity.location,
+        max_participants: activity.capacity,
+        registration_start: new Date(activity.registrationStart),
+        registration_end: new Date(activity.registrationEnd),
+        category: activity.category,
+        tags: activity.tags || [],
+        requirements: activity.requirements,
+        contact_info: activity.contactInfo,
+        is_public: activity.isPublic !== false,
+        allow_waitlist: activity.allowWaitlist === true,
+      };
+      form.setFieldsValue(initialValues);
+      setFormValues(initialValues);
+
+      if (activity.coverImage) {
+        setFileList([
+          {
+            url: activity.coverImage,
+            key: "cover",
+          },
+        ]);
+      }
+    }
+  }, [isEdit, activity, form]);
+
+  // 新建模式：设置默认值
+  useEffect(() => {
+    if (!isEdit) {
+      const defaultValues: Partial<ActivityFormData> = {
+        max_participants: 50,
+        is_public: true,
+        allow_waitlist: false,
+        category: "business" as ActivityCategory,
+        tags: [],
+      };
+      form.setFieldsValue(defaultValues);
+      setFormValues(defaultValues);
+    }
+  }, [isEdit, form]);
+
+  // 监听表单变化，更新预览
+  const handleFormChange = useCallback(() => {
+    const values = form.getFieldsValue();
+    setFormValues(values);
+  }, [form]);
+
+  // 图片上传处理
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const url = await uploadCoverImage(file);
+      return {
+        url,
+        key: Date.now().toString(),
+      };
+    } catch (error) {
+      console.error("Image upload error:", error);
+      Toast.show({ icon: "fail", content: "图片上传失败，请重试" });
+      throw error;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // 图片列表变化时更新预览
+  useEffect(() => {
+    handleFormChange();
+  }, [fileList, handleFormChange]);
+
+  // 表单提交
+  const handleSubmit = async (values: ActivityFormData) => {
+    try {
+      // 验证必填字段
+      if (!values.title || !values.description) {
+        Toast.show({
+          icon: "fail",
+          content: "请填写活动标题和描述",
+        });
+        return;
+      }
+
+      // 验证时间字段
+      if (
+        !values.start_time ||
+        !values.end_time ||
+        !values.registration_start ||
+        !values.registration_end
+      ) {
+        Toast.show({
+          icon: "fail",
+          content: "请选择完整的活动时间和报名时间",
+        });
+        return;
+      }
+
+      // 添加封面图片
+      const submitData = {
+        ...values,
+        cover_image: fileList[0]?.url,
+      };
+
+      Toast.show({
+        icon: "loading",
+        content: "正在提交...",
+        duration: 0,
+      });
+
+      await onSubmit(submitData);
+    } catch (error) {
+      console.error("表单提交错误:", error);
+      Toast.clear();
+
+      if (error instanceof Error) {
+        Toast.show({
+          icon: "fail",
+          content: error.message || "提交失败，请稍后重试",
+          duration: 3000,
+        });
+      } else {
+        Toast.show({
+          icon: "fail",
+          content: "提交失败，请稍后重试",
+          duration: 3000,
+        });
+      }
+    }
+  };
+
+  // 取消操作
+  const handleCancel = () => {
+    const values = form.getFieldsValue();
+    const hasContent =
+      values.title || values.description || fileList.length > 0;
+
+    if (hasContent) {
+      Dialog.confirm({
+        content: "确定要放弃当前编辑的内容吗？",
+        onConfirm: () => navigate("/dashboard"),
+      });
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
+  if (isEdit && detailLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-500">加载中...</div>
+      </div>
+    );
+  }
+
+  // 表单内容
+  const formContent = (
+    <Form
+      form={form}
+      onFinish={handleSubmit}
+      onValuesChange={handleFormChange}
+      onFinishFailed={(errorInfo) => {
+        const firstError = errorInfo.errorFields?.[0];
+        if (firstError && firstError.errors?.[0]) {
+          Toast.show({
+            icon: "fail",
+            content: firstError.errors[0],
+            duration: 3000,
+          });
+        }
+      }}
+      mode="card"
+      style={{ "--border-radius": "12px" } as any}
+    >
+      {/* 基本信息 */}
+      <Card
+        title="基本信息"
+        className="mb-4"
+        style={{ "--border-radius": "12px" } as any}
+      >
+        <Form.Item name="title" label="活动标题" rules={validateTitle}>
+          <Input
+            placeholder="请输入活动标题"
+            maxLength={50}
+            {...({ showCount: true } as any)}
+            style={{ "--border-radius": "8px" } as any}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="description"
+          label="活动描述"
+          rules={validateDescription}
+        >
+          <TextArea
+            placeholder="请详细描述活动内容、目的和亮点"
+            maxLength={500}
+            {...({ showCount: true } as any)}
+            rows={4}
+            style={{ "--border-radius": "8px" } as any}
+          />
+        </Form.Item>
+
+        <Form.Item name="category" label="活动分类">
+          <Selector
+            options={CATEGORY_OPTIONS}
+            style={{ "--border-radius": "8px" } as any}
+          />
+        </Form.Item>
+
+        <Form.Item name="tags" label="活动标签">
+          <Selector
+            options={TAG_OPTIONS}
+            {...({ multiple: true } as any)}
+            style={{ "--border-radius": "8px" } as any}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="cover_image"
+          label="封面图片"
+          rules={[
+            {
+              validator: () => {
+                if (fileList.length === 0) {
+                  return Promise.reject(new Error("请上传活动封面图片"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
+        >
+          <ImageUploader
+            value={fileList}
+            onChange={setFileList}
+            upload={handleImageUpload}
+            maxCount={1}
+          >
+            <div className="flex flex-col items-center justify-center h-24 bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+              <PictureOutline className="text-2xl text-gray-400 mb-1" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {uploading ? "上传中..." : "点击上传封面"}
+              </span>
+            </div>
+          </ImageUploader>
+        </Form.Item>
+      </Card>
+
+      {/* 时间地点 */}
+      <Card
+        title="时间地点"
+        className="mb-4"
+        style={{ "--border-radius": "12px" } as any}
+      >
+        <Form.Item name="location" label="活动地点" rules={validateLocation}>
+          <Input
+            placeholder="请输入详细地址"
+            style={{ "--border-radius": "8px" } as any}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="start_time"
+          label="活动开始时间"
+          rules={createTimeValidationRules(form, "start_time")}
+        >
+          <DatePickerField
+            placeholder="请选择活动开始时间"
+            onValidate={() => {
+              form.validateFields(["end_time"]).catch(() => {});
+              handleFormChange();
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="end_time"
+          label="活动结束时间"
+          rules={createTimeValidationRules(form, "end_time")}
+        >
+          <DatePickerField
+            placeholder="请选择活动结束时间"
+            onValidate={() => {
+              form.validateFields(["start_time"]).catch(() => {});
+              handleFormChange();
+            }}
+          />
+        </Form.Item>
+      </Card>
+
+      {/* 报名设置 */}
+      <Card
+        title="报名设置"
+        className="mb-4"
+        style={{ "--border-radius": "12px" } as any}
+      >
+        <Form.Item
+          name="registration_start"
+          label="报名开始时间"
+          rules={createTimeValidationRules(form, "registration_start")}
+        >
+          <DatePickerField
+            placeholder="请选择报名开始时间"
+            onValidate={() => {
+              form.validateFields(["registration_end"]).catch(() => {});
+              handleFormChange();
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="registration_end"
+          label="报名截止时间"
+          rules={createTimeValidationRules(form, "registration_end")}
+        >
+          <DatePickerField
+            placeholder="请选择报名截止时间"
+            onValidate={() => {
+              form.validateFields(["registration_start"]).catch(() => {});
+              handleFormChange();
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="max_participants"
+          label="最大参与人数"
+          rules={validateParticipants}
+        >
+          <Stepper
+            min={1}
+            max={1000}
+            style={{ "--border-radius": "8px" } as any}
+            onChange={handleFormChange}
+          />
+        </Form.Item>
+
+        <Form.Item name="allow_waitlist" label="允许候补">
+          <Switch onChange={handleFormChange} />
+        </Form.Item>
+
+        <Form.Item name="is_public" label="公开活动">
+          <Switch onChange={handleFormChange} />
+        </Form.Item>
+      </Card>
+
+      {/* 互动功能设置 */}
+      <Card
+        title="互动功能"
+        className="mb-4"
+        style={{ "--border-radius": "12px" } as any}
+      >
+        <Form.Item
+          name="enable_nfc"
+          label={
+            <div className="flex items-center gap-2">
+              <span>NFC 碰一碰</span>
+              <span className="px-1.5 py-0.5 bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 text-xs rounded-full font-medium">
+                推荐
+              </span>
+            </div>
+          }
+          extra={
+            <div className="text-xs text-gray-400 mt-1 leading-relaxed">
+              开启后，参与者可在活动现场通过 NFC
+              碰一碰功能快速交换联系方式、查看彼此资料。
+            </div>
+          }
+        >
+          <Switch onChange={handleFormChange} />
+        </Form.Item>
+      </Card>
+
+      {/* 其他信息 */}
+      <Card
+        title="其他信息"
+        className="mb-4"
+        style={{ "--border-radius": "12px" } as any}
+      >
+        <Form.Item name="requirements" label="参与要求">
+          <TextArea
+            placeholder="请描述参与者需要满足的条件或准备的物品"
+            maxLength={200}
+            {...({ showCount: true } as any)}
+            rows={3}
+            style={{ "--border-radius": "8px" } as any}
+          />
+        </Form.Item>
+
+        <Form.Item name="contact_info" label="联系方式">
+          <Input
+            placeholder="请输入联系电话或微信号"
+            style={{ "--border-radius": "8px" } as any}
+          />
+        </Form.Item>
+      </Card>
+
+      {/* 提交按钮 */}
+      <div className="mt-6 space-y-3 pb-20 lg:pb-6">
+        <Button
+          type="submit"
+          color="primary"
+          size="large"
+          block
+          loading={loading}
+          style={
+            {
+              "--border-radius": "12px",
+              "--background-color": "var(--adm-color-primary)",
+              height: "48px",
+              fontSize: "16px",
+              fontWeight: "500",
+            } as any
+          }
+        >
+          {loading
+            ? isEdit
+              ? "更新中..."
+              : "创建中..."
+            : isEdit
+              ? "更新活动"
+              : "创建活动"}
+        </Button>
+
+        <Button
+          size="large"
+          block
+          fill="outline"
+          onClick={handleCancel}
+          style={
+            {
+              "--border-radius": "12px",
+              height: "48px",
+              fontSize: "16px",
+            } as any
+          }
+        >
+          取消
+        </Button>
+      </div>
+    </Form>
+  );
+
+  return (
+    <div className="relative">
+      {/* PC端布局：左右分栏 */}
+      <div className="hidden lg:flex gap-6">
+        {/* 左侧表单区域 */}
+        <div
+          className={`transition-all duration-300 ${showPreview ? "w-1/2" : "w-full"}`}
+        >
+          <div className="px-4">{formContent}</div>
+        </div>
+
+        {/* 右侧预览区域 */}
+        {showPreview && (
+          <div className="w-1/2 sticky top-6 h-fit">
+            <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <Smartphone size={16} />
+                  实时预览
+                </h3>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
+                >
+                  <EyeOff size={14} />
+                  隐藏预览
+                </button>
+              </div>
+              <ActivityPreview
+                formData={formValues}
+                coverImage={fileList[0]?.url}
+                mode="mobile"
+                organizer={{
+                  name: user?.name || "活动主办方",
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* PC端：隐藏预览时的展开按钮 */}
+      {!showPreview && (
+        <button
+          onClick={() => setShowPreview(true)}
+          className="hidden lg:flex fixed right-6 top-1/2 -translate-y-1/2 z-40 items-center gap-2 px-4 py-3 bg-primary-500 text-white rounded-l-xl shadow-lg hover:bg-primary-600 transition-colors"
+        >
+          <Eye size={18} />
+          <span className="text-sm font-medium">显示预览</span>
+        </button>
+      )}
+
+      {/* 移动端/平板布局：全宽表单 */}
+      <div className="lg:hidden px-4">{formContent}</div>
+
+      {/* 移动端：底部预览按钮 */}
+      <div className="lg:hidden fixed bottom-16 right-4 z-40">
+        <button
+          onClick={() => setShowMobilePreview(true)}
+          className="w-12 h-12 bg-primary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-600 transition-colors"
+        >
+          <Eye size={20} />
+        </button>
+      </div>
+
+      {/* 移动端：预览弹窗 */}
+      <Popup
+        visible={showMobilePreview}
+        onMaskClick={() => setShowMobilePreview(false)}
+        position="bottom"
+        bodyStyle={{
+          height: "90vh",
+          borderTopLeftRadius: "16px",
+          borderTopRightRadius: "16px",
+          overflow: "hidden",
+        }}
+      >
+        <div className="h-full flex flex-col bg-gray-100 dark:bg-gray-900">
+          {/* 弹窗头部 */}
+          <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              活动预览
+            </h3>
+            <button
+              onClick={() => setShowMobilePreview(false)}
+              className="text-sm text-primary-500 font-medium"
+            >
+              关闭
+            </button>
+          </div>
+
+          {/* 预览内容 */}
+          <div className="flex-1 overflow-auto p-4 flex items-start justify-center">
+            <ActivityPreview
+              formData={formValues}
+              coverImage={fileList[0]?.url}
+              mode="mobile"
+              organizer={{
+                name: user?.name || "活动主办方",
+              }}
+            />
+          </div>
+        </div>
+      </Popup>
+    </div>
+  );
+};
+
+export default ActivityFormWithPreview;

@@ -2,6 +2,8 @@
  * Activities Components 导出
  */
 
-export * from "./ActivityForm";
+export { ActivityForm } from "./ActivityForm";
+export { ActivityFormWithPreview } from "./ActivityForm/ActivityFormWithPreview";
+export { DatePickerField } from "./ActivityForm/DatePickerField";
 export * from "./ActivityCard";
 export * from "./ActivityList";

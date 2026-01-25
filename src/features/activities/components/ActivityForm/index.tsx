@@ -64,7 +64,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 
   const isEdit = Boolean(activityId);
   const { activity, loading: detailLoading } = useActivityDetail(
-    isEdit ? activityId : undefined
+    isEdit ? activityId : undefined,
   );
 
   // 编辑模式：填充表单数据
@@ -457,6 +457,34 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           </Form.Item>
         </Card>
 
+        {/* 互动功能设置 */}
+        <Card
+          title="互动功能"
+          className="mb-4"
+          style={{ "--border-radius": "12px" } as any}
+        >
+          <Form.Item
+            name="enable_nfc"
+            label={
+              <div className="flex items-center gap-2">
+                <span>NFC 碰一碰</span>
+                <span className="px-1.5 py-0.5 bg-accent-100 text-accent-600 text-xs rounded-full font-medium">
+                  推荐
+                </span>
+              </div>
+            }
+            extra={
+              <div className="text-xs text-gray-400 mt-1 leading-relaxed">
+                开启后，参与者可在活动现场通过 NFC
+                碰一碰功能快速交换联系方式、查看彼此资料，提升社交效率。需要参与者设备支持
+                NFC 功能。
+              </div>
+            }
+          >
+            <Switch />
+          </Form.Item>
+        </Card>
+
         {/* 其他信息 */}
         <Card
           title="其他信息"
@@ -504,8 +532,8 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
                 ? "更新中..."
                 : "创建中..."
               : isEdit
-              ? "更新活动"
-              : "创建活动"}
+                ? "更新活动"
+                : "创建活动"}
           </Button>
 
           <Button

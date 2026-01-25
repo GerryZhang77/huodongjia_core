@@ -84,6 +84,11 @@ export interface ActivityFormData {
   contact_info?: string;
   is_public: boolean;
   allow_waitlist: boolean;
+  /**
+   * 是否启用 NFC 碰一碰功能
+   * 开启后，参与者可在活动现场通过 NFC 碰一碰功能快速交换联系方式
+   */
+  enable_nfc?: boolean;
 }
 
 /**

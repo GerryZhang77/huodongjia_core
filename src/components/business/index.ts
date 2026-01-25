@@ -22,3 +22,6 @@ export type { UserHoverCardProps, UserBrief } from "./UserHoverCard/types";
 
 export { NFCTouchModal } from "./NFCTouchModal";
 export type { NFCTouchModalProps } from "./NFCTouchModal/types";
+
+export { ActivityPreview } from "./ActivityPreview";
+export type { ActivityPreviewProps } from "./ActivityPreview";
