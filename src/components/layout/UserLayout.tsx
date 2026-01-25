@@ -6,7 +6,7 @@
 import { FC, ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Bell, User } from "lucide-react";
-import { getUnreadCount } from "@/mocks/data/user-notifications";
+import { useNotifications } from "@/features/user/profile/hooks/useNotifications";
 import { DesktopSidebar } from "./DesktopSidebar";
 import { TopBar } from "./TopBar";
 import { BreadcrumbItem } from "./types";
@@ -53,8 +53,9 @@ export const UserLayout: FC<UserLayoutProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 获取未读消息数
-  const unreadCount = getUnreadCount();
+  // 获取未读消息数 - 使用 React Query 实现响应式更新
+  const { data: notificationsData } = useNotifications();
+  const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
   // Tab 配置 - 3Tab: 首页 | 消息 | 我的
   const tabs: TabItem[] = [
@@ -150,7 +151,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
                             }`}
                             strokeWidth={isActive ? 2.5 : 1.8}
                           />
-                          {tab.badge && tab.badge > 0 && (
+                          {tab.badge !== undefined && tab.badge > 0 && (
                             <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-error-500 rounded-full">
                               {tab.badge > 99 ? "99+" : tab.badge}
                             </span>

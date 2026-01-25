@@ -67,7 +67,7 @@ export const CitySelector: FC<CitySelectorProps> = ({
   // 渲染城市按钮
   const renderCityButton = (
     city: { label: string; value: string },
-    isSelected: boolean
+    isSelected: boolean,
   ) => (
     <button
       key={city.value}
@@ -76,7 +76,7 @@ export const CitySelector: FC<CitySelectorProps> = ({
         "px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150",
         isSelected
           ? "bg-primary-500 text-white shadow-sm"
-          : "bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-200 dark:hover:bg-gray-600 active:bg-slate-300 dark:active:bg-gray-500"
+          : "bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-gray-300 hover:bg-slate-200 dark:hover:bg-gray-600 active:bg-slate-300 dark:active:bg-gray-500",
       )}
     >
       {city.label}
@@ -155,7 +155,7 @@ export const CitySelector: FC<CitySelectorProps> = ({
                         "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors",
                         value === city.value
                           ? "bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
-                          : "hover:bg-slate-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                          : "hover:bg-slate-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300",
                       )}
                     >
                       <MapPin
@@ -198,7 +198,7 @@ export const CitySelector: FC<CitySelectorProps> = ({
                       </div>
                       <div className="grid grid-cols-4 gap-2">
                         {hotCities.map((city) =>
-                          renderCityButton(city, value === city.value)
+                          renderCityButton(city, value === city.value),
                         )}
                       </div>
                     </div>
@@ -219,7 +219,7 @@ export const CitySelector: FC<CitySelectorProps> = ({
                     <div className="px-4 py-2">
                       <div className="grid grid-cols-4 gap-2">
                         {group.items.map((city) =>
-                          renderCityButton(city, value === city.value)
+                          renderCityButton(city, value === city.value),
                         )}
                       </div>
                     </div>
@@ -239,8 +239,9 @@ export const CitySelector: FC<CitySelectorProps> = ({
         .city-selector-popup .adm-popup-body {
           background: white;
         }
-        .dark .city-selector-popup .adm-popup-body {
-          background: #1f2937;
+        .dark .city-selector-popup .adm-popup-body,
+        [data-theme="dark"] .city-selector-popup .adm-popup-body {
+          background: #1f2937 !important;
         }
         .city-index-bar .adm-index-bar-sidebar {
           right: 4px;
@@ -249,7 +250,8 @@ export const CitySelector: FC<CitySelectorProps> = ({
           backdrop-filter: blur(8px);
           border-radius: 12px;
         }
-        .dark .city-index-bar .adm-index-bar-sidebar {
+        .dark .city-index-bar .adm-index-bar-sidebar,
+        [data-theme="dark"] .city-index-bar .adm-index-bar-sidebar {
           background: rgba(31, 41, 55, 0.9);
         }
         .city-index-bar .adm-index-bar-sidebar-item {
@@ -257,7 +259,8 @@ export const CitySelector: FC<CitySelectorProps> = ({
           font-size: 10px;
           color: #64748b;
         }
-        .dark .city-index-bar .adm-index-bar-sidebar-item {
+        .dark .city-index-bar .adm-index-bar-sidebar-item,
+        [data-theme="dark"] .city-index-bar .adm-index-bar-sidebar-item {
           color: #9ca3af;
         }
         .city-index-bar .adm-index-bar-sidebar-item-active {
@@ -270,6 +273,19 @@ export const CitySelector: FC<CitySelectorProps> = ({
         .city-index-bar .adm-index-bar-anchor-title {
           padding: 0;
           background: transparent;
+        }
+        .dark .city-index-bar .adm-index-bar-anchor-title,
+        [data-theme="dark"] .city-index-bar .adm-index-bar-anchor-title {
+          background: transparent;
+        }
+        /* IndexBar 内容区域暗黑模式 */
+        .dark .city-index-bar,
+        [data-theme="dark"] .city-index-bar {
+          background: #1f2937;
+        }
+        .dark .city-index-bar .adm-index-bar-body,
+        [data-theme="dark"] .city-index-bar .adm-index-bar-body {
+          background: #1f2937;
         }
       `}</style>
     </Popup>

@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Bell, Sparkles } from "lucide-react";
 import { Breadcrumb } from "./Breadcrumb";
 import { TopBarProps } from "./types";
-import { getUnreadCount } from "@/mocks/data/user-notifications";
+import { useNotifications } from "@/features/user/profile/hooks/useNotifications";
 
 /**
  * 顶部导航栏
@@ -29,7 +29,10 @@ export const TopBar: FC<TopBarProps> = ({
   rightContent,
 }) => {
   const navigate = useNavigate();
-  const unreadCount = getUnreadCount();
+
+  // 获取未读消息数 - 使用 React Query 实现响应式更新
+  const { data: notificationsData } = useNotifications();
+  const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
   const handleLogoClick = () => {
     if (onLogoClick) {
