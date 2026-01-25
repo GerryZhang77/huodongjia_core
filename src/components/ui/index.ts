@@ -64,3 +64,6 @@ export type { DrawerProps, DrawerPlacement } from "./Drawer/types";
 // 城市选择器
 export { CitySelector } from "./CitySelector";
 export type { CitySelectorProps } from "./CitySelector/types";
+
+// 主题选择器
+export { ThemeSelector } from "./ThemeSelector";
