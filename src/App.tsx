@@ -20,31 +20,38 @@ const Register = lazy(() => import("./pages/common/Register"));
 const ForgotPassword = lazy(() => import("./pages/common/ForgotPassword"));
 const ActivityDetail = lazy(() => import("./pages/common/ActivityDetail"));
 const ActivityDetailTemp = lazy(
-  () => import("./pages/common/ActivityDetailTemp")
+  () => import("./pages/common/ActivityDetailTemp"),
 );
 
-// B端商家页面 - 懒加载
-const Dashboard = lazy(() =>
-  import("./pages/merchant/Dashboard").then((m) => ({ default: m.Dashboard }))
-);
-const ActivityCreate = lazy(() => import("./pages/merchant/ActivityCreate"));
-const ActivityEdit = lazy(() => import("./pages/merchant/ActivityEdit"));
-const ActivityManage = lazy(() =>
-  import("./pages/merchant/ActivityManage").then((m) => ({
-    default: m.ActivityManage,
-  }))
-);
+// B端商家页面 - 懒加载 (使用新版重构组件)
+const Dashboard = lazy(() => import("./pages/merchant/DashboardNew"));
+const ActivityCreate = lazy(() => import("./pages/merchant/ActivityCreateNew"));
+const ActivityEdit = lazy(() => import("./pages/merchant/ActivityEditNew"));
+const ActivityManage = lazy(() => import("./pages/merchant/ActivityManageNew"));
 const EnrollmentManagement = lazy(
-  () => import("./pages/merchant/EnrollmentManagement")
+  () => import("./pages/merchant/EnrollmentManagementNew"),
 );
 const MatchingConfiguration = lazy(
-  () => import("./pages/merchant/MatchingConfiguration")
+  () => import("./pages/merchant/MatchingConfigurationNew"),
 );
+const MerchantNotifications = lazy(
+  () => import("./pages/merchant/NotificationsPage"),
+);
+const MerchantProfile = lazy(() => import("./pages/merchant/ProfilePage"));
+const MerchantProfileEdit = lazy(
+  () => import("./pages/merchant/ProfileEditPage"),
+);
+const MerchantHelpCenter = lazy(
+  () => import("./pages/merchant/HelpCenterPage"),
+);
+const MerchantAnalytics = lazy(() => import("./pages/merchant/AnalyticsPage"));
+const MerchantSettings = lazy(() => import("./pages/merchant/SettingsPage"));
+const TalentPool = lazy(() => import("./pages/merchant/TalentPoolPage"));
 
 // C端用户页面 - 懒加载
 const UserHome = lazy(() => import("./pages/user/UserHome"));
 const UserActivityDetail = lazy(
-  () => import("./pages/user/UserActivityDetail")
+  () => import("./pages/user/UserActivityDetail"),
 );
 const UserNotifications = lazy(() => import("./pages/user/UserNotifications"));
 const UserProfileCards = lazy(() => import("./pages/user/UserProfileCards"));
@@ -56,7 +63,7 @@ const UserFavorites = lazy(() => import("./pages/user/UserFavorites"));
 const UserFriends = lazy(() => import("./pages/user/UserFriends"));
 const UserEditProfile = lazy(() => import("./pages/user/UserEditProfile"));
 const UserActivityHistory = lazy(
-  () => import("./pages/user/UserActivityHistory")
+  () => import("./pages/user/UserActivityHistory"),
 );
 const UserPublicProfile = lazy(() => import("./pages/user/UserPublicProfile"));
 
@@ -141,6 +148,76 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole={["organizer", "admin"]}>
                       <MatchingConfiguration />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* B端商家 - 消息中心 */}
+                <Route
+                  path="/dashboard/notifications"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <MerchantNotifications />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* B端商家 - 个人中心 */}
+                <Route
+                  path="/dashboard/profile"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <MerchantProfile />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* B端商家 - 编辑个人资料 */}
+                <Route
+                  path="/dashboard/profile/edit"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <MerchantProfileEdit />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* B端商家 - 帮助中心 */}
+                <Route
+                  path="/dashboard/help"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <MerchantHelpCenter />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* B端商家 - 数据分析 */}
+                <Route
+                  path="/dashboard/analytics"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <MerchantAnalytics />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* B端商家 - 设置 */}
+                <Route
+                  path="/dashboard/settings"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <MerchantSettings />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* B端商家 - 人才库 */}
+                <Route
+                  path="/dashboard/talent-pool"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <TalentPool />
                     </ProtectedRoute>
                   }
                 />
