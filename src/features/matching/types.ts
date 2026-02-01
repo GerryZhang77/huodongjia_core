@@ -128,3 +128,38 @@ export interface MatchingState {
     maxScore: number;
   };
 }
+
+// === API 请求/响应类型 ===
+
+/**
+ * 生成规则请求
+ */
+export interface GenerateRulesRequest {
+  activityId: string;
+  description: string;
+}
+
+/**
+ * 生成规则响应
+ */
+export interface GenerateRulesResponse {
+  rules: MatchingRule[];
+}
+
+/**
+ * 执行匹配请求
+ */
+export interface ExecuteMatchRequest {
+  activityId: string;
+  rules: MatchingRule[];
+}
+
+/**
+ * 执行匹配响应
+ */
+export interface ExecuteMatchResponse {
+  groups: MatchingGroup[];
+  totalParticipants: number;
+  groupedParticipants: number;
+  averageScore: number;
+}

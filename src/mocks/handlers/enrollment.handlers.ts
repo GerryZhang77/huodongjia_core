@@ -10,6 +10,39 @@ import {
 } from "../data/enrollments";
 
 // ========================================
+// 数据转换函数
+// ========================================
+
+/**
+ * 将 Mock 数据格式转换为前端期望的 Enrollment 格式
+ */
+function transformEnrollment(mock: MockEnrollment) {
+  return {
+    id: mock.id,
+    activityId: mock.activity_id,
+    userId: mock.user_id,
+    name: mock.name,
+    email: mock.email,
+    phone: mock.phone,
+    avatar: mock.avatar,
+    gender: mock.gender,
+    age: mock.age,
+    occupation: mock.occupation,
+    company: mock.company,
+    city: mock.city,
+    // 合并 interests 和 skills 为 tags
+    tags: [...(mock.interests || []), ...(mock.skills || [])],
+    bio: mock.bio,
+    matchingNeeds: mock.matching_needs,
+    // 状态映射: confirmed -> approved
+    status: mock.status === "confirmed" ? "approved" : mock.status,
+    enrolledAt: mock.registration_time,
+    updatedAt: mock.updated_at,
+    isInfoComplete: true,
+  };
+}
+
+// ========================================
 // 报名模块 Handlers
 // ========================================
 export const enrollmentHandlers = [
@@ -29,24 +62,30 @@ export const enrollmentHandlers = [
             success: false,
             message: "未授权访问",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
       const { activityId } = params;
-      const enrollments = getEnrollmentsByActivityId(activityId as string);
+      const rawEnrollments = getEnrollmentsByActivityId(activityId as string);
       const stats = getEnrollmentStats(activityId as string);
 
+      // 转换数据格式
+      const enrollments = rawEnrollments.map(transformEnrollment);
+
+      console.log(
+        `📋 [Mock] 获取报名列表 - 活动ID: ${activityId}, 数量: ${enrollments.length}`,
+      );
+
+      // 直接返回报名数组，与前端期望的格式一致
       return HttpResponse.json({
         success: true,
         message: "获取成功",
-        data: {
-          enrollments,
-          statistics: stats,
-          total: enrollments.length,
-        },
+        data: enrollments,
+        statistics: stats,
+        total: enrollments.length,
       });
-    }
+    },
   ),
 
   /**
@@ -63,7 +102,7 @@ export const enrollmentHandlers = [
           success: false,
           message: "未授权访问",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -76,7 +115,7 @@ export const enrollmentHandlers = [
           success: false,
           message: "报名记录不存在",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -102,7 +141,7 @@ export const enrollmentHandlers = [
             success: false,
             message: "未授权访问",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -119,7 +158,7 @@ export const enrollmentHandlers = [
           total: 10,
         },
       });
-    }
+    },
   ),
 
   /**
@@ -138,7 +177,7 @@ export const enrollmentHandlers = [
             success: false,
             message: "未授权访问",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -152,7 +191,7 @@ export const enrollmentHandlers = [
           download_url: `/api/files/enrollments_${activityId}.xlsx`,
         },
       });
-    }
+    },
   ),
 
   /**
@@ -169,7 +208,7 @@ export const enrollmentHandlers = [
           success: false,
           message: "未授权访问",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -183,7 +222,7 @@ export const enrollmentHandlers = [
           success: false,
           message: "报名记录不存在",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -214,7 +253,7 @@ export const enrollmentHandlers = [
             success: false,
             message: "未授权访问",
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
 
@@ -232,7 +271,7 @@ export const enrollmentHandlers = [
           sent_count: body.recipients?.length || 0,
         },
       });
-    }
+    },
   ),
 
   /**
@@ -249,7 +288,7 @@ export const enrollmentHandlers = [
           success: false,
           message: "未授权访问",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 

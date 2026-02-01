@@ -5,54 +5,54 @@
 import React, { useState } from "react";
 import { X, Info } from "lucide-react";
 import { Button } from "@/components/ui";
-import type { MatchRule, MatchRuleType } from "../../types";
+import type { MatchingRule, RuleType } from "../../types";
 
 interface AddRuleModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (rule: MatchRule) => void;
-  existingRules: MatchRule[];
+  onSubmit: (rule: MatchingRule) => void;
+  existingRules: MatchingRule[];
 }
 
-// 预设规则模板
+// 预设规则模板 - 使用新的 RuleType
 const RULE_TEMPLATES: Array<{
-  type: MatchRuleType;
+  type: RuleType;
   name: string;
   description: string;
   field: string;
 }> = [
   {
-    type: "interests",
+    type: "similarity",
     name: "兴趣相似",
     description: "根据兴趣标签计算相似度",
     field: "interests",
   },
   {
-    type: "location",
+    type: "diversity",
     name: "院校多样",
     description: "避免同院校人员聚集",
     field: "school",
   },
   {
-    type: "custom",
+    type: "diversity",
     name: "行业分散",
     description: "确保不同行业的人混合",
     field: "industry",
   },
   {
-    type: "age",
+    type: "similarity",
     name: "年龄相近",
     description: "同年龄段人员优先匹配",
     field: "age",
   },
   {
-    type: "location",
+    type: "diversity",
     name: "地域多元",
     description: "来自不同地区的人混合",
     field: "city",
   },
   {
-    type: "gender",
+    type: "constraint",
     name: "性别平衡",
     description: "保持组内性别比例均衡",
     field: "gender",
@@ -76,32 +76,26 @@ export const AddRuleModal: React.FC<AddRuleModalProps> = ({
   if (!visible) return null;
 
   const handleSubmit = () => {
-    const now = new Date().toISOString();
-    let rule: MatchRule;
+    let rule: MatchingRule;
 
     if (mode === "template" && selectedTemplate) {
       rule = {
         id: `custom_${Date.now()}`,
-        activityId: "", // 由父组件填充
         name: selectedTemplate.name,
         description: selectedTemplate.description,
         type: selectedTemplate.type,
-        priority: "medium",
+        field: selectedTemplate.field,
         weight: weight,
         enabled: true,
-        createdAt: now,
       };
     } else if (mode === "custom" && customName.trim()) {
       rule = {
         id: `custom_${Date.now()}`,
-        activityId: "",
         name: customName.trim(),
         description: customDescription.trim(),
         type: "custom",
-        priority: "medium",
         weight: weight,
         enabled: true,
-        createdAt: now,
       };
     } else {
       return;

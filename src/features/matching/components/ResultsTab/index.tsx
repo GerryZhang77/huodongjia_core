@@ -20,7 +20,12 @@ import {
   Info,
 } from "lucide-react";
 import { Button } from "@/components/ui";
-import type { MatchGroup, MatchRule, GroupMember } from "../../types";
+import { UserHoverCard } from "@/components/business/UserHoverCard";
+import type { MatchingGroup, MatchingRule } from "../../types";
+
+// 类型别名 - 兼容
+type MatchGroup = MatchingGroup;
+type MatchRule = MatchingRule;
 
 // 简化的参与者类型，用于组件内部
 interface Participant {
@@ -29,6 +34,8 @@ interface Participant {
   gender?: string;
   industry?: string;
   occupation?: string;
+  tags?: string[];
+  city?: string;
 }
 
 // 简化的分组类型（兼容组件需要）
@@ -86,30 +93,43 @@ const MemberAvatar: React.FC<{
 };
 
 /**
- * 成员卡片
+ * 成员卡片 - 集成 UserHoverCard
  */
 interface MemberCardProps {
   participant: Participant;
   isDraggable?: boolean;
+  matchScore?: number;
 }
 
 const MemberCard: React.FC<MemberCardProps> = ({
   participant,
   isDraggable: _isDraggable,
+  matchScore,
 }) => {
-  // 简化版：不使用拖拽功能，保持简洁
+  // 转换为 UserHoverCard 需要的格式
+  const userBrief = {
+    id: participant.id,
+    name: participant.name,
+    avatar: undefined, // participant 中暂无 avatar
+    occupation: participant.occupation,
+    city: participant.city,
+    tags: participant.tags,
+  };
+
   return (
-    <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 hover:border-primary-200 transition-colors">
-      <MemberAvatar participant={participant} size="sm" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
-          {participant.name}
-        </p>
-        <p className="text-xs text-gray-500 truncate">
-          {participant.industry || participant.occupation || "未知"}
-        </p>
+    <UserHoverCard user={userBrief} matchScore={matchScore} placement="right">
+      <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 hover:border-primary-200 transition-colors cursor-pointer">
+        <MemberAvatar participant={participant} size="sm" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">
+            {participant.name}
+          </p>
+          <p className="text-xs text-gray-500 truncate">
+            {participant.industry || participant.occupation || "未知"}
+          </p>
+        </div>
       </div>
-    </div>
+    </UserHoverCard>
   );
 };
 
@@ -222,6 +242,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
                 key={member.id}
                 participant={member}
                 isDraggable={!group.isLocked}
+                matchScore={group.score}
               />
             ))}
           </div>

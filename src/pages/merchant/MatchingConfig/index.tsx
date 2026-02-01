@@ -37,13 +37,11 @@ const MatchingConfigPage: React.FC = () => {
     stage,
     activeTab,
     isLoading,
-    isGenerating,
     isMatching,
     isPublishing,
     matchingProgress,
 
     // 数据
-    naturalLanguageInput,
     rules,
     constraints,
     participants,
@@ -52,13 +50,11 @@ const MatchingConfigPage: React.FC = () => {
 
     // 设置方法
     setActiveTab,
-    setNaturalLanguageInput,
     setRules,
     setConstraints,
     setGroups,
 
     // 操作方法
-    handleGenerateRules,
     handleSaveRules,
     handleStartMatching,
     handleRematch,
@@ -163,14 +159,10 @@ const MatchingConfigPage: React.FC = () => {
         {/* Tab 内容 */}
         {activeTab === "rules" ? (
           <RulesTab
-            naturalLanguageInput={naturalLanguageInput}
-            onNaturalLanguageInputChange={setNaturalLanguageInput}
             rules={rules}
             onRulesChange={setRules}
             constraints={constraints}
             onConstraintsChange={setConstraints}
-            isGenerating={isGenerating}
-            onGenerateRules={handleGenerateRules}
             onSaveRules={handleSaveRules}
             onStartMatching={handleStartMatching}
             isMatching={isMatching}

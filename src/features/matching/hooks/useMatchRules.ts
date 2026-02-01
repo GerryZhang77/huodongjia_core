@@ -11,7 +11,7 @@ import {
   deleteMatchRule,
 } from "../services";
 import { useMatchingStore } from "../stores";
-import type { MatchRule } from "../types";
+import type { MatchingRule as MatchRule } from "../types";
 
 export const useMatchRules = (activityId: string | undefined) => {
   const [loading, setLoading] = useState(false);
@@ -68,7 +68,7 @@ export const useMatchRules = (activityId: string | undefined) => {
 
   const updateRuleById = async (
     ruleId: string,
-    updates: Partial<MatchRule>
+    updates: Partial<MatchRule>,
   ) => {
     setLoading(true);
 

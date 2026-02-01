@@ -4,13 +4,17 @@
  */
 
 import type {
-  MatchRule,
-  MatchGroup,
+  MatchingRule,
+  MatchingGroup,
   GenerateRulesRequest,
   GenerateRulesResponse,
   ExecuteMatchRequest,
   ExecuteMatchResponse,
 } from "../types";
+
+// 兼容别名
+type MatchRule = MatchingRule;
+type MatchGroup = MatchingGroup;
 
 /**
  * 获取 token
@@ -23,7 +27,7 @@ const getToken = (): string | null => {
  * 获取活动的匹配规则列表
  */
 export const getMatchRules = async (
-  activityId: string
+  activityId: string,
 ): Promise<MatchRule[]> => {
   const token = getToken();
 
@@ -47,7 +51,7 @@ export const getMatchRules = async (
  * 添加匹配规则
  */
 export const createMatchRule = async (
-  rule: Omit<MatchRule, "id" | "createdAt">
+  rule: Omit<MatchRule, "id" | "createdAt">,
 ): Promise<MatchRule> => {
   const token = getToken();
 
@@ -74,7 +78,7 @@ export const createMatchRule = async (
  */
 export const updateMatchRule = async (
   ruleId: string,
-  updates: Partial<MatchRule>
+  updates: Partial<MatchRule>,
 ): Promise<MatchRule> => {
   const token = getToken();
 
@@ -121,7 +125,7 @@ export const deleteMatchRule = async (ruleId: string): Promise<void> => {
  * 使用 AI 生成匹配规则
  */
 export const generateMatchRules = async (
-  request: GenerateRulesRequest
+  request: GenerateRulesRequest,
 ): Promise<GenerateRulesResponse> => {
   const token = getToken();
 
@@ -136,7 +140,7 @@ export const generateMatchRules = async (
       body: JSON.stringify({
         description: request.description,
       }),
-    }
+    },
   );
 
   const data = await response.json();
@@ -154,7 +158,7 @@ export const generateMatchRules = async (
  * 执行智能匹配
  */
 export const executeMatching = async (
-  request: ExecuteMatchRequest
+  request: ExecuteMatchRequest,
 ): Promise<ExecuteMatchResponse> => {
   const token = getToken();
 
@@ -187,7 +191,7 @@ export const executeMatching = async (
  * 获取匹配结果
  */
 export const getMatchGroups = async (
-  activityId: string
+  activityId: string,
 ): Promise<MatchGroup[]> => {
   const token = getToken();
 
@@ -212,7 +216,7 @@ export const getMatchGroups = async (
  */
 export const toggleGroupLock = async (
   groupId: string,
-  isLocked: boolean
+  isLocked: boolean,
 ): Promise<void> => {
   const token = getToken();
 

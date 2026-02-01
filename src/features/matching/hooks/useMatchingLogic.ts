@@ -12,14 +12,17 @@ import {
   createMatchRule,
   updateMatchRule,
   deleteMatchRule,
-  generateMatchRules,
   executeMatching,
   getMatchGroups,
   toggleGroupLock,
 } from "../services/matchingApi";
 
-// 使用 API 服务中导入的类型
-import type { MatchRule, MatchGroup } from "../types";
+// 使用重构版类型定义
+import type {
+  MatchingRule as MatchRule,
+  MatchingGroup as MatchGroup,
+  MatchConstraints,
+} from "../types";
 
 // === 本地类型定义 ===
 export type MatchingStage =
@@ -30,13 +33,8 @@ export type MatchingStage =
   | "published";
 export type TabKey = "rules" | "results";
 
-export interface MatchConstraints {
-  minGroupSize: number;
-  maxGroupSize: number;
-  genderRatioMin: number;
-  genderRatioMax: number;
-  sameIndustryMax: number;
-}
+// 重新导出 MatchConstraints 类型供外部使用
+export type { MatchConstraints };
 
 export interface Participant {
   id: string;
@@ -77,7 +75,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const [activeTab, setActiveTab] = useState<TabKey>("rules");
 
   // 规则相关
-  const [naturalLanguageInput, setNaturalLanguageInput] = useState("");
   const [rules, setRules] = useState<MatchRule[]>([]);
   const [constraints, setConstraints] = useState<MatchConstraints>({
     minGroupSize: 3,
@@ -94,7 +91,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   // 加载状态
   const [isLoading, setIsLoading] = useState(true);
 
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isMatching, setIsMatching] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [matchingProgress, setMatchingProgress] = useState(0);
@@ -151,38 +147,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       loadInitialData();
     }
   }, [activityId]);
-
-  // === AI 生成规则 ===
-  const handleGenerateRules = useCallback(async () => {
-    if (!naturalLanguageInput.trim()) {
-      Toast.show({ content: "请输入匹配需求描述", icon: "fail" });
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      const result = await generateMatchRules({
-        activityId,
-        description: naturalLanguageInput,
-      });
-
-      if (result.rules && result.rules.length > 0) {
-        setRules(result.rules);
-        setStage("configuring");
-        Toast.show({
-          content: `已生成 ${result.rules.length} 条规则`,
-          icon: "success",
-        });
-      } else {
-        Toast.show({ content: "未能生成规则，请重试", icon: "fail" });
-      }
-    } catch (error) {
-      console.error("Failed to generate rules:", error);
-      Toast.show({ content: "生成规则失败", icon: "fail" });
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [activityId, naturalLanguageInput]);
 
   // === 添加规则 ===
   const handleAddRule = useCallback(
@@ -335,9 +299,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   // === 重新匹配 ===
   const handleRematch = useCallback(async () => {
     const lockedGroups = groups.filter((g) => g.isLocked);
-    const lockedMemberIds = new Set(
-      lockedGroups.flatMap((g) => g.members.map((m: LocalGroupMember) => m.id)),
-    );
+    // members 是 string[] (成员 ID 数组)，直接使用
+    const lockedMemberIds = new Set(lockedGroups.flatMap((g) => g.members));
     const unlockParticipants = participants.filter(
       (p) => !lockedMemberIds.has(p.id),
     );
@@ -412,13 +375,11 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     stage,
     activeTab,
     isLoading,
-    isGenerating,
     isMatching,
     isPublishing,
     matchingProgress,
 
     // 数据
-    naturalLanguageInput,
     rules,
     constraints,
     participants,
@@ -427,13 +388,11 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
     // 设置方法
     setActiveTab,
-    setNaturalLanguageInput,
     setRules,
     setConstraints,
     setGroups,
 
     // 规则操作
-    handleGenerateRules,
     handleAddRule,
     handleUpdateRule,
     handleDeleteRule,

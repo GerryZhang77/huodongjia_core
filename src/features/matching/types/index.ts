@@ -1,6 +1,8 @@
 /**
  * Matching Module - Type Definitions
  * 匹配模块 - 类型定义
+ *
+ * 重新导出 types.ts (重构版) 的类型，并提供兼容别名
  */
 
 // 从 matchResult 导出特定类型（避免与本文件同名类型冲突）
@@ -10,67 +12,77 @@ export type {
   UngroupedMember,
 } from "./matchResult";
 
+// 从重构版 types.ts 重新导出所有类型
+export {
+  type RuleType,
+  type MatchingRule,
+  type MatchConstraints,
+  type Participant,
+  type MatchingGroup,
+  type MatchingResult,
+  type MatchingStage,
+  type TabKey,
+  type MatchingState,
+} from "../types";
+
+// === 兼容别名 ===
+// 为旧代码提供别名，逐步迁移后可删除
+
+import type { RuleType, MatchingRule, MatchingGroup } from "../types";
+
 /**
- * 匹配规则类型
+ * @deprecated 请使用 RuleType
  */
 export type MatchRuleType =
+  | RuleType
   | "age"
   | "gender"
   | "interests"
   | "location"
-  | "skill"
-  | "custom";
+  | "skill";
+
+/**
+ * @deprecated 请使用 MatchingRule
+ */
+export type MatchRule = MatchingRule & {
+  activityId?: string;
+  priority?: "high" | "medium" | "low";
+  conditions?: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+/**
+ * @deprecated 请使用 MatchingGroup
+ */
+export type MatchGroup = MatchingGroup & {
+  activityId?: string;
+  matchScore?: number;
+  matchReasons?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 /**
  * 规则优先级
+ * @deprecated 使用 weight (0-100) 代替
  */
 export type RulePriority = "high" | "medium" | "low";
 
 /**
- * 匹配规则
- */
-export interface MatchRule {
-  id: string;
-  activityId: string;
-  name: string;
-  description: string;
-  type: MatchRuleType;
-  priority: RulePriority;
-  weight: number;
-  enabled: boolean;
-  conditions?: Record<string, unknown>;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-/**
- * 匹配组成员
+ * 匹配组成员 (已废弃，members 现在是 string[] ID 列表)
+ * @deprecated 使用 Participant 和 members: string[] 代替
  */
 export interface GroupMember {
   id: string;
-  userId: string;
-  userName: string;
+  userId?: string;
+  userName?: string;
   userAvatar?: string;
   age?: number;
   gender?: string;
   interests?: string[];
   keywords?: string[];
   profile?: Record<string, unknown>;
-}
-
-/**
- * 匹配组
- */
-export interface MatchGroup {
-  id: string;
-  activityId: string;
-  name: string;
-  members: GroupMember[];
-  matchScore: number;
-  matchReasons: string[];
-  isLocked: boolean;
-  createdAt: string;
-  updatedAt?: string;
 }
 
 /**
@@ -85,7 +97,7 @@ export interface GenerateRulesRequest {
  * 生成规则响应
  */
 export interface GenerateRulesResponse {
-  rules: MatchRule[];
+  rules: MatchingRule[];
 }
 
 /**
@@ -93,14 +105,14 @@ export interface GenerateRulesResponse {
  */
 export interface ExecuteMatchRequest {
   activityId: string;
-  rules: MatchRule[];
+  rules: MatchingRule[];
 }
 
 /**
  * 执行匹配响应
  */
 export interface ExecuteMatchResponse {
-  groups: MatchGroup[];
+  groups: MatchingGroup[];
   totalParticipants: number;
   groupedParticipants: number;
   averageScore: number;
@@ -117,26 +129,4 @@ export interface BubbleData {
   size: number;
   color: string;
   connections: string[];
-}
-
-/**
- * Matching Store 状态
- */
-export interface MatchingState {
-  rules: MatchRule[];
-  groups: MatchGroup[];
-  bubbleData: BubbleData[];
-  loading: boolean;
-  matchingProgress: number;
-  setRules: (rules: MatchRule[]) => void;
-  addRule: (rule: MatchRule) => void;
-  updateRule: (ruleId: string, updates: Partial<MatchRule>) => void;
-  removeRule: (ruleId: string) => void;
-  setGroups: (groups: MatchGroup[]) => void;
-  addGroup: (group: MatchGroup) => void;
-  updateGroup: (groupId: string, updates: Partial<MatchGroup>) => void;
-  setBubbleData: (data: BubbleData[]) => void;
-  setLoading: (loading: boolean) => void;
-  setMatchingProgress: (progress: number) => void;
-  clearMatching: () => void;
 }

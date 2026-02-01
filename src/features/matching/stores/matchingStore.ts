@@ -1,34 +1,52 @@
 /**
  * 匹配状态管理 Store
+ * 使用新的类型定义
  */
 
 import { create } from "zustand";
-import type {
-  MatchingState,
-  MatchRule,
-  MatchGroup,
-  BubbleData,
-} from "../types";
+import type { MatchingRule, MatchingGroup } from "../types";
 
-export const useMatchingStore = create<MatchingState>((set) => ({
+// Store 专用接口 (不要与 types.ts 的 MatchingState 混淆)
+interface MatchingStoreState {
+  // 数据
+  rules: MatchingRule[];
+  groups: MatchingGroup[];
+
+  // 状态
+  loading: boolean;
+  matchingProgress: number;
+
+  // Actions
+  setRules: (rules: MatchingRule[]) => void;
+  addRule: (rule: MatchingRule) => void;
+  updateRule: (ruleId: string, updates: Partial<MatchingRule>) => void;
+  removeRule: (ruleId: string) => void;
+  setGroups: (groups: MatchingGroup[]) => void;
+  addGroup: (group: MatchingGroup) => void;
+  updateGroup: (groupId: string, updates: Partial<MatchingGroup>) => void;
+  setLoading: (loading: boolean) => void;
+  setMatchingProgress: (progress: number) => void;
+  clearMatching: () => void;
+}
+
+export const useMatchingStore = create<MatchingStoreState>((set) => ({
   rules: [],
   groups: [],
-  bubbleData: [],
   loading: false,
   matchingProgress: 0,
 
-  setRules: (rules: MatchRule[]) => {
+  setRules: (rules: MatchingRule[]) => {
     set({ rules });
   },
 
-  addRule: (rule: MatchRule) => {
+  addRule: (rule: MatchingRule) => {
     set((state) => ({ rules: [...state.rules, rule] }));
   },
 
-  updateRule: (ruleId: string, updates: Partial<MatchRule>) => {
+  updateRule: (ruleId: string, updates: Partial<MatchingRule>) => {
     set((state) => ({
       rules: state.rules.map((rule) =>
-        rule.id === ruleId ? { ...rule, ...updates } : rule
+        rule.id === ruleId ? { ...rule, ...updates } : rule,
       ),
     }));
   },
@@ -39,24 +57,20 @@ export const useMatchingStore = create<MatchingState>((set) => ({
     }));
   },
 
-  setGroups: (groups: MatchGroup[]) => {
+  setGroups: (groups: MatchingGroup[]) => {
     set({ groups });
   },
 
-  addGroup: (group: MatchGroup) => {
+  addGroup: (group: MatchingGroup) => {
     set((state) => ({ groups: [...state.groups, group] }));
   },
 
-  updateGroup: (groupId: string, updates: Partial<MatchGroup>) => {
+  updateGroup: (groupId: string, updates: Partial<MatchingGroup>) => {
     set((state) => ({
       groups: state.groups.map((group) =>
-        group.id === groupId ? { ...group, ...updates } : group
+        group.id === groupId ? { ...group, ...updates } : group,
       ),
     }));
-  },
-
-  setBubbleData: (data: BubbleData[]) => {
-    set({ bubbleData: data });
   },
 
   setLoading: (loading: boolean) => {
@@ -71,7 +85,6 @@ export const useMatchingStore = create<MatchingState>((set) => ({
     set({
       rules: [],
       groups: [],
-      bubbleData: [],
       matchingProgress: 0,
     });
   },

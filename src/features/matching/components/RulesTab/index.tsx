@@ -1,7 +1,9 @@
 /**
  * 规则设置 Tab 组件 (重构版)
  * 设计风格统一：使用新设计系统（天空蓝、活力橙、梦幻紫）
- * 功能：自然语言输入 → AI生成规则 → 调整权重 → 边界条件 → 保存/开始匹配
+ * 功能：展示后端下发规则 → 调整权重 → 边界条件 → 保存/开始匹配
+ *
+ * 注意：自然语言输入功能已移除，改为直接使用后端下发的匹配规则
  */
 
 import React, { useState, useMemo } from "react";
@@ -19,52 +21,33 @@ import {
   Users,
   Scale,
   Building2,
-  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui";
-import type { MatchRule } from "../../types";
+import type { MatchingRule as MatchRule, MatchConstraints } from "../../types";
 import AddRuleModal from "./AddRuleModal";
 
-// 边界条件类型
-interface MatchConstraints {
-  minGroupSize?: number;
-  maxGroupSize?: number;
-  genderRatioMin?: number;
-  genderRatioMax?: number;
-  sameIndustryMax?: number;
-}
+// 使用从 types.ts 导入的 MatchConstraints 类型
 
 interface RulesTabProps {
-  naturalLanguageInput: string;
-  onNaturalLanguageInputChange: (value: string) => void;
+  /** 匹配规则列表（从后端获取） */
   rules: MatchRule[];
+  /** 规则变更回调 */
   onRulesChange: (rules: MatchRule[]) => void;
+  /** 边界约束条件 */
   constraints: MatchConstraints;
+  /** 约束条件变更回调 */
   onConstraintsChange: (constraints: MatchConstraints) => void;
-  isGenerating: boolean;
-  onGenerateRules: () => Promise<void>;
+  /** 保存规则配置 */
   onSaveRules: () => Promise<void>;
+  /** 开始匹配 */
   onStartMatching: () => Promise<void>;
+  /** 是否正在匹配 */
   isMatching: boolean;
+  /** 匹配进度 (0-100) */
   matchingProgress: number;
+  /** 参与人数 */
   participantCount: number;
 }
-
-// 快捷示例
-const QUICK_EXAMPLES = [
-  {
-    label: "跨校跨行业",
-    text: "尽量跨院校、跨行业，兴趣重合优先，男女比例均衡。",
-  },
-  {
-    label: "兴趣匹配",
-    text: "按照兴趣爱好和专业技能进行分组，让有共同话题的人组成团队。",
-  },
-  {
-    label: "多元平衡",
-    text: "平衡各组的性别比例、年龄结构和地域分布，促进多元交流。",
-  },
-];
 
 /**
  * 规则卡片组件
@@ -201,14 +184,10 @@ const RuleCard: React.FC<RuleCardProps> = ({
  * 规则设置 Tab 主组件
  */
 const RulesTab: React.FC<RulesTabProps> = ({
-  naturalLanguageInput,
-  onNaturalLanguageInputChange,
   rules,
   onRulesChange,
   constraints,
   onConstraintsChange,
-  isGenerating,
-  onGenerateRules,
   onSaveRules,
   onStartMatching,
   isMatching,
@@ -228,15 +207,13 @@ const RulesTab: React.FC<RulesTabProps> = ({
 
   // 更新规则权重
   const handleWeightChange = (ruleId: string, weight: number) => {
-    onRulesChange(
-      rules.map((r) => (r.id === ruleId ? { ...r, weight } : r))
-    );
+    onRulesChange(rules.map((r) => (r.id === ruleId ? { ...r, weight } : r)));
   };
 
   // 切换规则启用
   const handleToggleRule = (ruleId: string) => {
     onRulesChange(
-      rules.map((r) => (r.id === ruleId ? { ...r, enabled: !r.enabled } : r))
+      rules.map((r) => (r.id === ruleId ? { ...r, enabled: !r.enabled } : r)),
     );
   };
 
@@ -267,59 +244,6 @@ const RulesTab: React.FC<RulesTabProps> = ({
 
   return (
     <div className="pb-32">
-      {/* 自然语言输入区 */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-            <Lightbulb size={16} className="text-primary-500" />
-          </div>
-          <h3 className="text-base font-semibold text-gray-900">
-            活动匹配期望
-          </h3>
-        </div>
-
-        <textarea
-          value={naturalLanguageInput}
-          onChange={(e) => onNaturalLanguageInputChange(e.target.value)}
-          placeholder="请用自然语言描述您的匹配需求，例如：&#10;• 尽量跨院校、跨行业&#10;• 兴趣重合优先&#10;• 男女比例均衡"
-          className="w-full h-32 px-4 py-3 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400 transition-all"
-          maxLength={500}
-        />
-
-        {/* 快捷示例 */}
-        <div className="flex flex-wrap gap-2 mt-3">
-          {QUICK_EXAMPLES.map((example, idx) => (
-            <button
-              key={idx}
-              onClick={() => onNaturalLanguageInputChange(example.text)}
-              className="px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-full transition-colors"
-            >
-              {example.label}
-            </button>
-          ))}
-        </div>
-
-        {/* 生成按钮 */}
-        <Button
-          onClick={onGenerateRules}
-          disabled={!naturalLanguageInput.trim() || isGenerating}
-          className="w-full mt-4"
-          size="large"
-        >
-          {isGenerating ? (
-            <span className="flex items-center gap-2">
-              <Loader2 size={18} className="animate-spin" />
-              生成中...
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <Sparkles size={18} />
-              AI 生成匹配规则
-            </span>
-          )}
-        </Button>
-      </div>
-
       {/* 规则列表 */}
       {rules.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 mb-4">
@@ -358,12 +282,14 @@ const RulesTab: React.FC<RulesTabProps> = ({
                 key={rule.id}
                 rule={rule}
                 onToggle={() => handleToggleRule(rule.id!)}
-                onWeightChange={(weight) => handleWeightChange(rule.id!, weight)}
+                onWeightChange={(weight) =>
+                  handleWeightChange(rule.id!, weight)
+                }
                 onDelete={() => handleDeleteRule(rule.id!)}
                 isExpanded={expandedRuleId === rule.id}
                 onExpandToggle={() =>
                   setExpandedRuleId(
-                    expandedRuleId === rule.id ? null : rule.id!
+                    expandedRuleId === rule.id ? null : rule.id!,
                   )
                 }
               />
@@ -414,7 +340,8 @@ const RulesTab: React.FC<RulesTabProps> = ({
                   每组人数
                 </span>
                 <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-600 rounded-full">
-                  {constraints.minGroupSize || 3} - {constraints.maxGroupSize || 8} 人
+                  {constraints.minGroupSize || 3} -{" "}
+                  {constraints.maxGroupSize || 8} 人
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -465,7 +392,8 @@ const RulesTab: React.FC<RulesTabProps> = ({
                   性别比例
                 </span>
                 <span className="px-2 py-0.5 text-xs font-medium bg-orange-100 text-secondary-600 rounded-full">
-                  {constraints.genderRatioMin || 40}% - {constraints.genderRatioMax || 60}%
+                  {constraints.genderRatioMin || 40}% -{" "}
+                  {constraints.genderRatioMax || 60}%
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -605,7 +533,11 @@ const RulesTab: React.FC<RulesTabProps> = ({
             <Button
               size="large"
               onClick={handleStartMatching}
-              disabled={enabledRules.length === 0 || participantCount === 0 || isMatching}
+              disabled={
+                enabledRules.length === 0 ||
+                participantCount === 0 ||
+                isMatching
+              }
               className="flex-1"
             >
               {isMatching ? (
