@@ -1,6 +1,6 @@
 /**
- * 人才库页面
- * 平台人才数据库，供商家筛选和推送活动邀请
+ * 用户发现页面
+ * 发现平台活跃用户，供商家筛选和推送活动邀请
  *
  * 功能说明:
  * - 提供平台用户的综合画像数据
@@ -283,7 +283,7 @@ const TalentCard: React.FC<{
   );
 };
 
-/** 人才库页面主组件 */
+/** 用户发现页面主组件 */
 const TalentPoolPage: React.FC = () => {
   // 状态
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -389,7 +389,7 @@ const TalentPoolPage: React.FC = () => {
   };
 
   return (
-    <MerchantLayout title="人才库">
+    <MerchantLayout title="用户发现">
       <div className="space-y-4 pb-6">
         {/* 功能说明 */}
         <div className="bg-gradient-to-r from-accent-50 to-purple-50 rounded-xl p-4 border border-accent-100">
@@ -399,7 +399,7 @@ const TalentPoolPage: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-1">
-                活动人才库
+                用户发现
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed">
                 平台汇集了各行业优质人才资源，您可以根据活跃度、职业、出勤率等多维度筛选目标用户，并向他们发送活动邀请，提高活动参与质量。

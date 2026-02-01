@@ -3,7 +3,7 @@
  * 使用 MerchantLayout 布局
  */
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Users,
@@ -20,6 +20,11 @@ import {
 } from "lucide-react";
 import { Toast } from "antd-mobile";
 import { MerchantLayout } from "@/components/layout";
+import {
+  ImportEnrollmentModal,
+  SendNotificationModal,
+  ExportEnrollmentModal,
+} from "@/components/enrollment";
 import { useStore } from "@/store";
 import type { Enrollment, FilterCriteria } from "@/types/enrollment";
 import { DEFAULT_FILTER_CRITERIA, STATUS_LABELS } from "@/types/enrollment";
@@ -182,7 +187,6 @@ const EnrollmentManagementNew: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { token } = useStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 报名数据
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -198,6 +202,11 @@ const EnrollmentManagementNew: React.FC = () => {
 
   // 批量选择
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Modal 状态
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // 计算筛选选项 (预留给高级筛选功能)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -254,6 +263,7 @@ const EnrollmentManagementNew: React.FC = () => {
       }
 
       const data = await response.json();
+      console.log("[EnrollmentManagement] API 返回数据:", data);
       setEnrollments(data.data || []);
     } catch (error) {
       console.error("获取报名列表失败:", error);
@@ -312,11 +322,26 @@ const EnrollmentManagementNew: React.FC = () => {
 
   // 导入导出
   const handleImport = () => {
-    fileInputRef.current?.click();
+    setShowImportModal(true);
   };
 
   const handleExport = () => {
-    Toast.show({ content: "正在导出..." });
+    setShowExportModal(true);
+  };
+
+  const handleImportSuccess = (count: number) => {
+    // 导入成功后刷新数据
+    fetchEnrollments();
+    Toast.show({ content: `成功导入 ${count} 条数据` });
+  };
+
+  const handleSendNotification = () => {
+    console.log(
+      "[EnrollmentManagement] 打开通知弹窗, enrollments:",
+      enrollments?.length,
+      enrollments,
+    );
+    setShowNotifyModal(true);
   };
 
   // 统计数据
@@ -402,7 +427,10 @@ const EnrollmentManagementNew: React.FC = () => {
               <Download size={14} />
               导出
             </button>
-            <button className="h-8 px-3 rounded-lg bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 flex items-center gap-1">
+            <button
+              className="h-8 px-3 rounded-lg bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 flex items-center gap-1"
+              onClick={handleSendNotification}
+            >
               <Send size={14} />
               发送通知
             </button>
@@ -500,19 +528,37 @@ const EnrollmentManagementNew: React.FC = () => {
           )}
         </div>
 
-        {/* 隐藏的文件上传 */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept=".xlsx,.xls"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              Toast.show({ content: `正在导入: ${file.name}` });
-              // TODO: 处理文件上传
-            }
+        {/* 导入报名弹窗 */}
+        <ImportEnrollmentModal
+          visible={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          activityId={id || ""}
+          onSuccess={handleImportSuccess}
+        />
+
+        {/* 发送通知弹窗 */}
+        <SendNotificationModal
+          visible={showNotifyModal}
+          onClose={() => setShowNotifyModal(false)}
+          activityId={id || ""}
+          enrollments={enrollments}
+          selectedIds={selectedIds}
+          onSuccess={(count) => {
+            console.log(
+              `[EnrollmentManagement] 通知发送成功，发送数量: ${count}`,
+            );
+            // 发送成功后清空选中
+            setSelectedIds([]);
           }}
+        />
+
+        {/* 导出报名弹窗 */}
+        <ExportEnrollmentModal
+          visible={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          activityId={id || ""}
+          activityTitle="活动"
+          enrollments={filteredEnrollments}
         />
       </div>
     </MerchantLayout>

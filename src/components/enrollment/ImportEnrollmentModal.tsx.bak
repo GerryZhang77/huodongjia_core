@@ -1,0 +1,752 @@
+/**
+ * 导入报名模态框组件
+ * 支持 Excel 文件解析、字段映射、数据预览
+ */
+
+import React, { useState, useCallback, useRef } from "react";
+import {
+  Upload,
+  FileSpreadsheet,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
+import { Toast } from "antd-mobile";
+import * as XLSX from "xlsx";
+import { useStore } from "@/store";
+
+// ========================================
+// 类型定义
+// ========================================
+
+interface ImportEnrollmentModalProps {
+  visible: boolean;
+  activityId: string;
+  onClose: () => void;
+  onSuccess: (count: number) => void;
+}
+
+interface ParsedRow {
+  [key: string]: string | number | undefined;
+}
+
+interface FieldMapping {
+  sourceField: string;
+  targetField: string;
+}
+
+interface ImportPreview {
+  name: string;
+  gender?: string;
+  age?: number;
+  phone?: string;
+  email?: string;
+  occupation?: string;
+  company?: string;
+  city?: string;
+  interests?: string[];
+  skills?: string[];
+  bio?: string;
+  matchingNeeds?: string;
+  industry?: string;
+  position?: string;
+}
+
+// 目标字段定义
+const TARGET_FIELDS = [
+  { key: "name", label: "姓名", required: true },
+  { key: "gender", label: "性别", required: false },
+  { key: "age", label: "年龄", required: false },
+  { key: "phone", label: "手机号", required: false },
+  { key: "email", label: "邮箱", required: false },
+  { key: "occupation", label: "职业", required: false },
+  { key: "company", label: "公司", required: false },
+  { key: "industry", label: "行业", required: false },
+  { key: "position", label: "职位", required: false },
+  { key: "city", label: "城市", required: false },
+  { key: "interests", label: "兴趣爱好", required: false },
+  { key: "skills", label: "技能", required: false },
+  { key: "bio", label: "个人简介", required: false },
+  { key: "matchingNeeds", label: "匹配需求", required: false },
+];
+
+// 常见字段名映射（用于自动匹配）
+const FIELD_NAME_ALIASES: Record<string, string[]> = {
+  name: ["姓名", "名字", "name", "用户名", "昵称"],
+  gender: ["性别", "gender", "sex"],
+  age: ["年龄", "age"],
+  phone: ["手机", "电话", "手机号", "phone", "mobile", "联系方式"],
+  email: ["邮箱", "email", "电子邮件", "e-mail"],
+  occupation: ["职业", "职位", "岗位", "occupation", "job"],
+  company: ["公司", "单位", "company", "organization", "企业"],
+  industry: ["行业", "industry", "领域"],
+  position: ["职位", "position", "岗位", "title"],
+  city: ["城市", "所在城市", "city", "地区"],
+  interests: ["兴趣", "爱好", "兴趣爱好", "interests", "hobby"],
+  skills: ["技能", "专长", "skills", "能力"],
+  bio: ["简介", "个人简介", "自我介绍", "bio", "introduction"],
+  matchingNeeds: ["匹配需求", "期望", "需求", "matchingNeeds", "expectation"],
+};
+
+// ========================================
+// 组件实现
+// ========================================
+
+const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
+  visible,
+  activityId,
+  onClose,
+  onSuccess,
+}) => {
+  // 从 store 获取 token
+  const { token } = useStore();
+
+  // 步骤: 1-上传文件, 2-字段映射, 3-预览确认
+  const [step, setStep] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_file, setFile] = useState<File | null>(null);
+  const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
+  const [sourceFields, setSourceFields] = useState<string[]>([]);
+  const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
+  const [previewData, setPreviewData] = useState<ImportPreview[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 重置状态
+  const resetState = useCallback(() => {
+    setStep(1);
+    setFile(null);
+    setParsedData([]);
+    setSourceFields([]);
+    setFieldMappings([]);
+    setPreviewData([]);
+    setIsUploading(false);
+    setIsImporting(false);
+    setErrors([]);
+  }, []);
+
+  // 关闭模态框
+  const handleClose = useCallback(() => {
+    resetState();
+    onClose();
+  }, [resetState, onClose]);
+
+  // 自动匹配字段
+  const autoMatchFields = useCallback((headers: string[]): FieldMapping[] => {
+    const mappings: FieldMapping[] = [];
+
+    headers.forEach((header) => {
+      const headerLower = header.toLowerCase().trim();
+
+      for (const [targetKey, aliases] of Object.entries(FIELD_NAME_ALIASES)) {
+        if (
+          aliases.some(
+            (alias) =>
+              alias.toLowerCase() === headerLower ||
+              headerLower.includes(alias.toLowerCase()),
+          )
+        ) {
+          // 检查是否已经映射过该目标字段
+          if (!mappings.some((m) => m.targetField === targetKey)) {
+            mappings.push({
+              sourceField: header,
+              targetField: targetKey,
+            });
+          }
+          break;
+        }
+      }
+    });
+
+    return mappings;
+  }, []);
+
+  // 解析 Excel 文件
+  const parseExcelFile = useCallback(
+    async (file: File) => {
+      setIsUploading(true);
+      setErrors([]);
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+
+        // 获取第一个工作表
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+
+        // 转换为 JSON
+        const jsonData = XLSX.utils.sheet_to_json<ParsedRow>(worksheet, {
+          defval: "",
+        });
+
+        if (jsonData.length === 0) {
+          setErrors(["Excel 文件为空，请检查文件内容"]);
+          return;
+        }
+
+        // 获取表头（字段名）
+        const headers = Object.keys(jsonData[0]);
+        setSourceFields(headers);
+        setParsedData(jsonData);
+
+        // 自动匹配字段
+        const autoMappings = autoMatchFields(headers);
+        setFieldMappings(autoMappings);
+
+        // 进入下一步
+        setStep(2);
+
+        Toast.show({
+          content: `成功解析 ${jsonData.length} 条数据`,
+          icon: "success",
+        });
+      } catch (error) {
+        console.error("解析 Excel 失败:", error);
+        setErrors(["Excel 文件解析失败，请检查文件格式"]);
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [autoMatchFields],
+  );
+
+  // 处理文件选择
+  const handleFileSelect = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = event.target.files?.[0];
+      if (selectedFile) {
+        setFile(selectedFile);
+        parseExcelFile(selectedFile);
+      }
+      // 重置 input，允许重复选择同一文件
+      event.target.value = "";
+    },
+    [parseExcelFile],
+  );
+
+  // 处理拖拽上传
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const droppedFile = event.dataTransfer.files[0];
+      if (droppedFile) {
+        const isExcel =
+          droppedFile.name.endsWith(".xlsx") ||
+          droppedFile.name.endsWith(".xls");
+        if (isExcel) {
+          setFile(droppedFile);
+          parseExcelFile(droppedFile);
+        } else {
+          Toast.show({ content: "请上传 Excel 文件 (.xlsx 或 .xls)" });
+        }
+      }
+    },
+    [parseExcelFile],
+  );
+
+  // 更新字段映射
+  const updateMapping = useCallback(
+    (sourceField: string, targetField: string) => {
+      setFieldMappings((prev) => {
+        // 移除之前映射到该目标字段的映射
+        const filtered = prev.filter((m) => m.targetField !== targetField);
+
+        if (targetField) {
+          return [...filtered, { sourceField, targetField }];
+        }
+        return filtered;
+      });
+    },
+    [],
+  );
+
+  // 生成预览数据
+  const generatePreview = useCallback(() => {
+    const preview: ImportPreview[] = parsedData.slice(0, 100).map((row) => {
+      const item: ImportPreview = { name: "" };
+
+      fieldMappings.forEach((mapping) => {
+        const value = row[mapping.sourceField];
+        const targetKey = mapping.targetField as keyof ImportPreview;
+
+        if (targetKey === "age" && value !== undefined) {
+          item.age =
+            typeof value === "number"
+              ? value
+              : parseInt(String(value), 10) || undefined;
+        } else if (targetKey === "interests" || targetKey === "skills") {
+          // 将逗号分隔的字符串转为数组
+          const strValue = String(value || "");
+          item[targetKey] = strValue
+            ? strValue
+                .split(/[,，、]/)
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [];
+        } else if (value !== undefined) {
+          // 类型安全的赋值
+          const stringValue = String(value);
+          switch (targetKey) {
+            case "name":
+              item.name = stringValue;
+              break;
+            case "gender":
+              item.gender = stringValue;
+              break;
+            case "phone":
+              item.phone = stringValue;
+              break;
+            case "email":
+              item.email = stringValue;
+              break;
+            case "company":
+              item.company = stringValue;
+              break;
+            case "industry":
+              item.industry = stringValue;
+              break;
+            case "position":
+              item.position = stringValue;
+              break;
+            case "city":
+              item.city = stringValue;
+              break;
+            case "bio":
+              item.bio = stringValue;
+              break;
+            case "matchingNeeds":
+              item.matchingNeeds = stringValue;
+              break;
+            default:
+              // 其他字段不处理
+              break;
+          }
+        }
+      });
+
+      return item;
+    });
+
+    setPreviewData(preview);
+    setStep(3);
+  }, [parsedData, fieldMappings]);
+
+  // 验证映射
+  const validateMappings = useCallback(() => {
+    const newErrors: string[] = [];
+
+    // 检查必填字段
+    const requiredFields = TARGET_FIELDS.filter((f) => f.required);
+    requiredFields.forEach((field) => {
+      if (!fieldMappings.some((m) => m.targetField === field.key)) {
+        newErrors.push(`请映射必填字段: ${field.label}`);
+      }
+    });
+
+    setErrors(newErrors);
+    return newErrors.length === 0;
+  }, [fieldMappings]);
+
+  // 进入预览步骤
+  const handleNextToPreview = useCallback(() => {
+    if (validateMappings()) {
+      generatePreview();
+    }
+  }, [validateMappings, generatePreview]);
+
+  // 提交导入
+  const handleImport = useCallback(async () => {
+    setIsImporting(true);
+    setErrors([]);
+
+    try {
+      // 转换所有数据
+      const importData = parsedData.map((row) => {
+        const item: Record<string, unknown> = {};
+
+        fieldMappings.forEach((mapping) => {
+          const value = row[mapping.sourceField];
+          const targetKey = mapping.targetField;
+
+          if (targetKey === "age" && value !== undefined) {
+            item.age =
+              typeof value === "number"
+                ? value
+                : parseInt(String(value), 10) || null;
+          } else if (targetKey === "gender") {
+            // 标准化性别
+            const genderStr = String(value || "").toLowerCase();
+            if (
+              genderStr.includes("男") ||
+              genderStr === "male" ||
+              genderStr === "m"
+            ) {
+              item.gender = "male";
+            } else if (
+              genderStr.includes("女") ||
+              genderStr === "female" ||
+              genderStr === "f"
+            ) {
+              item.gender = "female";
+            } else {
+              item.gender = "other";
+            }
+          } else if (targetKey === "interests" || targetKey === "skills") {
+            const strValue = String(value || "");
+            item[targetKey] = strValue
+              ? strValue
+                  .split(/[,，、]/)
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              : [];
+          } else if (value !== undefined && value !== "") {
+            item[targetKey] = String(value);
+          }
+        });
+
+        return item;
+      });
+
+      // 调用导入 API
+      const response = await fetch(
+        `/api/events/${activityId}/enrollments/import`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            enrollments: importData,
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        Toast.show({
+          content: `成功导入 ${result.data?.imported_count || importData.length} 条数据`,
+          icon: "success",
+        });
+        onSuccess(result.data?.imported_count || importData.length);
+        handleClose();
+      } else {
+        setErrors([result.message || "导入失败，请重试"]);
+      }
+    } catch (error) {
+      console.error("导入失败:", error);
+      setErrors(["网络错误，请检查网络连接后重试"]);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [parsedData, fieldMappings, activityId, token, onSuccess, handleClose]);
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+        {/* 头部 */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">导入报名数据</h2>
+          <button
+            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
+            onClick={handleClose}
+          >
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+
+        {/* 步骤指示器 */}
+        <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+          <div className="flex items-center justify-center gap-4">
+            {[
+              { num: 1, label: "上传文件" },
+              { num: 2, label: "字段映射" },
+              { num: 3, label: "预览确认" },
+            ].map((s, index) => (
+              <React.Fragment key={s.num}>
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                      step >= s.num
+                        ? "bg-primary-400 text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    {step > s.num ? <CheckCircle size={14} /> : s.num}
+                  </div>
+                  <span
+                    className={`text-sm ${
+                      step >= s.num ? "text-gray-900" : "text-gray-400"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </div>
+                {index < 2 && (
+                  <div
+                    className={`w-8 h-0.5 ${
+                      step > s.num ? "bg-primary-400" : "bg-gray-200"
+                    }`}
+                  />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* 错误提示 */}
+          {errors.length > 0 && (
+            <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-100">
+              {errors.map((error, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-2 text-sm text-red-600"
+                >
+                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 步骤 1: 上传文件 */}
+          {step === 1 && (
+            <div
+              className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-primary-400 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+            >
+              {isUploading ? (
+                <div className="flex flex-col items-center">
+                  <Loader2
+                    size={48}
+                    className="text-primary-400 animate-spin mb-4"
+                  />
+                  <p className="text-gray-600">正在解析文件...</p>
+                </div>
+              ) : (
+                <>
+                  <FileSpreadsheet
+                    size={48}
+                    className="mx-auto text-gray-400 mb-4"
+                  />
+                  <p className="text-gray-900 font-medium mb-2">
+                    点击或拖拽上传 Excel 文件
+                  </p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    支持 .xlsx、.xls 格式
+                  </p>
+                  <button className="px-4 py-2 bg-primary-400 text-white rounded-full text-sm font-medium hover:bg-primary-500 transition-colors inline-flex items-center gap-2">
+                    <Upload size={16} />
+                    选择文件
+                  </button>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </div>
+          )}
+
+          {/* 步骤 2: 字段映射 */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 mb-4">
+                已解析{" "}
+                <span className="font-medium text-primary-600">
+                  {parsedData.length}
+                </span>{" "}
+                条数据，请配置字段映射：
+              </p>
+
+              <div className="space-y-3">
+                {sourceFields.map((sourceField) => {
+                  const currentMapping = fieldMappings.find(
+                    (m) => m.sourceField === sourceField,
+                  );
+
+                  return (
+                    <div
+                      key={sourceField}
+                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {sourceField}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          示例: {String(parsedData[0]?.[sourceField] || "-")}
+                        </p>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-400" />
+                      <select
+                        className="flex-1 h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+                        value={currentMapping?.targetField || ""}
+                        onChange={(e) =>
+                          updateMapping(sourceField, e.target.value)
+                        }
+                      >
+                        <option value="">不导入</option>
+                        {TARGET_FIELDS.map((field) => (
+                          <option
+                            key={field.key}
+                            value={field.key}
+                            disabled={fieldMappings.some(
+                              (m) =>
+                                m.targetField === field.key &&
+                                m.sourceField !== sourceField,
+                            )}
+                          >
+                            {field.label}
+                            {field.required ? " *" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 步骤 3: 预览确认 */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                即将导入{" "}
+                <span className="font-medium text-primary-600">
+                  {parsedData.length}
+                </span>{" "}
+                条数据，预览前 {Math.min(5, previewData.length)} 条：
+              </p>
+
+              <div className="space-y-3">
+                {previewData.slice(0, 5).map((item, index) => (
+                  <div
+                    key={index}
+                    className="p-3 bg-gray-50 rounded-lg border border-gray-100"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium text-gray-900">
+                        {item.name || "(未填写姓名)"}
+                      </span>
+                      {item.gender && (
+                        <span className="text-xs text-gray-500">
+                          {item.gender === "male"
+                            ? "男"
+                            : item.gender === "female"
+                              ? "女"
+                              : "其他"}
+                        </span>
+                      )}
+                      {item.age && (
+                        <span className="text-xs text-gray-500">
+                          {item.age}岁
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600 space-x-3">
+                      {item.occupation && <span>{item.occupation}</span>}
+                      {item.company && <span>@{item.company}</span>}
+                      {item.city && <span>{item.city}</span>}
+                    </div>
+                    {item.interests && item.interests.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {item.interests.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-2 py-0.5 text-xs bg-primary-50 text-primary-600 rounded-full"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {previewData.length > 5 && (
+                <p className="text-center text-sm text-gray-500">
+                  ... 还有 {previewData.length - 5} 条数据
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 底部操作 */}
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+          <div>
+            {step > 1 && (
+              <button
+                className="px-4 py-2 text-gray-600 text-sm font-medium hover:bg-gray-100 rounded-lg inline-flex items-center gap-1"
+                onClick={() => setStep(step - 1)}
+                disabled={isImporting}
+              >
+                <ChevronLeft size={16} />
+                上一步
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              className="px-4 py-2 text-gray-600 text-sm font-medium hover:bg-gray-100 rounded-lg"
+              onClick={handleClose}
+              disabled={isImporting}
+            >
+              取消
+            </button>
+            {step === 2 && (
+              <button
+                className="px-4 py-2 bg-primary-400 text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors inline-flex items-center gap-1"
+                onClick={handleNextToPreview}
+              >
+                下一步
+                <ChevronRight size={16} />
+              </button>
+            )}
+            {step === 3 && (
+              <button
+                className="px-4 py-2 bg-primary-400 text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors inline-flex items-center gap-1 disabled:opacity-50"
+                onClick={handleImport}
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    导入中...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={16} />
+                    确认导入
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ImportEnrollmentModal;
