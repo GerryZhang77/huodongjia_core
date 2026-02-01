@@ -15,20 +15,26 @@ import { initTheme } from "./store/themeStore";
 async function enableMocking() {
   const useMock = import.meta.env.VITE_USE_MOCK;
 
-  // 仅在 MSW 模式下启用
-  if (useMock !== "msw") {
-    return;
-  }
-
-  // 动态导入 MSW worker (仅开发环境)
+  // 开发环境：根据配置决定是否启用 MSW
   if (import.meta.env.DEV) {
+    if (useMock !== "msw") {
+      return;
+    }
     const { worker } = await import("./mocks/browser");
-
-    // 启动 MSW worker
     return worker.start({
-      onUnhandledRequest: "warn", // 未匹配的请求发出警告
+      onUnhandledRequest: "warn",
     });
   }
+
+  // 生产环境：临时演示模式，始终启用 MSW Mock
+  // TODO: 后端接口完善后移除此逻辑
+  const { worker } = await import("./mocks/browser");
+  return worker.start({
+    onUnhandledRequest: "bypass", // 生产环境静默忽略未匹配请求
+    serviceWorker: {
+      url: "/mockServiceWorker.js",
+    },
+  });
 }
 
 // ========================================
