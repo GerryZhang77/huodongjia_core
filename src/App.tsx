@@ -153,6 +153,16 @@ function App() {
                   }
                 />
 
+                {/* 活动详情 (商家端) */}
+                <Route
+                  path="/dashboard/activity/:id/detail"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <ActivityDetail />
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* B端商家 - 消息中心 */}
                 <Route
                   path="/dashboard/notifications"

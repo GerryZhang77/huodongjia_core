@@ -26,6 +26,7 @@ export interface MerchantActivity {
   id: string;
   title: string;
   coverImage: string | null;
+  images?: string[]; // 活动图片数组（支持多图轮播）
   status:
     | "draft"
     | "recruiting"
@@ -102,6 +103,12 @@ export const mockMerchantActivities: MerchantActivity[] = [
     title: "2025 新年跨年派对",
     coverImage:
       "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800",
+    images: [
+      "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800",
+      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+      "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800",
+      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800",
+    ],
     status: "recruiting",
     registrationStartTime: "2025-01-01T00:00:00Z",
     registrationEndTime: "2025-01-20T23:59:59Z",

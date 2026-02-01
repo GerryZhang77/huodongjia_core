@@ -25,3 +25,12 @@ export type { NFCTouchModalProps } from "./NFCTouchModal/types";
 
 export { ActivityPreview } from "./ActivityPreview";
 export type { ActivityPreviewProps } from "./ActivityPreview";
+
+export { ImageGallery } from "./ImageGallery";
+export type { ImageGalleryProps } from "./ImageGallery";
+
+export { ParticipantAvatar } from "./ParticipantAvatar";
+export type { ParticipantInfo } from "./ParticipantAvatar";
+
+export { ImageCarousel } from "./ImageCarousel";
+export type { ImageCarouselProps } from "./ImageCarousel";

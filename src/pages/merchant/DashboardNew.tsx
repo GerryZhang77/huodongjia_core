@@ -152,7 +152,10 @@ const ActivityCard: FC<ActivityCardProps> = ({
       : 0;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+    <div
+      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+      onClick={onView}
+    >
       {/* 封面图 */}
       <div className="relative h-36 bg-gradient-to-br from-primary-50 to-purple-50">
         {activity.coverImage ? (
@@ -277,7 +280,10 @@ const ActivityCard: FC<ActivityCardProps> = ({
         <div className="flex gap-2">
           <button
             className="flex-1 h-9 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors flex items-center justify-center gap-1"
-            onClick={onManage}
+            onClick={(e) => {
+              e.stopPropagation();
+              onManage();
+            }}
           >
             <Users size={14} />
             管理报名
@@ -288,14 +294,20 @@ const ActivityCard: FC<ActivityCardProps> = ({
             )}
           </button>
           {activity.hasMatchResult ? (
-            <button className="h-9 px-3 bg-accent-50 text-accent-600 rounded-lg text-sm font-medium hover:bg-accent-100 transition-colors flex items-center gap-1">
+            <button
+              className="h-9 px-3 bg-accent-50 text-accent-600 rounded-lg text-sm font-medium hover:bg-accent-100 transition-colors flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
               <CheckCircle size={14} />
               已匹配
             </button>
           ) : activity.status === "recruiting" || activity.status === "full" ? (
             <button
               className="h-9 px-3 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
-              onClick={onMatch}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMatch();
+              }}
             >
               智能匹配
             </button>

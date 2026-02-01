@@ -79,7 +79,12 @@ export interface ActivityFormData {
   registration_end: Date;
   category: ActivityCategory;
   tags: ActivityTag[];
-  cover_image: string; // 必填字段
+  cover_image: string; // 必填字段（第一张图片作为封面）
+  /**
+   * 活动图片数组（最多9张）
+   * 第一张图片将作为封面展示
+   */
+  images?: string[];
   requirements?: string;
   contact_info?: string;
   is_public: boolean;

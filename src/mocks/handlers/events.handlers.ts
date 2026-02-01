@@ -3,6 +3,7 @@
  */
 import { http, HttpResponse, delay } from "msw";
 import { mockActivities, MockActivity } from "../data/activities";
+import { mockMerchantActivities } from "../data/merchant";
 
 // ========================================
 // 活动模块 Handlers
@@ -30,7 +31,7 @@ export const activityHandlers = [
 
     if (keyword) {
       filtered = filtered.filter(
-        (a) => a.title.includes(keyword) || a.description.includes(keyword)
+        (a) => a.title.includes(keyword) || a.description.includes(keyword),
       );
     }
 
@@ -66,7 +67,7 @@ export const activityHandlers = [
           success: false,
           message: "未授权访问",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -96,7 +97,7 @@ export const activityHandlers = [
           success: false,
           message: "活动不存在",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -104,6 +105,83 @@ export const activityHandlers = [
       success: true,
       message: "获取成功",
       data: activity,
+    });
+  }),
+
+  /**
+   * 获取活动详情 (商家端详情页专用)
+   * GET /api/event-detail/:id
+   * 返回格式与 /api/events/:id 类似，但字段名为 event
+   * 同时支持 mockActivities (event_xxx) 和 mockMerchantActivities (ma_xxx)
+   */
+  http.get("/api/event-detail/:id", async ({ params }) => {
+    await delay(200);
+
+    const { id } = params;
+
+    // 先从 mockActivities 查找
+    let activity = mockActivities.find((a) => a.id === id);
+
+    // 如果没找到，从 mockMerchantActivities 查找
+    if (!activity) {
+      const merchantActivity = mockMerchantActivities.find((a) => a.id === id);
+      if (merchantActivity) {
+        // 转换 merchantActivity 格式为统一格式
+        activity = {
+          id: merchantActivity.id,
+          title: merchantActivity.title,
+          description: `${merchantActivity.title} - 精彩活动等你来参加！`,
+          cover_image: merchantActivity.coverImage,
+          images: merchantActivity.images, // 传递多图轮播数据
+          category: "综合活动",
+          tags: ["热门", "推荐"],
+          registration_start_time: merchantActivity.registrationStartTime,
+          registration_end_time: merchantActivity.registrationEndTime,
+          event_start_time: merchantActivity.eventStartTime,
+          event_end_time: merchantActivity.eventEndTime,
+          location: merchantActivity.location,
+          max_participants: merchantActivity.maxParticipants,
+          current_participants: merchantActivity.currentParticipants,
+          status: merchantActivity.status,
+          is_public: true,
+          allow_waitlist: true,
+          fee: 0,
+          organizer: {
+            id: "merchant_001",
+            name: "活动家商家",
+            avatar: "https://picsum.photos/seed/merchant/100/100",
+          },
+          created_at: merchantActivity.createdAt,
+          updated_at: merchantActivity.updatedAt,
+        } as MockActivity;
+      }
+    }
+
+    if (!activity) {
+      return HttpResponse.json(
+        {
+          success: false,
+          message: "活动不存在",
+        },
+        { status: 404 },
+      );
+    }
+
+    // 返回活动详情，字段名使用 event (与 ActivityDetail.tsx 期望的格式匹配)
+    return HttpResponse.json({
+      success: true,
+      message: "获取成功",
+      event: {
+        ...activity,
+        // 补充一些详情页可能需要的额外字段
+        images:
+          (activity as any).images || [activity.cover_image].filter(Boolean),
+        organizer: activity.organizer || {
+          id: "user-001",
+          name: "活动家官方",
+          avatar: "https://picsum.photos/seed/organizer/100/100",
+        },
+      },
     });
   }),
 
@@ -122,7 +200,7 @@ export const activityHandlers = [
           success: false,
           message: "未授权访问",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -135,7 +213,7 @@ export const activityHandlers = [
           success: false,
           message: "活动标题不能为空",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -178,7 +256,7 @@ export const activityHandlers = [
         message: "创建成功",
         data: newActivity,
       },
-      { status: 201 }
+      { status: 201 },
     );
   }),
 
@@ -193,7 +271,7 @@ export const activityHandlers = [
           success: false,
           message: "未授权访问",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -236,7 +314,7 @@ export const activityHandlers = [
         message: "创建成功",
         data: newActivity,
       },
-      { status: 201 }
+      { status: 201 },
     );
   }),
 
@@ -254,7 +332,7 @@ export const activityHandlers = [
           success: false,
           message: "未授权访问",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -268,7 +346,7 @@ export const activityHandlers = [
           success: false,
           message: "活动不存在",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -300,7 +378,7 @@ export const activityHandlers = [
           success: false,
           message: "未授权访问",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -313,7 +391,7 @@ export const activityHandlers = [
           success: false,
           message: "活动不存在",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -324,7 +402,7 @@ export const activityHandlers = [
           success: false,
           message: `该活动已有 ${mockActivities[index].current_participants} 人报名，无法删除`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -335,5 +413,95 @@ export const activityHandlers = [
       success: true,
       message: "删除成功",
     });
+  }),
+
+  /**
+   * 上传活动图片
+   * POST /api/events/upload-image
+   */
+  http.post("/api/events/upload-image", async ({ request }) => {
+    await delay(500);
+
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return HttpResponse.json(
+        {
+          success: false,
+          message: "未授权访问",
+        },
+        { status: 401 },
+      );
+    }
+
+    try {
+      // 解析 FormData
+      const formData = await request.formData();
+      const file = formData.get("file") as File | null;
+
+      if (!file) {
+        return HttpResponse.json(
+          {
+            success: false,
+            message: "请选择要上传的图片",
+          },
+          { status: 400 },
+        );
+      }
+
+      // 验证文件类型
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        return HttpResponse.json(
+          {
+            success: false,
+            message:
+              "不支持的图片格式，请上传 JPG、PNG、GIF 或 WebP 格式的图片",
+          },
+          { status: 400 },
+        );
+      }
+
+      // 验证文件大小（最大 5MB）
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        return HttpResponse.json(
+          {
+            success: false,
+            message: "图片大小不能超过 5MB",
+          },
+          { status: 400 },
+        );
+      }
+
+      // 生成 Mock 图片 URL
+      // 使用 picsum.photos 作为 Mock 图片服务
+      const randomId = Math.floor(Math.random() * 1000);
+      const mockImageUrl = `https://picsum.photos/seed/${randomId}/800/600`;
+
+      return HttpResponse.json({
+        success: true,
+        message: "上传成功",
+        data: {
+          url: mockImageUrl,
+          filename: file.name,
+          size: file.size,
+          type: file.type,
+        },
+      });
+    } catch (error) {
+      console.error("[MSW] Upload image error:", error);
+      return HttpResponse.json(
+        {
+          success: false,
+          message: "图片上传失败，请重试",
+        },
+        { status: 500 },
+      );
+    }
   }),
 ];

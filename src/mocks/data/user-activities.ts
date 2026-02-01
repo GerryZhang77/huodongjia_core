@@ -16,6 +16,8 @@ export interface UserActivity {
   /** 活动描述（可选） */
   description?: string;
   coverImage: string;
+  /** 活动图片数组（用于轮播，可选） */
+  images?: string[];
   eventStartTime: string;
   eventEndTime: string;
   location: string;
@@ -39,6 +41,11 @@ export const mockUserActivities: UserActivity[] = [
     title: "创业者社交酒会｜与 50 位创业者面对面",
     coverImage:
       "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=800&q=80",
+      "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=80",
+      "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&q=80",
+    ],
     eventStartTime: "2025-12-28T19:00:00Z",
     eventEndTime: "2025-12-28T22:00:00Z",
     location: "北京市朝阳区三里屯 SOHO A座 15F",
@@ -419,7 +426,7 @@ export const mockUserActivities: UserActivity[] = [
 
 // 根据状态筛选活动
 export const getActivitiesByStatus = (
-  status?: UserActivityStatus
+  status?: UserActivityStatus,
 ): UserActivity[] => {
   if (!status) return mockUserActivities;
   return mockUserActivities.filter((a) => a.userStatus === status);
@@ -432,7 +439,7 @@ export const getActivityById = (id: string): UserActivity | undefined => {
 
 // 获取上一个活动
 export const getPreviousActivity = (
-  currentId: string
+  currentId: string,
 ): UserActivity | undefined => {
   const currentIndex = mockUserActivities.findIndex((a) => a.id === currentId);
   if (currentIndex <= 0) return undefined;
@@ -441,7 +448,7 @@ export const getPreviousActivity = (
 
 // 获取下一个活动
 export const getNextActivity = (
-  currentId: string
+  currentId: string,
 ): UserActivity | undefined => {
   const currentIndex = mockUserActivities.findIndex((a) => a.id === currentId);
   if (currentIndex < 0 || currentIndex >= mockUserActivities.length - 1)

@@ -51,7 +51,7 @@ export const getActivities = async (): Promise<GetActivitiesResponse> => {
  */
 export const getActivityById = async (id: string): Promise<Activity> => {
   const response = (await api.get(
-    `/api/events/${id}`
+    `/api/events/${id}`,
   )) as ApiResponse<Activity>;
 
   if (!response.success) {
@@ -69,13 +69,13 @@ export const getActivityById = async (id: string): Promise<Activity> => {
  * 创建活动
  */
 export const createActivity = async (
-  request: CreateActivityRequest
+  request: CreateActivityRequest,
 ): Promise<Activity> => {
   console.log("[createActivity] 发送请求:", request);
 
   const response = (await api.post(
     "/api/events/create",
-    request
+    request,
   )) as ApiResponse<Activity>;
 
   console.log("[createActivity] 收到响应:", response);
@@ -103,11 +103,11 @@ export const createActivity = async (
  */
 export const updateActivity = async (
   id: string,
-  request: UpdateActivityRequest
+  request: UpdateActivityRequest,
 ): Promise<Activity> => {
   const response = (await api.put(
     `/api/events/${id}`,
-    request
+    request,
   )) as ApiResponse<Activity>;
 
   if (!response.success) {
@@ -126,7 +126,7 @@ export const updateActivity = async (
  */
 export const deleteActivity = async (id: string): Promise<void> => {
   const response = (await api.delete(
-    `/api/events/${id}`
+    `/api/events/${id}`,
   )) as ApiResponse<never>;
 
   if (!response.success) {
@@ -145,11 +145,16 @@ export const uploadCoverImage = async (file: File): Promise<string> => {
     headers: {
       "Content-Type": "multipart/form-data",
     },
-  })) as ApiResponse<never>;
+  })) as ApiResponse<{
+    url: string;
+    filename: string;
+    size: number;
+    type: string;
+  }>;
 
-  if (!response.success || !response.url) {
+  if (!response.success || !response.data?.url) {
     throw new Error(response.message || "图片上传失败");
   }
 
-  return response.url;
+  return response.data.url;
 };

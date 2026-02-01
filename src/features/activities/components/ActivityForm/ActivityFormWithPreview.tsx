@@ -22,7 +22,7 @@ import {
   Popup,
 } from "antd-mobile";
 import { PictureOutline } from "antd-mobile-icons";
-import { Eye, EyeOff, Smartphone } from "lucide-react";
+import { Eye, EyeOff, Smartphone, Monitor } from "lucide-react";
 import { useActivityDetail } from "../../hooks";
 import { uploadCoverImage } from "../../services";
 import {
@@ -36,7 +36,7 @@ import {
 } from "../../utils";
 import type { ActivityFormData, ActivityCategory } from "../../types";
 import { DatePickerField } from "./DatePickerField";
-import { ActivityPreview } from "@/components/business/ActivityPreview";
+import { ActivityPreview } from "@/components/business";
 import { useAuthStore } from "@/features/auth/stores";
 
 interface ActivityFormWithPreviewProps {
@@ -68,6 +68,9 @@ export const ActivityFormWithPreview: React.FC<
   // 预览相关状态
   const [showPreview, setShowPreview] = useState(true); // PC端默认显示
   const [showMobilePreview, setShowMobilePreview] = useState(false); // 移动端预览弹窗
+  const [previewMode, setPreviewMode] = useState<"mobile" | "desktop">(
+    "mobile",
+  ); // 预览模式
   const [formValues, setFormValues] = useState<Partial<ActivityFormData>>({});
 
   // 获取用户信息作为主办方
@@ -181,10 +184,11 @@ export const ActivityFormWithPreview: React.FC<
         return;
       }
 
-      // 添加封面图片
+      // 添加封面图片和图片数组
       const submitData = {
         ...values,
         cover_image: fileList[0]?.url,
+        images: fileList.map((f) => f.url),
       };
 
       Toast.show({
@@ -303,31 +307,49 @@ export const ActivityFormWithPreview: React.FC<
 
         <Form.Item
           name="cover_image"
-          label="封面图片"
+          label={
+            <div className="flex items-center gap-2">
+              <span>活动图片</span>
+              <span className="text-xs text-gray-400 font-normal">
+                (最多9张，第一张为封面)
+              </span>
+            </div>
+          }
           rules={[
             {
               validator: () => {
                 if (fileList.length === 0) {
-                  return Promise.reject(new Error("请上传活动封面图片"));
+                  return Promise.reject(new Error("请至少上传一张活动图片"));
                 }
                 return Promise.resolve();
               },
             },
           ]}
         >
-          <ImageUploader
-            value={fileList}
-            onChange={setFileList}
-            upload={handleImageUpload}
-            maxCount={1}
-          >
-            <div className="flex flex-col items-center justify-center h-24 bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-              <PictureOutline className="text-2xl text-gray-400 mb-1" />
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {uploading ? "上传中..." : "点击上传封面"}
-              </span>
-            </div>
-          </ImageUploader>
+          <div className="space-y-2">
+            <ImageUploader
+              value={fileList}
+              onChange={setFileList}
+              upload={handleImageUpload}
+              maxCount={9}
+              columns={3}
+            >
+              <div className="flex flex-col items-center justify-center h-24 bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <PictureOutline className="text-2xl text-gray-400 mb-1" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {uploading ? "上传中..." : "点击上传图片"}
+                </span>
+              </div>
+            </ImageUploader>
+            {fileList.length > 0 && (
+              <p className="text-xs text-primary-500 flex items-center gap-1">
+                <span className="w-4 h-4 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-[10px] font-bold">
+                  1
+                </span>
+                第一张图片将作为活动封面展示
+              </p>
+            )}
+          </div>
         </Form.Item>
       </Card>
 
@@ -541,23 +563,64 @@ export const ActivityFormWithPreview: React.FC<
         {showPreview && (
           <div className="w-1/2 sticky top-6 h-fit">
             <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl p-6">
+              {/* 预览头部工具栏 */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                  <Smartphone size={16} />
+                  {previewMode === "mobile" ? (
+                    <Smartphone size={16} />
+                  ) : (
+                    <Monitor size={16} />
+                  )}
                   实时预览
                 </h3>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
-                >
-                  <EyeOff size={14} />
-                  隐藏预览
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* 模式切换按钮组 */}
+                  <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
+                    <button
+                      onClick={() => setPreviewMode("mobile")}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                        previewMode === "mobile"
+                          ? "bg-primary-500 text-white shadow-sm"
+                          : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      }`}
+                    >
+                      <Smartphone size={14} />
+                      移动端
+                    </button>
+                    <button
+                      onClick={() => setPreviewMode("desktop")}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                        previewMode === "desktop"
+                          ? "bg-primary-500 text-white shadow-sm"
+                          : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      }`}
+                    >
+                      <Monitor size={14} />
+                      桌面端
+                    </button>
+                  </div>
+                  {/* 隐藏预览按钮 */}
+                  <button
+                    onClick={() => setShowPreview(false)}
+                    className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1 px-2 py-1.5"
+                  >
+                    <EyeOff size={14} />
+                    隐藏
+                  </button>
+                </div>
               </div>
+              {/* 预览模式说明 */}
+              <p className="text-xs text-gray-400 mb-4">
+                {previewMode === "mobile"
+                  ? "模拟手机端浏览效果"
+                  : "模拟桌面端浏览效果（1024px 宽度）"}
+              </p>
+              {/* 预览组件 */}
               <ActivityPreview
                 formData={formValues}
                 coverImage={fileList[0]?.url}
-                mode="mobile"
+                images={fileList.map((f) => f.url)}
+                mode={previewMode}
                 organizer={{
                   name: user?.name || "活动主办方",
                 }}
@@ -609,12 +672,39 @@ export const ActivityFormWithPreview: React.FC<
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
               活动预览
             </h3>
-            <button
-              onClick={() => setShowMobilePreview(false)}
-              className="text-sm text-primary-500 font-medium"
-            >
-              关闭
-            </button>
+            <div className="flex items-center gap-3">
+              {/* 模式切换 */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+                <button
+                  onClick={() => setPreviewMode("mobile")}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                    previewMode === "mobile"
+                      ? "bg-white dark:bg-gray-600 text-primary-500 shadow-sm"
+                      : "text-gray-500"
+                  }`}
+                >
+                  <Smartphone size={12} />
+                  移动端
+                </button>
+                <button
+                  onClick={() => setPreviewMode("desktop")}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                    previewMode === "desktop"
+                      ? "bg-white dark:bg-gray-600 text-primary-500 shadow-sm"
+                      : "text-gray-500"
+                  }`}
+                >
+                  <Monitor size={12} />
+                  桌面端
+                </button>
+              </div>
+              <button
+                onClick={() => setShowMobilePreview(false)}
+                className="text-sm text-primary-500 font-medium"
+              >
+                关闭
+              </button>
+            </div>
           </div>
 
           {/* 预览内容 */}
@@ -622,7 +712,8 @@ export const ActivityFormWithPreview: React.FC<
             <ActivityPreview
               formData={formValues}
               coverImage={fileList[0]?.url}
-              mode="mobile"
+              images={fileList.map((f) => f.url)}
+              mode={previewMode}
               organizer={{
                 name: user?.name || "活动主办方",
               }}

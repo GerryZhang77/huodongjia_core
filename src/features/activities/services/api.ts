@@ -78,7 +78,7 @@ export const getActivityById = async (id: string): Promise<Activity> => {
  * 创建活动
  */
 export const createActivity = async (
-  request: CreateActivityRequest
+  request: CreateActivityRequest,
 ): Promise<Activity> => {
   try {
     console.log("createActivity - 发送请求:", request);
@@ -88,19 +88,19 @@ export const createActivity = async (
 
     console.log(
       "createActivity - API 原始响应:",
-      JSON.stringify(data, null, 2)
+      JSON.stringify(data, null, 2),
     );
     console.log(
       "createActivity - success 值:",
       data.success,
       "类型:",
-      typeof data.success
+      typeof data.success,
     );
     console.log(
       "createActivity - event 值:",
       data.event,
       "类型:",
-      typeof data.event
+      typeof data.event,
     );
     console.log("createActivity - message 值:", data.message);
 
@@ -109,7 +109,7 @@ export const createActivity = async (
       const errorMsg = data.message || "创建活动失败";
       console.error(
         "createActivity - 检测到 success === false，错误:",
-        errorMsg
+        errorMsg,
       );
       throw new Error(errorMsg);
     }
@@ -147,7 +147,7 @@ export const createActivity = async (
  */
 export const updateActivity = async (
   id: string,
-  request: UpdateActivityRequest
+  request: UpdateActivityRequest,
 ): Promise<Activity> => {
   const data = (await api.put(`/api/events/${id}`, request)) as ApiResponse;
 
@@ -185,11 +185,16 @@ export const uploadCoverImage = async (file: File): Promise<string> => {
     headers: {
       "Content-Type": "multipart/form-data",
     },
-  })) as ApiResponse<never>;
+  })) as ApiResponse<{
+    url: string;
+    filename: string;
+    size: number;
+    type: string;
+  }>;
 
-  if (!data.success || !data.url) {
+  if (!data.success || !data.data?.url) {
     throw new Error(data.message || "图片上传失败");
   }
 
-  return data.url;
+  return data.data.url;
 };

@@ -111,6 +111,7 @@ export interface UserActivity {
   title: string;
   description?: string;
   coverImage: string;
+  images?: string[]; // 活动图片数组（支持多图轮播）
   eventStartTime: string;
   eventEndTime: string;
   location: string;

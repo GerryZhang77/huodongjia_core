@@ -19,6 +19,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui";
+import { ImageCarousel } from "@/components/business/ImageCarousel";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useActivityDetail, useUserActivities } from "@/features/user";
 import type { UserActivityStatus } from "@/services/userApi";
@@ -231,61 +232,64 @@ const UserActivityDetail: FC = () => {
             </button>
           )}
 
-          {/* 封面区域 */}
-          <div className="relative aspect-[4/3] lg:aspect-[21/9] md:rounded-t-2xl overflow-hidden">
-            <img
-              src={activity.coverImage}
-              alt={activity.title}
-              className="w-full h-full object-cover"
-            />
-            {/* 渐变遮罩 */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
+          {/* 封面区域 - 图片轮播 */}
+          <ImageCarousel
+            images={
+              activity.images?.length ? activity.images : [activity.coverImage]
+            }
+            heightClass="aspect-[4/3] lg:aspect-[21/9]"
+            className="md:rounded-t-2xl"
+            renderOverlay={() => (
+              <>
+                {/* 顶部导航 - 增加顶部安全区域 */}
+                <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-20">
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                  >
+                    <ArrowLeft size={20} className="text-white" />
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsFavorited(!isFavorited)}
+                      className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                    >
+                      <Heart
+                        size={20}
+                        className={
+                          isFavorited
+                            ? "text-red-400 fill-red-400"
+                            : "text-white"
+                        }
+                      />
+                    </button>
+                    <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
+                      <Share2 size={20} className="text-white" />
+                    </button>
+                  </div>
+                </div>
 
-            {/* 顶部导航 - 增加顶部安全区域 */}
-            <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
-              >
-                <ArrowLeft size={20} className="text-white" />
-              </button>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsFavorited(!isFavorited)}
-                  className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                {/* 状态标签 - 移动到右下角，避免与返回按钮重叠 */}
+                <div
+                  className={`absolute bottom-3 right-4 px-3 py-1 rounded-full text-xs font-medium text-white z-20 ${config.color}`}
                 >
-                  <Heart
-                    size={20}
-                    className={
-                      isFavorited ? "text-red-400 fill-red-400" : "text-white"
-                    }
-                  />
-                </button>
-                <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
-                  <Share2 size={20} className="text-white" />
-                </button>
-              </div>
-            </div>
+                  {config.label}
+                </div>
 
-            {/* 状态标签 - 移动到右下角，避免与返回按钮重叠 */}
-            <div
-              className={`absolute bottom-3 right-4 px-3 py-1 rounded-full text-xs font-medium text-white ${config.color}`}
-            >
-              {config.label}
-            </div>
-
-            {/* 底部标签 */}
-            <div className="absolute bottom-3 left-4 flex gap-1.5">
-              {activity.tags.slice(0, 3).map((tag, i) => (
-                <span
-                  key={i}
-                  className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
+                {/* 底部标签 */}
+                <div className="absolute bottom-3 left-4 flex gap-1.5 z-20">
+                  {activity.tags.slice(0, 3).map((tag, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          />
 
           {/* 内容区 */}
           <div className="px-4 py-5 md:px-6 lg:px-8">

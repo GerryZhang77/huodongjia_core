@@ -1,63 +1,133 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import {
-  NavBar,
-  Button,
-  Card,
-  Tag,
-  Toast,
-  ActionSheet,
-  Dialog,
-  Tabs,
-  List,
-  Avatar,
-  Badge,
-} from "antd-mobile";
-import {
-  MoreOutline,
-  EditSOutline,
-  UserOutline,
-  CalendarOutline,
-  LocationOutline,
-  TeamOutline,
-  MessageOutline,
-} from "antd-mobile-icons";
-import { useStore } from "@/store";
+/**
+ * 商家端活动详情页
+ * 现代化设计，与用户端风格一致
+ * 保留商家特有功能：编辑、报名管理、匹配配置、参与者管理
+ */
 
+import { FC, useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  MoreHorizontal,
+  Edit3,
+  Users,
+  Settings,
+  Calendar,
+  MapPin,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
+import { Toast, Dialog, ActionSheet } from "antd-mobile";
+import { Button } from "@/components/ui";
+import {
+  ParticipantAvatar,
+  type ParticipantInfo,
+} from "@/components/business/ParticipantAvatar";
+import { ImageCarousel } from "@/components/business/ImageCarousel";
+import { useStore } from "@/store";
+import dayjs from "dayjs";
+
+// 活动接口定义 (与 Mock 数据格式匹配)
 interface Activity {
-  activity_id: string;
+  id: string;
   title: string;
   description: string;
-  start_time: string;
-  end_time: string;
+  event_start_time: string;
+  event_end_time: string;
+  registration_start_time?: string;
+  registration_end_time?: string;
   location: string;
   max_participants: number;
   current_participants: number;
-  status: string;
-  cover_image?: string;
+  status: ActivityStatus;
+  cover_image?: string | null;
+  images?: string[];
   category: string;
   tags: string[];
   requirements?: string;
   contact_info?: string;
+  fee?: number;
+  is_public?: boolean;
+  allow_waitlist?: boolean;
+  organizer?: {
+    id: string;
+    name: string;
+    avatar?: string | null;
+  };
   created_at: string;
+  updated_at?: string;
 }
 
-interface Participant {
-  user_id: string;
-  name: string;
-  avatar?: string;
-  registration_time: string;
-  status: "confirmed" | "waitlist" | "cancelled";
-}
+// 活动状态类型 (与 Mock 数据匹配)
+type ActivityStatus =
+  | "draft"
+  | "published"
+  | "recruiting"
+  | "full"
+  | "ongoing"
+  | "completed"
+  | "cancelled";
 
-const ActivityDetail: React.FC = () => {
+// 状态配置
+const statusConfig: Record<
+  ActivityStatus,
+  { label: string; color: string; bgColor: string }
+> = {
+  draft: {
+    label: "草稿",
+    color: "text-gray-600",
+    bgColor: "bg-gray-100",
+  },
+  published: {
+    label: "已发布",
+    color: "text-primary-600",
+    bgColor: "bg-primary-50",
+  },
+  recruiting: {
+    label: "报名中",
+    color: "text-success-600",
+    bgColor: "bg-success-50",
+  },
+  full: {
+    label: "已满员",
+    color: "text-warning-600",
+    bgColor: "bg-warning-50",
+  },
+  ongoing: {
+    label: "进行中",
+    color: "text-primary-600",
+    bgColor: "bg-primary-50",
+  },
+  completed: {
+    label: "已结束",
+    color: "text-gray-500",
+    bgColor: "bg-gray-100",
+  },
+  cancelled: {
+    label: "已取消",
+    color: "text-error-600",
+    bgColor: "bg-error-50",
+  },
+};
+
+// 格式化日期
+const formatDate = (dateStr: string): string => {
+  return dayjs(dateStr).format("M月D日 HH:mm");
+};
+
+const formatDateTime = (dateStr: string): string => {
+  return dayjs(dateStr).format("YYYY年M月D日 HH:mm");
+};
+
+const ActivityDetail: FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { id } = useParams();
   const { token } = useStore();
+
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<ParticipantInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("detail");
+  const [activeTab, setActiveTab] = useState<"info" | "participants">("info");
 
   // 获取活动详情
   const fetchActivityDetail = async () => {
@@ -107,7 +177,7 @@ const ActivityDetail: React.FC = () => {
   useEffect(() => {
     if (id) {
       Promise.all([fetchActivityDetail(), fetchParticipants()]).finally(() =>
-        setLoading(false)
+        setLoading(false),
       );
     }
   }, [id]);
@@ -117,19 +187,14 @@ const ActivityDetail: React.FC = () => {
     ActionSheet.show({
       actions: [
         {
-          text: "编辑活动",
-          key: "edit",
-          onClick: () => navigate(`/activity/${id}/edit`),
+          text: "发送通知",
+          key: "notify",
+          onClick: () => Toast.show("功能开发中"),
         },
         {
-          text: "报名管理",
-          key: "enrollment",
-          onClick: () => navigate(`/activity/${id}/enrollment`),
-        },
-        {
-          text: "匹配配置",
-          key: "matching",
-          onClick: () => navigate(`/activity/${id}/matching`),
+          text: "复制活动",
+          key: "copy",
+          onClick: () => Toast.show("功能开发中"),
         },
         {
           text: "取消活动",
@@ -146,6 +211,8 @@ const ActivityDetail: React.FC = () => {
   const handleCancelActivity = () => {
     Dialog.confirm({
       content: "确定要取消这个活动吗？取消后无法恢复。",
+      confirmText: "确定取消",
+      cancelText: "再想想",
       onConfirm: async () => {
         try {
           const response = await fetch(`/api/delete-event/${id}`, {
@@ -172,330 +239,417 @@ const ActivityDetail: React.FC = () => {
     });
   };
 
-  // 状态标签配置
-  const getStatusTag = (status: string) => {
-    const statusConfig = {
-      draft: { text: "草稿", color: "default" },
-      published: { text: "已发布", color: "primary" },
-      ongoing: { text: "进行中", color: "success" },
-      completed: { text: "已结束", color: "default" },
-      cancelled: { text: "已取消", color: "danger" },
-    };
-
-    const config =
-      statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-    return (
-      <Tag color={config.color} fill="outline">
-        {config.text}
-      </Tag>
-    );
-  };
-
-  // 格式化时间
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   // 计算参与率
   const getParticipationRate = () => {
     if (!activity || activity.max_participants === 0) return 0;
     return Math.round(
-      (activity.current_participants / activity.max_participants) * 100
+      (activity.current_participants / activity.max_participants) * 100,
     );
   };
 
-  if (loading || !activity) {
+  // 获取状态徽章样式
+  const getStatusBadge = (status: ActivityStatus) => {
+    const config = statusConfig[status] || statusConfig.draft;
+    return (
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium ${config.color} ${config.bgColor}`}
+      >
+        {config.label}
+      </span>
+    );
+  };
+
+  // 加载中状态
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-          <p className="text-gray-600">加载中...</p>
+          <div className="w-8 h-8 border-2 border-primary-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <p className="text-gray-500 text-sm">加载中...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <NavBar
-        back="返回"
-        onBack={() => navigate("/dashboard")}
-        right={
-          <Button fill="none" onClick={handleMoreActions}>
-            <MoreOutline />
-          </Button>
-        }
-        style={{
-          "--height": "48px",
-          "--border-bottom": "1px solid var(--adm-border-color)",
-        }}
-      >
-        活动详情
-      </NavBar>
-
-      {/* 封面图片 */}
-      {activity.cover_image && (
-        <div className="relative">
-          <img
-            src={activity.cover_image}
-            alt={activity.title}
-            className="w-full h-48 object-cover"
-          />
-          <div className="absolute top-4 right-4">
-            {getStatusTag(activity.status)}
-          </div>
-        </div>
-      )}
-
-      {/* 基本信息 */}
-      <div className="p-4">
-        <Card style={{ "--border-radius": "12px" } as React.CSSProperties}>
-          <div className="space-y-4">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 mb-2">
-                {activity.title}
-              </h1>
-              {!activity.cover_image && (
-                <div className="mb-2">{getStatusTag(activity.status)}</div>
-              )}
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {activity.description}
-              </p>
-            </div>
-
-            {/* 标签 */}
-            {activity.tags && activity.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {activity.tags.map((tag, index) => (
-                  <Tag
-                    key={index}
-                    color="primary"
-                    fill="outline"
-                    className="text-xs"
-                  >
-                    {tag}
-                  </Tag>
-                ))}
-              </div>
-            )}
-
-            {/* 时间地点信息 */}
-            <div className="space-y-3 pt-3 border-t border-gray-100">
-              <div className="flex items-center text-sm text-gray-600">
-                <CalendarOutline className="mr-3 text-blue-500" />
-                <div>
-                  <div>开始：{formatDateTime(activity.start_time)}</div>
-                  <div>结束：{formatDateTime(activity.end_time)}</div>
-                </div>
-              </div>
-
-              <div className="flex items-center text-sm text-gray-600">
-                <LocationOutline className="mr-3 text-blue-500" />
-                <span>{activity.location}</span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <div className="flex items-center">
-                  <UserOutline className="mr-3 text-blue-500" />
-                  <span>
-                    {activity.current_participants}/{activity.max_participants}{" "}
-                    人
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 transition-all duration-300"
-                      style={{ width: `${getParticipationRate()}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    {getParticipationRate()}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* 标签页 */}
-      <div className="bg-white">
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          style={{
-            "--content-padding": "16px",
-            "--title-font-size": "14px",
-          }}
+  // 活动不存在
+  if (!activity) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <AlertCircle size={40} className="text-gray-300 mb-3" />
+        <p className="text-gray-500 text-sm mb-4">活动不存在</p>
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="px-4 py-2 bg-primary-400 text-white text-sm rounded-lg"
         >
-          <Tabs.Tab title="详细信息" key="detail">
-            <div className="space-y-4">
-              {activity.requirements && (
-                <Card
-                  title="参与要求"
-                  style={{ "--border-radius": "12px" } as React.CSSProperties}
-                >
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    {activity.requirements}
-                  </p>
-                </Card>
-              )}
+          返回管理后台
+        </button>
+      </div>
+    );
+  }
 
-              {activity.contact_info && (
-                <Card
-                  title="联系方式"
-                  style={{ "--border-radius": "12px" } as React.CSSProperties}
-                >
-                  <div className="flex items-center">
-                    <MessageOutline className="mr-2 text-blue-500" />
-                    <span className="text-gray-600 text-sm">
-                      {activity.contact_info}
-                    </span>
-                  </div>
-                </Card>
-              )}
-
-              <Card
-                title="活动信息"
-                style={{ "--border-radius": "12px" } as React.CSSProperties}
-              >
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex justify-between">
-                    <span>活动分类：</span>
-                    <span>{activity.category}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>创建时间：</span>
-                    <span>{formatDateTime(activity.created_at)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>活动ID：</span>
-                    <span className="font-mono text-xs">
-                      {activity.activity_id}
-                    </span>
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {/* 页面内容 */}
+      <div className="md:py-6 lg:py-8">
+        {/* 响应式容器 */}
+        <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen md:min-h-0 pb-52 md:pb-48 shadow-sm md:shadow-xl md:rounded-2xl md:mb-6 relative">
+          {/* 封面区域 - 图片轮播 */}
+          <ImageCarousel
+            images={
+              activity.images?.length
+                ? activity.images
+                : activity.cover_image
+                  ? [activity.cover_image]
+                  : []
+            }
+            heightClass="aspect-[4/3] lg:aspect-[21/9]"
+            className="md:rounded-t-2xl"
+            renderOverlay={() => (
+              <>
+                {/* 顶部导航 */}
+                <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-20">
+                  <button
+                    onClick={() => navigate("/dashboard")}
+                    className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                  >
+                    <ArrowLeft size={20} className="text-white" />
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => navigate(`/dashboard/activity/${id}/edit`)}
+                      className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                    >
+                      <Edit3 size={20} className="text-white" />
+                    </button>
+                    <button
+                      onClick={handleMoreActions}
+                      className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                    >
+                      <MoreHorizontal size={20} className="text-white" />
+                    </button>
                   </div>
                 </div>
-              </Card>
-            </div>
-          </Tabs.Tab>
 
-          <Tabs.Tab
-            title={`参与者 (${participants.length})`}
-            key="participants"
-          >
-            {participants.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">暂无参与者</div>
-            ) : (
-              <List>
-                {participants.map((participant) => (
-                  <List.Item
-                    key={participant.user_id}
-                    prefix={
-                      <Avatar
-                        src={participant.avatar}
-                        style={{ "--size": "40px" } as React.CSSProperties}
-                        fallback={
-                          <span className="text-sm font-medium">
-                            {participant.name.charAt(0)}
-                          </span>
-                        }
-                      />
-                    }
-                    extra={
-                      <Badge
-                        content={
-                          participant.status === "confirmed"
-                            ? "已确认"
-                            : participant.status === "waitlist"
-                            ? "候补"
-                            : "已取消"
-                        }
-                        color={
-                          participant.status === "confirmed"
-                            ? "success"
-                            : participant.status === "waitlist"
-                            ? "warning"
-                            : "danger"
-                        }
-                      />
-                    }
-                  >
-                    <div>
-                      <div className="font-medium">{participant.name}</div>
-                      <div className="text-xs text-gray-500">
-                        报名时间：
-                        {formatDateTime(participant.registration_time)}
-                      </div>
-                    </div>
-                  </List.Item>
-                ))}
-              </List>
+                {/* 状态标签 */}
+                <div className="absolute bottom-3 right-4 z-20">
+                  {getStatusBadge(activity.status)}
+                </div>
+
+                {/* 底部标签 */}
+                {activity.tags && activity.tags.length > 0 && (
+                  <div className="absolute bottom-3 left-4 flex gap-1.5 z-20">
+                    {activity.tags.slice(0, 3).map((tag, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
-          </Tabs.Tab>
-        </Tabs>
-      </div>
+          />
 
-      {/* 底部操作按钮 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 safe-area-pb">
-        <div className="flex space-x-3">
-          <Button
-            color="primary"
-            fill="outline"
-            size="large"
-            onClick={() => navigate(`/activity/${id}/edit`)}
-            style={
-              {
-                "--border-radius": "12px",
-                flex: 1,
-              } as React.CSSProperties
-            }
-          >
-            <EditSOutline className="mr-1" />
-            编辑
-          </Button>
+          {/* 内容区 */}
+          <div className="px-4 py-5 md:px-6 lg:px-8">
+            {/* 标题 */}
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
+              {activity.title}
+            </h1>
 
-          <Button
-            color="primary"
-            size="large"
-            onClick={() => navigate(`/activity/${id}/enrollment`)}
-            style={
-              {
-                "--border-radius": "12px",
-                flex: 1,
-              } as React.CSSProperties
-            }
-          >
-            <TeamOutline className="mr-1" />
-            报名管理
-          </Button>
+            {/* 数据统计卡片 */}
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="bg-primary-50 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-primary-500">
+                  {activity.current_participants}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">已报名</p>
+              </div>
+              <div className="bg-success-50 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-success-500">
+                  {activity.max_participants}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">名额上限</p>
+              </div>
+              <div className="bg-secondary-50 rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold text-secondary-500">
+                  {getParticipationRate()}%
+                </p>
+                <p className="text-xs text-gray-500 mt-1">报名率</p>
+              </div>
+            </div>
 
-          <Button
-            color="primary"
-            size="large"
-            onClick={() => navigate(`/activity/${id}/matching`)}
-            style={
-              {
-                "--border-radius": "12px",
-                flex: 1,
-              } as React.CSSProperties
-            }
-          >
-            匹配配置
-          </Button>
+            {/* 信息卡片 - 网格布局 */}
+            <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+              {/* 时间 */}
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+                  <Calendar size={16} className="text-primary-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">活动时间</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {formatDate(activity.event_start_time)} -{" "}
+                    {formatDate(activity.event_end_time)}
+                  </p>
+                </div>
+              </div>
+
+              {/* 地点 */}
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-success-50 flex items-center justify-center flex-shrink-0">
+                  <MapPin size={16} className="text-success-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">活动地点</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {activity.location}
+                  </p>
+                </div>
+              </div>
+
+              {/* 分类 */}
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-secondary-50 flex items-center justify-center flex-shrink-0">
+                  <Settings size={16} className="text-secondary-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">活动分类</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {activity.category}
+                  </p>
+                </div>
+              </div>
+
+              {/* 创建时间 */}
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <Clock size={16} className="text-gray-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">创建时间</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {formatDateTime(activity.created_at)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 分隔线 */}
+            <div className="h-px bg-gray-100 my-5" />
+
+            {/* Tab 切换 */}
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveTab("info")}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "info"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500"
+                }`}
+              >
+                详细信息
+              </button>
+              <button
+                onClick={() => setActiveTab("participants")}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "participants"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500"
+                }`}
+              >
+                参与者 ({participants.length})
+              </button>
+            </div>
+
+            {/* Tab 内容 */}
+            <div className="mt-4">
+              {activeTab === "info" && (
+                <div className="space-y-4">
+                  {/* 活动简介 */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                      活动简介
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {activity.description || "暂无活动简介"}
+                    </p>
+                  </div>
+
+                  {/* 参与要求 */}
+                  {activity.requirements && (
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                        参与要求
+                      </h3>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {activity.requirements}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 联系方式 */}
+                  {activity.contact_info && (
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                        联系方式
+                      </h3>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {activity.contact_info}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 活动ID */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                      活动ID
+                    </h3>
+                    <p className="text-xs font-mono text-gray-500">
+                      {activity.id}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "participants" && (
+                <div>
+                  {participants.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Users size={40} className="mx-auto text-gray-300 mb-3" />
+                      <p className="text-gray-500 text-sm">暂无参与者</p>
+                      <p className="text-gray-400 text-xs mt-1">
+                        报名开始后参与者将在这里显示
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {/* 参与者统计 */}
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <span>
+                            已确认:{" "}
+                            <span className="text-success-600 font-medium">
+                              {
+                                participants.filter(
+                                  (p) => p.status === "confirmed",
+                                ).length
+                              }
+                            </span>
+                          </span>
+                          <span>
+                            待审核:{" "}
+                            <span className="text-primary-600 font-medium">
+                              {
+                                participants.filter(
+                                  (p) => p.status === "pending",
+                                ).length
+                              }
+                            </span>
+                          </span>
+                          <span>
+                            候补:{" "}
+                            <span className="text-warning-600 font-medium">
+                              {
+                                participants.filter(
+                                  (p) => p.status === "waitlist",
+                                ).length
+                              }
+                            </span>
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          共 {participants.length} 人
+                        </span>
+                      </div>
+
+                      {/* 参与者列表 */}
+                      {participants.map((participant) => (
+                        <div
+                          key={participant.user_id}
+                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                        >
+                          {/* 使用 ParticipantAvatar 组件 */}
+                          <ParticipantAvatar
+                            participant={participant}
+                            size="medium"
+                            showName
+                            showStatus
+                            className="flex-1"
+                          />
+
+                          {/* 报名时间 */}
+                          {participant.registration_time && (
+                            <span className="text-[10px] text-gray-400 flex-shrink-0">
+                              {formatDateTime(participant.registration_time)}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 底部操作栏 */}
+          <div className="absolute bottom-0 left-0 right-0 z-50 md:rounded-b-2xl overflow-hidden">
+            <div className="bg-white border-t border-gray-100 px-4 pt-3 pb-4 lg:pb-6">
+              {/* 快捷操作按钮 */}
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <button
+                  onClick={() => navigate(`/dashboard/activity/${id}/edit`)}
+                  className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <Edit3 size={20} className="text-primary-500" />
+                  <span className="text-xs text-gray-600">编辑活动</span>
+                </button>
+                <button
+                  onClick={() =>
+                    navigate(`/dashboard/activity/${id}/enrollment`)
+                  }
+                  className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <Users size={20} className="text-success-500" />
+                  <span className="text-xs text-gray-600">报名管理</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/dashboard/activity/${id}/matching`)}
+                  className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <Settings size={20} className="text-secondary-500" />
+                  <span className="text-xs text-gray-600">匹配配置</span>
+                </button>
+              </div>
+
+              {/* 主操作按钮 */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleMoreActions}
+                  className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                >
+                  <MoreHorizontal size={22} className="text-gray-400" />
+                </button>
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    navigate(`/dashboard/activity/${id}/enrollment`)
+                  }
+                  className="flex-1 h-12"
+                >
+                  管理报名
+                </Button>
+              </div>
+
+              {/* 移动端底部安全区域 */}
+              <div className="h-4 lg:hidden" />
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* 底部安全区域 */}
-      <div className="h-20"></div>
     </div>
   );
 };
