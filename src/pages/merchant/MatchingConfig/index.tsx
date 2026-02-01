@@ -5,6 +5,8 @@
  * 功能:
  * - 规则设置: 自然语言输入 → AI 生成规则 → 调整权重 → 边界条件
  * - 匹配结果: 查看分组 → 拖拽调整 → 锁定 → 发布
+ * - 重新匹配: 保留锁定分组 → 调整规则 → 重新计算
+ * - 后台执行: 最小化匹配进度 → 继续其他操作
  */
 
 import React, { useMemo } from "react";
@@ -13,6 +15,10 @@ import { Settings, Users, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import MerchantLayout from "@/components/layout/MerchantLayout";
 import { Button } from "@/components/ui";
 import { RulesTab, ResultsTab } from "@/features/matching/components";
+import {
+  MatchingProgressOverlay,
+  MatchingProgressBanner,
+} from "@/features/matching/components/MatchingProgressOverlay";
 import { useMatchingLogic } from "@/features/matching/hooks/useMatchingLogic";
 import type { TabKey } from "@/features/matching/types";
 
@@ -40,12 +46,20 @@ const MatchingConfigPage: React.FC = () => {
     isMatching,
     isPublishing,
     matchingProgress,
+    matchingMessage,
+
+    // 重新匹配相关状态
+    isRematchMode,
+    isBackgroundMatching,
+    lockedGroupsForRematch,
+    currentHistoryId,
 
     // 数据
     rules,
     constraints,
     participants,
     groups,
+    history,
     matchingStats,
 
     // 设置方法
@@ -59,6 +73,21 @@ const MatchingConfigPage: React.FC = () => {
     handleStartMatching,
     handleRematch,
     handlePublish,
+    handleViewHistory,
+    handleRestoreHistory,
+
+    // 规则配置操作
+    savedConfigs,
+    handleLoadConfig,
+    handleDeleteConfig,
+
+    // 重新匹配操作
+    handleEnterRematchMode,
+    handleCancelRematchMode,
+
+    // 后台匹配操作
+    handleMinimizeMatching,
+    handleExpandMatching,
   } = useMatchingLogic({ activityId: activityId || "" });
 
   // 计算结果 Tab 的徽章
@@ -69,9 +98,24 @@ const MatchingConfigPage: React.FC = () => {
     return undefined;
   }, [groups]);
 
-  // 处理返回
+  // 处理返回 - 返回到活动详情页
   const handleBack = () => {
-    navigate(`/dashboard/activity/${activityId}`);
+    navigate(`/dashboard/activity/${activityId}/detail`);
+  };
+
+  // 适配器：将 handlePublish 转换为 ResultsTab 期望的签名
+  // ResultsTab 期望: (sendNotification?: boolean, notificationConfig?: NotificationConfig) => Promise<void | { success: boolean; error?: string }>
+  // Hook 提供: (historyId?: string) => Promise<void>
+  const handlePublishAdapter = async (
+    _sendNotification?: boolean,
+    _notificationConfig?: unknown,
+  ): Promise<void | { success: boolean; error?: string }> => {
+    try {
+      await handlePublish();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
   };
 
   // 加载状态
@@ -111,6 +155,14 @@ const MatchingConfigPage: React.FC = () => {
       onBack={handleBack}
       showTabBar={false}
     >
+      {/* 后台匹配 Banner（最小化状态时显示在顶部） */}
+      <MatchingProgressBanner
+        visible={isBackgroundMatching}
+        progress={matchingProgress}
+        message={matchingMessage}
+        onExpand={handleExpandMatching}
+      />
+
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 md:py-6">
         {/* 页面标题 */}
         <div className="mb-6">
@@ -168,6 +220,12 @@ const MatchingConfigPage: React.FC = () => {
             isMatching={isMatching}
             matchingProgress={matchingProgress}
             participantCount={participants.length}
+            isRematchMode={isRematchMode}
+            lockedGroupsCount={lockedGroupsForRematch.length}
+            onCancelRematchMode={handleCancelRematchMode}
+            savedConfigs={savedConfigs}
+            onLoadConfig={handleLoadConfig}
+            onDeleteConfig={handleDeleteConfig}
           />
         ) : (
           <ResultsTab
@@ -176,13 +234,31 @@ const MatchingConfigPage: React.FC = () => {
             participants={participants}
             rules={rules}
             isPublishing={isPublishing}
-            onPublish={handlePublish}
-            onRematch={handleRematch}
+            onPublish={handlePublishAdapter}
+            onRematch={handleEnterRematchMode}
             isRematching={isMatching}
             matchingStats={matchingStats || undefined}
+            history={history}
+            currentHistoryId={currentHistoryId}
+            onViewHistory={handleViewHistory}
+            onRestoreHistory={handleRestoreHistory}
           />
         )}
       </div>
+
+      {/* 匹配进度覆盖层（全屏模式） */}
+      {isMatching && !isBackgroundMatching && (
+        <MatchingProgressOverlay
+          visible={true}
+          progress={matchingProgress}
+          message={matchingMessage}
+          onMinimize={handleMinimizeMatching}
+          onCancel={() => {
+            // TODO: 实现取消匹配功能
+            console.log("Cancel matching");
+          }}
+        />
+      )}
     </MerchantLayout>
   );
 };

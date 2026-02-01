@@ -223,7 +223,7 @@ function App() {
                   }
                 />
 
-                {/* B端商家 - 人才库 */}
+                {/* B端商家 - 用户发现 */}
                 <Route
                   path="/dashboard/talent-pool"
                   element={

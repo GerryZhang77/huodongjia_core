@@ -350,7 +350,7 @@ export const DashboardNew: FC = () => {
     },
     {
       icon: UserSearch,
-      label: "人才库",
+      label: "用户发现",
       path: "/dashboard/talent-pool",
       color: "text-accent-500",
     },

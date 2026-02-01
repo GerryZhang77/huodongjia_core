@@ -120,7 +120,9 @@ const MatchingConfiguration: React.FC = () => {
       {/* 导航栏 */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto">
-          <NavBar onBack={() => navigate(-1)}>智能匹配配置</NavBar>
+          <NavBar onBack={() => navigate(`/dashboard/activity/${id}/detail`)}>
+            智能匹配配置
+          </NavBar>
         </div>
       </div>
 

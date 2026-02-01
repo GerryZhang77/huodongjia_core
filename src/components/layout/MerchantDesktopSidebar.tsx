@@ -38,7 +38,7 @@ export const MerchantDesktopSidebar: FC = () => {
   // TODO: 从通知数据获取未读数量
   const unreadCount = 3;
 
-  // 商家端导航配置 - 5项: 活动管理 | 创建活动 | 人才库 | 消息 | 我的
+  // 商家端导航配置 - 5项: 活动管理 | 创建活动 | 用户发现 | 消息 | 我的
   const navItems: NavItem[] = [
     {
       key: "dashboard",
@@ -54,12 +54,11 @@ export const MerchantDesktopSidebar: FC = () => {
     },
     {
       key: "talent-pool",
-      label: "人才库",
+      label: "用户发现",
       icon: UserSearch,
       path: "/dashboard/talent-pool",
       isNew: true,
-      tooltip:
-        "平台人才数据库，可按活跃度、职业、出勤率等维度筛选并推送活动邀请",
+      tooltip: "发现活跃用户，可按活跃度、职业、出勤率等维度筛选并推送活动邀请",
     },
     {
       key: "notifications",
