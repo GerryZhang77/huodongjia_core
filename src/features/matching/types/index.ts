@@ -130,3 +130,57 @@ export interface BubbleData {
   color: string;
   connections: string[];
 }
+
+/**
+ * 匹配历史记录
+ */
+export interface MatchingHistory {
+  id: string;
+  activityId: string;
+  /** 匹配执行时间 */
+  executedAt: string;
+  /** 使用的规则配置 */
+  rules: MatchingRule[];
+  /** 匹配结果分组 */
+  groups: MatchingGroup[];
+  /** 统计信息 */
+  statistics: {
+    totalParticipants: number;
+    totalGroups: number;
+    avgScore: number;
+    minScore: number;
+    maxScore: number;
+  };
+  /** 是否已发布 */
+  isPublished: boolean;
+  /** 创建人 */
+  createdBy?: string;
+  /** 备注 */
+  note?: string;
+}
+
+/**
+ * 匹配任务状态
+ */
+export type MatchingTaskStatus =
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
+
+/**
+ * 匹配任务
+ */
+export interface MatchingTask {
+  id: string;
+  activityId: string;
+  status: MatchingTaskStatus;
+  progress: number; // 0-100
+  message?: string;
+  /** 开始时间 */
+  startedAt: string;
+  /** 完成时间 */
+  completedAt?: string;
+  /** 匹配结果 ID (完成后) */
+  resultId?: string;
+}

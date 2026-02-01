@@ -21,8 +21,13 @@ import {
   Users,
   Scale,
   Building2,
+  Lock,
+  X,
+  RefreshCw,
 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, Switch } from "@/components/ui";
+import { WeightSlider } from "../WeightSlider";
+import { SaveConfigDialog, type SavedConfig } from "../SaveConfigDialog";
 import type { MatchingRule as MatchRule, MatchConstraints } from "../../types";
 import AddRuleModal from "./AddRuleModal";
 
@@ -37,8 +42,8 @@ interface RulesTabProps {
   constraints: MatchConstraints;
   /** 约束条件变更回调 */
   onConstraintsChange: (constraints: MatchConstraints) => void;
-  /** 保存规则配置 */
-  onSaveRules: () => Promise<void>;
+  /** 保存规则配置（带名称） */
+  onSaveRules: (configName: string) => Promise<void>;
   /** 开始匹配 */
   onStartMatching: () => Promise<void>;
   /** 是否正在匹配 */
@@ -47,6 +52,20 @@ interface RulesTabProps {
   matchingProgress: number;
   /** 参与人数 */
   participantCount: number;
+  /** 规则是否锁定（匹配过程中不可编辑） */
+  isRulesLocked?: boolean;
+  /** 是否处于重新匹配模式 */
+  isRematchMode?: boolean;
+  /** 重新匹配时锁定的分组数量 */
+  lockedGroupsCount?: number;
+  /** 取消重新匹配模式 */
+  onCancelRematchMode?: () => void;
+  /** 已保存的配置列表 */
+  savedConfigs?: SavedConfig[];
+  /** 加载已保存的配置 */
+  onLoadConfig?: (config: SavedConfig) => void;
+  /** 删除已保存的配置 */
+  onDeleteConfig?: (configId: string) => void;
 }
 
 /**
@@ -59,6 +78,7 @@ interface RuleCardProps {
   onDelete: () => void;
   isExpanded: boolean;
   onExpandToggle: () => void;
+  isLocked?: boolean;
 }
 
 const RuleCard: React.FC<RuleCardProps> = ({
@@ -68,10 +88,13 @@ const RuleCard: React.FC<RuleCardProps> = ({
   onDelete,
   isExpanded,
   onExpandToggle,
+  isLocked = false,
 }) => {
   return (
     <div
       className={`border rounded-xl transition-all duration-200 ${
+        isLocked ? "opacity-70" : ""
+      } ${
         rule.enabled
           ? "bg-primary-50/50 border-primary-200"
           : "bg-gray-50 border-gray-200"
@@ -79,35 +102,29 @@ const RuleCard: React.FC<RuleCardProps> = ({
     >
       {/* 头部 */}
       <div
-        className="flex items-center gap-3 p-4 cursor-pointer"
-        onClick={onExpandToggle}
+        className={`flex items-center gap-3 p-4 ${!isLocked ? "cursor-pointer" : "cursor-not-allowed"}`}
+        onClick={!isLocked ? onExpandToggle : undefined}
       >
         {/* 开关 */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${
-            rule.enabled ? "bg-primary-400" : "bg-gray-300"
-          }`}
-        >
-          <span
-            className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-              rule.enabled ? "translate-x-5" : "translate-x-1"
-            }`}
-          />
-        </button>
+        <Switch
+          checked={rule.enabled}
+          onChange={() => !isLocked && onToggle()}
+          disabled={isLocked}
+          aria-label={`${rule.enabled ? "禁用" : "启用"}规则: ${rule.name}`}
+        />
 
         {/* 规则信息 */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h4 className="font-medium text-gray-900 truncate">{rule.name}</h4>
-            {rule.enabled && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-600 rounded-full">
-                {rule.weight}%
-              </span>
-            )}
+            {/* 权重标签 - 始终占位，禁用时透明 */}
+            <span
+              className={`px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-600 rounded-full transition-opacity duration-200 ${
+                rule.enabled ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {rule.weight}%
+            </span>
           </div>
           {rule.description && (
             <p className="text-sm text-gray-500 mt-0.5 truncate">
@@ -116,60 +133,35 @@ const RuleCard: React.FC<RuleCardProps> = ({
           )}
         </div>
 
-        {/* 展开/收起图标 */}
-        {rule.enabled && (
-          <div className="text-gray-400">
-            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </div>
-        )}
+        {/* 展开/收起图标 - 始终占位，禁用时透明 */}
+        <div
+          className={`text-gray-400 transition-opacity duration-200 ${
+            rule.enabled ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </div>
       </div>
 
       {/* 展开内容 */}
-      {rule.enabled && isExpanded && (
+      {rule.enabled && isExpanded && !isLocked && (
         <div className="px-4 pb-4 border-t border-primary-100 pt-4">
           {/* 权重滑块 */}
           <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">权重调整</span>
-              <span className="text-lg font-bold text-primary-500">
-                {rule.weight}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
+            <WeightSlider
               value={rule.weight}
-              onChange={(e) => onWeightChange(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer
-                [&::-webkit-slider-thumb]:appearance-none
-                [&::-webkit-slider-thumb]:w-5
-                [&::-webkit-slider-thumb]:h-5
-                [&::-webkit-slider-thumb]:rounded-full
-                [&::-webkit-slider-thumb]:bg-primary-400
-                [&::-webkit-slider-thumb]:shadow-md
-                [&::-webkit-slider-thumb]:cursor-pointer
-                [&::-webkit-slider-thumb]:transition-transform
-                [&::-webkit-slider-thumb]:hover:scale-110"
-              style={{
-                background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${rule.weight}%, #E5E7EB ${rule.weight}%, #E5E7EB 100%)`,
-              }}
+              onChange={onWeightChange}
+              disabled={isLocked}
+              label="权重调整"
+              ticks={[0, 25, 50, 75, 100]}
             />
-            {/* 刻度 */}
-            <div className="flex justify-between mt-1 text-xs text-gray-400">
-              <span>0</span>
-              <span>25</span>
-              <span>50</span>
-              <span>75</span>
-              <span>100</span>
-            </div>
           </div>
 
           {/* 删除按钮 */}
           <button
             onClick={onDelete}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            disabled={isLocked}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 size={14} />
             <span>删除规则</span>
@@ -193,10 +185,21 @@ const RulesTab: React.FC<RulesTabProps> = ({
   isMatching,
   matchingProgress,
   participantCount,
+  isRulesLocked = false,
+  isRematchMode = false,
+  lockedGroupsCount = 0,
+  onCancelRematchMode,
+  savedConfigs = [],
+  onLoadConfig,
+  onDeleteConfig,
 }) => {
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConstraints, setShowConstraints] = useState(false);
+
+  // 保存配置弹窗状态
+  const [showSaveConfigDialog, setShowSaveConfigDialog] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   // 计算启用规则和权重总和
   const { enabledRules, totalWeight } = useMemo(() => {
@@ -229,6 +232,38 @@ const RulesTab: React.FC<RulesTabProps> = ({
     Toast.show({ content: "规则已添加", icon: "success" });
   };
 
+  // 打开保存配置弹窗
+  const handleOpenSaveDialog = () => {
+    if (rules.length === 0) {
+      Toast.show({ content: "暂无规则可保存", icon: "fail" });
+      return;
+    }
+    setShowSaveConfigDialog(true);
+  };
+
+  // 保存配置确认
+  const handleSaveConfigConfirm = async (configName: string) => {
+    setIsSavingConfig(true);
+    try {
+      await onSaveRules(configName);
+      setShowSaveConfigDialog(false);
+      Toast.show({ content: `配置"${configName}"已保存`, icon: "success" });
+    } catch (error) {
+      Toast.show({ content: "保存失败，请重试", icon: "fail" });
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  // 加载已保存的配置
+  const handleLoadConfig = (config: SavedConfig) => {
+    if (onLoadConfig) {
+      onLoadConfig(config);
+      setShowSaveConfigDialog(false);
+      Toast.show({ content: `已加载配置"${config.name}"`, icon: "success" });
+    }
+  };
+
   // 开始匹配前验证
   const handleStartMatching = async () => {
     if (enabledRules.length === 0) {
@@ -244,6 +279,59 @@ const RulesTab: React.FC<RulesTabProps> = ({
 
   return (
     <div className="pb-32">
+      {/* 重新匹配模式提示 Banner */}
+      {isRematchMode && (
+        <div className="mb-4 p-4 bg-gradient-to-r from-primary-50 to-accent-50 border border-primary-200 rounded-xl">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 flex items-center justify-center flex-shrink-0 shadow-sm">
+              <RefreshCw size={20} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold text-gray-900">
+                  重新匹配模式
+                </h4>
+                {onCancelRematchMode && (
+                  <button
+                    onClick={onCancelRematchMode}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 rounded-lg transition-colors"
+                  >
+                    <X size={14} />
+                    取消
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                调整规则后点击"开始匹配"重新计算未锁定的分组
+              </p>
+              {lockedGroupsCount > 0 && (
+                <div className="flex items-center gap-1.5 mt-2 px-2 py-1 bg-white/60 rounded-lg w-fit">
+                  <Lock size={12} className="text-amber-500" />
+                  <span className="text-xs font-medium text-amber-700">
+                    {lockedGroupsCount} 个分组已锁定，将保持不变
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 匹配进行中提示 */}
+      {isRulesLocked && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <Loader2 size={20} className="text-amber-600 animate-spin" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-amber-800">正在匹配中...</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              匹配过程中规则配置已锁定，完成后可继续编辑
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 规则列表 */}
       {rules.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 mb-4">
@@ -292,6 +380,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
                     expandedRuleId === rule.id ? null : rule.id!,
                   )
                 }
+                isLocked={isRulesLocked}
               />
             ))}
           </div>
@@ -299,7 +388,8 @@ const RulesTab: React.FC<RulesTabProps> = ({
           {/* 添加自定义规则按钮 */}
           <button
             onClick={() => setShowAddModal(true)}
-            className="w-full mt-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/30 transition-all flex items-center justify-center gap-2"
+            disabled={isRulesLocked}
+            className="w-full mt-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:text-gray-500 disabled:hover:bg-transparent"
           >
             <Plus size={18} />
             添加自定义规则
@@ -521,7 +611,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
             <Button
               variant="outline"
               size="large"
-              onClick={onSaveRules}
+              onClick={handleOpenSaveDialog}
               disabled={rules.length === 0}
               className="flex-1"
             >
@@ -562,6 +652,18 @@ const RulesTab: React.FC<RulesTabProps> = ({
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddRule}
         existingRules={rules}
+      />
+
+      {/* 保存配置命名弹窗 */}
+      <SaveConfigDialog
+        visible={showSaveConfigDialog}
+        rules={rules}
+        savedConfigs={savedConfigs}
+        onConfirm={handleSaveConfigConfirm}
+        onCancel={() => setShowSaveConfigDialog(false)}
+        onLoadConfig={onLoadConfig ? handleLoadConfig : undefined}
+        onDeleteConfig={onDeleteConfig}
+        isLoading={isSavingConfig}
       />
     </div>
   );

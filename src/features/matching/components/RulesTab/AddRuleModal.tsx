@@ -5,6 +5,7 @@
 import React, { useState } from "react";
 import { X, Info } from "lucide-react";
 import { Button } from "@/components/ui";
+import { WeightSlider } from "../WeightSlider";
 import type { MatchingRule, RuleType } from "../../types";
 
 interface AddRuleModalProps {
@@ -263,32 +264,11 @@ export const AddRuleModal: React.FC<AddRuleModalProps> = ({
           {((mode === "template" && selectedTemplate) ||
             (mode === "custom" && customName.trim())) && (
             <div className="p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-700">
-                  初始权重
-                </span>
-                <span className="text-lg font-bold text-primary-500">
-                  {weight}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="10"
-                max="100"
-                step="5"
+              <WeightSlider
                 value={weight}
-                onChange={(e) => setWeight(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer
-                  [&::-webkit-slider-thumb]:appearance-none
-                  [&::-webkit-slider-thumb]:w-5
-                  [&::-webkit-slider-thumb]:h-5
-                  [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:bg-primary-400
-                  [&::-webkit-slider-thumb]:shadow-md
-                  [&::-webkit-slider-thumb]:cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #3B82F6 0%, #3B82F6 ${weight}%, #E5E7EB ${weight}%, #E5E7EB 100%)`,
-                }}
+                onChange={setWeight}
+                label="初始权重"
+                ticks={[0, 25, 50, 75, 100]}
               />
             </div>
           )}

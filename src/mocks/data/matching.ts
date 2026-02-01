@@ -903,6 +903,133 @@ export const mockSimilarityMatrix = [
 // 辅助函数
 // ========================================
 
+// 引入报名数据
+import { mockEnrollments, type MockEnrollment } from "./enrollments";
+
+/**
+ * 根据活动ID获取参与者并生成匹配分组
+ * 解决 mockMatchingGroups 与实际活动报名数据不匹配的问题
+ */
+export function generateMatchingGroupsForActivity(
+  activityId: string,
+): MockMatchingGroup[] {
+  // 获取该活动的报名数据
+  const activityEnrollments = mockEnrollments.filter(
+    (e) => e.activity_id === activityId && e.status !== "cancelled",
+  );
+
+  if (activityEnrollments.length === 0) {
+    return [];
+  }
+
+  // 将报名数据转换为匹配组成员格式
+  const members: MockGroupMember[] = activityEnrollments.map((enrollment) => ({
+    user_id: enrollment.user_id,
+    name: enrollment.name,
+    avatar:
+      enrollment.avatar || `https://i.pravatar.cc/150?u=${enrollment.user_id}`,
+    keywords: [...enrollment.interests, ...enrollment.skills].slice(0, 3),
+    gender: enrollment.gender as "male" | "female",
+    profile: {
+      age: enrollment.age,
+      occupation: enrollment.occupation,
+      company: enrollment.company,
+      industry: enrollment.company, // 使用 company 作为 industry 的近似值
+      city: enrollment.city,
+    },
+  }));
+
+  // 简单分组算法：根据成员数量分成若干组
+  const groupSize = 4; // 每组4人
+  const groups: MockMatchingGroup[] = [];
+
+  for (let i = 0; i < members.length; i += groupSize) {
+    const groupMembers = members.slice(i, i + groupSize);
+    const groupIndex = Math.floor(i / groupSize);
+
+    // 根据成员特征生成匹配理由
+    const reasons = generateMatchReasons(groupMembers);
+
+    groups.push({
+      group_id: `group_${activityId}_${groupIndex + 1}`,
+      group_name: `第${groupIndex + 1}组`,
+      members: groupMembers,
+      similarity_score: 0.75 + Math.random() * 0.2, // 随机相似度 0.75-0.95
+      match_reasons: reasons,
+      is_locked: false,
+    });
+  }
+
+  return groups;
+}
+
+/**
+ * 根据成员特征生成匹配理由
+ */
+function generateMatchReasons(members: MockGroupMember[]): string[] {
+  const reasons: string[] = [];
+
+  // 检查性别比例
+  const maleCount = members.filter((m) => m.gender === "male").length;
+  const femaleCount = members.filter((m) => m.gender === "female").length;
+  if (maleCount > 0 && femaleCount > 0) {
+    reasons.push("性别比例均衡");
+  }
+
+  // 检查年龄分布
+  const ages = members.map((m) => m.profile.age).filter(Boolean);
+  if (ages.length > 1) {
+    const minAge = Math.min(...ages);
+    const maxAge = Math.max(...ages);
+    if (maxAge - minAge <= 10) {
+      reasons.push("年龄相近");
+    } else {
+      reasons.push("年龄分布合理");
+    }
+  }
+
+  // 检查城市分布
+  const cities = [
+    ...new Set(members.map((m) => m.profile.city).filter(Boolean)),
+  ];
+  if (cities.length > 1) {
+    reasons.push("跨城市交流机会");
+  } else if (cities.length === 1) {
+    reasons.push(`同城（${cities[0]}）便于线下交流`);
+  }
+
+  // 检查职业多样性
+  const occupations = [
+    ...new Set(members.map((m) => m.profile.occupation).filter(Boolean)),
+  ];
+  if (occupations.length > 1) {
+    reasons.push("职业背景多样");
+  }
+
+  // 检查关键词匹配
+  const allKeywords = members.flatMap((m) => m.keywords);
+  const keywordCounts = allKeywords.reduce(
+    (acc, kw) => {
+      acc[kw] = (acc[kw] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+  const commonKeywords = Object.entries(keywordCounts)
+    .filter(([, count]) => count > 1)
+    .map(([kw]) => kw);
+  if (commonKeywords.length > 0) {
+    reasons.push(`共同兴趣：${commonKeywords.slice(0, 2).join("、")}`);
+  }
+
+  // 确保至少有一个理由
+  if (reasons.length === 0) {
+    reasons.push("综合匹配度较高");
+  }
+
+  return reasons.slice(0, 4); // 最多返回4个理由
+}
+
 /**
  * 根据自然语言描述调整规则权重
  */
@@ -938,4 +1065,227 @@ export function adjustRulesByDescription(description: string): MockMatchRule[] {
  */
 export function generateMockEmbedding(dimension: number = 128): number[] {
   return Array.from({ length: dimension }, () => Math.random() * 2 - 1);
+}
+
+// ========================================
+// 匹配历史记录
+// ========================================
+export interface MockMatchingHistory {
+  id: string;
+  activityId: string;
+  executedAt: string;
+  rules: MockMatchRule[];
+  groups: MockMatchGroup[];
+  statistics: {
+    totalParticipants: number;
+    totalGroups: number;
+    avgScore: number;
+    minScore: number;
+    maxScore: number;
+  };
+  isPublished: boolean;
+  createdBy?: string;
+  note?: string;
+}
+
+// 内存存储匹配历史
+const matchingHistoryStore: Map<string, MockMatchingHistory[]> = new Map();
+
+// 预置一些历史记录 for ma_001 (使用真实的分组数据)
+const presetHistoryGroups = mockMatchingGroups.slice(0, 2); // 取前两个分组作为历史记录
+const presetTotalParticipants = presetHistoryGroups.reduce(
+  (sum, g) => sum + g.members.length,
+  0,
+);
+
+matchingHistoryStore.set("ma_001", [
+  {
+    id: "history_001",
+    activityId: "ma_001",
+    executedAt: "2025-01-15T10:30:00Z",
+    rules: mockMatchingRules.slice(0, 4),
+    groups: presetHistoryGroups,
+    statistics: {
+      totalParticipants: presetTotalParticipants,
+      totalGroups: presetHistoryGroups.length,
+      avgScore:
+        presetHistoryGroups.reduce((sum, g) => sum + g.similarity_score, 0) /
+        presetHistoryGroups.length,
+      minScore: Math.min(...presetHistoryGroups.map((g) => g.similarity_score)),
+      maxScore: Math.max(...presetHistoryGroups.map((g) => g.similarity_score)),
+    },
+    isPublished: false,
+    createdBy: "merchant_001",
+    note: "首次测试匹配",
+  },
+]);
+
+/**
+ * 获取活动的匹配历史记录
+ */
+export function getMatchingHistory(activityId: string): MockMatchingHistory[] {
+  return matchingHistoryStore.get(activityId) || [];
+}
+
+/**
+ * 保存匹配结果到历史记录
+ */
+export function saveMatchingHistory(
+  activityId: string,
+  rules: MockMatchRule[],
+  groups: MockMatchGroup[],
+  note?: string,
+): MockMatchingHistory {
+  const history: MockMatchingHistory = {
+    id: `history_${Date.now()}`,
+    activityId,
+    executedAt: new Date().toISOString(),
+    rules: JSON.parse(JSON.stringify(rules)),
+    groups: JSON.parse(JSON.stringify(groups)),
+    statistics: {
+      totalParticipants: groups.reduce((sum, g) => sum + g.members.length, 0),
+      totalGroups: groups.length,
+      avgScore:
+        groups.length > 0
+          ? groups.reduce((sum, g) => sum + g.similarity_score, 0) /
+            groups.length
+          : 0,
+      minScore:
+        groups.length > 0
+          ? Math.min(...groups.map((g) => g.similarity_score))
+          : 0,
+      maxScore:
+        groups.length > 0
+          ? Math.max(...groups.map((g) => g.similarity_score))
+          : 0,
+    },
+    isPublished: false,
+    createdBy: "merchant_001",
+    note,
+  };
+
+  const existingHistory = matchingHistoryStore.get(activityId) || [];
+  existingHistory.unshift(history); // 新记录放在前面
+  matchingHistoryStore.set(activityId, existingHistory);
+
+  return history;
+}
+
+/**
+ * 发布匹配结果
+ */
+export function publishMatchingHistory(historyId: string): boolean {
+  for (const [activityId, histories] of matchingHistoryStore) {
+    const history = histories.find((h) => h.id === historyId);
+    if (history) {
+      // 先取消其他已发布的
+      histories.forEach((h) => {
+        h.isPublished = false;
+      });
+      // 发布当前的
+      history.isPublished = true;
+      return true;
+    }
+  }
+  return false;
+}
+
+// ========================================
+// 匹配任务 (用于异步匹配进度追踪)
+// ========================================
+export interface MockMatchingTask {
+  id: string;
+  activityId: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  progress: number;
+  message?: string;
+  startedAt: string;
+  completedAt?: string;
+  resultId?: string;
+}
+
+// 内存存储匹配任务
+const matchingTaskStore: Map<string, MockMatchingTask> = new Map();
+
+/**
+ * 创建匹配任务
+ */
+export function createMatchingTask(activityId: string): MockMatchingTask {
+  const task: MockMatchingTask = {
+    id: `task_${Date.now()}`,
+    activityId,
+    status: "pending",
+    progress: 0,
+    message: "任务已创建，等待处理...",
+    startedAt: new Date().toISOString(),
+  };
+  matchingTaskStore.set(task.id, task);
+  return task;
+}
+
+/**
+ * 获取匹配任务状态
+ */
+export function getMatchingTask(taskId: string): MockMatchingTask | null {
+  return matchingTaskStore.get(taskId) || null;
+}
+
+/**
+ * 更新匹配任务状态
+ */
+export function updateMatchingTask(
+  taskId: string,
+  updates: Partial<MockMatchingTask>,
+): MockMatchingTask | null {
+  const task = matchingTaskStore.get(taskId);
+  if (task) {
+    Object.assign(task, updates);
+    return task;
+  }
+  return null;
+}
+
+/**
+ * 模拟异步匹配过程
+ */
+export async function simulateAsyncMatching(
+  taskId: string,
+  activityId: string,
+  rules: MockMatchRule[],
+): Promise<void> {
+  const progressSteps = [
+    { progress: 10, message: "正在加载参与者数据..." },
+    { progress: 25, message: "正在分析用户特征..." },
+    { progress: 40, message: "正在计算相似度矩阵..." },
+    { progress: 60, message: "正在应用匹配规则..." },
+    { progress: 80, message: "正在优化分组结果..." },
+    { progress: 95, message: "正在生成匹配报告..." },
+  ];
+
+  updateMatchingTask(taskId, { status: "processing" });
+
+  for (const step of progressSteps) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, 500 + Math.random() * 500),
+    );
+    updateMatchingTask(taskId, {
+      progress: step.progress,
+      message: step.message,
+    });
+  }
+
+  // 生成结果
+  const groups = generateMatchingGroupsForActivity(activityId);
+
+  // 保存到历史记录
+  const history = saveMatchingHistory(activityId, rules, groups);
+
+  // 完成任务
+  updateMatchingTask(taskId, {
+    status: "completed",
+    progress: 100,
+    message: "匹配完成",
+    completedAt: new Date().toISOString(),
+    resultId: history.id,
+  });
 }

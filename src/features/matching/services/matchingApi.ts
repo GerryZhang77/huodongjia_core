@@ -31,7 +31,7 @@ export const getMatchRules = async (
 ): Promise<MatchRule[]> => {
   const token = getToken();
 
-  const response = await fetch(`/api/match-rules/${activityId}`, {
+  const response = await fetch(`/api/matching/${activityId}/rules`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -44,7 +44,7 @@ export const getMatchRules = async (
     throw new Error(data.message || "获取匹配规则失败");
   }
 
-  return data.rules || [];
+  return data.data?.rules || data.rules || [];
 };
 
 /**
@@ -162,7 +162,7 @@ export const executeMatching = async (
 ): Promise<ExecuteMatchResponse> => {
   const token = getToken();
 
-  const response = await fetch(`/api/execute-matching/${request.activityId}`, {
+  const response = await fetch(`/api/matching/${request.activityId}/execute`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -195,7 +195,7 @@ export const getMatchGroups = async (
 ): Promise<MatchGroup[]> => {
   const token = getToken();
 
-  const response = await fetch(`/api/match-groups/${activityId}`, {
+  const response = await fetch(`/api/matching/${activityId}/results`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -208,7 +208,25 @@ export const getMatchGroups = async (
     throw new Error(data.message || "获取匹配结果失败");
   }
 
-  return data.groups || [];
+  const rawGroups = data.data?.groups || data.groups || [];
+
+  // 转换后端数据格式到前端期望格式
+  return rawGroups.map((g: any, index: number) => ({
+    id: g.group_id || g.id || `group_${index}`,
+    name: g.group_name || g.name || `第${index + 1}组`,
+    members: Array.isArray(g.members)
+      ? g.members.map((m: any) =>
+          typeof m === "string" ? m : m.user_id || m.id,
+        )
+      : [],
+    score: Math.round(
+      (g.similarity_score ?? g.score ?? 0) *
+        (g.similarity_score !== undefined && g.similarity_score <= 1 ? 100 : 1),
+    ),
+    reasons: g.match_reasons || g.reasons || [],
+    warnings: g.warnings || [],
+    isLocked: g.is_locked ?? g.isLocked ?? false,
+  }));
 };
 
 /**
@@ -220,7 +238,7 @@ export const toggleGroupLock = async (
 ): Promise<void> => {
   const token = getToken();
 
-  const response = await fetch(`/api/match-groups/${groupId}/lock`, {
+  const response = await fetch(`/api/matching/groups/${groupId}/lock`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -234,4 +252,131 @@ export const toggleGroupLock = async (
   if (!data.success) {
     throw new Error(data.message || "操作失败");
   }
+};
+
+/**
+ * 获取活动参与者列表 (从报名数据)
+ */
+export const getParticipants = async (activityId: string): Promise<any[]> => {
+  const token = getToken();
+
+  const response = await fetch(`/api/matching/${activityId}/participants`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || "获取参与者列表失败");
+  }
+
+  return data.data?.participants || [];
+};
+
+/**
+ * 获取匹配历史记录
+ */
+export const getMatchingHistory = async (
+  activityId: string,
+): Promise<any[]> => {
+  const token = getToken();
+
+  const response = await fetch(`/api/matching/${activityId}/history`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || "获取历史记录失败");
+  }
+
+  return data.data?.history || [];
+};
+
+/**
+ * 发布匹配结果
+ */
+export const publishMatchingResult = async (
+  activityId: string,
+  historyId: string,
+): Promise<void> => {
+  const token = getToken();
+
+  const response = await fetch(`/api/matching/${activityId}/publish`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ historyId }),
+  });
+
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || "发布失败");
+  }
+};
+
+/**
+ * 提交异步匹配任务
+ */
+export const submitMatchingTask = async (
+  activityId: string,
+  rules: MatchingRule[],
+): Promise<{ taskId: string }> => {
+  const token = getToken();
+
+  const response = await fetch(`/api/matching/${activityId}/task`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ rules }),
+  });
+
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || "提交任务失败");
+  }
+
+  return { taskId: data.data?.taskId };
+};
+
+/**
+ * 查询匹配任务状态
+ */
+export const getMatchingTaskStatus = async (
+  taskId: string,
+): Promise<{
+  status: "pending" | "processing" | "completed" | "failed";
+  progress: number;
+  message?: string;
+  resultId?: string;
+}> => {
+  const token = getToken();
+
+  const response = await fetch(`/api/matching/task/${taskId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || "获取任务状态失败");
+  }
+
+  return data.data;
 };

@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useMemo } from "react";
-import { Dialog } from "antd-mobile";
 import {
   Users,
   RefreshCw,
@@ -18,10 +17,21 @@ import {
   Loader2,
   BarChart3,
   Info,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
-import type { MatchingGroup, MatchingRule } from "../../types";
+import { RematchConfirmDialog } from "../RematchConfirmDialog";
+import {
+  PublishResultDialog,
+  PublishResultFeedback,
+  type NotificationConfig,
+  type ParticipantPreview,
+} from "../PublishResultDialog";
+import { MatchingHistoryPanel } from "../MatchingHistoryPanel";
+import { RestoreHistoryDialog } from "../RestoreHistoryDialog";
+import { HistoryDetailDialog } from "../HistoryDetailDialog";
+import type { MatchingGroup, MatchingRule, MatchingHistory } from "../../types";
 
 // 类型别名 - 兼容
 type MatchGroup = MatchingGroup;
@@ -36,6 +46,8 @@ interface Participant {
   occupation?: string;
   tags?: string[];
   city?: string;
+  phone?: string;
+  email?: string;
 }
 
 // 简化的分组类型（兼容组件需要）
@@ -55,14 +67,25 @@ interface ResultsTabProps {
   participants: Participant[];
   rules: MatchRule[];
   isPublishing: boolean;
-  onPublish: () => Promise<void>;
-  onRematch: () => Promise<void>;
+  onPublish: (
+    sendNotification?: boolean,
+    notificationConfig?: NotificationConfig,
+  ) => Promise<void | { success: boolean; error?: string }>;
+  onRematch: () => void | Promise<void>;
   isRematching: boolean;
   matchingStats?: {
     avgScore: number;
     minScore: number;
     maxScore: number;
   };
+  /** 匹配历史记录 */
+  history?: MatchingHistory[];
+  /** 当前查看的历史记录ID（null表示当前结果） */
+  currentHistoryId?: string | null;
+  /** 查看历史记录 */
+  onViewHistory?: (history: MatchingHistory) => void;
+  /** 恢复历史记录 */
+  onRestoreHistory?: (history: MatchingHistory) => void;
 }
 
 /**
@@ -173,11 +196,14 @@ const GroupCard: React.FC<GroupCardProps> = ({
     return { male, female, other };
   }, [members]);
 
+  // 评分（确保有默认值）
+  const score = group.score ?? 0;
+
   // 评分颜色
   const scoreColor =
-    group.score >= 80
+    score >= 80
       ? "text-green-600 bg-green-50"
-      : group.score >= 60
+      : score >= 60
         ? "text-primary-600 bg-primary-50"
         : "text-orange-600 bg-orange-50";
 
@@ -223,7 +249,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
         <div
           className={`px-3 py-1 rounded-full text-sm font-semibold ${scoreColor}`}
         >
-          {group.score.toFixed(0)}分
+          {score.toFixed(0)}分
         </div>
 
         {/* 展开图标 */}
@@ -242,7 +268,7 @@ const GroupCard: React.FC<GroupCardProps> = ({
                 key={member.id}
                 participant={member}
                 isDraggable={!group.isLocked}
-                matchScore={group.score}
+                matchScore={score}
               />
             ))}
           </div>
@@ -336,9 +362,41 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   onRematch,
   isRematching,
   matchingStats,
+  history = [],
+  currentHistoryId = null,
+  onViewHistory,
+  onRestoreHistory,
 }) => {
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(true);
+  const [showHistory, setShowHistory] = useState(false); // 历史记录面板展开状态
+
+  // 对话框状态
+  const [showRematchDialog, setShowRematchDialog] = useState(false);
+  const [showPublishDialog, setShowPublishDialog] = useState(false);
+
+  // 恢复历史记录确认弹窗状态
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [restoreHistoryItem, setRestoreHistoryItem] =
+    useState<MatchingHistory | null>(null);
+  const [restoreHistoryIndex, setRestoreHistoryIndex] = useState(0);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  // 历史详情弹窗状态
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [detailHistoryItem, setDetailHistoryItem] =
+    useState<MatchingHistory | null>(null);
+  const [detailHistoryIndex, setDetailHistoryIndex] = useState(0);
+
+  // 发布结果反馈状态
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | undefined>();
+  const [publishedConfig, setPublishedConfig] = useState<
+    NotificationConfig | undefined
+  >();
+  // 本地发布加载状态（用于过渡动画）
+  const [isPublishingLocal, setIsPublishingLocal] = useState(false);
 
   // 计算统计数据
   const stats = useMemo(() => {
@@ -372,19 +430,106 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     );
   };
 
-  // 发布前确认
-  const handlePublish = async () => {
-    const result = await Dialog.confirm({
-      title: "发布匹配结果",
-      content: "发布后将通知所有参与者查看分组结果，确定发布吗？",
-      confirmText: "确定发布",
-      cancelText: "再想想",
-    });
+  // 处理重新匹配确认
+  const handleRematchConfirm = async () => {
+    setShowRematchDialog(false);
+    await onRematch();
+  };
 
-    if (result) {
-      await onPublish();
+  // 处理打开恢复确认弹窗
+  const handleOpenRestoreDialog = (historyItem: MatchingHistory) => {
+    const index = history.findIndex((h) => h.id === historyItem.id);
+    setRestoreHistoryItem(historyItem);
+    setRestoreHistoryIndex(index >= 0 ? index : 0);
+    setShowRestoreDialog(true);
+  };
+
+  // 处理打开历史详情弹窗（查看详情）
+  const handleOpenDetailDialog = (historyItem: MatchingHistory) => {
+    const index = history.findIndex((h) => h.id === historyItem.id);
+    setDetailHistoryItem(historyItem);
+    setDetailHistoryIndex(index >= 0 ? index : 0);
+    setShowDetailDialog(true);
+  };
+
+  // 从详情弹窗触发恢复（先关闭详情弹窗，再打开恢复确认弹窗）
+  const handleRestoreFromDetail = (historyItem: MatchingHistory) => {
+    setShowDetailDialog(false);
+    // 延迟打开恢复弹窗，避免动画冲突
+    setTimeout(() => {
+      handleOpenRestoreDialog(historyItem);
+    }, 200);
+  };
+
+  // 处理恢复历史记录确认
+  const handleRestoreConfirm = async () => {
+    if (!restoreHistoryItem || !onRestoreHistory) return;
+
+    setIsRestoring(true);
+    try {
+      await onRestoreHistory(restoreHistoryItem);
+      setShowRestoreDialog(false);
+      setRestoreHistoryItem(null);
+    } finally {
+      setIsRestoring(false);
     }
   };
+
+  // 处理发布确认
+  const handlePublishConfirm = async (
+    sendNotification: boolean,
+    notificationConfig?: NotificationConfig,
+  ) => {
+    setShowPublishDialog(false);
+    setPublishedConfig(notificationConfig);
+
+    // 显示加载状态
+    setIsPublishingLocal(true);
+
+    try {
+      const result = await onPublish(sendNotification, notificationConfig);
+
+      // 兼容两种返回类型：void 或 { success, error }
+      if (
+        result === undefined ||
+        result === null ||
+        (typeof result === "object" && result.success)
+      ) {
+        // 原接口返回 void，视为成功；或返回 { success: true }
+        setFeedbackSuccess(true);
+        setFeedbackError(undefined);
+      } else if (typeof result === "object" && !result.success) {
+        setFeedbackSuccess(false);
+        setFeedbackError(result.error || "发布失败，请稍后重试");
+      }
+    } catch (err) {
+      setFeedbackSuccess(false);
+      setFeedbackError(
+        err instanceof Error ? err.message : "发布失败，请稍后重试",
+      );
+    } finally {
+      // 隐藏加载状态
+      setIsPublishingLocal(false);
+    }
+
+    setShowFeedback(true);
+  };
+
+  // 生成参与者预览数据
+  const participantPreviews = useMemo<ParticipantPreview[]>(() => {
+    return participants
+      .filter((p) => groups.some((g) => g.members.includes(p.id)))
+      .map((p) => {
+        const group = groups.find((g) => g.members.includes(p.id));
+        return {
+          id: p.id,
+          name: p.name,
+          phone: p.phone,
+          email: p.email,
+          groupName: group?.name || `分组 ${groups.indexOf(group!) + 1}`,
+        };
+      });
+  }, [participants, groups]);
 
   // 无结果状态
   if (!groups.length) {
@@ -506,6 +651,61 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         </button>
       )}
 
+      {/* 当前查看的历史记录提示 */}
+      {currentHistoryId && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+          <History size={18} className="text-amber-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">
+              正在查看历史记录
+            </p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              当前显示的是历史匹配结果，非最新数据
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 历史记录面板 */}
+      {history.length > 0 && onViewHistory && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="w-full px-4 py-3 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-gray-200 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <History size={18} className="text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">
+                匹配历史记录
+              </span>
+              <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
+                {history.length}
+              </span>
+            </div>
+            <div className="text-gray-400">
+              {showHistory ? (
+                <ChevronUp size={18} />
+              ) : (
+                <ChevronDown size={18} />
+              )}
+            </div>
+          </button>
+
+          {showHistory && (
+            <div className="mt-2">
+              <MatchingHistoryPanel
+                history={history}
+                currentHistoryId={currentHistoryId}
+                onViewHistory={handleOpenDetailDialog}
+                onRestoreHistory={
+                  onRestoreHistory ? handleOpenRestoreDialog : undefined
+                }
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 操作提示 */}
       <div className="mb-4 flex items-start gap-2 p-3 bg-blue-50 rounded-xl">
         <Info size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
@@ -558,7 +758,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
             <Button
               variant="outline"
               size="large"
-              onClick={onRematch}
+              onClick={() => setShowRematchDialog(true)}
               disabled={isRematching || isPublishing}
               className="flex-1"
             >
@@ -576,7 +776,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
             </Button>
             <Button
               size="large"
-              onClick={handlePublish}
+              onClick={() => setShowPublishDialog(true)}
               disabled={isPublishing || isRematching}
               className="flex-1"
             >
@@ -595,6 +795,94 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 重新匹配确认对话框 */}
+      <RematchConfirmDialog
+        visible={showRematchDialog}
+        groups={groups}
+        participantCount={participants.length}
+        onConfirm={handleRematchConfirm}
+        onCancel={() => setShowRematchDialog(false)}
+        isLoading={isRematching}
+      />
+
+      {/* 发布结果对话框 */}
+      <PublishResultDialog
+        visible={showPublishDialog}
+        groups={groups}
+        participantCount={participants.length}
+        participants={participantPreviews}
+        matchingStats={matchingStats}
+        onConfirm={handlePublishConfirm}
+        onCancel={() => setShowPublishDialog(false)}
+        isLoading={isPublishing}
+      />
+
+      {/* 发布中加载遮罩 */}
+      {isPublishingLocal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4 shadow-xl max-w-xs mx-4">
+            <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center">
+              <Loader2 size={32} className="text-primary-500 animate-spin" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                正在发布...
+              </h3>
+              <p className="text-sm text-gray-500">
+                {publishedConfig?.channels?.length
+                  ? "正在发布结果并发送通知"
+                  : "正在发布匹配结果"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 发布结果反馈对话框 */}
+      <PublishResultFeedback
+        visible={showFeedback}
+        success={feedbackSuccess}
+        stats={
+          feedbackSuccess && stats
+            ? {
+                groupCount: stats.groupCount,
+                memberCount: stats.totalMembers,
+                notifiedCount: publishedConfig ? stats.totalMembers : undefined,
+                channels: publishedConfig?.channels,
+              }
+            : undefined
+        }
+        errorMessage={feedbackError}
+        onClose={() => setShowFeedback(false)}
+      />
+
+      {/* 恢复历史记录确认对话框 */}
+      <RestoreHistoryDialog
+        visible={showRestoreDialog}
+        historyItem={restoreHistoryItem}
+        historyIndex={restoreHistoryIndex}
+        onConfirm={handleRestoreConfirm}
+        onCancel={() => {
+          setShowRestoreDialog(false);
+          setRestoreHistoryItem(null);
+        }}
+        isLoading={isRestoring}
+      />
+
+      {/* 历史详情弹窗 */}
+      <HistoryDetailDialog
+        visible={showDetailDialog}
+        historyItem={detailHistoryItem}
+        historyIndex={detailHistoryIndex}
+        participants={participants}
+        onClose={() => {
+          setShowDetailDialog(false);
+          setDetailHistoryItem(null);
+        }}
+        onRestore={handleRestoreFromDetail}
+        isRestoring={isRestoring}
+      />
     </div>
   );
 };
