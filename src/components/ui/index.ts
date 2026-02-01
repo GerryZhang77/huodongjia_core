@@ -41,6 +41,9 @@ export type {
 export { Checkbox } from "./Checkbox";
 export type { CheckboxProps, CheckboxSize } from "./Checkbox/types";
 
+export { Switch } from "./Switch";
+export type { SwitchProps } from "./Switch";
+
 // 数据展示组件
 export { Tag, TagGroup } from "./Tag";
 export type {
