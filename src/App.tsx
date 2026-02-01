@@ -31,8 +31,9 @@ const ActivityManage = lazy(() => import("./pages/merchant/ActivityManageNew"));
 const EnrollmentManagement = lazy(
   () => import("./pages/merchant/EnrollmentManagementNew"),
 );
+// 使用重构后的匹配配置页面
 const MatchingConfiguration = lazy(
-  () => import("./pages/merchant/MatchingConfigurationNew"),
+  () => import("./pages/merchant/MatchingConfig"),
 );
 const MerchantNotifications = lazy(
   () => import("./pages/merchant/NotificationsPage"),

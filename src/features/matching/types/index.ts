@@ -3,8 +3,12 @@
  * 匹配模块 - 类型定义
  */
 
-// 导出匹配结果相关类型
-export * from "./matchResult";
+// 从 matchResult 导出特定类型（避免与本文件同名类型冲突）
+export type {
+  MatchResultData,
+  MatchStatistics,
+  UngroupedMember,
+} from "./matchResult";
 
 /**
  * 匹配规则类型
