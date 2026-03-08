@@ -17,6 +17,7 @@ import {
   MoreVertical,
   Loader2,
   Check,
+  Repeat,
 } from "lucide-react";
 import { Toast } from "antd-mobile";
 import { MerchantLayout } from "@/components/layout";
@@ -24,6 +25,7 @@ import {
   ImportEnrollmentModal,
   SendNotificationModal,
   ExportEnrollmentModal,
+  FilterDrawer,
 } from "@/components/enrollment";
 import { useStore } from "@/store";
 import type { Enrollment, FilterCriteria } from "@/types/enrollment";
@@ -193,8 +195,7 @@ const EnrollmentManagementNew: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // 筛选
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [filterCriteria, _setFilterCriteria] = useState<FilterCriteria>(
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(
     DEFAULT_FILTER_CRITERIA,
   );
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -203,14 +204,14 @@ const EnrollmentManagementNew: React.FC = () => {
   // 批量选择
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Modal 状态
+  // Modal / Drawer 状态
   const [showImportModal, setShowImportModal] = useState(false);
   const [showNotifyModal, setShowNotifyModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
-  // 计算筛选选项 (预留给高级筛选功能)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _filterOptions = useMemo(() => {
+  // 计算筛选选项（从报名数据中动态提取可用维度）
+  const filterOptions = useMemo(() => {
     return calculateFilterOptions(enrollments);
   }, [enrollments]);
 
@@ -400,7 +401,10 @@ const EnrollmentManagementNew: React.FC = () => {
             </div>
 
             {/* 筛选按钮 */}
-            <button className="h-9 px-3 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1">
+            <button
+              className="h-9 px-3 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+              onClick={() => setShowFilterDrawer(true)}
+            >
               <Filter size={14} />
               筛选
               {activeFilterCount > 0 && (
@@ -461,23 +465,47 @@ const EnrollmentManagementNew: React.FC = () => {
 
         {/* 批量操作栏 */}
         {selectedIds.length > 0 && (
-          <div className="bg-primary-50 rounded-xl p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-primary-600">
-                已选择 {selectedIds.length} 人
-              </span>
-              <button
-                className="text-sm text-primary-500 hover:underline"
-                onClick={selectAll}
-              >
-                全选
-              </button>
-              <button
-                className="text-sm text-gray-500 hover:underline"
-                onClick={clearSelection}
-              >
-                取消
-              </button>
+          <div className="bg-primary-50 rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-sm font-medium text-primary-600">
+                  已选 {selectedIds.length}
+                </span>
+                <span className="text-xs text-gray-400">/</span>
+                <span className="text-xs text-gray-500">
+                  筛选结果 {filteredEnrollments.length}
+                </span>
+                <span className="text-xs text-gray-400">/</span>
+                <span className="text-xs text-gray-500">
+                  全部 {enrollments.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-xs text-primary-500 hover:underline"
+                  onClick={selectAll}
+                >
+                  全选当前
+                </button>
+                <button
+                  className="text-xs text-primary-500 hover:underline flex items-center gap-0.5"
+                  onClick={() => {
+                    const invertedIds = filteredEnrollments
+                      .filter((e) => !selectedIds.includes(e.id))
+                      .map((e) => e.id);
+                    setSelectedIds(invertedIds);
+                  }}
+                >
+                  <Repeat size={10} />
+                  反选
+                </button>
+                <button
+                  className="text-xs text-gray-500 hover:underline"
+                  onClick={clearSelection}
+                >
+                  取消
+                </button>
+              </div>
             </div>
             <div className="flex gap-2">
               <button
@@ -491,6 +519,12 @@ const EnrollmentManagementNew: React.FC = () => {
                 onClick={handleBatchReject}
               >
                 批量拒绝
+              </button>
+              <button
+                className="h-8 px-3 rounded-lg bg-accent-400 text-white text-sm font-medium hover:bg-accent-500"
+                onClick={handleSendNotification}
+              >
+                发送通知
               </button>
             </div>
           </div>
@@ -542,6 +576,7 @@ const EnrollmentManagementNew: React.FC = () => {
           onClose={() => setShowNotifyModal(false)}
           activityId={id || ""}
           enrollments={enrollments}
+          filteredEnrollments={filteredEnrollments}
           selectedIds={selectedIds}
           onSuccess={(count) => {
             console.log(
@@ -559,6 +594,15 @@ const EnrollmentManagementNew: React.FC = () => {
           activityId={id || ""}
           activityTitle="活动"
           enrollments={filteredEnrollments}
+        />
+
+        {/* 筛选面板 */}
+        <FilterDrawer
+          visible={showFilterDrawer}
+          filterOptions={filterOptions}
+          filterCriteria={filterCriteria}
+          onChange={setFilterCriteria}
+          onClose={() => setShowFilterDrawer(false)}
         />
       </div>
     </MerchantLayout>

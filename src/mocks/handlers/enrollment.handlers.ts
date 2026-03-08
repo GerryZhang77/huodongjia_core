@@ -30,6 +30,7 @@ function transformEnrollment(mock: MockEnrollment) {
     occupation: mock.occupation,
     company: mock.company,
     city: mock.city,
+    industry: mock.industry || undefined,
     // 合并 interests 和 skills 为 tags
     tags: [...(mock.interests || []), ...(mock.skills || [])],
     bio: mock.bio,
@@ -39,6 +40,8 @@ function transformEnrollment(mock: MockEnrollment) {
     enrolledAt: mock.registration_time,
     updatedAt: mock.updated_at,
     isInfoComplete: true,
+    // 自定义字段
+    customFields: mock.custom_fields || undefined,
   };
 }
 

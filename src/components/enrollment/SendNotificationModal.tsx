@@ -27,6 +27,8 @@ interface SendNotificationModalProps {
   activityId: string;
   activityTitle?: string;
   enrollments: Enrollment[];
+  /** 经筛选后的报名列表（可选，用于支持"发送给筛选结果"） */
+  filteredEnrollments?: Enrollment[];
   selectedIds?: string[];
   onClose: () => void;
   onSuccess?: (count: number) => void;
@@ -73,6 +75,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
   activityId,
   activityTitle = "活动",
   enrollments,
+  filteredEnrollments,
   selectedIds = [],
   onClose,
   onSuccess,
@@ -98,7 +101,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
   const [customContent, setCustomContent] = useState("");
   // 接收人范围
   const [recipientScope, setRecipientScope] = useState<
-    "all" | "selected" | "approved"
+    "all" | "selected" | "approved" | "filtered"
   >(selectedIds.length > 0 ? "selected" : "all");
   // 发送状态
   const [isSending, setIsSending] = useState(false);
@@ -116,11 +119,13 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
         return enrollments.filter((e) => selectedIds.includes(e.id));
       case "approved":
         return enrollments.filter((e) => e.status === "approved");
+      case "filtered":
+        return filteredEnrollments || enrollments;
       case "all":
       default:
         return enrollments;
     }
-  }, [enrollments, selectedIds, recipientScope]);
+  }, [enrollments, filteredEnrollments, selectedIds, recipientScope]);
 
   // 获取当前内容
   const currentContent = useMemo(() => {
@@ -291,6 +296,16 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                       count: enrollments.filter((e) => e.status === "approved")
                         .length,
                     },
+                    ...(filteredEnrollments &&
+                    filteredEnrollments.length !== enrollments.length
+                      ? [
+                          {
+                            scope: "filtered" as const,
+                            label: "当前筛选结果",
+                            count: filteredEnrollments.length,
+                          },
+                        ]
+                      : []),
                     ...(selectedIds.length > 0
                       ? [
                           {

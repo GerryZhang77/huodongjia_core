@@ -18,6 +18,7 @@ export interface MockEnrollment {
   occupation: string;
   company: string;
   city: string;
+  industry?: string;
   interests: string[];
   skills: string[];
   bio: string;
@@ -25,6 +26,8 @@ export interface MockEnrollment {
   status: "pending" | "confirmed" | "waitlist" | "cancelled";
   registration_time: string;
   updated_at: string;
+  /** 自定义字段（如 VIP等级、推荐人等） */
+  custom_fields?: Record<string, string>;
 }
 
 // ========================================
@@ -173,6 +176,7 @@ export const mockEnrollments: MockEnrollment[] = [
     occupation: "市场营销",
     company: "互联网公司A",
     city: "北京",
+    industry: "互联网",
     interests: ["营销策划", "社交媒体", "内容创作"],
     skills: ["营销策划", "文案写作", "数据分析"],
     bio: "热爱营销，善于发现用户需求，喜欢尝试新鲜事物",
@@ -180,6 +184,7 @@ export const mockEnrollments: MockEnrollment[] = [
     status: "confirmed",
     registration_time: "2025-01-05T09:30:00Z",
     updated_at: "2025-01-05T09:30:00Z",
+    custom_fields: { VIP等级: "银卡", 来源渠道: "朋友推荐" },
   },
   {
     id: "enroll_ma_002",
@@ -194,10 +199,12 @@ export const mockEnrollments: MockEnrollment[] = [
     occupation: "产品总监",
     company: "科技创业公司",
     city: "上海",
+    industry: "科技",
     interests: ["产品设计", "用户体验", "创业"],
     skills: ["产品规划", "团队管理", "商业分析"],
     bio: "10年产品经验，专注于B端产品设计，正在寻找志同道合的伙伴",
     matching_needs: "寻找技术合伙人，了解AI产品方向",
+    custom_fields: { VIP等级: "金卡", 来源渠道: "活动官网" },
     status: "confirmed",
     registration_time: "2025-01-06T14:20:00Z",
     updated_at: "2025-01-06T14:20:00Z",
@@ -215,6 +222,7 @@ export const mockEnrollments: MockEnrollment[] = [
     occupation: "全栈工程师",
     company: "外企D",
     city: "深圳",
+    industry: "互联网",
     interests: ["编程", "开源项目", "技术分享"],
     skills: ["TypeScript", "React", "Node.js", "Python"],
     bio: "全栈开发者，热爱开源，业余时间喜欢写技术博客",
@@ -236,6 +244,7 @@ export const mockEnrollments: MockEnrollment[] = [
     occupation: "投资经理",
     company: "知名VC机构",
     city: "北京",
+    industry: "金融",
     interests: ["投资", "创业", "科技趋势"],
     skills: ["投资分析", "商业谈判", "尽职调查"],
     bio: "关注早期科技项目，已投资多个成功案例",
@@ -257,6 +266,7 @@ export const mockEnrollments: MockEnrollment[] = [
     occupation: "UI/UX设计师",
     company: "设计工作室",
     city: "杭州",
+    industry: "设计",
     interests: ["设计", "摄影", "旅行"],
     skills: ["Figma", "Sketch", "用户研究"],
     bio: "用设计讲故事，热爱生活美学",
@@ -278,6 +288,7 @@ export const mockEnrollments: MockEnrollment[] = [
     occupation: "算法工程师",
     company: "AI公司",
     city: "北京",
+    industry: "人工智能",
     interests: ["机器学习", "深度学习", "计算机视觉"],
     skills: ["Python", "PyTorch", "TensorFlow"],
     bio: "专注于计算机视觉领域，追求技术极致",
@@ -299,6 +310,7 @@ export const mockEnrollments: MockEnrollment[] = [
     occupation: "HR总监",
     company: "上市公司E",
     city: "广州",
+    industry: "企业服务",
     interests: ["人才发展", "组织管理", "心理学"],
     skills: ["招聘", "培训", "绩效管理"],
     bio: "15年HR经验，帮助企业构建高效团队",
@@ -320,6 +332,7 @@ export const mockEnrollments: MockEnrollment[] = [
     occupation: "连续创业者",
     company: "创业中",
     city: "成都",
+    industry: "创业",
     interests: ["创业", "商业模式", "团队建设"],
     skills: ["战略规划", "融资", "业务拓展"],
     bio: "三次创业经历，正在探索新赛道",
