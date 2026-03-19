@@ -38,7 +38,7 @@ export const MerchantDesktopSidebar: FC = () => {
   // TODO: 从通知数据获取未读数量
   const unreadCount = 3;
 
-  // 商家端导航配置 - 5项: 活动管理 | 创建活动 | 用户发现 | 消息 | 我的
+  // 商家端导航配置 - 5项: 活动管理 | 创建活动 | 用户管理 | 消息 | 我的
   const navItems: NavItem[] = [
     {
       key: "dashboard",
@@ -53,12 +53,12 @@ export const MerchantDesktopSidebar: FC = () => {
       path: "/dashboard/activity/create",
     },
     {
-      key: "talent-pool",
-      label: "用户发现",
+      key: "user-pool",
+      label: "用户管理",
       icon: UserSearch,
-      path: "/dashboard/talent-pool",
+      path: "/dashboard/user-pool",
       isNew: true,
-      tooltip: "发现活跃用户，可按活跃度、职业、出勤率等维度筛选并推送活动邀请",
+      tooltip: "管理所有活动用户，支持分库查看、标签筛选、定向推送活动",
     },
     {
       key: "notifications",
@@ -80,7 +80,7 @@ export const MerchantDesktopSidebar: FC = () => {
     // 精确匹配或前缀匹配
     if (path === "/dashboard") return "dashboard";
     if (path.startsWith("/dashboard/activity/create")) return "create";
-    if (path.startsWith("/dashboard/talent-pool")) return "talent-pool";
+    if (path.startsWith("/dashboard/user-pool")) return "user-pool";
     if (path.startsWith("/dashboard/notifications")) return "notifications";
     if (path.startsWith("/dashboard/profile")) return "profile";
     // 活动管理相关页面都归到 dashboard

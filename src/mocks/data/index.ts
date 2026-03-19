@@ -12,6 +12,8 @@ export * from "./activities";
 export * from "./enrollments";
 export * from "./matching";
 export * from "./merchant";
+export * from "./merchant-users";
+export * from "./platform-users";
 
 // C端用户数据
 export * from "./user-activities";

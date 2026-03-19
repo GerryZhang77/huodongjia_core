@@ -1,9 +1,14 @@
 /**
  * 报名管理页面 (新版)
- * 使用 MerchantLayout 布局
+ *
+ * 改进点：
+ * 1. 选择模式：点击卡片进入详情，长按或点击「选择」按钮进入多选模式
+ * 2. 选中样式：整卡高亮 + 角标勾选，视觉更直观
+ * 3. 用户详情：底部/右侧 Drawer 展示完整信息
+ * 4. 筛选面板：PC端右侧面板，移动端底部抽屉
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Users,
@@ -11,13 +16,16 @@ import {
   Download,
   Filter,
   Send,
-  CheckCircle,
-  XCircle,
   Search,
-  MoreVertical,
   Loader2,
   Check,
   Repeat,
+  ListChecks,
+  X,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
 } from "lucide-react";
 import { Toast } from "antd-mobile";
 import { MerchantLayout } from "@/components/layout";
@@ -26,9 +34,14 @@ import {
   SendNotificationModal,
   ExportEnrollmentModal,
   FilterDrawer,
+  EnrollmentDetailDrawer,
 } from "@/components/enrollment";
 import { useStore } from "@/store";
-import type { Enrollment, FilterCriteria } from "@/types/enrollment";
+import type {
+  Enrollment,
+  FilterCriteria,
+  FilterOptions,
+} from "@/types/enrollment";
 import { DEFAULT_FILTER_CRITERIA, STATUS_LABELS } from "@/types/enrollment";
 import {
   calculateFilterOptions,
@@ -47,45 +60,91 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-gray-100 text-gray-500",
 };
 
-/**
- * 报名卡片组件
- */
+// ========================================
+// EnrollmentCard 子组件（改进选择体验）
+// ========================================
+
 interface EnrollmentCardProps {
   enrollment: Enrollment;
   selected: boolean;
+  /** 是否处于多选模式 */
+  selectionMode: boolean;
+  /** 选择切换 */
   onSelect: () => void;
-  onApprove: () => void;
-  onReject: () => void;
+  /** 点击查看详情 */
+  onViewDetail: () => void;
+  /** 长按进入选择模式 */
+  onLongPress: () => void;
 }
 
 const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
   enrollment,
   selected,
+  selectionMode,
   onSelect,
-  onApprove,
-  onReject,
+  onViewDetail,
+  onLongPress,
 }) => {
-  const [showMenu, setShowMenu] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPressing = useRef(false);
+
+  const handlePointerDown = () => {
+    isLongPressing.current = false;
+    longPressTimer.current = setTimeout(() => {
+      isLongPressing.current = true;
+      onLongPress();
+    }, 500);
+  };
+
+  const handlePointerUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleClick = () => {
+    if (isLongPressing.current) {
+      isLongPressing.current = false;
+      return;
+    }
+    if (selectionMode) {
+      onSelect();
+    } else {
+      onViewDetail();
+    }
+  };
 
   return (
     <div
-      className={`bg-white rounded-xl border p-4 transition-all ${
-        selected ? "border-primary-400 bg-primary-50/30" : "border-gray-100"
+      className={`group relative bg-white rounded-xl border p-4 transition-all cursor-pointer select-none ${
+        selected
+          ? "border-primary-400 bg-primary-50/40 ring-1 ring-primary-200"
+          : "border-gray-100 hover:border-gray-200 hover:shadow-sm"
       }`}
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
     >
-      <div className="flex items-start gap-3">
-        {/* 选择框 */}
-        <button
-          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+      {/* 选中角标 */}
+      {(selectionMode || selected) && (
+        <div
+          className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-all z-10 ${
             selected
-              ? "bg-primary-400 border-primary-400"
-              : "border-gray-300 hover:border-primary-400"
+              ? "bg-primary-400 shadow-sm shadow-primary-200"
+              : "bg-white border-2 border-gray-300"
           }`}
-          onClick={onSelect}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect();
+          }}
         >
-          {selected && <Check size={12} className="text-white" />}
-        </button>
+          {selected && <Check size={14} className="text-white" />}
+        </div>
+      )}
 
+      <div className="flex items-start gap-3">
         {/* 头像 */}
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-purple-100 flex items-center justify-center flex-shrink-0">
           <span className="text-primary-600 font-medium text-sm">
@@ -96,7 +155,9 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
         {/* 信息 */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-gray-900">{enrollment.name}</span>
+            <span className="font-medium text-gray-900">
+              {enrollment.name}
+            </span>
             <span
               className={`px-2 py-0.5 text-xs rounded-full ${statusColors[enrollment.status] || "bg-gray-100 text-gray-500"}`}
             >
@@ -104,7 +165,15 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
             </span>
           </div>
           <div className="text-sm text-gray-500 space-x-3">
-            {enrollment.gender && <span>{enrollment.gender}</span>}
+            {enrollment.gender && (
+              <span>
+                {enrollment.gender === "male"
+                  ? "男"
+                  : enrollment.gender === "female"
+                    ? "女"
+                    : "其他"}
+              </span>
+            )}
             {enrollment.age && <span>{enrollment.age}岁</span>}
             {enrollment.industry && <span>{enrollment.industry}</span>}
           </div>
@@ -127,64 +196,255 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
           )}
         </div>
 
-        {/* 操作按钮 */}
-        <div className="relative flex-shrink-0">
-          <button
-            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
-            onClick={() => setShowMenu(!showMenu)}
-          >
-            <MoreVertical size={16} className="text-gray-400" />
-          </button>
-
-          {showMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowMenu(false)}
-              />
-              <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 min-w-[100px] z-20">
-                {enrollment.status === "pending" && (
-                  <>
-                    <button
-                      className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center gap-2"
-                      onClick={() => {
-                        onApprove();
-                        setShowMenu(false);
-                      }}
-                    >
-                      <CheckCircle size={14} />
-                      通过
-                    </button>
-                    <button
-                      className="w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 flex items-center gap-2"
-                      onClick={() => {
-                        onReject();
-                        setShowMenu(false);
-                      }}
-                    >
-                      <XCircle size={14} />
-                      拒绝
-                    </button>
-                  </>
-                )}
-                <button
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                  onClick={() => setShowMenu(false)}
-                >
-                  查看详情
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        {/* 右侧箭头（非选择模式才显示） */}
+        {!selectionMode && (
+          <ChevronRight
+            size={16}
+            className="text-gray-300 group-hover:text-gray-400 flex-shrink-0 mt-2 transition-colors"
+          />
+        )}
       </div>
     </div>
   );
 };
 
-/**
- * EnrollmentManagement 页面组件
- */
+// ========================================
+// PC 端内联筛选面板
+// ========================================
+
+const PCFilterChip: React.FC<{
+  label: string;
+  count: number;
+  selected: boolean;
+  onClick: () => void;
+}> = ({ label, count, selected, onClick }) => (
+  <button
+    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-colors ${
+      selected
+        ? "bg-primary-400 text-white"
+        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+    }`}
+    onClick={onClick}
+  >
+    <span>{label}</span>
+    <span className={`${selected ? "text-white/70" : "text-gray-400"}`}>
+      {count}
+    </span>
+  </button>
+);
+
+const PCFilterSection: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  selectedCount?: number;
+}> = ({ title, children, selectedCount }) => {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div className="border-b border-gray-50 last:border-b-0">
+      <button
+        className="flex items-center justify-between w-full py-2.5 text-left"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className="text-xs font-medium text-gray-700">
+          {title}
+          {selectedCount !== undefined && selectedCount > 0 && (
+            <span className="ml-1 text-xs text-primary-400 font-normal">
+              ({selectedCount})
+            </span>
+          )}
+        </span>
+        {expanded ? (
+          <ChevronUp size={14} className="text-gray-400" />
+        ) : (
+          <ChevronDown size={14} className="text-gray-400" />
+        )}
+      </button>
+      {expanded && (
+        <div className="pb-2.5 flex flex-wrap gap-1.5">{children}</div>
+      )}
+    </div>
+  );
+};
+
+interface PCFilterPanelProps {
+  filterOptions: FilterOptions;
+  filterCriteria: FilterCriteria;
+  onChange: (criteria: FilterCriteria) => void;
+  onReset: () => void;
+  activeCount: number;
+}
+
+const PCFilterPanel: React.FC<PCFilterPanelProps> = ({
+  filterOptions,
+  filterCriteria,
+  onChange,
+  onReset,
+  activeCount,
+}) => {
+  const toggleFilter = (
+    field: "gender" | "city" | "industry" | "ageGroup" | "tags",
+    value: string,
+  ) => {
+    const currentValues = filterCriteria[field] as string[];
+    const newValues = currentValues.includes(value)
+      ? currentValues.filter((v) => v !== value)
+      : [...currentValues, value];
+    onChange({ ...filterCriteria, [field]: newValues });
+  };
+
+  const toggleCustomFilter = (fieldName: string, value: string) => {
+    const currentValues = filterCriteria.customFields[fieldName] || [];
+    const newValues = currentValues.includes(value)
+      ? currentValues.filter((v) => v !== value)
+      : [...currentValues, value];
+    onChange({
+      ...filterCriteria,
+      customFields: { ...filterCriteria.customFields, [fieldName]: newValues },
+    });
+  };
+
+  // 构建可用维度
+  type SectionDef = {
+    key: string;
+    title: string;
+    type: "standard" | "custom";
+  };
+  const sections: SectionDef[] = [];
+
+  if (filterOptions.gender.length > 0)
+    sections.push({ key: "gender", title: "性别", type: "standard" });
+  if (filterOptions.city.length > 0)
+    sections.push({ key: "city", title: "城市", type: "standard" });
+  if (filterOptions.industry.length > 0)
+    sections.push({ key: "industry", title: "行业", type: "standard" });
+  if (filterOptions.ageGroup.length > 0)
+    sections.push({ key: "ageGroup", title: "年龄段", type: "standard" });
+  if (filterOptions.tags.length > 0)
+    sections.push({ key: "tags", title: "标签", type: "standard" });
+
+  Object.keys(filterOptions.customFields).forEach((fieldName) => {
+    if (filterOptions.customFields[fieldName].length > 0) {
+      sections.push({
+        key: `custom_${fieldName}`,
+        title: fieldName,
+        type: "custom",
+      });
+    }
+  });
+
+  const getSelectedCount = (sectionKey: string): number => {
+    if (sectionKey.startsWith("custom_")) {
+      const fieldName = sectionKey.replace("custom_", "");
+      return (filterCriteria.customFields[fieldName] || []).length;
+    }
+    const field = sectionKey as keyof FilterCriteria;
+    const val = filterCriteria[field];
+    return Array.isArray(val) ? val.length : 0;
+  };
+
+  return (
+    <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+      <div className="px-4 py-2">
+        {sections.length === 0 ? (
+          <p className="text-gray-400 text-xs text-center py-6">
+            暂无可用的筛选维度
+          </p>
+        ) : (
+          sections.map((section) => (
+            <PCFilterSection
+              key={section.key}
+              title={section.title}
+              selectedCount={getSelectedCount(section.key)}
+            >
+              {section.type === "standard"
+                ? (
+                    filterOptions[
+                      section.key as
+                        | "gender"
+                        | "city"
+                        | "industry"
+                        | "ageGroup"
+                        | "tags"
+                    ] as Array<{ value: string; label: string; count: number }>
+                  ).map((opt) => (
+                    <PCFilterChip
+                      key={opt.value}
+                      label={opt.label}
+                      count={opt.count}
+                      selected={(
+                        filterCriteria[
+                          section.key as
+                            | "gender"
+                            | "city"
+                            | "industry"
+                            | "ageGroup"
+                            | "tags"
+                        ] as string[]
+                      ).includes(opt.value)}
+                      onClick={() =>
+                        toggleFilter(
+                          section.key as
+                            | "gender"
+                            | "city"
+                            | "industry"
+                            | "ageGroup"
+                            | "tags",
+                          opt.value,
+                        )
+                      }
+                    />
+                  ))
+                : (
+                    filterOptions.customFields[
+                      section.key.replace("custom_", "")
+                    ] || []
+                  ).map((opt) => (
+                    <PCFilterChip
+                      key={opt.value}
+                      label={opt.label}
+                      count={opt.count}
+                      selected={(
+                        filterCriteria.customFields[
+                          section.key.replace("custom_", "")
+                        ] || []
+                      ).includes(opt.value)}
+                      onClick={() =>
+                        toggleCustomFilter(
+                          section.key.replace("custom_", ""),
+                          opt.value,
+                        )
+                      }
+                    />
+                  ))}
+            </PCFilterSection>
+          ))
+        )}
+      </div>
+
+      {/* 底部操作 */}
+      <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+        <button
+          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+          onClick={onReset}
+        >
+          <RotateCcw size={12} />
+          重置
+        </button>
+        {activeCount > 0 && (
+          <span className="text-xs text-primary-400">
+            {activeCount} 个筛选项
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ========================================
+// 主页面组件
+// ========================================
+
 const EnrollmentManagementNew: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -201,8 +461,15 @@ const EnrollmentManagementNew: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  // 批量选择
+  // 选择模式
+  const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // 详情抽屉
+  const [detailEnrollment, setDetailEnrollment] = useState<Enrollment | null>(
+    null,
+  );
+  const [showDetailDrawer, setShowDetailDrawer] = useState(false);
 
   // Modal / Drawer 状态
   const [showImportModal, setShowImportModal] = useState(false);
@@ -210,7 +477,7 @@ const EnrollmentManagementNew: React.FC = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
-  // 计算筛选选项（从报名数据中动态提取可用维度）
+  // 计算筛选选项
   const filterOptions = useMemo(() => {
     return calculateFilterOptions(enrollments);
   }, [enrollments]);
@@ -219,12 +486,10 @@ const EnrollmentManagementNew: React.FC = () => {
   const filteredEnrollments = useMemo(() => {
     let filtered = applyFilters(enrollments, filterCriteria);
 
-    // 按 Tab 过滤状态
     if (activeTab !== "all") {
       filtered = filtered.filter((e) => e.status === activeTab);
     }
 
-    // 搜索关键词
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase();
       filtered = filtered.filter(
@@ -274,74 +539,83 @@ const EnrollmentManagementNew: React.FC = () => {
     }
   };
 
-  // 初始化加载
   React.useEffect(() => {
     fetchEnrollments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // 选择操作
-  const toggleSelect = (enrollmentId: string) => {
+  // ====== 选择操作 ======
+
+  const toggleSelect = useCallback((enrollmentId: string) => {
     setSelectedIds((prev) =>
       prev.includes(enrollmentId)
-        ? prev.filter((id) => id !== enrollmentId)
+        ? prev.filter((eid) => eid !== enrollmentId)
         : [...prev, enrollmentId],
     );
-  };
+  }, []);
+
+  const enterSelectionMode = useCallback(
+    (firstId?: string) => {
+      setSelectionMode(true);
+      if (firstId && !selectedIds.includes(firstId)) {
+        setSelectedIds((prev) => [...prev, firstId]);
+      }
+    },
+    [selectedIds],
+  );
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+  }, []);
 
   const selectAll = () => {
     setSelectedIds(filteredEnrollments.map((e) => e.id));
   };
 
-  const clearSelection = () => {
-    setSelectedIds([]);
-  };
+  // ====== 详情操作 ======
 
-  // 审核操作
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleApprove = async (enrollmentId: string) => {
+  const handleViewDetail = useCallback(
+    (enrollment: Enrollment) => {
+      if (selectionMode) return;
+      setDetailEnrollment(enrollment);
+      setShowDetailDrawer(true);
+    },
+    [selectionMode],
+  );
+
+  // ====== 审核操作 ======
+
+  const handleApprove = async (_enrollmentId: string) => {
     Toast.show({ content: "审核通过" });
-    // TODO: 调用 API 传入 enrollmentId
+    setShowDetailDrawer(false);
+    // TODO: 调用 API
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleReject = async (enrollmentId: string) => {
+  const handleReject = async (_enrollmentId: string) => {
     Toast.show({ content: "已拒绝" });
-    // TODO: 调用 API 传入 enrollmentId
+    setShowDetailDrawer(false);
+    // TODO: 调用 API
   };
 
-  // 批量操作
   const handleBatchApprove = async () => {
     Toast.show({ content: `已通过 ${selectedIds.length} 人` });
-    clearSelection();
+    exitSelectionMode();
   };
 
   const handleBatchReject = async () => {
     Toast.show({ content: `已拒绝 ${selectedIds.length} 人` });
-    clearSelection();
+    exitSelectionMode();
   };
 
-  // 导入导出
-  const handleImport = () => {
-    setShowImportModal(true);
-  };
-
-  const handleExport = () => {
-    setShowExportModal(true);
-  };
+  // ====== 导入导出 ======
 
   const handleImportSuccess = (count: number) => {
-    // 导入成功后刷新数据
     fetchEnrollments();
     Toast.show({ content: `成功导入 ${count} 条数据` });
   };
 
   const handleSendNotification = () => {
-    console.log(
-      "[EnrollmentManagement] 打开通知弹窗, enrollments:",
-      enrollments?.length,
-      enrollments,
-    );
     setShowNotifyModal(true);
   };
 
@@ -361,177 +635,203 @@ const EnrollmentManagementNew: React.FC = () => {
       showBack
       onBack={() => navigate("/dashboard")}
     >
-      <div className="space-y-4">
-        {/* 统计卡片 */}
-        <div className="grid grid-cols-4 gap-2">
-          <div className="bg-white rounded-xl p-3 text-center border border-gray-100">
-            <p className="text-lg font-bold text-gray-900">{stats.total}</p>
-            <p className="text-xs text-gray-500">全部</p>
+      {/* PC端使用两栏布局：左侧列表 + 右侧筛选面板 */}
+      <div className="md:flex md:gap-6 md:items-start">
+        {/* 左侧主内容 */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* 统计卡片 */}
+          <div className="grid grid-cols-4 gap-2 md:gap-3">
+            <div className="bg-white rounded-xl p-3 md:p-4 text-center border border-gray-100">
+              <p className="text-lg md:text-xl font-bold text-gray-900">
+                {stats.total}
+              </p>
+              <p className="text-xs text-gray-500">全部</p>
+            </div>
+            <div className="bg-yellow-50 rounded-xl p-3 md:p-4 text-center">
+              <p className="text-lg md:text-xl font-bold text-yellow-600">
+                {stats.pending}
+              </p>
+              <p className="text-xs text-gray-500">待审核</p>
+            </div>
+            <div className="bg-green-50 rounded-xl p-3 md:p-4 text-center">
+              <p className="text-lg md:text-xl font-bold text-green-600">
+                {stats.approved}
+              </p>
+              <p className="text-xs text-gray-500">已通过</p>
+            </div>
+            <div className="bg-red-50 rounded-xl p-3 md:p-4 text-center">
+              <p className="text-lg md:text-xl font-bold text-red-500">
+                {stats.rejected}
+              </p>
+              <p className="text-xs text-gray-500">已拒绝</p>
+            </div>
           </div>
-          <div className="bg-yellow-50 rounded-xl p-3 text-center">
-            <p className="text-lg font-bold text-yellow-600">{stats.pending}</p>
-            <p className="text-xs text-gray-500">待审核</p>
-          </div>
-          <div className="bg-green-50 rounded-xl p-3 text-center">
-            <p className="text-lg font-bold text-green-600">{stats.approved}</p>
-            <p className="text-xs text-gray-500">已通过</p>
-          </div>
-          <div className="bg-red-50 rounded-xl p-3 text-center">
-            <p className="text-lg font-bold text-red-500">{stats.rejected}</p>
-            <p className="text-xs text-gray-500">已拒绝</p>
-          </div>
-        </div>
 
-        {/* 操作栏 */}
-        <div className="bg-white rounded-xl p-3 border border-gray-100">
-          <div className="flex items-center gap-2 mb-3">
-            {/* 搜索框 */}
-            <div className="flex-1 relative">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="搜索姓名、标签..."
-                className="w-full h-9 pl-9 pr-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-primary-400"
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-              />
+          {/* 操作栏 */}
+          <div className="bg-white rounded-xl p-3 md:p-4 border border-gray-100">
+            <div className="flex items-center gap-2 mb-3">
+              {/* 搜索框 */}
+              <div className="flex-1 relative">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="搜索姓名、标签..."
+                  className="w-full h-9 md:h-10 pl-9 pr-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-100"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                />
+              </div>
+
+              {/* 筛选按钮 */}
+              <button
+                className="h-9 md:h-10 px-3 md:px-4 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1 transition-colors"
+                onClick={() => setShowFilterDrawer(!showFilterDrawer)}
+              >
+                <Filter size={14} />
+                <span className="hidden sm:inline">筛选</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-4 h-4 bg-primary-400 text-white text-xs rounded-full flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {/* 选择模式切换 */}
+              <button
+                className={`h-9 md:h-10 px-3 md:px-4 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
+                  selectionMode
+                    ? "bg-primary-400 text-white"
+                    : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+                onClick={() =>
+                  selectionMode ? exitSelectionMode() : enterSelectionMode()
+                }
+              >
+                <ListChecks size={14} />
+                <span className="hidden sm:inline">
+                  {selectionMode ? "退出选择" : "选择"}
+                </span>
+              </button>
             </div>
 
-            {/* 筛选按钮 */}
-            <button
-              className="h-9 px-3 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1"
-              onClick={() => setShowFilterDrawer(true)}
-            >
-              <Filter size={14} />
-              筛选
-              {activeFilterCount > 0 && (
-                <span className="w-4 h-4 bg-primary-400 text-white text-xs rounded-full flex items-center justify-center">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* 导入导出 */}
-          <div className="flex items-center gap-2">
-            <button
-              className="h-8 px-3 rounded-lg bg-primary-50 text-primary-600 text-sm font-medium hover:bg-primary-100 flex items-center gap-1"
-              onClick={handleImport}
-            >
-              <Upload size={14} />
-              导入
-            </button>
-            <button
-              className="h-8 px-3 rounded-lg bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 flex items-center gap-1"
-              onClick={handleExport}
-            >
-              <Download size={14} />
-              导出
-            </button>
-            <button
-              className="h-8 px-3 rounded-lg bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 flex items-center gap-1"
-              onClick={handleSendNotification}
-            >
-              <Send size={14} />
-              发送通知
-            </button>
-          </div>
-        </div>
-
-        {/* Tab 筛选 */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {[
-            { key: "all", label: `全部 (${stats.total})` },
-            { key: "pending", label: `待审核 (${stats.pending})` },
-            { key: "approved", label: `已通过 (${stats.approved})` },
-            { key: "rejected", label: `已拒绝 (${stats.rejected})` },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
-                activeTab === tab.key
-                  ? "bg-primary-400 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* 批量操作栏 */}
-        {selectedIds.length > 0 && (
-          <div className="bg-primary-50 rounded-xl p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-sm font-medium text-primary-600">
-                  已选 {selectedIds.length}
-                </span>
-                <span className="text-xs text-gray-400">/</span>
-                <span className="text-xs text-gray-500">
-                  筛选结果 {filteredEnrollments.length}
-                </span>
-                <span className="text-xs text-gray-400">/</span>
-                <span className="text-xs text-gray-500">
-                  全部 {enrollments.length}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className="text-xs text-primary-500 hover:underline"
-                  onClick={selectAll}
-                >
-                  全选当前
-                </button>
-                <button
-                  className="text-xs text-primary-500 hover:underline flex items-center gap-0.5"
-                  onClick={() => {
-                    const invertedIds = filteredEnrollments
-                      .filter((e) => !selectedIds.includes(e.id))
-                      .map((e) => e.id);
-                    setSelectedIds(invertedIds);
-                  }}
-                >
-                  <Repeat size={10} />
-                  反选
-                </button>
-                <button
-                  className="text-xs text-gray-500 hover:underline"
-                  onClick={clearSelection}
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-            <div className="flex gap-2">
+            {/* 功能按钮行 */}
+            <div className="flex items-center gap-2 flex-wrap">
               <button
-                className="h-8 px-3 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600"
-                onClick={handleBatchApprove}
+                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-primary-50 text-primary-600 text-sm font-medium hover:bg-primary-100 flex items-center gap-1 transition-colors"
+                onClick={() => setShowImportModal(true)}
               >
-                批量通过
+                <Upload size={14} />
+                导入
               </button>
               <button
-                className="h-8 px-3 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600"
-                onClick={handleBatchReject}
+                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 flex items-center gap-1 transition-colors"
+                onClick={() => setShowExportModal(true)}
               >
-                批量拒绝
+                <Download size={14} />
+                导出
               </button>
               <button
-                className="h-8 px-3 rounded-lg bg-accent-400 text-white text-sm font-medium hover:bg-accent-500"
+                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 flex items-center gap-1 transition-colors"
                 onClick={handleSendNotification}
               >
+                <Send size={14} />
                 发送通知
               </button>
             </div>
           </div>
-        )}
 
-        {/* 报名列表 */}
-        <div className="space-y-3">
+          {/* Tab 筛选 */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {[
+              { key: "all", label: `全部 (${stats.total})` },
+              { key: "pending", label: `待审核 (${stats.pending})` },
+              { key: "approved", label: `已通过 (${stats.approved})` },
+              { key: "rejected", label: `已拒绝 (${stats.rejected})` },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+                  activeTab === tab.key
+                    ? "bg-primary-400 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 批量操作栏 */}
+          {selectionMode && (
+            <div className="bg-primary-50 rounded-xl p-3 space-y-2 sticky top-0 z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-sm font-medium text-primary-600">
+                    已选 {selectedIds.length}
+                  </span>
+                  <span className="text-xs text-gray-400">/</span>
+                  <span className="text-xs text-gray-500">
+                    当前 {filteredEnrollments.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="text-xs text-primary-500 hover:underline"
+                    onClick={selectAll}
+                  >
+                    全选
+                  </button>
+                  <button
+                    className="text-xs text-primary-500 hover:underline flex items-center gap-0.5"
+                    onClick={() => {
+                      const invertedIds = filteredEnrollments
+                        .filter((e) => !selectedIds.includes(e.id))
+                        .map((e) => e.id);
+                      setSelectedIds(invertedIds);
+                    }}
+                  >
+                    <Repeat size={10} />
+                    反选
+                  </button>
+                  <button
+                    className="text-xs text-gray-500 hover:underline flex items-center gap-0.5"
+                    onClick={exitSelectionMode}
+                  >
+                    <X size={10} />
+                    取消
+                  </button>
+                </div>
+              </div>
+              {selectedIds.length > 0 && (
+                <div className="flex gap-2">
+                  <button
+                    className="h-8 px-3 rounded-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
+                    onClick={handleBatchApprove}
+                  >
+                    批量通过
+                  </button>
+                  <button
+                    className="h-8 px-3 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
+                    onClick={handleBatchReject}
+                  >
+                    批量拒绝
+                  </button>
+                  <button
+                    className="h-8 px-3 rounded-lg bg-accent-400 text-white text-sm font-medium hover:bg-accent-500 transition-colors"
+                    onClick={handleSendNotification}
+                  >
+                    发送通知
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 报名列表 - PC端可显示为双列 */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="w-8 h-8 text-primary-400 animate-spin" />
@@ -543,60 +843,68 @@ const EnrollmentManagementNew: React.FC = () => {
               <p className="text-gray-500">暂无报名数据</p>
               <button
                 className="mt-4 px-4 py-2 bg-primary-400 text-white rounded-full text-sm font-medium hover:bg-primary-500 transition-colors"
-                onClick={handleImport}
+                onClick={() => setShowImportModal(true)}
               >
                 导入报名
               </button>
             </div>
           ) : (
-            filteredEnrollments.map((enrollment) => (
-              <EnrollmentCard
-                key={enrollment.id}
-                enrollment={enrollment}
-                selected={selectedIds.includes(enrollment.id)}
-                onSelect={() => toggleSelect(enrollment.id)}
-                onApprove={() => handleApprove(enrollment.id)}
-                onReject={() => handleReject(enrollment.id)}
-              />
-            ))
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {filteredEnrollments.map((enrollment) => (
+                <EnrollmentCard
+                  key={enrollment.id}
+                  enrollment={enrollment}
+                  selected={selectedIds.includes(enrollment.id)}
+                  selectionMode={selectionMode}
+                  onSelect={() => toggleSelect(enrollment.id)}
+                  onViewDetail={() => handleViewDetail(enrollment)}
+                  onLongPress={() => enterSelectionMode(enrollment.id)}
+                />
+              ))}
+            </div>
           )}
         </div>
 
-        {/* 导入报名弹窗 */}
-        <ImportEnrollmentModal
-          visible={showImportModal}
-          onClose={() => setShowImportModal(false)}
-          activityId={id || ""}
-          onSuccess={handleImportSuccess}
-        />
+        {/* PC端筛选侧边栏 (仅 md+ 屏幕且打开时) */}
+        {showFilterDrawer && (
+          <div className="hidden md:block w-[320px] flex-shrink-0 sticky top-4">
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              {/* 侧栏头部 */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  筛选条件
+                  {activeFilterCount > 0 && (
+                    <span className="ml-2 text-xs font-normal text-primary-400">
+                      {activeFilterCount} 项
+                    </span>
+                  )}
+                </h3>
+                <button
+                  className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                  onClick={() => setShowFilterDrawer(false)}
+                >
+                  <X size={16} className="text-gray-400" />
+                </button>
+              </div>
+              <PCFilterPanel
+                filterOptions={filterOptions}
+                filterCriteria={filterCriteria}
+                onChange={(criteria) => setFilterCriteria(criteria)}
+                onReset={() =>
+                  setFilterCriteria({
+                    ...DEFAULT_FILTER_CRITERIA,
+                    keyword: filterCriteria.keyword,
+                  })
+                }
+                activeCount={activeFilterCount}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
-        {/* 发送通知弹窗 */}
-        <SendNotificationModal
-          visible={showNotifyModal}
-          onClose={() => setShowNotifyModal(false)}
-          activityId={id || ""}
-          enrollments={enrollments}
-          filteredEnrollments={filteredEnrollments}
-          selectedIds={selectedIds}
-          onSuccess={(count) => {
-            console.log(
-              `[EnrollmentManagement] 通知发送成功，发送数量: ${count}`,
-            );
-            // 发送成功后清空选中
-            setSelectedIds([]);
-          }}
-        />
-
-        {/* 导出报名弹窗 */}
-        <ExportEnrollmentModal
-          visible={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          activityId={id || ""}
-          activityTitle="活动"
-          enrollments={filteredEnrollments}
-        />
-
-        {/* 筛选面板 */}
+      {/* 移动端筛选面板（md以下才显示） */}
+      <div className="md:hidden">
         <FilterDrawer
           visible={showFilterDrawer}
           filterOptions={filterOptions}
@@ -605,6 +913,56 @@ const EnrollmentManagementNew: React.FC = () => {
           onClose={() => setShowFilterDrawer(false)}
         />
       </div>
+
+      {/* 导入报名弹窗 */}
+      <ImportEnrollmentModal
+        visible={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        activityId={id || ""}
+        onSuccess={handleImportSuccess}
+      />
+
+      {/* 发送通知弹窗 */}
+      <SendNotificationModal
+        visible={showNotifyModal}
+        onClose={() => setShowNotifyModal(false)}
+        activityId={id || ""}
+        enrollments={enrollments}
+        filteredEnrollments={filteredEnrollments}
+        selectedIds={selectedIds}
+        onSuccess={(count) => {
+          console.log(
+            `[EnrollmentManagement] 通知发送成功，发送数量: ${count}`,
+          );
+          setSelectedIds([]);
+        }}
+      />
+
+      {/* 导出报名弹窗 */}
+      <ExportEnrollmentModal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        activityId={id || ""}
+        activityTitle="活动"
+        enrollments={filteredEnrollments}
+      />
+
+      {/* 详情抽屉 */}
+      <EnrollmentDetailDrawer
+        visible={showDetailDrawer}
+        enrollment={detailEnrollment}
+        onClose={() => {
+          setShowDetailDrawer(false);
+          setDetailEnrollment(null);
+        }}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onNotify={(enrollmentId) => {
+          setShowDetailDrawer(false);
+          setSelectedIds([enrollmentId]);
+          setShowNotifyModal(true);
+        }}
+      />
     </MerchantLayout>
   );
 };

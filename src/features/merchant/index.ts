@@ -11,3 +11,6 @@ export * from "./enrollment";
 
 // Matching - 智能匹配
 export * from "./matching";
+
+// User Pool - 用户池管理 (分库/总库、标签、推送)
+export * from "./user-pool";

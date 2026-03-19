@@ -912,7 +912,7 @@ import { mockEnrollments, type MockEnrollment } from "./enrollments";
  */
 export function generateMatchingGroupsForActivity(
   activityId: string,
-): MockMatchingGroup[] {
+): MockMatchGroup[] {
   // 获取该活动的报名数据
   const activityEnrollments = mockEnrollments.filter(
     (e) => e.activity_id === activityId && e.status !== "cancelled",
@@ -923,6 +923,7 @@ export function generateMatchingGroupsForActivity(
   }
 
   // 将报名数据转换为匹配组成员格式
+  type MockGroupMember = MockMatchGroup["members"][number];
   const members: MockGroupMember[] = activityEnrollments.map((enrollment) => ({
     user_id: enrollment.user_id,
     name: enrollment.name,
@@ -941,7 +942,7 @@ export function generateMatchingGroupsForActivity(
 
   // 简单分组算法：根据成员数量分成若干组
   const groupSize = 4; // 每组4人
-  const groups: MockMatchingGroup[] = [];
+  const groups: MockMatchGroup[] = [];
 
   for (let i = 0; i < members.length; i += groupSize) {
     const groupMembers = members.slice(i, i + groupSize);
@@ -966,7 +967,9 @@ export function generateMatchingGroupsForActivity(
 /**
  * 根据成员特征生成匹配理由
  */
-function generateMatchReasons(members: MockGroupMember[]): string[] {
+function generateMatchReasons(
+  members: MockMatchGroup["members"][number][],
+): string[] {
   const reasons: string[] = [];
 
   // 检查性别比例
@@ -1016,7 +1019,7 @@ function generateMatchReasons(members: MockGroupMember[]): string[] {
     {} as Record<string, number>,
   );
   const commonKeywords = Object.entries(keywordCounts)
-    .filter(([, count]) => count > 1)
+    .filter(([, count]) => (count as number) > 1)
     .map(([kw]) => kw);
   if (commonKeywords.length > 0) {
     reasons.push(`共同兴趣：${commonKeywords.slice(0, 2).join("、")}`);

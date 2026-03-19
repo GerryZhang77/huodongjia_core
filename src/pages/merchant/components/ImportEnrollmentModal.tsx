@@ -234,10 +234,11 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
           ["interests", "skills"].includes(mapping.targetField) &&
           typeof value === "string"
         ) {
-          value = value
+          transformed[mapping.targetField] = value
             .split(/[,，、;；]/)
             .map((s) => s.trim())
             .filter(Boolean);
+          return;
         }
         transformed[mapping.targetField] = value;
       });

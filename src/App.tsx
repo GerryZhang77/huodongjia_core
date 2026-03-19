@@ -47,7 +47,7 @@ const MerchantHelpCenter = lazy(
 );
 const MerchantAnalytics = lazy(() => import("./pages/merchant/AnalyticsPage"));
 const MerchantSettings = lazy(() => import("./pages/merchant/SettingsPage"));
-const TalentPool = lazy(() => import("./pages/merchant/TalentPoolPage"));
+const UserPool = lazy(() => import("./pages/merchant/UserPoolPage"));
 
 // C端用户页面 - 懒加载
 const UserHome = lazy(() => import("./pages/user/UserHome"));
@@ -223,12 +223,12 @@ function App() {
                   }
                 />
 
-                {/* B端商家 - 用户发现 */}
+                {/* B端商家 - 用户管理 */}
                 <Route
-                  path="/dashboard/talent-pool"
+                  path="/dashboard/user-pool"
                   element={
                     <ProtectedRoute requiredRole={["organizer", "admin"]}>
-                      <TalentPool />
+                      <UserPool />
                     </ProtectedRoute>
                   }
                 />
