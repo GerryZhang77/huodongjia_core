@@ -10,7 +10,7 @@
 
 import { FC, ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, Bell, User } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Bell, User, UserSearch } from "lucide-react";
 import { MerchantDesktopSidebar } from "./MerchantDesktopSidebar";
 import { MerchantTopBar } from "./MerchantTopBar";
 import { BreadcrumbItem } from "./types";
@@ -75,7 +75,7 @@ export const MerchantLayout: FC<MerchantLayoutProps> = ({
   // TODO: 获取未读消息数
   const unreadCount = 3;
 
-  // Tab 配置 - 4Tab: 活动 | 创建 | 消息 | 我的
+  // Tab 配置 - 5Tab: 活动 | 创建 | 用户 | 消息 | 我的
   const tabs: TabItem[] = [
     {
       key: "dashboard",
@@ -88,6 +88,12 @@ export const MerchantLayout: FC<MerchantLayoutProps> = ({
       label: "创建",
       icon: PlusCircle,
       path: "/dashboard/activity/create",
+    },
+    {
+      key: "user-pool",
+      label: "用户",
+      icon: UserSearch,
+      path: "/dashboard/user-pool",
     },
     {
       key: "notifications",
@@ -104,6 +110,7 @@ export const MerchantLayout: FC<MerchantLayoutProps> = ({
     const path = location.pathname;
     if (path === "/dashboard") return "dashboard";
     if (path.startsWith("/dashboard/activity/create")) return "create";
+    if (path.startsWith("/dashboard/user-pool")) return "user-pool";
     if (path.startsWith("/dashboard/notifications")) return "notifications";
     if (path.startsWith("/dashboard/profile")) return "profile";
     // 活动管理相关页面归到 dashboard
