@@ -64,6 +64,7 @@ export interface Enrollment {
   // 状态
   status: EnrollmentStatus;
   isInfoComplete?: boolean;
+  isExternal?: boolean; // 通过导入添加，无平台账号
 
   // 时间戳
   enrolledAt: string;

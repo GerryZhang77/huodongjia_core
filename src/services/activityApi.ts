@@ -1,91 +1,103 @@
 /**
  * Activity API - 活动接口
  * 底层 API 调用，与后端接口 1:1 对应
+ *
+ * 后端字段使用 snake_case，前端在此层直接使用 snake_case
  */
 
 import { api } from "@/services/api";
 
 // ============================================
-// 类型定义
+// 类型定义 (与后端 snake_case 保持一致)
 // ============================================
 
 export type ActivityStatus =
   | "draft"
-  | "published"
-  | "registration"
-  | "ongoing"
-  | "completed"
+  | "active"
+  | "full"
+  | "ended"
   | "cancelled";
 
 export interface Activity {
   id: string;
+  organizer_id: string;
   title: string;
   description: string;
-  coverImage?: string;
-  category?: string;
-  tags?: string[];
+  expectation?: string;
+  cover_image?: string;
+  registration_deadline?: string;
+  start_time?: string;
+  end_time?: string;
   location?: string;
-  maxParticipants?: number;
-  currentParticipants?: number;
-  registrationStartTime?: string;
-  registrationEndTime?: string;
-  eventStartTime?: string;
-  eventEndTime?: string;
+  max_participants?: number;
+  fee?: number;
+  tags?: string[];
+  checkin_password?: string;
   status: ActivityStatus;
-  isPublic?: boolean;
-  organizerId?: string;
-  organizerName?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ActivityListResponse {
   success: boolean;
   data?: {
     activities: Activity[];
-    total?: number;
-    page?: number;
-    pageSize?: number;
+    total: number;
   };
   message?: string;
 }
 
 export interface ActivityDetailResponse {
   success: boolean;
-  data?: Activity;
+  event?: Activity;
+  registration_stats?: {
+    total: number;
+    approved: number;
+    pending: number;
+    rejected: number;
+  };
   message?: string;
 }
 
 export interface CreateActivityRequest {
   title: string;
   description: string;
-  coverImage?: string;
-  category?: string;
+  expectation?: string;
+  cover_image?: string;
+  registration_deadline: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  max_participants?: number;
+  fee?: number;
   tags?: string[];
-  location?: string;
-  maxParticipants?: number;
-  registrationStartTime?: string;
-  registrationEndTime?: string;
-  eventStartTime?: string;
-  eventEndTime?: string;
-  isPublic?: boolean;
-}
-
-export interface UpdateActivityRequest extends Partial<CreateActivityRequest> {
-  id: string;
+  checkin_password?: string;
 }
 
 export interface ActivityQueryParams {
   page?: number;
-  pageSize?: number;
+  limit?: number;
   status?: ActivityStatus;
-  category?: string;
-  keyword?: string;
 }
 
 // ============================================
-// 公共接口 (B端/C端共用)
+// 公共接口
 // ============================================
+
+/**
+ * 获取活动列表
+ * GET /api/events
+ */
+export async function getActivities(
+  params?: ActivityQueryParams
+): Promise<ActivityListResponse> {
+  return api.get("/api/events", { params });
+}
+
+/**
+ * 获取公开活动列表 (getActivities 的别名，兼容旧代码)
+ */
+export const getPublicActivities = getActivities;
 
 /**
  * 获取活动详情
@@ -97,16 +109,6 @@ export async function getActivityDetail(
   return api.get(`/api/events/${id}`);
 }
 
-/**
- * 获取公开活动列表 (C端浏览)
- * GET /api/events/public
- */
-export async function getPublicActivities(
-  params?: ActivityQueryParams
-): Promise<ActivityListResponse> {
-  return api.get("/api/events/public", { params });
-}
-
 // ============================================
 // 商家接口 (B端专属)
 // ============================================
@@ -115,8 +117,10 @@ export async function getPublicActivities(
  * 获取我的活动列表 (商家)
  * GET /api/events/my
  */
-export async function getMyActivities(): Promise<ActivityListResponse> {
-  return api.get("/api/events/my");
+export async function getMyActivities(
+  params?: ActivityQueryParams
+): Promise<ActivityListResponse> {
+  return api.get("/api/events/my", { params });
 }
 
 /**
@@ -125,7 +129,7 @@ export async function getMyActivities(): Promise<ActivityListResponse> {
  */
 export async function createActivity(
   data: CreateActivityRequest
-): Promise<ActivityDetailResponse> {
+): Promise<{ success: boolean; event?: Activity; message?: string }> {
   return api.post("/api/events/create", data);
 }
 
@@ -136,87 +140,40 @@ export async function createActivity(
 export async function updateActivity(
   id: string,
   data: Partial<CreateActivityRequest>
-): Promise<ActivityDetailResponse> {
+): Promise<{ success: boolean; event?: Activity; message?: string }> {
   return api.put(`/api/events/${id}`, data);
 }
 
 /**
- * 删除活动
+ * 删除活动 (软删除)
  * DELETE /api/events/{id}
  */
 export async function deleteActivity(
   id: string
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; message?: string }> {
   return api.delete(`/api/events/${id}`);
 }
 
 /**
  * 发布活动
  * POST /api/events/{id}/publish
+ *
+ * 注意：后端暂未实现此接口
  */
 export async function publishActivity(
   id: string
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; message?: string }> {
   return api.post(`/api/events/${id}/publish`);
 }
 
 /**
  * 取消活动
  * POST /api/events/{id}/cancel
+ *
+ * 注意：后端暂未实现此接口，可通过 DELETE 实现软删除
  */
 export async function cancelActivity(
   id: string
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; message?: string }> {
   return api.post(`/api/events/${id}/cancel`);
-}
-
-// ============================================
-// C端用户接口
-// ============================================
-
-/**
- * 获取推荐活动
- * GET /api/user/activities/recommended
- */
-export async function getRecommendedActivities(): Promise<ActivityListResponse> {
-  return api.get("/api/user/activities/recommended");
-}
-
-/**
- * 搜索活动
- * GET /api/user/activities/search
- */
-export async function searchActivities(
-  params: ActivityQueryParams
-): Promise<ActivityListResponse> {
-  return api.get("/api/user/activities/search", { params });
-}
-
-/**
- * 获取活动分类
- * GET /api/user/activities/categories
- */
-export async function getActivityCategories(): Promise<{
-  success: boolean;
-  categories?: string[];
-}> {
-  return api.get("/api/user/activities/categories");
-}
-
-/**
- * 收藏/取消收藏活动
- * POST /api/user/activities/{id}/favorite
- */
-export async function toggleFavoriteActivity(
-  id: string
-): Promise<{ success: boolean; isFavorite?: boolean }> {
-  return api.post(`/api/user/activities/${id}/favorite`);
-}
-
-/**
- * 获取收藏的活动
- * GET /api/user/activities/favorites
- */
-export async function getFavoriteActivities(): Promise<ActivityListResponse> {
-  return api.get("/api/user/activities/favorites");
 }

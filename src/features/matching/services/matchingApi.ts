@@ -20,18 +20,26 @@ type MatchGroup = MatchingGroup;
  * 获取 token
  */
 const getToken = (): string | null => {
-  return localStorage.getItem("token");
+  try {
+    const raw = localStorage.getItem("auth-storage");
+    if (!raw) return null;
+    return JSON.parse(raw)?.state?.token ?? null;
+  } catch {
+    return null;
+  }
 };
 
 /**
  * 获取活动的匹配规则列表
+ * 后端返回 match_rules_detail.rules，是 string[] 或 MatchingRule[]
+ * 统一转换为 MatchingRule[]
  */
 export const getMatchRules = async (
   activityId: string,
 ): Promise<MatchRule[]> => {
   const token = getToken();
 
-  const response = await fetch(`/api/matching/${activityId}/rules`, {
+  const response = await fetch(`/api/match/${activityId}/rules`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -44,33 +52,56 @@ export const getMatchRules = async (
     throw new Error(data.message || "获取匹配规则失败");
   }
 
-  return data.data?.rules || data.rules || [];
+  // 后端返回 { success: true, rules: { rules: string[] | MatchingRule[], weights?: number[] } }
+  const rawRules = data.rules?.rules ?? data.rules ?? [];
+
+  if (!Array.isArray(rawRules) || rawRules.length === 0) return [];
+
+  // 如果是字符串数组（AI 生成后保存的格式），转换为 MatchingRule[]
+  if (typeof rawRules[0] === "string") {
+    const weights: number[] = data.rules?.weights ?? [];
+    return (rawRules as string[]).map((name, i) => ({
+      id: `rule-${i}`,
+      name,
+      type: "similarity" as const,
+      weight: weights[i] ?? Math.round(100 / rawRules.length),
+      enabled: true,
+    }));
+  }
+
+  return rawRules as MatchRule[];
 };
 
 /**
- * 添加匹配规则
+ * 保存匹配规则到后端
+ * 后端期望: { rules: MatchingRule[], weights?: number[] }
  */
-export const createMatchRule = async (
-  rule: Omit<MatchRule, "id" | "createdAt">,
-): Promise<MatchRule> => {
+export const saveMatchRules = async (
+  activityId: string,
+  rules: MatchRule[],
+): Promise<void> => {
   const token = getToken();
 
-  const response = await fetch("/api/match-rules", {
+  const enabledRules = rules.filter((r) => r.enabled);
+  const totalWeight = enabledRules.reduce((s, r) => s + r.weight, 0);
+  const weights = rules.map((r) =>
+    r.enabled && totalWeight > 0 ? Math.round((r.weight / totalWeight) * 100) : 0
+  );
+
+  const response = await fetch(`/api/match/${activityId}/rules`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(rule),
+    body: JSON.stringify({ rules, weights }),
   });
 
   const data = await response.json();
 
   if (!data.success) {
-    throw new Error(data.message || "创建匹配规则失败");
+    throw new Error(data.message || "保存匹配规则失败");
   }
-
-  return data.rule;
 };
 
 /**
@@ -156,21 +187,27 @@ export const generateMatchRules = async (
 
 /**
  * 执行智能匹配
+ * 后端期望: { rules: "规则1,规则2,...", weights: [30, 40, 30] }
  */
 export const executeMatching = async (
   request: ExecuteMatchRequest,
 ): Promise<ExecuteMatchResponse> => {
   const token = getToken();
 
-  const response = await fetch(`/api/matching/${request.activityId}/execute`, {
+  const enabledRules = request.rules.filter((r) => r.enabled);
+  const rulesStr = enabledRules.map((r) => r.name).join(",");
+  const totalWeight = enabledRules.reduce((s, r) => s + r.weight, 0);
+  const weights = enabledRules.map((r) =>
+    totalWeight > 0 ? Math.round((r.weight / totalWeight) * 100) : Math.round(100 / enabledRules.length)
+  );
+
+  const response = await fetch(`/api/match/${request.activityId}/execute`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      rules: request.rules,
-    }),
+    body: JSON.stringify({ rules: rulesStr, weights }),
   });
 
   const data = await response.json();
@@ -195,7 +232,7 @@ export const getMatchGroups = async (
 ): Promise<MatchGroup[]> => {
   const token = getToken();
 
-  const response = await fetch(`/api/matching/${activityId}/results`, {
+  const response = await fetch(`/api/match/${activityId}/results`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -238,7 +275,7 @@ export const toggleGroupLock = async (
 ): Promise<void> => {
   const token = getToken();
 
-  const response = await fetch(`/api/matching/groups/${groupId}/lock`, {
+  const response = await fetch(`/api/match/groups/${groupId}/lock`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -260,7 +297,7 @@ export const toggleGroupLock = async (
 export const getParticipants = async (activityId: string): Promise<any[]> => {
   const token = getToken();
 
-  const response = await fetch(`/api/matching/${activityId}/participants`, {
+  const response = await fetch(`/api/match/${activityId}/participants`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -284,7 +321,7 @@ export const getMatchingHistory = async (
 ): Promise<any[]> => {
   const token = getToken();
 
-  const response = await fetch(`/api/matching/${activityId}/history`, {
+  const response = await fetch(`/api/match/${activityId}/history`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -309,7 +346,7 @@ export const publishMatchingResult = async (
 ): Promise<void> => {
   const token = getToken();
 
-  const response = await fetch(`/api/matching/${activityId}/publish`, {
+  const response = await fetch(`/api/match/${activityId}/publish`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -326,46 +363,31 @@ export const publishMatchingResult = async (
 };
 
 /**
- * 提交异步匹配任务
+ * 提交匹配任务（调用 execute 接口，后端异步执行）
+ * 返回 activityId 作为 taskId，用于后续轮询进度
  */
 export const submitMatchingTask = async (
   activityId: string,
   rules: MatchingRule[],
 ): Promise<{ taskId: string }> => {
-  const token = getToken();
-
-  const response = await fetch(`/api/matching/${activityId}/task`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ rules }),
-  });
-
-  const data = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || "提交任务失败");
-  }
-
-  return { taskId: data.data?.taskId };
+  await executeMatching({ activityId, rules });
+  // 后端立即返回 success，异步执行匹配；用 activityId 作为轮询 key
+  return { taskId: activityId };
 };
 
 /**
- * 查询匹配任务状态
+ * 查询匹配任务状态（轮询 /api/match/:eventId/progress）
  */
 export const getMatchingTaskStatus = async (
-  taskId: string,
+  eventId: string,
 ): Promise<{
   status: "pending" | "processing" | "completed" | "failed";
   progress: number;
   message?: string;
-  resultId?: string;
 }> => {
   const token = getToken();
 
-  const response = await fetch(`/api/matching/task/${taskId}`, {
+  const response = await fetch(`/api/match/${eventId}/progress`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -375,8 +397,36 @@ export const getMatchingTaskStatus = async (
   const data = await response.json();
 
   if (!data.success) {
-    throw new Error(data.message || "获取任务状态失败");
+    throw new Error(data.message || "获取匹配进度失败");
   }
 
-  return data.data;
+  // 后端返回 status 字段，映射到前端期望的格式
+  const statusMap: Record<string, "pending" | "processing" | "completed" | "failed"> = {
+    pending: "pending",
+    matching_extract: "processing",
+    matching_embed: "processing",
+    matching_cal_similarity: "processing",
+    matching_totalScore: "processing",
+    matching_calBestMatch: "processing",
+    completed: "completed",
+    failed: "failed",
+  };
+
+  const progressMap: Record<string, number> = {
+    pending: 5,
+    matching_extract: 20,
+    matching_embed: 40,
+    matching_cal_similarity: 60,
+    matching_totalScore: 75,
+    matching_calBestMatch: 90,
+    completed: 100,
+    failed: 0,
+  };
+
+  const backendStatus = data.status || "pending";
+  return {
+    status: statusMap[backendStatus] ?? "processing",
+    progress: progressMap[backendStatus] ?? 50,
+    message: data.message,
+  };
 };

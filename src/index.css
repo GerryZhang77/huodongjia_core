@@ -12,77 +12,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========================================
- * CSS 变量定义 (可选，用于 JS 访问)
- * ======================================== */
 @layer base {
-  :root {
-    /* 品牌色 */
-    --color-primary-400: #3b82f6;
-    --color-primary-500: #2563eb;
-    --color-primary-600: #1d4ed8;
-
-    --color-secondary-400: #f97316;
-    --color-secondary-500: #ea580c;
-    --color-secondary-600: #c2410c;
-
-    --color-accent-400: #a855f7;
-    --color-accent-500: #9333ea;
-    --color-accent-600: #7e22ce;
-
-    /* 功能色 */
-    --color-success-400: #22c55e;
-    --color-warning-400: #f59e0b;
-    --color-error-400: #ef4444;
-    --color-info-400: #3b82f6;
-
-    /* 中性色 */
-    --color-gray-50: #f8fafc;
-    --color-gray-100: #f1f5f9;
-    --color-gray-200: #e2e8f0;
-    --color-gray-500: #64748b;
-    --color-gray-900: #0f172a;
-
-    /* 阴影 */
-    --shadow-button: 0 2px 8px rgba(59, 130, 246, 0.3);
-    --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.06);
-    --shadow-card-hover: 0 8px 16px rgba(59, 130, 246, 0.12);
-  }
-
-  /* 暗黑模式 */
-  :root.dark {
-    /* 品牌色 - 暗黑模式下稍微调亮 */
-    --color-primary-400: #60a5fa;
-    --color-primary-500: #3b82f6;
-    --color-primary-600: #2563eb;
-
-    --color-secondary-400: #fb923c;
-    --color-secondary-500: #f97316;
-    --color-secondary-600: #ea580c;
-
-    --color-accent-400: #c084fc;
-    --color-accent-500: #a855f7;
-    --color-accent-600: #9333ea;
-
-    /* 功能色 */
-    --color-success-400: #4ade80;
-    --color-warning-400: #fbbf24;
-    --color-error-400: #f87171;
-    --color-info-400: #60a5fa;
-
-    /* 中性色 - 反转 */
-    --color-gray-50: #0f172a;
-    --color-gray-100: #1e293b;
-    --color-gray-200: #334155;
-    --color-gray-500: #94a3b8;
-    --color-gray-900: #f1f5f9;
-
-    /* 阴影 - 暗黑模式下使用更深的阴影 */
-    --shadow-button: 0 2px 8px rgba(59, 130, 246, 0.4);
-    --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.3);
-    --shadow-card-hover: 0 8px 16px rgba(59, 130, 246, 0.2);
-  }
-
   /* 全局字体 */
   body {
     font-family:

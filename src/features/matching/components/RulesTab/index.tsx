@@ -66,6 +66,10 @@ interface RulesTabProps {
   onLoadConfig?: (config: SavedConfig) => void;
   /** 删除已保存的配置 */
   onDeleteConfig?: (configId: string) => void;
+  /** AI 生成规则（传入自然语言描述） */
+  onGenerateRules?: (description: string) => Promise<void>;
+  /** 是否正在生成规则 */
+  isGeneratingRules?: boolean;
 }
 
 /**
@@ -192,10 +196,13 @@ const RulesTab: React.FC<RulesTabProps> = ({
   savedConfigs = [],
   onLoadConfig,
   onDeleteConfig,
+  onGenerateRules,
+  isGeneratingRules = false,
 }) => {
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConstraints, setShowConstraints] = useState(false);
+  const [aiInput, setAiInput] = useState("");
 
   // 保存配置弹窗状态
   const [showSaveConfigDialog, setShowSaveConfigDialog] = useState(false);
@@ -279,6 +286,40 @@ const RulesTab: React.FC<RulesTabProps> = ({
 
   return (
     <div className="pb-32">
+      {/* AI 生成规则区域 */}
+      {onGenerateRules && !isRulesLocked && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 mb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={18} className="text-primary-500" />
+            <h3 className="text-base font-semibold text-gray-900">AI 生成规则</h3>
+          </div>
+          <textarea
+            value={aiInput}
+            onChange={(e) => setAiInput(e.target.value)}
+            placeholder="描述你的匹配需求，例如：希望将兴趣相近、行业相同的参与者分在一组"
+            rows={3}
+            disabled={isGeneratingRules}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400 disabled:opacity-50"
+          />
+          <button
+            onClick={async () => {
+              if (!aiInput.trim()) {
+                Toast.show({ content: "请输入匹配需求描述", icon: "fail" });
+                return;
+              }
+              await onGenerateRules(aiInput);
+            }}
+            disabled={isGeneratingRules || !aiInput.trim()}
+            className="mt-2 w-full py-2.5 flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-accent-500 text-white text-sm font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingRules ? (
+              <><Loader2 size={16} className="animate-spin" />生成中...</>
+            ) : (
+              <><Sparkles size={16} />生成匹配规则</>
+            )}
+          </button>
+        </div>
+      )}
       {/* 重新匹配模式提示 Banner */}
       {isRematchMode && (
         <div className="mb-4 p-4 bg-gradient-to-r from-primary-50 to-accent-50 border border-primary-200 rounded-xl">

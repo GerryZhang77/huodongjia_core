@@ -56,6 +56,26 @@ const applyTheme = (theme: Theme) => {
 };
 
 /**
+ * 同步读取 localStorage 中保存的 mode，避免 persist rehydration 异步导致的时序问题
+ */
+const getInitialMode = (): ThemeMode => {
+  try {
+    const stored = localStorage.getItem("theme-storage");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed?.state?.mode ?? "system";
+    }
+  } catch {
+    // ignore
+  }
+  return "system";
+};
+
+const initialMode = getInitialMode();
+const initialTheme = resolveTheme(initialMode);
+applyTheme(initialTheme);
+
+/**
  * 主题 Store
  * 支持持久化存储，页面刷新后保持用户选择
  * 支持跟随系统主题
@@ -63,9 +83,9 @@ const applyTheme = (theme: Theme) => {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
-      mode: "system",
-      theme: resolveTheme("system"),
-      isDark: resolveTheme("system") === "dark",
+      mode: initialMode,
+      theme: initialTheme,
+      isDark: initialTheme === "dark",
 
       setMode: (mode: ThemeMode) => {
         const theme = resolveTheme(mode);

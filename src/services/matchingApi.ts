@@ -70,18 +70,18 @@ export interface ExecuteMatchRequest {
 
 /**
  * 提取关键词
- * GET /api/matching/{activityId}/extract-keywords
+ * GET /api/match/{activityId}/extract-keywords
  */
 export async function extractKeywords(activityId: string): Promise<{
   success: boolean;
   keywords?: string[];
 }> {
-  return api.get(`/api/matching/${activityId}/extract-keywords`);
+  return api.get(`/api/match/${activityId}/extract-keywords`);
 }
 
 /**
  * 生成匹配规则 (NLP)
- * POST /api/matching/{activityId}/generate-rules
+ * POST /api/match/{activityId}/generate
  */
 export async function generateMatchRules(
   activityId: string,
@@ -90,36 +90,36 @@ export async function generateMatchRules(
   success: boolean;
   rules?: MatchRule[];
 }> {
-  return api.post(`/api/matching/${activityId}/generate-rules`, {
+  return api.post(`/api/match/${activityId}/generate`, {
     description,
   });
 }
 
 /**
  * 保存匹配规则
- * POST /api/matching/{activityId}/rules
+ * POST /api/match/{activityId}/rules
  */
 export async function saveMatchRules(
   activityId: string,
   rules: MatchRule[]
 ): Promise<{ success: boolean }> {
-  return api.post(`/api/matching/${activityId}/rules`, { rules });
+  return api.post(`/api/match/${activityId}/rules`, { rules });
 }
 
 /**
  * 获取已保存的匹配规则
- * GET /api/matching/{activityId}/rules
+ * GET /api/match/{activityId}/rules
  */
 export async function getMatchRules(activityId: string): Promise<{
   success: boolean;
   rules?: MatchRule[];
 }> {
-  return api.get(`/api/matching/${activityId}/rules`);
+  return api.get(`/api/match/${activityId}/rules`);
 }
 
 /**
  * 执行匹配
- * POST /api/matching/{activityId}/execute
+ * POST /api/match/{activityId}/execute
  */
 export async function executeMatching(
   activityId: string,
@@ -128,59 +128,59 @@ export async function executeMatching(
   success: boolean;
   result?: MatchResult;
 }> {
-  return api.post(`/api/matching/${activityId}/execute`, request);
+  return api.post(`/api/match/${activityId}/execute`, request);
 }
 
 /**
  * 获取匹配结果
- * GET /api/matching/{activityId}/result
+ * GET /api/match/{activityId}/results
  */
 export async function getMatchResult(activityId: string): Promise<{
   success: boolean;
   result?: MatchResult;
 }> {
-  return api.get(`/api/matching/${activityId}/result`);
+  return api.get(`/api/match/${activityId}/results`);
 }
 
 /**
  * 发布匹配结果
- * POST /api/matching/{activityId}/publish
+ * POST /api/match/{activityId}/publish
  */
 export async function publishMatchResult(activityId: string): Promise<{
   success: boolean;
 }> {
-  return api.post(`/api/matching/${activityId}/publish`);
+  return api.post(`/api/match/${activityId}/publish`);
 }
 
 /**
  * 更新分组
- * PUT /api/matching/{activityId}/groups/{groupId}
+ * PUT /api/match/{activityId}/groups/{groupId}
  */
 export async function updateMatchGroup(
   activityId: string,
   groupId: string,
   data: Partial<MatchGroup>
 ): Promise<{ success: boolean }> {
-  return api.put(`/api/matching/${activityId}/groups/${groupId}`, data);
+  return api.put(`/api/match/${activityId}/groups/${groupId}`, data);
 }
 
 /**
  * 锁定/解锁分组
- * POST /api/matching/{activityId}/groups/{groupId}/lock
+ * POST /api/match/{activityId}/groups/{groupId}/lock
  */
 export async function toggleGroupLock(
   activityId: string,
   groupId: string,
   isLocked: boolean
 ): Promise<{ success: boolean }> {
-  return api.post(`/api/matching/${activityId}/groups/${groupId}/lock`, {
+  return api.post(`/api/match/${activityId}/groups/${groupId}/lock`, {
     isLocked,
   });
 }
 
 /**
  * 获取词嵌入
- * POST /api/embedding/{activityId}/get-embedding
+ * GET /api/match/{activityId}/get-embedding
  */
 export async function getEmbedding(
   activityId: string,
@@ -189,12 +189,12 @@ export async function getEmbedding(
   success: boolean;
   embeddings?: number[][];
 }> {
-  return api.post(`/api/embedding/${activityId}/get-embedding`, { texts });
+  return api.get(`/api/match/${activityId}/get-embedding`, { params: { texts } });
 }
 
 /**
  * 计算相似度
- * POST /api/embedding/{activityId}/calculate-similarity
+ * GET /api/match/{activityId}/calculate
  */
 export async function calculateSimilarity(
   activityId: string,
@@ -204,8 +204,7 @@ export async function calculateSimilarity(
   success: boolean;
   similarity?: number;
 }> {
-  return api.post(`/api/embedding/${activityId}/calculate-similarity`, {
-    embedding1,
-    embedding2,
+  return api.get(`/api/match/${activityId}/calculate`, {
+    params: { embedding1, embedding2 },
   });
 }

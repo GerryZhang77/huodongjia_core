@@ -1,35 +1,19 @@
 /**
  * Auth 服务 - API 调用
+ *
+ * 联调模式：通过 axios 调用真实后端 API
+ * Mock 模式：MSW 拦截请求返回 mock 数据
  */
 
 import { api } from "@/services/api";
-import type { LoginCredentials, LoginResponse, UserType } from "../types";
-
-/**
- * 根据账号判断用户角色
- * - 以 "user" 开头或包含 "user" 的账号 → 普通用户
- * - 以 "admin" 开头的账号 → 管理员
- * - 其他账号 → 商家 (organizer)
- */
-function getUserTypeByIdentifier(identifier: string): UserType {
-  const lowerIdentifier = identifier.toLowerCase();
-  if (lowerIdentifier.startsWith("user") || lowerIdentifier.includes("user")) {
-    return "user";
-  }
-  if (lowerIdentifier.startsWith("admin")) {
-    return "admin";
-  }
-  return "organizer";
-}
+import type { LoginCredentials, LoginResponse } from "../types";
 
 /**
  * 用户登录
- * 根据 OpenAPI 文档: POST /api/auth/login
+ * POST /api/auth/login
  *
- * 🔧 临时模式: 任意账号密码都可以登录
- * - 账号包含 "user" → 普通用户角色，跳转 /u/home
- * - 账号以 "admin" 开头 → 管理员角色，跳转 /dashboard
- * - 其他账号 → 商家角色，跳转 /dashboard
+ * 后端接受 { identifier, password }
+ * identifier 可以是用户名或手机号
  */
 export async function login(
   credentials: LoginCredentials
@@ -37,64 +21,39 @@ export async function login(
   try {
     console.log("🔐 [authApi] 发送登录请求:", {
       identifier: credentials.identifier,
-      // password 不打印
     });
 
-    // 🔧 临时: 直接返回 mock 成功响应，跳过真实 API 调用
-    const userType = getUserTypeByIdentifier(credentials.identifier);
-    const mockResponse: LoginResponse = {
-      success: true,
-      message: "登录成功",
-      token: "mock_token_" + Date.now(),
-      user: {
-        id: "user_" + Date.now(),
-        name: credentials.identifier || "测试用户",
-        phone: credentials.identifier.includes("@")
-          ? ""
-          : credentials.identifier,
-        user_type: userType, // 根据账号自动判断角色
-        tags: [],
-      },
-    };
-
-    console.log("✅ [authApi] Mock 登录响应:", {
-      success: mockResponse.success,
-      message: mockResponse.message,
-      hasToken: !!mockResponse.token,
-      hasUser: !!mockResponse.user,
-      user: mockResponse.user,
-    });
-
-    return mockResponse;
-
-    /* 🔧 真实 API 调用 (已禁用)
-    const response = (await api.post("/api/auth/login", {
+    const response = await api.post<LoginResponse>("/api/auth/login", {
       identifier: credentials.identifier,
       password: credentials.password,
-    })) as LoginResponse;
+    });
 
     console.log("✅ [authApi] 登录响应:", {
       success: response.success,
       message: response.message,
       hasToken: !!response.token,
       hasUser: !!response.user,
-      user: response.user,
     });
 
     return response;
-    */
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ [authApi] 登录错误:", error);
+
+    // 提取后端返回的错误信息
+    const axiosError = error as { response?: { data?: { message?: string } } };
+    const message =
+      axiosError?.response?.data?.message || "登录失败，请检查网络连接";
+
     return {
       success: false,
-      message: "登录失败，请重试",
+      message,
     };
   }
 }
 
 /**
  * 用户登出
- * 根据 OpenAPI 文档: POST /api/auth/logout
+ * POST /api/auth/logout
  */
 export async function logout(): Promise<void> {
   try {
@@ -102,27 +61,36 @@ export async function logout(): Promise<void> {
   } catch (error) {
     console.error("Logout error:", error);
   } finally {
-    // 清理本地存储
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("auth-storage");
   }
 }
 
 /**
  * 获取当前用户信息
- *
- * @todo 待实现：从 token 或服务器获取用户信息
+ * GET /api/auth/me
  */
 export async function getCurrentUser(): Promise<LoginResponse> {
-  // TODO: 实现从 token 解析或从服务器获取用户信息
-  return {
-    success: false,
-    message: "未实现",
-  };
+  try {
+    const response = await api.get<{ success: boolean; user: LoginResponse["user"] }>("/api/auth/me");
+    return {
+      success: true,
+      message: "获取成功",
+      user: response.user,
+    };
+  } catch (error) {
+    console.error("❌ [authApi] 获取用户信息失败:", error);
+    return {
+      success: false,
+      message: "获取用户信息失败",
+    };
+  }
 }
 
 /**
  * 发送短信验证码
+ *
+ * 注意：后端目前未实现短信验证码接口
+ * 联调时此功能暂不可用，保留接口定义以备后续实现
  */
 export async function sendSmsCode(
   phone: string,
@@ -131,8 +99,6 @@ export async function sendSmsCode(
   try {
     console.log("📱 [authApi] 发送短信验证码:", { phone, type });
 
-    // 🔧 临时 Mock：模拟发送成功
-    // 验证手机号格式
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       return {
         success: false,
@@ -140,19 +106,13 @@ export async function sendSmsCode(
       };
     }
 
-    // 模拟网络延迟
+    // 后端未实现，返回提示
+    console.warn("⚠️ [authApi] 短信验证码接口后端未实现，使用模拟模式");
     await new Promise((resolve) => setTimeout(resolve, 500));
-
-    console.log("✅ [authApi] 短信验证码发送成功 (Mock)");
     return {
       success: true,
-      message: "验证码已发送",
+      message: "验证码已发送（模拟模式，验证码为 123456）",
     };
-
-    /* 🔧 真实 API 调用 (已禁用)
-    const response = await api.post("/api/auth/send-sms", { phone, type });
-    return response;
-    */
   } catch (error) {
     console.error("❌ [authApi] 发送验证码失败:", error);
     return {
@@ -164,6 +124,8 @@ export async function sendSmsCode(
 
 /**
  * 验证短信验证码
+ *
+ * 注意：后端目前未实现，使用固定验证码 123456
  */
 export async function verifySmsCode(
   phone: string,
@@ -172,9 +134,8 @@ export async function verifySmsCode(
   try {
     console.log("🔍 [authApi] 验证短信验证码:", { phone, code });
 
-    // 🔧 临时 Mock：验证码为 123456 时通过
+    // 后端未实现，使用固定验证码
     if (code === "123456") {
-      console.log("✅ [authApi] 验证码验证成功 (Mock)");
       return {
         success: true,
         message: "验证成功",
@@ -187,11 +148,6 @@ export async function verifySmsCode(
       message: "验证码错误或已过期",
       verified: false,
     };
-
-    /* 🔧 真实 API 调用 (已禁用)
-    const response = await api.post("/api/auth/verify-sms", { phone, code });
-    return response;
-    */
   } catch (error) {
     console.error("❌ [authApi] 验证码验证失败:", error);
     return {
@@ -204,54 +160,56 @@ export async function verifySmsCode(
 
 /**
  * 用户注册
+ * POST /api/auth/register
+ *
+ * 后端接受 { account, password, phone?, userType?, name? }
+ * 前端传入 { phone, sms_code, password }
+ * 适配：用 phone 作为 account（如果没有单独的 account 字段）
  */
 export async function register(credentials: {
   phone: string;
   sms_code: string;
   password: string;
+  account?: string;
+  name?: string;
 }): Promise<LoginResponse> {
   try {
     console.log("📝 [authApi] 用户注册:", { phone: credentials.phone });
 
-    // 🔧 临时 Mock：模拟注册成功
-    // 模拟网络延迟
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const mockResponse: LoginResponse = {
-      success: true,
-      message: "注册成功",
-      token: "mock_token_" + Date.now(),
-      user: {
-        id: "user_" + Date.now(),
-        name: "新用户",
-        phone: credentials.phone,
-        user_type: "user",
-        tags: [],
-      },
-    };
-
-    console.log("✅ [authApi] 注册成功 (Mock):", {
-      success: mockResponse.success,
-      hasUser: !!mockResponse.user,
+    const response = await api.post<LoginResponse>("/api/auth/register", {
+      account: credentials.account || credentials.phone,
+      password: credentials.password,
+      phone: credentials.phone,
+      name: credentials.name || credentials.phone,
+      userType: "user",
     });
 
-    return mockResponse;
+    console.log("✅ [authApi] 注册响应:", {
+      success: response.success,
+      hasUser: !!response.user,
+    });
 
-    /* 🔧 真实 API 调用 (已禁用)
-    const response = await api.post("/api/auth/register", credentials);
     return response;
-    */
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ [authApi] 注册失败:", error);
+
+    const axiosError = error as { response?: { data?: { message?: string } } };
+    const message =
+      axiosError?.response?.data?.message || "注册失败，请稍后重试";
+
     return {
       success: false,
-      message: "注册失败，请稍后重试",
+      message,
     };
   }
 }
 
 /**
  * 重置密码
+ * PUT /api/auth/password
+ *
+ * 后端接受 { oldPassword, newPassword }，需要认证
+ * 注意：后端不支持通过短信验证码重置密码，仅支持已登录用户修改密码
  */
 export async function resetPassword(credentials: {
   phone: string;
@@ -261,20 +219,12 @@ export async function resetPassword(credentials: {
   try {
     console.log("🔑 [authApi] 重置密码:", { phone: credentials.phone });
 
-    // 🔧 临时 Mock：模拟重置成功
-    // 模拟网络延迟
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    console.log("✅ [authApi] 密码重置成功 (Mock)");
+    // 后端当前仅支持已登录用户通过旧密码修改，不支持短信验证码重置
+    console.warn("⚠️ [authApi] 后端不支持短信验证码重置密码，此功能暂不可用");
     return {
-      success: true,
-      message: "密码重置成功",
+      success: false,
+      message: "暂不支持短信验证码重置密码，请联系管理员",
     };
-
-    /* 🔧 真实 API 调用 (已禁用)
-    const response = await api.post("/api/auth/reset-password", credentials);
-    return response;
-    */
   } catch (error) {
     console.error("❌ [authApi] 重置密码失败:", error);
     return {

@@ -95,54 +95,56 @@ export interface SendNotificationRequest {
 
 /**
  * 获取活动的报名列表 (商家)
- * GET /api/events/{activityId}/enrollments
+ * GET /api/enrollments/{activityId}
  */
 export async function getEnrollmentList(
   activityId: string
 ): Promise<EnrollmentListResponse> {
-  return api.get(`/api/events/${activityId}/enrollments`);
+  return api.get(`/api/enrollments/${activityId}`);
 }
 
 /**
  * 获取报名详情
- * GET /api/enrollments/{id}
+ * GET /api/enrollments/{eventId}/{userId}
  */
 export async function getEnrollmentDetail(
-  id: string
+  eventId: string,
+  userId: string
 ): Promise<EnrollmentDetailResponse> {
-  return api.get(`/api/enrollments/${id}`);
+  return api.get(`/api/enrollments/${eventId}/${userId}`);
 }
 
 /**
  * 更新报名状态
- * PATCH /api/enrollments/{id}/status
+ * PATCH /api/enrollments/{eventId}/status
  */
 export async function updateEnrollmentStatus(
-  id: string,
+  eventId: string,
+  userId: string,
   status: EnrollmentStatus
 ): Promise<{ success: boolean }> {
-  return api.patch(`/api/enrollments/${id}/status`, { status });
+  return api.patch(`/api/enrollments/${eventId}/status`, { userId, status });
 }
 
 /**
  * 批量导入报名
- * POST /api/events/{activityId}/enrollments/import
+ * POST /api/enrollments/{activityId}/import
  */
 export async function importEnrollments(
   activityId: string,
   formData: FormData
 ): Promise<ImportEnrollmentResult> {
-  return api.post(`/api/events/${activityId}/enrollments/import`, formData, {
+  return api.post(`/api/enrollments/${activityId}/import`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
 
 /**
  * 导出报名数据
- * GET /api/events/{activityId}/enrollments/export
+ * GET /api/enrollments/{activityId}/export
  */
 export async function exportEnrollments(activityId: string): Promise<Blob> {
-  return api.get(`/api/events/${activityId}/enrollments/export`, {
+  return api.get(`/api/enrollments/${activityId}/export`, {
     responseType: "blob",
   });
 }

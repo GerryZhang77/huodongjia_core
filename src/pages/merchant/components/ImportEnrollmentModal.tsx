@@ -262,7 +262,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
       const enrollments = transformData();
 
       const response = await fetch(
-        `/api/events/${activityId}/enrollments/import`,
+        `/api/enrollments/${activityId}/import`,
         {
           method: "POST",
           headers: {

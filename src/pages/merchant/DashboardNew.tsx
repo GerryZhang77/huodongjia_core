@@ -27,12 +27,12 @@ import {
 } from "lucide-react";
 import { MerchantLayout } from "@/components/layout";
 import {
-  mockMerchantStats,
-  mockMerchantActivities,
   MerchantActivity,
   getActivityStatusText,
   getActivityStatusColor,
 } from "@/mocks/data/merchant";
+import { useMerchantActivities } from "@/features/merchant/activity-manage/hooks/useMerchantActivities";
+import type { Activity } from "@/services/activityApi";
 
 /**
  * 统计卡片组件
@@ -318,13 +318,43 @@ const ActivityCard: FC<ActivityCardProps> = ({
   );
 };
 
+// 将后端 Activity 转换为 MerchantActivity 格式
+function toMerchantActivity(a: Activity): MerchantActivity {
+  return {
+    id: a.id,
+    title: a.title,
+    status: (a.status === "active" ? "recruiting" : a.status) as MerchantActivity["status"],
+    registrationStartTime: a.created_at ?? "",
+    registrationEndTime: a.registration_deadline ?? "",
+    eventStartTime: a.start_time ?? "",
+    eventEndTime: a.end_time ?? "",
+    location: a.location ?? "",
+    coverImage: a.cover_image ?? null,
+    maxParticipants: a.max_participants ?? 0,
+    currentParticipants: 0,
+    pendingCount: 0,
+    approvedCount: 0,
+    hasMatchResult: false,
+    createdAt: a.created_at ?? "",
+    updatedAt: a.updated_at ?? "",
+  };
+}
+
 /**
  * Dashboard 页面组件
  */
 export const DashboardNew: FC = () => {
   const navigate = useNavigate();
-  const stats = mockMerchantStats;
-  const activities = mockMerchantActivities;
+  const { data } = useMerchantActivities();
+
+  const activities: MerchantActivity[] = (data?.data?.activities ?? []).map(toMerchantActivity);
+
+  const stats = {
+    totalActivities: activities.length,
+    activeActivities: activities.filter((a) => a.status === "recruiting" || a.status === "ongoing").length,
+    totalParticipants: activities.reduce((sum, a) => sum + a.currentParticipants, 0),
+    pendingEnrollments: activities.reduce((sum, a) => sum + a.pendingCount, 0),
+  };
 
   // 筛选活动状态
   const [statusFilter, setStatusFilter] = useState<string>("all");

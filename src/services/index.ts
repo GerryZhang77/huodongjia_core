@@ -28,7 +28,6 @@ export type {
   ActivityListResponse,
   ActivityDetailResponse,
   CreateActivityRequest,
-  UpdateActivityRequest,
   ActivityQueryParams,
 } from "./activityApi";
 

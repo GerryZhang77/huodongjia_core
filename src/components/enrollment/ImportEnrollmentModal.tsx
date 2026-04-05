@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Toast } from "antd-mobile";
 import * as XLSX from "xlsx";
-import { useStore } from "@/store";
+import { useAuthStore } from "@/features/auth/stores";
 
 // ========================================
 // 类型定义
@@ -292,7 +292,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   onSuccess,
 }) => {
   // 从 store 获取 token
-  const { token } = useStore();
+  const { token } = useAuthStore();
 
   // 步骤: 1-上传文件, 3-预览确认
   const [step, setStep] = useState(1);
@@ -551,7 +551,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
       // 调用导入 API
       const response = await fetch(
-        `/api/events/${activityId}/enrollments/import`,
+        `/api/enrollments/${activityId}/import`,
         {
           method: "POST",
           headers: {

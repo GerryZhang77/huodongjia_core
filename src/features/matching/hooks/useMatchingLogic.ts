@@ -14,9 +14,7 @@ import { Toast } from "antd-mobile";
 // API 服务函数
 import {
   getMatchRules,
-  createMatchRule,
-  updateMatchRule,
-  deleteMatchRule,
+  saveMatchRules,
   executeMatching,
   getMatchGroups,
   toggleGroupLock,
@@ -103,6 +101,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   // 加载状态
   const [isLoading, setIsLoading] = useState(true);
   const [isMatching, setIsMatching] = useState(false);
+  const [isGeneratingRules, setIsGeneratingRules] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [matchingProgress, setMatchingProgress] = useState(0);
   const [matchingMessage, setMatchingMessage] = useState<string>("");
@@ -235,71 +234,66 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     }
   }, [activityId]);
 
-  // === 添加规则 ===
-  const handleAddRule = useCallback(
-    async (rule: Omit<MatchRule, "id" | "createdAt">) => {
+  // === AI 生成匹配规则 ===
+  const handleGenerateRules = useCallback(
+    async (description: string) => {
+      setIsGeneratingRules(true);
       try {
-        const newRule = await createMatchRule(rule);
-        setRules((prev) => [...prev, newRule]);
-        Toast.show({ content: "规则已添加", icon: "success" });
-        return newRule;
+        const token = (() => {
+          try {
+            const raw = localStorage.getItem("auth-storage");
+            return raw ? JSON.parse(raw)?.state?.token ?? null : null;
+          } catch { return null; }
+        })();
+
+        const response = await fetch(`/api/match/${activityId}/generate`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ description }),
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message || "生成失败");
+
+        const rawRules: string[] = data.rules || [];
+        const rawWeights: number[] = data.weights || [];
+        if (rawRules.length === 0) throw new Error("未生成任何规则");
+        const generatedRules: MatchRule[] = rawRules.map((name, i) => ({
+          id: `rule-${Date.now()}-${i}`,
+          name,
+          type: "similarity" as const,
+          weight: rawWeights[i] ?? Math.round(100 / rawRules.length),
+          enabled: true,
+        }));
+
+        setRules(generatedRules);
+        setStage("configuring");
+        Toast.show({ content: `已生成 ${generatedRules.length} 条规则`, icon: "success" });
       } catch (error) {
-        console.error("Failed to add rule:", error);
-        Toast.show({ content: "添加规则失败", icon: "fail" });
-        throw error;
+        Toast.show({ content: error instanceof Error ? error.message : "生成规则失败", icon: "fail" });
+      } finally {
+        setIsGeneratingRules(false);
       }
     },
-    [],
+    [activityId],
   );
 
-  // === 更新规则 ===
-  const handleUpdateRule = useCallback(
-    async (ruleId: string, updates: Partial<MatchRule>) => {
-      try {
-        const updatedRule = await updateMatchRule(ruleId, updates);
-        setRules((prev) =>
-          prev.map((r) => (r.id === ruleId ? { ...r, ...updatedRule } : r)),
-        );
-        return updatedRule;
-      } catch (error) {
-        console.error("Failed to update rule:", error);
-        Toast.show({ content: "更新规则失败", icon: "fail" });
-        throw error;
-      }
-    },
-    [],
-  );
-
-  // === 删除规则 ===
-  const handleDeleteRule = useCallback(async (ruleId: string) => {
-    try {
-      await deleteMatchRule(ruleId);
-      setRules((prev) => prev.filter((r) => r.id !== ruleId));
-      Toast.show({ content: "规则已删除", icon: "success" });
-    } catch (error) {
-      console.error("Failed to delete rule:", error);
-      Toast.show({ content: "删除规则失败", icon: "fail" });
-    }
-  }, []);
-
-  // === 保存所有规则配置 ===
+  // === 保存所有规则配置到后端 ===
   const handleSaveRules = useCallback(
     async (configName: string) => {
       try {
-        // 创建新的配置
+        await saveMatchRules(activityId, rules);
+
         const newConfig = {
           id: `config_${Date.now()}`,
           name: configName,
           rules: [...rules],
           savedAt: new Date().toISOString(),
         };
-
-        // 添加到已保存配置列表
         setSavedConfigs((prev) => [newConfig, ...prev]);
-
-        // 这里可以保存到后端或本地存储
-        // await saveRulesConfigToBackend(activityId, newConfig);
-
         Toast.show({ content: `配置"${configName}"已保存`, icon: "success" });
       } catch (error) {
         console.error("Failed to save rules:", error);
@@ -307,7 +301,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         throw error;
       }
     },
-    [rules],
+    [activityId, rules],
   );
 
   // === 加载已保存的配置 ===
@@ -331,11 +325,11 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     Toast.show({ content: "配置已删除", icon: "success" });
   }, []);
 
-  // === 轮询任务状态 ===
+  // === 轮询任务状态（传入 activityId） ===
   const pollTaskStatus = useCallback(
-    async (taskId: string) => {
+    async (eventId: string) => {
       try {
-        const status = await getMatchingTaskStatus(taskId);
+        const status = await getMatchingTaskStatus(eventId);
 
         setMatchingProgress(status.progress);
         setMatchingMessage(status.message || "");
@@ -441,17 +435,17 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     setIsRulesLocked(true); // 锁定规则编辑
 
     try {
-      // 提交异步匹配任务
+      // 提交异步匹配任务（内部调用 execute，返回 activityId 作为 taskId）
       const { taskId } = await submitMatchingTask(activityId, enabledRules);
       currentTaskIdRef.current = taskId;
 
-      // 开始轮询任务状态
+      // 开始轮询任务状态（用 activityId 轮询 /progress）
       taskPollingRef.current = setInterval(() => {
-        pollTaskStatus(taskId);
-      }, 1000);
+        pollTaskStatus(activityId);
+      }, 2000);
 
       // 立即执行一次
-      pollTaskStatus(taskId);
+      pollTaskStatus(activityId);
     } catch (error) {
       console.error("Failed to start matching:", error);
       Toast.show({ content: "提交匹配任务失败", icon: "fail" });
@@ -743,12 +737,11 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     setGroups,
 
     // 规则操作
-    handleAddRule,
-    handleUpdateRule,
-    handleDeleteRule,
+    handleGenerateRules,
+    isGeneratingRules,
     handleSaveRules,
-    handleLoadConfig, // 加载已保存的配置
-    handleDeleteConfig, // 删除已保存的配置
+    handleLoadConfig,
+    handleDeleteConfig,
 
     // 匹配操作
     handleStartMatching,

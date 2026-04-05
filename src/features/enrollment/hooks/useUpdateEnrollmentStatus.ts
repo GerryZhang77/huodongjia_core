@@ -2,58 +2,54 @@
  * 更新报名状态 Hook
  */
 
-import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Toast } from "antd-mobile";
 import { updateEnrollmentStatus as updateStatusApi } from "../services";
 import type { EnrollmentStatus } from "../types";
 
-export const useUpdateEnrollmentStatus = () => {
-  const [loading, setLoading] = useState(false);
+export const useUpdateEnrollmentStatus = (activityId: string) => {
+  const queryClient = useQueryClient();
 
-  const updateStatus = async (
+  const mutation = useMutation({
+    mutationFn: ({
+      enrollmentIds,
+      status,
+    }: {
+      enrollmentIds: string[];
+      status: EnrollmentStatus;
+    }) => updateStatusApi({ activityId, enrollmentIds, status }),
+    onSuccess: (_, { enrollmentIds, status }) => {
+      const statusText =
+        status === "approved" ? "通过" : status === "rejected" ? "拒绝" : "更新";
+      Toast.show({
+        icon: "success",
+        content: `已${statusText} ${enrollmentIds.length} 条报名`,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["merchant", "enrollment", "list", activityId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["activity", "detail", activityId] });
+      queryClient.invalidateQueries({ queryKey: ["merchant", "activities"] });
+    },
+    onError: (error) => {
+      Toast.show({
+        icon: "fail",
+        content: error instanceof Error ? error.message : "更新失败",
+      });
+    },
+  });
+
+  const updateStatus = (
     enrollmentIds: string[],
     status: EnrollmentStatus,
     onSuccess?: () => void
   ) => {
     if (enrollmentIds.length === 0) {
-      Toast.show({
-        icon: "fail",
-        content: "请先选择要操作的报名",
-      });
+      Toast.show({ icon: "fail", content: "请先选择要操作的报名" });
       return;
     }
-
-    setLoading(true);
-
-    try {
-      await updateStatusApi({
-        enrollmentIds,
-        status,
-      });
-
-      const statusText =
-        status === "approved"
-          ? "通过"
-          : status === "rejected"
-          ? "拒绝"
-          : "更新";
-
-      Toast.show({
-        icon: "success",
-        content: `已${statusText} ${enrollmentIds.length} 条报名`,
-      });
-
-      onSuccess?.();
-    } catch (error) {
-      console.error("更新报名状态失败:", error);
-      Toast.show({
-        icon: "fail",
-        content: error instanceof Error ? error.message : "更新失败",
-      });
-    } finally {
-      setLoading(false);
-    }
+    mutation.mutate({ enrollmentIds, status }, { onSuccess });
   };
 
-  return { updateStatus, loading };
+  return { updateStatus, loading: mutation.isPending };
 };

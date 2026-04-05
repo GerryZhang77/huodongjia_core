@@ -355,11 +355,11 @@ export async function deleteAccount(): Promise<{ success: boolean }> {
 
 /**
  * 修改密码
- * PUT /api/user/password
+ * PUT /api/auth/password
  */
 export async function changePassword(data: {
   oldPassword: string;
   newPassword: string;
 }): Promise<{ success: boolean }> {
-  return api.put("/api/user/password", data);
+  return api.put("/api/auth/password", data);
 }

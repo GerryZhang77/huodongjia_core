@@ -12,7 +12,7 @@ import type { ActivityListResponse } from "@/services/activityApi";
 export function useMerchantActivities() {
   return useQuery<ActivityListResponse, Error>({
     queryKey: ["merchant", "activities"],
-    queryFn: getMerchantActivities,
+    queryFn: () => getMerchantActivities(),
     staleTime: 2 * 60 * 1000, // 2分钟
   });
 }

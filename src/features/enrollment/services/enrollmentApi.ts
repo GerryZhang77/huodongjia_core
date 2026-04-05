@@ -150,24 +150,10 @@ export const getEnrollments = async (
  * 更新报名状态(批量)
  */
 export const updateEnrollmentStatus = async (
-  request: UpdateEnrollmentStatusRequest
+  request: UpdateEnrollmentStatusRequest & { activityId: string }
 ): Promise<void> => {
-  const token = getToken();
-
-  const response = await fetch("/api/update-enrollment-status", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(request),
-  });
-
-  const data = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || "更新报名状态失败");
-  }
+  const { activityId, enrollmentIds, status } = request;
+  await api.patch(`/api/enrollments/${activityId}/status`, { enrollment_ids: enrollmentIds, status });
 };
 
 /**
@@ -283,32 +269,19 @@ export const getEnrollmentsDetailed = async (
   const requestId =
     activityId === DEMO_ACTIVITY_ID ? FIXED_ENROLLMENT_ID : activityId;
 
-  // 调用后端 API
-  // 后端返回格式: { success: true, total: number, participants: BackendEnrollment[] }
+  // 后端返回格式: { success: true, data: { enrollments: [], total: number } }
   const response = await api.get<{
     success: boolean;
-    total: number;
-    participants: BackendEnrollment[];
-  }>(`/api/events/${requestId}/enrollments`, { params });
+    data: { enrollments: BackendEnrollment[]; total: number };
+  }>(`/api/enrollments/${requestId}`, { params });
 
-  console.log("🔍 后端原始响应:", response);
-  console.log("🔍 participants 数组:", response.participants);
-  console.log("🔍 participants 长度:", response.participants?.length);
-
-  // 提取报名数组
-  const backendEnrollments = response.participants || [];
-
-  console.log("✅ 提取到的报名数组长度:", backendEnrollments.length);
-
-  // 转换后端数据到前端类型
+  const backendEnrollments = response.data?.enrollments || [];
   const enrollments = backendEnrollments.map(transformBackendEnrollment);
-
-  console.log("✅ 转换后的报名数据:", enrollments.length, "条");
 
   return {
     success: true,
     enrollments,
-    total: response.total || enrollments.length,
+    total: response.data?.total ?? enrollments.length,
   };
 };
 

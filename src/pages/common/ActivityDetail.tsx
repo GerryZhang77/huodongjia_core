@@ -4,7 +4,7 @@
  * 保留商家特有功能：编辑、报名管理、匹配配置、参与者管理
  */
 
-import { FC, useState, useEffect } from "react";
+import { FC, useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -16,15 +16,18 @@ import {
   MapPin,
   AlertCircle,
   Clock,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Toast, Dialog, ActionSheet } from "antd-mobile";
+import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import { Button } from "@/components/ui";
 import {
   ParticipantAvatar,
   type ParticipantInfo,
 } from "@/components/business/ParticipantAvatar";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
-import { useStore } from "@/store";
+import { useAuthStore } from "@/features/auth/stores/authStore";
 import dayjs from "dayjs";
 
 // 活动接口定义 (与 Mock 数据格式匹配)
@@ -122,17 +125,22 @@ const formatDateTime = (dateStr: string): string => {
 const ActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { token } = useStore();
+  const { token } = useAuthStore();
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [participants, setParticipants] = useState<ParticipantInfo[]>([]);
+  const [participantsTotal, setParticipantsTotal] = useState(0);
+  const [participantPage, setParticipantPage] = useState(1);
+  const [participantStatus, setParticipantStatus] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"info" | "participants">("info");
+  const PAGE_SIZE = 10;
+  const participantListRef = useRef<HTMLDivElement>(null);
 
   // 获取活动详情
   const fetchActivityDetail = async () => {
     try {
-      const response = await fetch(`/api/event-detail/${id}`, {
+      const response = await fetch(`/api/events/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -154,29 +162,45 @@ const ActivityDetail: FC = () => {
     }
   };
 
-  // 获取参与者列表
-  const fetchParticipants = async () => {
+  // 加载参与者（支持分页和状态筛选）
+  const loadParticipants = async (page: number, status: string | undefined) => {
     try {
-      const response = await fetch(`/api/event-participants/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setParticipants(data.participants || []);
-      }
+      const res = await getEnrollmentsDetailed(id!, { page, pageSize: PAGE_SIZE, status });
+      setParticipants(res.enrollments.map((e) => ({
+        user_id: e.userId || e.id,
+        name: e.name,
+        avatar: undefined,
+        gender: e.gender,
+        age: e.age,
+        occupation: e.occupation,
+        company: e.company,
+        city: e.city,
+        status: (e.status === "approved" ? "confirmed" : e.status) as ParticipantInfo["status"],
+        registration_time: e.enrolledAt,
+      })));
+      setParticipantsTotal(res.total);
     } catch (error) {
       console.error("Fetch participants error:", error);
     }
   };
 
+  // 切换状态筛选
+  const handleStatusFilter = (status: string | undefined) => {
+    setParticipantStatus(status);
+    setParticipantPage(1);
+    loadParticipants(1, status);
+  };
+
+  // 翻页
+  const handlePageChange = (page: number) => {
+    setParticipantPage(page);
+    loadParticipants(page, participantStatus);
+    participantListRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   useEffect(() => {
     if (id) {
-      Promise.all([fetchActivityDetail(), fetchParticipants()]).finally(() =>
+      Promise.all([fetchActivityDetail(), loadParticipants(1, undefined)]).finally(() =>
         setLoading(false),
       );
     }
@@ -241,10 +265,10 @@ const ActivityDetail: FC = () => {
 
   // 计算参与率
   const getParticipationRate = () => {
-    if (!activity || activity.max_participants === 0) return 0;
-    return Math.round(
-      (activity.current_participants / activity.max_participants) * 100,
-    );
+    const max = activity?.max_participants || 0;
+    const current = activity?.current_participants || 0;
+    if (!max) return 0;
+    return Math.round((current / max) * 100);
   };
 
   // 获取状态徽章样式
@@ -460,7 +484,7 @@ const ActivityDetail: FC = () => {
                     : "text-gray-500"
                 }`}
               >
-                参与者 ({participants.length})
+                参与者 ({participantsTotal})
               </button>
             </div>
 
@@ -516,79 +540,83 @@ const ActivityDetail: FC = () => {
 
               {activeTab === "participants" && (
                 <div>
+                  {/* 状态筛选 */}
+                  <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+                    {[
+                      { label: "全部", value: undefined },
+                      { label: "已确认", value: "approved" },
+                      { label: "待审核", value: "pending" },
+                      { label: "候补", value: "waitlist" },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => handleStatusFilter(item.value)}
+                        className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          participantStatus === item.value
+                            ? "bg-primary-400 text-white"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                    <span className="flex-shrink-0 text-xs text-gray-400 self-center ml-auto">
+                      共 {participantsTotal} 人
+                    </span>
+                  </div>
+
                   {participants.length === 0 ? (
                     <div className="text-center py-12">
                       <Users size={40} className="mx-auto text-gray-300 mb-3" />
                       <p className="text-gray-500 text-sm">暂无参与者</p>
-                      <p className="text-gray-400 text-xs mt-1">
-                        报名开始后参与者将在这里显示
-                      </p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {/* 参与者统计 */}
-                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span>
-                            已确认:{" "}
-                            <span className="text-success-600 font-medium">
-                              {
-                                participants.filter(
-                                  (p) => p.status === "confirmed",
-                                ).length
-                              }
-                            </span>
-                          </span>
-                          <span>
-                            待审核:{" "}
-                            <span className="text-primary-600 font-medium">
-                              {
-                                participants.filter(
-                                  (p) => p.status === "pending",
-                                ).length
-                              }
-                            </span>
-                          </span>
-                          <span>
-                            候补:{" "}
-                            <span className="text-warning-600 font-medium">
-                              {
-                                participants.filter(
-                                  (p) => p.status === "waitlist",
-                                ).length
-                              }
-                            </span>
-                          </span>
-                        </div>
-                        <span className="text-xs text-gray-400">
-                          共 {participants.length} 人
-                        </span>
+                    <>
+                      <div ref={participantListRef} className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                        {participants.map((participant, idx) => (
+                          <div
+                            key={`${participant.user_id}-${idx}`}
+                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                          >
+                            <ParticipantAvatar
+                              participant={participant}
+                              size="medium"
+                              showName
+                              showStatus
+                              className="flex-1"
+                            />
+                            {participant.registration_time && (
+                              <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                {formatDateTime(participant.registration_time)}
+                              </span>
+                            )}
+                          </div>
+                        ))}
                       </div>
 
-                      {/* 参与者列表 */}
-                      {participants.map((participant) => (
-                        <div
-                          key={participant.user_id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                        >
-                          {/* 使用 ParticipantAvatar 组件 */}
-                          <ParticipantAvatar
-                            participant={participant}
-                            size="medium"
-                            showName
-                            showStatus
-                            className="flex-1"
-                          />
-
-                          {/* 报名时间 */}
-                          {participant.registration_time && (
-                            <span className="text-[10px] text-gray-400 flex-shrink-0">
-                              {formatDateTime(participant.registration_time)}
-                            </span>
-                          )}
+                      {/* 分页 - 固定在列表外部，始终可见 */}
+                      {participantsTotal > PAGE_SIZE && (
+                        <div className="flex items-center justify-center gap-3 pt-3">
+                          <button
+                            onClick={() => handlePageChange(participantPage - 1)}
+                            disabled={participantPage === 1}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 disabled:opacity-30"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+                          <span className="text-xs text-gray-500">
+                            {participantPage} / {Math.ceil(participantsTotal / PAGE_SIZE)}
+                          </span>
+                          <button
+                            onClick={() => handlePageChange(participantPage + 1)}
+                            disabled={participantPage >= Math.ceil(participantsTotal / PAGE_SIZE)}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 disabled:opacity-30"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

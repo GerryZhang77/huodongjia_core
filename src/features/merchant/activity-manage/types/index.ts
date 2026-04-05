@@ -8,24 +8,21 @@ import type {
 } from "@/features/shared/activity/types";
 
 /**
- * 创建活动请求
+ * 创建活动请求 (前端 camelCase，提交时转换为后端 snake_case)
  */
 export interface CreateActivityRequest {
   title: string;
   description: string;
+  expectation?: string;
   coverImage?: string;
-  category?: string;
   tags?: string[];
-  registrationStartTime: string;
-  registrationEndTime: string;
-  eventStartTime: string;
-  eventEndTime: string;
+  registrationDeadline: string;
+  startTime: string;
+  endTime: string;
   location: string;
-  maxParticipants: number;
-  isPublic?: boolean;
-  allowWaitlist?: boolean;
-  isPaid?: boolean;
-  price?: number;
+  maxParticipants?: number;
+  fee?: number;
+  checkinPassword?: string;
 }
 
 /**

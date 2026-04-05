@@ -70,23 +70,33 @@ export const enrollmentHandlers = [
       }
 
       const { activityId } = params;
-      const rawEnrollments = getEnrollmentsByActivityId(activityId as string);
+      const url = new URL(request.url);
+      const status = url.searchParams.get("status") || undefined;
+      const page = parseInt(url.searchParams.get("page") || "1", 10);
+      const pageSize = parseInt(url.searchParams.get("pageSize") || "20", 10);
+
+      let rawEnrollments = getEnrollmentsByActivityId(activityId as string);
       const stats = getEnrollmentStats(activityId as string);
 
-      // 转换数据格式
+      // 状态筛选在转换前进行（mock 原始状态: confirmed/pending/waitlist/cancelled）
+      // 前端传来的 status 与 mock 原始状态一致
+      if (status) {
+        rawEnrollments = rawEnrollments.filter((e) => e.status === status);
+      }
       const enrollments = rawEnrollments.map(transformEnrollment);
+      const total = enrollments.length;
+      const paged = enrollments.slice((page - 1) * pageSize, page * pageSize);
 
       console.log(
-        `📋 [Mock] 获取报名列表 - 活动ID: ${activityId}, 数量: ${enrollments.length}`,
+        `📋 [Mock] 获取报名列表 - 活动ID: ${activityId}, 状态: ${status || "全部"}, 第${page}页, 数量: ${paged.length}/${total}`,
       );
 
-      // 直接返回报名数组，与前端期望的格式一致
       return HttpResponse.json({
         success: true,
         message: "获取成功",
-        data: enrollments,
+        participants: paged,
         statistics: stats,
-        total: enrollments.length,
+        total,
       });
     },
   ),
@@ -130,10 +140,10 @@ export const enrollmentHandlers = [
 
   /**
    * 批量导入报名
-   * POST /api/events/:activityId/enrollments/import
+   * POST /api/events/:activityId/enrollments/batch-import
    */
   http.post(
-    "/api/events/:activityId/enrollments/import",
+    "/api/enrollments/:activityId/import",
     async ({ params, request }) => {
       await delay(1000);
 

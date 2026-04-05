@@ -164,6 +164,13 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
             <span>报名时间：{formatDate(enrollment.enrolledAt)}</span>
           </div>
 
+          {/* 外部用户提示 */}
+          {enrollment.isExternal && (
+            <div className="flex items-center gap-2 text-sm text-orange-600 mb-4 bg-orange-50 rounded-lg px-3 py-2">
+              <span>该用户通过导入添加，暂无平台账号</span>
+            </div>
+          )}
+
           {/* 基本信息 */}
           <div className="mb-5">
             <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">

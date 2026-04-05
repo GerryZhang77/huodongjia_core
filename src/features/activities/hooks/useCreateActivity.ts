@@ -31,7 +31,11 @@ const transformFormDataToRequest = (
     fee: 0, // 默认免费，后续可扩展
     tags: tags,
     expectation: data.requirements || "", // 将参与要求映射为期望
-    registration_deadline: data.registration_end.toISOString(), // 使用报名截止时间
+    registration_deadline: (
+      data.registration_end < data.start_time
+        ? data.registration_end
+        : new Date(data.start_time.getTime() - 60 * 60 * 1000)
+    ).toISOString(),
   };
 
   console.log("[transformFormDataToRequest] 转换后的数据:", {

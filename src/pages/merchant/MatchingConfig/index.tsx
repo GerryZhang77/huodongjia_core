@@ -80,6 +80,8 @@ const MatchingConfigPage: React.FC = () => {
     savedConfigs,
     handleLoadConfig,
     handleDeleteConfig,
+    handleGenerateRules,
+    isGeneratingRules,
 
     // 重新匹配操作
     handleEnterRematchMode,
@@ -226,6 +228,8 @@ const MatchingConfigPage: React.FC = () => {
             savedConfigs={savedConfigs}
             onLoadConfig={handleLoadConfig}
             onDeleteConfig={handleDeleteConfig}
+            onGenerateRules={handleGenerateRules}
+            isGeneratingRules={isGeneratingRules}
           />
         ) : (
           <ResultsTab

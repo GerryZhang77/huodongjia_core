@@ -78,34 +78,20 @@ export function useLogin() {
 
         return true;
       } else {
-        console.warn("⚠️  [useLogin] 登录失败 - 响应数据不完整");
+        console.warn("⚠️  [useLogin] 登录失败:", response.message);
 
-        // 🔥 临时修改：Mock 生产环境专用 - 登录失败跳转到人群画像页面
         const errorMessage = getErrorMessage(response.code, response.message);
         authNotification.error("登录失败", errorMessage);
-
-        // 延迟跳转到人群画像页面
-        setTimeout(() => {
-          console.log("🔄 [useLogin] 登录失败，跳转到人群画像页面");
-          window.location.href = "/portrait.html";
-        }, 1500);
 
         return false;
       }
     } catch (error) {
       console.error("❌ [useLogin] 捕获异常:", error);
 
-      // 🔥 临时修改：Mock 生产环境专用 - 网络错误也跳转到人群画像页面
       authNotification.error(
         "网络错误",
-        "无法连接到服务器，即将为您展示活动人群画像"
+        "无法连接到服务器，请检查网络连接"
       );
-
-      // 延迟跳转到人群画像页面
-      setTimeout(() => {
-        console.log("🔄 [useLogin] 网络错误，跳转到人群画像页面");
-        window.location.href = "/portrait.html";
-      }, 1500);
 
       return false;
     } finally {

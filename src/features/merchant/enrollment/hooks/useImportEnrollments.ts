@@ -18,10 +18,11 @@ export function useImportEnrollments(activityId: string) {
       return importEnrollments(activityId, formData);
     },
     onSuccess: () => {
-      // 刷新报名列表
       queryClient.invalidateQueries({
         queryKey: ["merchant", "enrollment", "list", activityId],
       });
+      queryClient.invalidateQueries({ queryKey: ["activity", "detail", activityId] });
+      queryClient.invalidateQueries({ queryKey: ["merchant", "activities"] });
     },
   });
 }

@@ -37,6 +37,8 @@ import {
   EnrollmentDetailDrawer,
 } from "@/components/enrollment";
 import { useStore } from "@/store";
+import { useAuthStore } from "@/features/auth/stores";
+import { useUpdateEnrollmentStatus } from "@/features/enrollment/hooks";
 import type {
   Enrollment,
   FilterCriteria,
@@ -158,6 +160,9 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
             <span className="font-medium text-gray-900">
               {enrollment.name}
             </span>
+            {(enrollment.isExternal || !enrollment.userId) && (
+              <span className="px-1.5 py-0.5 text-xs rounded bg-orange-100 text-orange-600">外部</span>
+            )}
             <span
               className={`px-2 py-0.5 text-xs rounded-full ${statusColors[enrollment.status] || "bg-gray-100 text-gray-500"}`}
             >
@@ -448,7 +453,8 @@ const PCFilterPanel: React.FC<PCFilterPanelProps> = ({
 const EnrollmentManagementNew: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { token } = useStore();
+  const { token } = useAuthStore();
+  const { updateStatus } = useUpdateEnrollmentStatus(id || "");
 
   // 报名数据
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -460,6 +466,10 @@ const EnrollmentManagementNew: React.FC = () => {
   );
   const [searchKeyword, setSearchKeyword] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+
+  // 分页
+  const PAGE_SIZE = 20;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // 选择模式
   const [selectionMode, setSelectionMode] = useState(false);
@@ -484,6 +494,7 @@ const EnrollmentManagementNew: React.FC = () => {
 
   // 应用筛选
   const filteredEnrollments = useMemo(() => {
+    setCurrentPage(1);
     let filtered = applyFilters(enrollments, filterCriteria);
 
     if (activeTab !== "all") {
@@ -513,7 +524,7 @@ const EnrollmentManagementNew: React.FC = () => {
         ? "00000000-0000-0000-0000-000000000000"
         : id;
 
-      const response = await fetch(`/api/events/${requestId}/enrollments`, {
+      const response = await fetch(`/api/enrollments/${requestId}?pageSize=1000`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -530,7 +541,14 @@ const EnrollmentManagementNew: React.FC = () => {
 
       const data = await response.json();
       console.log("[EnrollmentManagement] API 返回数据:", data);
-      setEnrollments(data.data || []);
+      const raw = data.data?.enrollments || data.data || [];
+      setEnrollments(raw.map((e: Record<string, unknown>) => ({
+        ...e,
+        isExternal: e.is_external,
+        userId: e.user_id,
+        activityId: e.event_id,
+        enrolledAt: e.created_at,
+      })));
     } catch (error) {
       console.error("获取报名列表失败:", error);
       Toast.show({ content: "获取报名列表失败" });
@@ -586,26 +604,34 @@ const EnrollmentManagementNew: React.FC = () => {
 
   // ====== 审核操作 ======
 
-  const handleApprove = async (_enrollmentId: string) => {
-    Toast.show({ content: "审核通过" });
-    setShowDetailDrawer(false);
-    // TODO: 调用 API
+  const handleApprove = (enrollmentId: string) => {
+    updateStatus([enrollmentId], "approved", () => {
+      setShowDetailDrawer(false);
+      setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, status: "approved" } : e));
+    });
   };
 
-  const handleReject = async (_enrollmentId: string) => {
-    Toast.show({ content: "已拒绝" });
-    setShowDetailDrawer(false);
-    // TODO: 调用 API
+  const handleReject = (enrollmentId: string) => {
+    updateStatus([enrollmentId], "rejected", () => {
+      setShowDetailDrawer(false);
+      setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, status: "rejected" } : e));
+    });
   };
 
-  const handleBatchApprove = async () => {
-    Toast.show({ content: `已通过 ${selectedIds.length} 人` });
-    exitSelectionMode();
+  const handleBatchApprove = () => {
+    const ids = [...selectedIds];
+    updateStatus(ids, "approved", () => {
+      exitSelectionMode();
+      setEnrollments(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: "approved" } : e));
+    });
   };
 
-  const handleBatchReject = async () => {
-    Toast.show({ content: `已拒绝 ${selectedIds.length} 人` });
-    exitSelectionMode();
+  const handleBatchReject = () => {
+    const ids = [...selectedIds];
+    updateStatus(ids, "rejected", () => {
+      exitSelectionMode();
+      setEnrollments(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: "rejected" } : e));
+    });
   };
 
   // ====== 导入导出 ======
@@ -849,8 +875,9 @@ const EnrollmentManagementNew: React.FC = () => {
               </button>
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredEnrollments.map((enrollment) => (
+              {filteredEnrollments.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((enrollment) => (
                 <EnrollmentCard
                   key={enrollment.id}
                   enrollment={enrollment}
@@ -862,6 +889,28 @@ const EnrollmentManagementNew: React.FC = () => {
                 />
               ))}
             </div>
+            {filteredEnrollments.length > PAGE_SIZE && (
+              <div className="flex items-center justify-center gap-3 py-4">
+                <button
+                  className="px-3 py-1 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40"
+                  onClick={() => setCurrentPage(p => p - 1)}
+                  disabled={currentPage === 1}
+                >
+                  上一页
+                </button>
+                <span className="text-sm text-gray-500">
+                  {currentPage} / {Math.ceil(filteredEnrollments.length / PAGE_SIZE)}
+                </span>
+                <button
+                  className="px-3 py-1 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40"
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  disabled={currentPage >= Math.ceil(filteredEnrollments.length / PAGE_SIZE)}
+                >
+                  下一页
+                </button>
+              </div>
+            )}
+            </>
           )}
         </div>
 
