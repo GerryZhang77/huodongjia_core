@@ -1,120 +1,71 @@
 /**
  * 注册表单组件
- *
- * 采用手机号 + 验证码注册方式
- * 包含：手机号输入、验证码、密码设置、协议勾选
+ * 学号 + 密码注册，支持自定义头像
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Input, Modal, Checkbox, Button } from "@/components/ui";
-import { UserAgreement, PrivacyPolicy } from "@/components/legal";
+import { Input, Button } from "@/components/ui";
 import { useRegister } from "@/features/auth/hooks";
-import {
-  Phone,
-  Lock,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  Shield,
-  ArrowLeft,
-} from "lucide-react";
+import { Lock, Eye, EyeOff, AlertCircle, ArrowLeft, Camera, User } from "lucide-react";
 
 export const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
-  const { register, sendSmsCode, loading, sendingCode } = useRegister();
+  const { register, loading, error } = useRegister();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 表单状态
-  const [phone, setPhone] = useState("");
-  const [smsCode, setSmsCode] = useState("");
+  const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [error, setError] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
 
-  // 验证码倒计时
-  const [countdown, setCountdown] = useState(0);
-
-  // 协议弹窗状态
-  const [showUserAgreement, setShowUserAgreement] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-
-  // 倒计时效果
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
-  // 验证手机号格式
-  const isValidPhone = (phone: string) => /^1[3-9]\d{9}$/.test(phone);
-
-  // 发送验证码
-  const handleSendCode = async () => {
-    if (!phone) {
-      setError("请输入手机号");
-      return;
-    }
-    if (!isValidPhone(phone)) {
-      setError("请输入正确的手机号");
-      return;
-    }
-
-    setError("");
-    const success = await sendSmsCode(phone);
-    if (success) {
-      setCountdown(60);
-    }
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
   };
 
-  // 提交注册
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    setError("");
+    setFormError("");
 
-    // 表单验证
-    if (!phone) {
-      setError("请输入手机号");
+    if (!account) {
+      setFormError("请输入学号");
       return;
     }
-    if (!isValidPhone(phone)) {
-      setError("请输入正确的手机号");
+    if (!/^\d+$/.test(account)) {
+      setFormError("学号只能包含数字");
       return;
     }
-    if (!smsCode) {
-      setError("请输入验证码");
-      return;
-    }
-    if (smsCode.length !== 6) {
-      setError("请输入6位验证码");
+    if (account.length < 2 || account.length > 20) {
+      setFormError("学号长度需在 2-20 位之间");
       return;
     }
     if (!password) {
-      setError("请设置密码");
+      setFormError("请设置密码");
       return;
     }
     if (password.length < 6) {
-      setError("密码至少6位");
+      setFormError("密码至少 6 位");
       return;
     }
     if (password !== confirmPassword) {
-      setError("两次密码输入不一致");
-      return;
-    }
-    if (!agreeTerms) {
-      setError("请先阅读并同意用户协议和隐私政策");
+      setFormError("两次密码输入不一致");
       return;
     }
 
-    const success = await register(phone, smsCode, password);
-
-    if (success) {
-      // 注册成功后 hook 会自动登录并跳转
-      // 如果需要跳转到登录页，可以在 hook 中调整
-    }
+    await register(account, password, avatarFile || undefined);
   };
 
   return (
@@ -130,74 +81,71 @@ export const RegisterForm: React.FC = () => {
           <span className="text-sm">返回登录</span>
         </button>
 
-        {/* 标题区域 */}
-        <div className="text-center mb-10 max-sm:mb-8">
-          <div
-            className="w-16 h-16 max-sm:w-14 max-sm:h-14 rounded-full flex items-center justify-center mx-auto mb-5"
-            style={{
-              background: "linear-gradient(to right, #4facfe, #00c6ff)",
-            }}
-          >
-            <Shield className="w-8 h-8 max-sm:w-6 max-sm:h-6 text-white" />
-          </div>
+        {/* 标题 */}
+        <div className="text-center mb-8">
           <h1 className="text-2xl max-sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             创建账号
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            使用手机号快速注册，开启精彩活动之旅
+            使用学号注册，开启精彩活动之旅
           </p>
+        </div>
+
+        {/* 头像选择 */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative">
+            <div
+              className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+              onClick={handleAvatarClick}
+            >
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="头像" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-10 h-10 text-gray-300 dark:text-gray-500" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleAvatarClick}
+              className="absolute bottom-0 right-0 w-6 h-6 bg-primary-400 rounded-full flex items-center justify-center shadow-md hover:bg-primary-500 transition-colors"
+            >
+              <Camera className="w-3.5 h-3.5 text-white" />
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+            {avatarPreview ? "点击更换头像" : "点击上传头像（可选）"}
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
         </div>
 
         {/* 注册表单 */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* 手机号输入 */}
+          {/* 学号 */}
           <Input
-            label="手机号"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="请输入手机号"
+            label="学号"
+            type="text"
+            value={account}
+            onChange={(e) => setAccount(e.target.value.replace(/\D/g, ""))}
+            placeholder="请输入学号（如 56785679）"
             size="large"
-            prefix={<Phone className="w-5 h-5 text-gray-400" />}
-            maxLength={11}
+            prefix={<User className="w-5 h-5 text-gray-400" />}
+            maxLength={20}
             required
           />
 
-          {/* 验证码输入 */}
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <Input
-                label="验证码"
-                type="text"
-                value={smsCode}
-                onChange={(e) => setSmsCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="请输入6位验证码"
-                size="large"
-                maxLength={6}
-                required
-              />
-            </div>
-            <div className="pt-[26px]">
-              <Button
-                type="button"
-                variant={countdown > 0 ? "outline" : "primary"}
-                disabled={countdown > 0 || sendingCode}
-                onClick={handleSendCode}
-                loading={sendingCode}
-                className="h-[50px] px-4 whitespace-nowrap"
-              >
-                {countdown > 0 ? `${countdown}s 后重发` : "获取验证码"}
-              </Button>
-            </div>
-          </div>
-
-          {/* 密码输入 */}
+          {/* 密码 */}
           <Input
             label="设置密码"
             type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="请设置6位以上密码"
+            placeholder="请设置 6 位以上密码"
             size="large"
             prefix={<Lock className="w-5 h-5 text-gray-400" />}
             suffix={
@@ -206,11 +154,7 @@ export const RegisterForm: React.FC = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             }
             required
@@ -231,49 +175,18 @@ export const RegisterForm: React.FC = () => {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                {showConfirmPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             }
             required
           />
 
-          {/* 用户协议勾选 */}
-          <div className="flex items-start gap-2">
-            <Checkbox
-              checked={agreeTerms}
-              onChange={(checked) => setAgreeTerms(checked)}
-              size="small"
-            />
-            <span className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-              我已阅读并同意
-              <button
-                type="button"
-                onClick={() => setShowUserAgreement(true)}
-                className="text-primary-400 hover:text-primary-500 mx-0.5"
-              >
-                《用户协议》
-              </button>
-              和
-              <button
-                type="button"
-                onClick={() => setShowPrivacyPolicy(true)}
-                className="text-primary-400 hover:text-primary-500 mx-0.5"
-              >
-                《隐私政策》
-              </button>
-            </span>
-          </div>
-
           {/* 错误提示 */}
-          {error && (
+          {(formError || error) && (
             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
               <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
+                <span>{formError || error}</span>
               </p>
             </div>
           )}
@@ -303,32 +216,6 @@ export const RegisterForm: React.FC = () => {
           </button>
         </p>
       </div>
-
-      {/* 用户协议弹窗 */}
-      <Modal
-        open={showUserAgreement}
-        onClose={() => setShowUserAgreement(false)}
-        title="用户服务协议"
-        width="large"
-        closable
-      >
-        <div className="max-h-[60vh] overflow-y-auto">
-          <UserAgreement />
-        </div>
-      </Modal>
-
-      {/* 隐私政策弹窗 */}
-      <Modal
-        open={showPrivacyPolicy}
-        onClose={() => setShowPrivacyPolicy(false)}
-        title="隐私政策"
-        width="large"
-        closable
-      >
-        <div className="max-h-[60vh] overflow-y-auto">
-          <PrivacyPolicy />
-        </div>
-      </Modal>
     </div>
   );
 };

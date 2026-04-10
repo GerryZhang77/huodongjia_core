@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores";
 import { login as loginApi } from "../services";
 import type { LoginCredentials } from "../types";
@@ -13,6 +14,7 @@ import { debugLogger } from "@/utils/debugLogger";
 export function useLogin() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
   /**
@@ -48,6 +50,9 @@ export function useLogin() {
 
         // 保存认证信息到 Store
         setAuth(response.user, response.token);
+
+        // 清除旧用户的 React Query 缓存，避免数据残留
+        queryClient.clear();
 
         debugLogger.log("[useLogin] 认证信息已保存，检查 localStorage");
         console.log("💾 [useLogin] 认证信息已保存，检查 localStorage");

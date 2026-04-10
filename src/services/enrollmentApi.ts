@@ -69,18 +69,30 @@ export interface ImportEnrollmentResult {
 }
 
 export interface EnrollmentFormData {
-  name: string;
-  gender?: "male" | "female" | "other";
-  age?: number;
-  phone?: string;
-  email?: string;
-  city?: string;
-  occupation?: string;
-  industry?: string;
-  bio?: string;
-  matchingNeeds?: string;
-  tags?: string[];
-  customFields?: Record<string, unknown>;
+  // 基本信息
+  姓名: string;
+  性别: string;
+  student_id: string;
+  联系方式: string;
+  学院专业?: string;
+  年级?: string;
+  一句话自我介绍?: string;
+  // 匹配信息（必填，用于智能分组计算）
+  兴趣爱好: string;
+  所在职能部门: string;
+  "关注/从事的行业方向": string;
+  软件技能: string;
+  擅长领域: string;
+  // 补充信息（选填）
+  过往相关经历?: string;
+  所在创投俱乐部?: string;
+  过往成果?: string;
+  核心人脉资源?: string;
+  工作风格?: string;
+  擅长工作场景?: string;
+  加入初衷?: string;
+  可投入时间?: string;
+  对社团的理解?: string;
 }
 
 export interface SendNotificationRequest {
@@ -177,7 +189,8 @@ export async function submitEnrollment(
   activityId: string,
   data: EnrollmentFormData
 ): Promise<EnrollmentDetailResponse> {
-  return api.post(`/api/user/activities/${activityId}/enroll`, data);
+  // 后端期望 { enrollment: {...} } 格式
+  return api.post(`/api/user/activities/${activityId}/enroll`, { enrollment: data });
 }
 
 /**

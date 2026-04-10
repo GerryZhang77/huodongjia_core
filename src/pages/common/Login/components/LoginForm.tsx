@@ -267,8 +267,8 @@ export const LoginForm: React.FC = () => {
           </button>
         </div> */}
 
-        {/* 注册链接 - 暂时隐藏 */}
-        {/* <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600 dark:text-gray-400">
+        {/* 注册链接 */}
+        <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600 dark:text-gray-400">
           还没有账号？
           <button
             type="button"
@@ -277,7 +277,7 @@ export const LoginForm: React.FC = () => {
           >
             立即注册
           </button>
-        </p> */}
+        </p>
 
         {/* 测试账号折叠区域 - 仅开发环境 */}
         {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&

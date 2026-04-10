@@ -147,30 +147,31 @@ export async function verifySmsCode(
  * POST /api/auth/register
  *
  * 后端接受 { account, password, phone?, userType?, name? }
- * 前端传入 { phone, sms_code, password }
- * 适配：用 phone 作为 account（如果没有单独的 account 字段）
+ * account 为学号（3-20位字母/数字/下划线）
  */
 export async function register(credentials: {
-  phone: string;
-  sms_code: string;
+  account: string;
   password: string;
-  account?: string;
+  phone?: string;
+  sms_code?: string;
   name?: string;
+  userType?: string;
 }): Promise<LoginResponse> {
   try {
-    console.log("📝 [authApi] 用户注册:", { phone: credentials.phone });
+    console.log("📝 [authApi] 用户注册:", { account: credentials.account });
 
     const response = await api.post<LoginResponse>("/api/auth/register", {
-      account: credentials.account || credentials.phone,
+      account: credentials.account,
       password: credentials.password,
       phone: credentials.phone,
-      name: credentials.name || credentials.phone,
-      userType: "user",
+      name: credentials.name || credentials.account,
+      userType: credentials.userType || "user",
     });
 
     console.log("✅ [authApi] 注册响应:", {
       success: response.success,
       hasUser: !!response.user,
+      account: credentials.account,
     });
 
     return response;

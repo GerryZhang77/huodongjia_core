@@ -11,28 +11,43 @@ import type { Activity } from "../types";
  */
 export interface ApiActivityData {
   id: string;
-  organizer_id: string;
+  // snake_case (直接查库) 或 camelCase (后端 mapEventToFrontend)
+  organizer_id?: string;
+  organizerId?: string;
   title: string;
   description: string;
   cover_image?: string;
-  start_time: string;
-  end_time: string;
+  coverImage?: string;
+  start_time?: string;
+  end_time?: string;
+  activityStart?: string;
+  activityEnd?: string;
   location: string;
-  max_participants: number;
+  max_participants?: number;
+  capacity?: number;
   fee?: number;
   tags?: string[];
   checkin_password?: string;
+  checkinPassword?: string;
   status: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
   expectation?: string;
   registration_deadline?: string;
-  // 可能的扩展字段
+  registrationStart?: string;
+  registrationEnd?: string;
+  enrolledCount?: number;
+  // 扩展字段
   category?: string;
   requirements?: string;
   contact_info?: string;
+  contactInfo?: string;
   is_public?: boolean;
+  isPublic?: boolean;
   allow_waitlist?: boolean;
+  allowWaitlist?: boolean;
 }
 
 /**
@@ -44,30 +59,39 @@ export const mapApiActivityToActivity = (
   try {
     console.log("mapApiActivityToActivity - 开始转换:", apiActivity);
 
+    const createdAt = apiActivity.createdAt || apiActivity.created_at || "";
+    const updatedAt = apiActivity.updatedAt || apiActivity.updated_at || "";
+    const activityStart = apiActivity.activityStart || apiActivity.start_time || "";
+    const activityEnd = apiActivity.activityEnd || apiActivity.end_time || "";
+
     const result: Activity = {
       id: apiActivity.id,
       title: apiActivity.title,
       description: apiActivity.description,
-      coverImage: apiActivity.cover_image || "",
+      coverImage: apiActivity.coverImage || apiActivity.cover_image || "",
       status: mapApiStatus(apiActivity.status),
-      // 使用 registration_deadline 或 start_time 前一天作为报名开始时间
-      registrationStart: apiActivity.created_at,
+      registrationStart:
+        apiActivity.registrationStart ||
+        apiActivity.registration_deadline ||
+        createdAt,
       registrationEnd:
-        apiActivity.registration_deadline || apiActivity.start_time,
-      activityStart: apiActivity.start_time,
-      activityEnd: apiActivity.end_time,
+        apiActivity.registrationEnd ||
+        apiActivity.registration_deadline ||
+        activityStart,
+      activityStart,
+      activityEnd,
       location: apiActivity.location,
-      capacity: apiActivity.max_participants,
-      enrolledCount: 0, // Mock 数据中没有此字段，默认为 0
-      createdAt: apiActivity.created_at,
-      updatedAt: apiActivity.updated_at,
+      capacity: apiActivity.capacity || apiActivity.max_participants || 0,
+      enrolledCount: apiActivity.enrolledCount || 0,
+      createdAt,
+      updatedAt,
       // 扩展字段
       category: (apiActivity.category || "other") as Activity["category"],
       tags: (apiActivity.tags || []) as Activity["tags"],
       requirements: apiActivity.requirements || apiActivity.expectation,
-      contactInfo: apiActivity.contact_info,
-      isPublic: apiActivity.is_public,
-      allowWaitlist: apiActivity.allow_waitlist,
+      contactInfo: apiActivity.contactInfo || apiActivity.contact_info,
+      isPublic: apiActivity.isPublic ?? apiActivity.is_public,
+      allowWaitlist: apiActivity.allowWaitlist ?? apiActivity.allow_waitlist,
     };
 
     console.log("mapApiActivityToActivity - ✅ 转换成功:", result);

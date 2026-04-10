@@ -17,8 +17,10 @@ export type UserType = "user" | "organizer" | "admin";
  */
 export interface User {
   id: string; // UUID
+  account?: string; // 学号/账号
   phone?: string | null;
   name: string;
+  avatar?: string | null; // 头像 URL（后端生成或用户上传）
   user_type: UserType; // 注意：使用下划线命名，符合后端规范
   age?: number | null;
   occupation?: string | null;

@@ -1,25 +1,20 @@
 /**
  * useRegister Hook - 用户注册逻辑
+ * 支持学号 + 密码注册，可选头像上传
  */
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/authStore";
 import * as authApi from "../services/authApi";
+import { uploadAvatar } from "@/services/userApi";
 
 export interface UseRegisterReturn {
-  /** 发送短信验证码 */
-  sendSmsCode: (phone: string) => Promise<boolean>;
-  /** 注册 */
-  register: (
-    phone: string,
-    smsCode: string,
-    password: string
-  ) => Promise<boolean>;
+  /** 注册（学号 + 密码，可选头像文件） */
+  register: (account: string, password: string, avatarFile?: File) => Promise<boolean>;
   /** 加载状态 */
   loading: boolean;
-  /** 发送验证码加载状态 */
-  sendingCode: boolean;
   /** 错误信息 */
   error: string | null;
   /** 清除错误 */
@@ -29,53 +24,21 @@ export interface UseRegisterReturn {
 export function useRegister(): UseRegisterReturn {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * 发送短信验证码
-   */
-  const sendSmsCode = async (phone: string): Promise<boolean> => {
-    setSendingCode(true);
-    setError(null);
-
-    try {
-      const response = await authApi.sendSmsCode(phone, "register");
-
-      if (!response.success) {
-        setError(response.message || "发送验证码失败");
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "发送验证码失败，请稍后重试";
-      setError(message);
-      return false;
-    } finally {
-      setSendingCode(false);
-    }
-  };
-
-  /**
-   * 用户注册
-   */
-  const register = async (
-    phone: string,
-    smsCode: string,
-    password: string
-  ): Promise<boolean> => {
+  const register = async (account: string, password: string, avatarFile?: File): Promise<boolean> => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await authApi.register({
-        phone,
-        sms_code: smsCode,
+        account,
         password,
+        name: account,
+        userType: "user",
       });
 
       if (!response.success) {
@@ -83,20 +46,27 @@ export function useRegister(): UseRegisterReturn {
         return false;
       }
 
-      // 注册成功，自动登录
       if (response.token && response.user) {
         setAuth(response.user, response.token);
 
-        // 根据用户类型跳转
-        const redirectPath =
-          response.user.user_type === "user" ? "/u/home" : "/dashboard";
-        navigate(redirectPath, { replace: true });
+        // 清除旧用户的 React Query 缓存
+        queryClient.clear();
+
+        // 上传头像（非关键步骤，失败不影响注册）
+        if (avatarFile) {
+          try {
+            await uploadAvatar(avatarFile);
+          } catch (e) {
+            console.warn("⚠️ [useRegister] 头像上传失败:", e);
+          }
+        }
+
+        navigate("/u/home", { replace: true });
       }
 
       return true;
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "注册失败，请稍后重试";
+      const message = err instanceof Error ? err.message : "注册失败，请稍后重试";
       setError(message);
       return false;
     } finally {
@@ -106,12 +76,5 @@ export function useRegister(): UseRegisterReturn {
 
   const clearError = () => setError(null);
 
-  return {
-    sendSmsCode,
-    register,
-    loading,
-    sendingCode,
-    error,
-    clearError,
-  };
+  return { register, loading, error, clearError };
 }
