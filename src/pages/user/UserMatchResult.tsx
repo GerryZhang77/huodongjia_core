@@ -439,7 +439,7 @@ const tabs: {
 }[] = [
   { key: "group", label: "我的分组", icon: Users },
   { key: "topMatches", label: "最佳匹配", icon: Trophy },
-  { key: "dimensions", label: "多维度", icon: Sparkles },
+  // { key: "dimensions", label: "多维度", icon: Sparkles }, // 暂时禁用：多维度功能未实现
 ];
 
 // ============================================
@@ -487,7 +487,7 @@ const UserMatchResult: FC = () => {
       topMatches = bestMatchesData.map((user) => ({
         id: user.user_id,
         name: user.name,
-        avatar: user.avatar || `https://i.pravatar.cc/100?u=${user.user_id}`,
+        avatar: user.avatar || generateDefaultAvatar(user.user_id),
         role: user.occupation || "参与者",
         occupation: user.occupation,
         city: user.city,
@@ -511,7 +511,7 @@ const UserMatchResult: FC = () => {
       const members: GroupMember[] = firstGroup.members.map((member, index) => ({
         id: member.user_id,
         name: member.name,
-        avatar: member.avatar || `https://i.pravatar.cc/100?u=${member.user_id}`,
+        avatar: member.avatar || generateDefaultAvatar(member.user_id),
         role: member.occupation || "参与者",
         occupation: member.occupation,
         city: member.city,

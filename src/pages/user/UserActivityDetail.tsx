@@ -23,6 +23,7 @@ import { ImageCarousel } from "@/components/business/ImageCarousel";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useActivityDetail, useUserActivities } from "@/features/user";
 import type { UserActivityStatus } from "@/services/userApi";
+import { useAuthStore } from "@/features/auth/stores/authStore";
 import dayjs from "dayjs";
 
 // 状态配置
@@ -76,6 +77,9 @@ const UserActivityDetail: FC = () => {
     window.innerWidth >= 1024,
   );
 
+  // 获取当前用户信息
+  const { user } = useAuthStore();
+
   // 使用 hooks 获取活动详情
   const { data: activityData, isLoading } = useActivityDetail(id);
   const { data: activitiesData } = useUserActivities();
@@ -83,6 +87,11 @@ const UserActivityDetail: FC = () => {
   const activity = useMemo(() => {
     return activityData?.data;
   }, [activityData]);
+
+  // 判断当前用户是否是活动创建者
+  const isOrganizer = useMemo(() => {
+    return activity?.organizer?.id === user?.id;
+  }, [activity, user]);
 
   // 计算上一个/下一个活动
   const { prevActivity, nextActivity } = useMemo(() => {
@@ -154,6 +163,17 @@ const UserActivityDetail: FC = () => {
 
   const config = statusConfig[activity.userStatus];
   const isFull = activity.currentParticipants >= activity.maxParticipants;
+
+  // 如果是活动创建者，覆盖按钮配置
+  const buttonConfig = isOrganizer
+    ? {
+        label: "报名中",
+        color: "bg-success-500",
+        btnLabel: "报名中",
+        btnStyle: "bg-gray-200 text-gray-500",
+        disabled: true,
+      }
+    : config;
 
   return (
     <UserLayout
@@ -271,9 +291,9 @@ const UserActivityDetail: FC = () => {
 
                 {/* 状态标签 - 移动到右下角，避免与返回按钮重叠 */}
                 <div
-                  className={`absolute bottom-3 right-4 px-3 py-1 rounded-full text-xs font-medium text-white z-20 ${config.color}`}
+                  className={`absolute bottom-3 right-4 px-3 py-1 rounded-full text-xs font-medium text-white z-20 ${buttonConfig.color}`}
                 >
-                  {config.label}
+                  {buttonConfig.label}
                 </div>
 
                 {/* 底部标签 */}
@@ -449,9 +469,9 @@ const UserActivityDetail: FC = () => {
                         ? "light"
                         : "primary"
                   }
-                  disabled={config.disabled}
+                  disabled={buttonConfig.disabled}
                   onClick={() => {
-                    if (activity.userStatus === "recruiting") {
+                    if (activity.userStatus === "recruiting" && !isOrganizer) {
                       navigate(`/u/activities/${id}/register`);
                     } else if (activity.userStatus === "approved") {
                       navigate(`/u/activities/${id}/match-result`);
@@ -459,7 +479,7 @@ const UserActivityDetail: FC = () => {
                   }}
                   className="flex-1 h-12"
                 >
-                  {config.btnLabel}
+                  {buttonConfig.btnLabel}
                 </Button>
               </div>
               {/* 移动端底部安全区域：TabBar (56px) + iOS 底部条 */}

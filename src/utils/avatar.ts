@@ -5,7 +5,7 @@
 
 /**
  * 生成默认头像 URL
- * 随机使用 avataaars（卡通人物）或 fun-emoji（可爱表情）风格
+ * 使用可爱的小动物和卡通形象风格
  *
  * @param seed - 用于生成头像的种子（通常是用户ID或名字）
  * @param size - 头像尺寸（可选，默认不指定）
@@ -17,8 +17,13 @@ export function generateDefaultAvatar(seed: string, size?: number): string {
     return char.charCodeAt(0) + ((acc << 5) - acc);
   }, 0);
 
-  // 根据哈希值的奇偶性选择风格
-  const style = Math.abs(hash) % 2 === 0 ? 'avataaars' : 'fun-emoji';
+  // 可爱的头像风格选项：
+  // - bottts: 可爱的机器人
+  // - lorelei: 可爱的卡通人物
+  // - notionists: Notion风格的可爱头像
+  // - thumbs: 可爱的大拇指表情
+  const styles = ['bottts', 'lorelei', 'notionists', 'thumbs'];
+  const style = styles[Math.abs(hash) % styles.length];
 
   const sizeParam = size ? `&size=${size}` : '';
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}${sizeParam}`;

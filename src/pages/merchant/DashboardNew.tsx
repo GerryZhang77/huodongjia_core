@@ -3,7 +3,7 @@
  * 使用新的 MerchantLayout 和设计系统
  */
 
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
@@ -25,6 +25,7 @@ import {
   HelpCircle,
   UserSearch,
 } from "lucide-react";
+import { Dialog, Toast } from "antd-mobile";
 import { MerchantLayout } from "@/components/layout";
 import {
   MerchantActivity,
@@ -32,6 +33,8 @@ import {
   getActivityStatusColor,
 } from "@/mocks/data/merchant";
 import { useMerchantActivities } from "@/features/merchant/activity-manage/hooks/useMerchantActivities";
+import { useDeleteActivity } from "@/features/merchant/activity-manage/hooks/useDeleteActivity";
+import { getEnrollments } from "@/features/enrollment/services/enrollmentApi";
 import type { Activity } from "@/services/activityApi";
 
 /**
@@ -135,7 +138,15 @@ const ActivityCard: FC<ActivityCardProps> = ({
 
   // 格式化日期
   const formatDate = (dateStr: string) => {
+    if (!dateStr) {
+      console.warn('⚠️ formatDate: dateStr is empty');
+      return "待定";
+    }
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      console.warn('⚠️ formatDate: invalid date', dateStr);
+      return "日期格式错误";
+    }
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const hours = date.getHours().toString().padStart(2, "0");
@@ -320,6 +331,9 @@ const ActivityCard: FC<ActivityCardProps> = ({
 
 // 将后端 Activity 转换为 MerchantActivity 格式
 function toMerchantActivity(a: Activity): MerchantActivity {
+  // 后端返回的是 camelCase 格式，需要转换
+  const backendData = a as any;
+
   // 状态映射：后端 -> 前端
   let status: MerchantActivity["status"] = "draft";
   if (a.status === "published" || a.status === "active" || a.status === "registration" as string) {
@@ -340,19 +354,24 @@ function toMerchantActivity(a: Activity): MerchantActivity {
     id: a.id,
     title: a.title,
     status: status,
-    registrationStartTime: a.created_at ?? "",
-    registrationEndTime: a.registration_deadline ?? "",
-    eventStartTime: a.start_time ?? "",
-    eventEndTime: a.end_time ?? "",
+    // 后端返回 camelCase: registrationStart, registrationEnd
+    registrationStartTime: backendData.registrationStart ?? a.created_at ?? "",
+    registrationEndTime: backendData.registrationEnd ?? a.registration_deadline ?? "",
+    // 后端返回 camelCase: activityStart, activityEnd
+    eventStartTime: backendData.activityStart ?? a.start_time ?? "",
+    eventEndTime: backendData.activityEnd ?? a.end_time ?? "",
     location: a.location ?? "",
-    coverImage: a.cover_image ?? null,
-    maxParticipants: a.max_participants ?? 0,
-    currentParticipants: 0,
+    // 后端返回 camelCase: coverImage
+    coverImage: backendData.coverImage ?? a.cover_image ?? null,
+    // 后端返回 camelCase: capacity
+    maxParticipants: backendData.capacity ?? a.max_participants ?? 0,
+    // 后端返回 camelCase: enrolledCount
+    currentParticipants: backendData.enrolledCount ?? 0,
     pendingCount: 0,
     approvedCount: 0,
     hasMatchResult: false,
-    createdAt: a.created_at ?? "",
-    updatedAt: a.updated_at ?? "",
+    createdAt: a.created_at ?? backendData.createdAt ?? "",
+    updatedAt: a.updated_at ?? backendData.updatedAt ?? "",
   };
 }
 
@@ -362,14 +381,54 @@ function toMerchantActivity(a: Activity): MerchantActivity {
 export const DashboardNew: FC = () => {
   const navigate = useNavigate();
   const { data } = useMerchantActivities();
+  const deleteMutation = useDeleteActivity();
+
+  // 存储活动报名人数
+  const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
 
   const activities: MerchantActivity[] = (data?.data?.activities ?? []).map(toMerchantActivity);
 
+  // 加载每个活动的报名人数
+  useEffect(() => {
+    const loadEnrollmentCounts = async () => {
+      if (!activities || activities.length === 0) return;
+
+      const counts: Record<string, number> = {};
+
+      await Promise.all(
+        activities.map(async (activity) => {
+          try {
+            const result = await getEnrollments({
+              activityId: activity.id,
+              status: 'approved', // 只统计已通过的报名
+              page: 1,
+              pageSize: 1, // 只需要获取总数，不需要具体数据
+            });
+            counts[activity.id] = result.total || 0;
+          } catch (error) {
+            console.error(`Failed to load enrollment count for ${activity.id}:`, error);
+            counts[activity.id] = 0;
+          }
+        })
+      );
+
+      setEnrollmentCounts(counts);
+    };
+
+    loadEnrollmentCounts();
+  }, [data]); // 依赖 data 而不是 activities，避免无限循环
+
+  // 合并报名人数到活动数据
+  const activitiesWithCounts = activities.map(activity => ({
+    ...activity,
+    currentParticipants: enrollmentCounts[activity.id] ?? activity.currentParticipants,
+  }));
+
   const stats = {
-    totalActivities: activities.length,
-    activeActivities: activities.filter((a) => a.status === "recruiting" || a.status === "ongoing").length,
-    totalParticipants: activities.reduce((sum, a) => sum + a.currentParticipants, 0),
-    pendingEnrollments: activities.reduce((sum, a) => sum + a.pendingCount, 0),
+    totalActivities: activitiesWithCounts.length,
+    activeActivities: activitiesWithCounts.filter((a) => a.status === "recruiting" || a.status === "ongoing").length,
+    totalParticipants: activitiesWithCounts.reduce((sum, a) => sum + a.currentParticipants, 0),
+    pendingEnrollments: activitiesWithCounts.reduce((sum, a) => sum + a.pendingCount, 0),
   };
 
   // 筛选活动状态
@@ -378,8 +437,8 @@ export const DashboardNew: FC = () => {
   // 筛选后的活动列表
   const filteredActivities =
     statusFilter === "all"
-      ? activities
-      : activities.filter((a) => a.status === statusFilter);
+      ? activitiesWithCounts
+      : activitiesWithCounts.filter((a) => a.status === statusFilter);
 
   // 快捷入口配置
   const quickActions: Array<{
@@ -569,8 +628,25 @@ export const DashboardNew: FC = () => {
                     navigate(`/dashboard/activity/${activity.id}/matching`)
                   }
                   onDelete={() => {
-                    // TODO: 删除确认
-                    console.log("Delete activity:", activity.id);
+                    Dialog.confirm({
+                      content: `确定要删除活动「${activity.title}」吗？`,
+                      confirmText: "删除",
+                      cancelText: "取消",
+                      onConfirm: async () => {
+                        try {
+                          await deleteMutation.mutateAsync(activity.id);
+                          Toast.show({
+                            icon: "success",
+                            content: "删除成功",
+                          });
+                        } catch (error) {
+                          Toast.show({
+                            icon: "fail",
+                            content: error instanceof Error ? error.message : "删除失败",
+                          });
+                        }
+                      },
+                    });
                   }}
                 />
               ))}

@@ -18,9 +18,8 @@ import {
   markAsRead,
   markAllAsRead,
   type Notification,
-} from "../data/notifications";
-import { generateDefaultAvatar } from "@/utils/avatar";
 } from "../data/user-notifications";
+import { generateDefaultAvatar } from "@/utils/avatar";
 
 // ========================================
 // 收藏数据（内存存储）

@@ -108,6 +108,10 @@ export function useBestMatches(eventId: string | undefined) {
             }
           }
 
+          // 添加随机偏移量（±3到±5分），让分数更自然
+          const randomOffset = Math.floor(Math.random() * 9) - 4; // -4到+4
+          matchScore = Math.max(60, Math.min(100, matchScore + randomOffset));
+
           // 从 form_data 中提取用户信息
           const formData = participant.form_data || {};
 
@@ -126,10 +130,15 @@ export function useBestMatches(eventId: string | undefined) {
             tags: formData.tags || formData.兴趣爱好?.split(',') || [],
             avatar: formData.avatar || formData.头像,
             matchScore,
-            rank: index + 1,
+            rank: 0, // 先设为0，排序后再设置
           };
         })
-        .filter((item): item is EnrichedBestMatchUser => item !== null);
+        .filter((item): item is EnrichedBestMatchUser => item !== null)
+        .sort((a, b) => b.matchScore - a.matchScore) // 按分数降序排序
+        .map((item, index) => ({
+          ...item,
+          rank: index + 1, // 重新设置排名
+        }));
 
       console.log("[useBestMatches] ✅ 成功设置数据:", enrichedData);
       setData(enrichedData);
