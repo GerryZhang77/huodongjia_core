@@ -1,10 +1,10 @@
 /**
  * 消息通知页面 (商家端)
- * 显示系统通知、报名提醒、匹配通知等
  */
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   UserPlus,
@@ -17,34 +17,47 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { MerchantLayout } from "@/components/layout";
-import {
-  mockMerchantNotifications,
-  MerchantNotification,
-} from "@/mocks/data/merchant";
+import { api } from "@/services/api/client";
 
-/**
- * 通知类型图标映射
- */
+interface MerchantNotification {
+  id: string;
+  type: "enrollment" | "match" | "system" | "reminder" | "approval";
+  title: string;
+  content: string;
+  activityId?: string;
+  activityTitle?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 const notificationIcons: Record<string, React.ReactNode> = {
   enrollment: <UserPlus size={18} />,
+  approval: <UserPlus size={18} />,
   match: <GitMerge size={18} />,
   system: <Settings size={18} />,
   reminder: <Clock size={18} />,
 };
 
-/**
- * 通知类型颜色映射
- */
 const notificationColors: Record<string, string> = {
   enrollment: "bg-primary-100 text-primary-500",
+  approval: "bg-primary-100 text-primary-500",
   match: "bg-accent-100 text-accent-500",
   system: "bg-gray-100 text-gray-500",
   reminder: "bg-orange-100 text-secondary-500",
 };
 
-/**
- * 通知卡片组件
- */
+const formatTime = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  if (days < 7) return `${days}天前`;
+  return date.toLocaleDateString();
+};
+
 interface NotificationCardProps {
   notification: MerchantNotification;
   onRead: () => void;
@@ -52,154 +65,98 @@ interface NotificationCardProps {
   onClick: () => void;
 }
 
-const NotificationCard: React.FC<NotificationCardProps> = ({
-  notification,
-  onRead,
-  onDelete,
-  onClick,
-}) => {
-  // 格式化时间
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 7) return `${days}天前`;
-    return date.toLocaleDateString();
-  };
-
-  return (
-    <div
-      className={`bg-white rounded-xl border p-4 cursor-pointer transition-all hover:shadow-md ${
-        notification.isRead
-          ? "border-gray-100"
-          : "border-primary-200 bg-primary-50/30"
-      }`}
-      onClick={onClick}
-    >
-      <div className="flex items-start gap-3">
-        {/* 图标 */}
-        <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            notificationColors[notification.type]
-          }`}
-        >
-          {notificationIcons[notification.type]}
+const NotificationCard: React.FC<NotificationCardProps> = ({ notification, onRead, onDelete, onClick }) => (
+  <div
+    className={`bg-white rounded-xl border p-4 cursor-pointer transition-all hover:shadow-md ${
+      notification.isRead ? "border-gray-100" : "border-primary-200 bg-primary-50/30"
+    }`}
+    onClick={onClick}
+  >
+    <div className="flex items-start gap-3">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${notificationColors[notification.type] ?? "bg-gray-100 text-gray-500"}`}>
+        {notificationIcons[notification.type] ?? <Bell size={18} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <h4 className="font-medium text-gray-900 text-sm line-clamp-1">{notification.title}</h4>
+          {!notification.isRead && <span className="w-2 h-2 bg-error-500 rounded-full flex-shrink-0" />}
         </div>
-
-        {/* 内容 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-medium text-gray-900 text-sm line-clamp-1">
-              {notification.title}
-            </h4>
-            {!notification.isRead && (
-              <span className="w-2 h-2 bg-error-500 rounded-full flex-shrink-0" />
-            )}
-          </div>
-          <p className="text-sm text-gray-500 line-clamp-2 mb-2">
-            {notification.content}
-          </p>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">
-              {formatTime(notification.createdAt)}
+        <p className="text-sm text-gray-500 line-clamp-2 mb-2">{notification.content}</p>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-400">{formatTime(notification.createdAt)}</span>
+          {notification.activityTitle && (
+            <span className="text-xs text-primary-500 flex items-center gap-0.5">
+              {notification.activityTitle}
+              <ChevronRight size={12} />
             </span>
-            {notification.activityTitle && (
-              <span className="text-xs text-primary-500 flex items-center gap-0.5">
-                {notification.activityTitle}
-                <ChevronRight size={12} />
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* 操作按钮 */}
-        <div className="flex flex-col gap-1 flex-shrink-0">
-          {!notification.isRead && (
-            <button
-              className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-primary-500"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRead();
-              }}
-              title="标为已读"
-            >
-              <Check size={14} />
-            </button>
           )}
-          <button
-            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-error-500"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            title="删除"
-          >
-            <Trash2 size={14} />
-          </button>
         </div>
       </div>
+      <div className="flex flex-col gap-1 flex-shrink-0">
+        {!notification.isRead && (
+          <button
+            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-primary-500"
+            onClick={(e) => { e.stopPropagation(); onRead(); }}
+            title="标为已读"
+          >
+            <Check size={14} />
+          </button>
+        )}
+        <button
+          className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-error-500"
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          title="删除"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
     </div>
-  );
-};
+  </div>
+);
 
-/**
- * 消息通知页面
- */
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(mockMerchantNotifications);
+  const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<string>("all");
 
-  // 筛选后的通知
+  const { data, isLoading } = useQuery({
+    queryKey: ["merchant", "notifications"],
+    queryFn: () => api.get<{ success: boolean; data: { notifications: MerchantNotification[]; unreadCount: number } }>("/api/merchant/received-notifications"),
+  });
+
+  const notifications: MerchantNotification[] = data?.data?.notifications ?? [];
+  const unreadCount = data?.data?.unreadCount ?? 0;
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["merchant", "notifications"] });
+
+  const readMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/api/merchant/notifications/${id}/read`),
+    onSuccess: invalidate,
+  });
+
+  const readAllMutation = useMutation({
+    mutationFn: () => api.post("/api/merchant/notifications/read-all"),
+    onSuccess: invalidate,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/api/merchant/notifications/${id}`),
+    onSuccess: invalidate,
+  });
+
   const filteredNotifications =
-    activeFilter === "all"
-      ? notifications
-      : activeFilter === "unread"
-        ? notifications.filter((n) => !n.isRead)
-        : notifications.filter((n) => n.type === activeFilter);
+    activeFilter === "all" ? notifications
+    : activeFilter === "unread" ? notifications.filter((n) => !n.isRead)
+    : notifications.filter((n) => n.type === activeFilter);
 
-  // 未读数量
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  // 标记已读
-  const handleRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-    );
-  };
-
-  // 全部标记已读
-  const handleReadAll = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
-
-  // 删除通知
-  const handleDelete = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  // 点击通知
   const handleClick = (notification: MerchantNotification) => {
-    // 标记已读
-    if (!notification.isRead) {
-      handleRead(notification.id);
-    }
-    // 跳转到相关活动
-    if (notification.activityId) {
-      navigate(`/dashboard/activity/${notification.activityId}/enrollment`);
-    }
+    if (!notification.isRead) readMutation.mutate(notification.id);
+    if (notification.activityId) navigate(`/dashboard/activity/${notification.activityId}/enrollment`);
   };
 
   return (
     <MerchantLayout title="消息中心">
       <div className="space-y-4">
-        {/* 头部操作栏 */}
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -214,15 +171,13 @@ const NotificationsPage: React.FC = () => {
             {unreadCount > 0 && (
               <button
                 className="text-sm text-primary-500 flex items-center gap-1 hover:underline"
-                onClick={handleReadAll}
+                onClick={() => readAllMutation.mutate()}
               >
                 <CheckCheck size={14} />
                 全部已读
               </button>
             )}
           </div>
-
-          {/* 筛选标签 */}
           <div className="flex gap-2 overflow-x-auto pb-1">
             {[
               { key: "all", label: "全部" },
@@ -247,8 +202,11 @@ const NotificationsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 通知列表 */}
-        {filteredNotifications.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-white rounded-xl p-12 text-center border border-gray-100">
+            <p className="text-gray-400 text-sm">加载中...</p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center border border-gray-100">
             <Bell size={48} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-500">暂无消息</p>
@@ -259,8 +217,8 @@ const NotificationsPage: React.FC = () => {
               <NotificationCard
                 key={notification.id}
                 notification={notification}
-                onRead={() => handleRead(notification.id)}
-                onDelete={() => handleDelete(notification.id)}
+                onRead={() => readMutation.mutate(notification.id)}
+                onDelete={() => deleteMutation.mutate(notification.id)}
                 onClick={() => handleClick(notification)}
               />
             ))}

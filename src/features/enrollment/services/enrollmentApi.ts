@@ -209,15 +209,19 @@ export const exportEnrollments = async (activityId: string): Promise<Blob> => {
 };
 
 /**
- * 发送通知给报名用户（新接口）
- * 使用 POST /api/events/{eventId}/enrollments/notify
+ * 发送通知给报名用户
+ * POST /api/notification/notify
  */
 export const sendEnrollmentNotification = async (
   request: SendNotificationRequest
 ): Promise<SendNotificationResponse> => {
-  const { activityId, ...payload } = request;
-
-  return api.post(`/api/events/${activityId}/enrollments/notify`, payload);
+  const { enrollmentIds, title, content, type } = request;
+  return api.post(`/api/notification/notify`, {
+    enrollment_ids: enrollmentIds,
+    title: title || '活动通知',
+    message: content,
+    type: type || 'enrollment',
+  });
 };
 
 /**

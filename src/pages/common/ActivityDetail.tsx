@@ -30,35 +30,35 @@ import { ImageCarousel } from "@/components/business/ImageCarousel";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import dayjs from "dayjs";
 
-// 活动接口定义 (与 Mock 数据格式匹配)
+// 活动接口定义 (与后端 camelCase 格式匹配)
 interface Activity {
   id: string;
   title: string;
   description: string;
-  event_start_time: string;
-  event_end_time: string;
-  registration_start_time?: string;
-  registration_end_time?: string;
+  activityStart: string;
+  activityEnd: string;
+  registrationStart?: string;
+  registrationEnd?: string;
   location: string;
-  max_participants: number;
-  current_participants: number;
+  capacity: number;
+  enrolledCount: number;
   status: ActivityStatus;
-  cover_image?: string | null;
+  coverImage?: string | null;
   images?: string[];
   category: string;
   tags: string[];
   requirements?: string;
-  contact_info?: string;
+  contactInfo?: string;
   fee?: number;
-  is_public?: boolean;
-  allow_waitlist?: boolean;
+  isPublic?: boolean;
+  allowWaitlist?: boolean;
   organizer?: {
     id: string;
     name: string;
     avatar?: string | null;
   };
-  created_at: string;
-  updated_at?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // 活动状态类型 (与 Mock 数据匹配)
@@ -265,8 +265,8 @@ const ActivityDetail: FC = () => {
 
   // 计算参与率
   const getParticipationRate = () => {
-    const max = activity?.max_participants || 0;
-    const current = activity?.current_participants || 0;
+    const max = activity?.capacity || 0;
+    const current = activity?.enrolledCount || 0;
     if (!max) return 0;
     return Math.round((current / max) * 100);
   };
@@ -322,8 +322,8 @@ const ActivityDetail: FC = () => {
             images={
               activity.images?.length
                 ? activity.images
-                : activity.cover_image
-                  ? [activity.cover_image]
+                : activity.coverImage
+                  ? [activity.coverImage]
                   : []
             }
             heightClass="aspect-[4/3] lg:aspect-[21/9]"
@@ -387,13 +387,13 @@ const ActivityDetail: FC = () => {
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="bg-primary-50 rounded-xl p-3 text-center">
                 <p className="text-2xl font-bold text-primary-500">
-                  {activity.current_participants}
+                  {activity.enrolledCount}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">已报名</p>
               </div>
               <div className="bg-success-50 rounded-xl p-3 text-center">
                 <p className="text-2xl font-bold text-success-500">
-                  {activity.max_participants}
+                  {activity.capacity}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">名额上限</p>
               </div>
@@ -415,8 +415,8 @@ const ActivityDetail: FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">活动时间</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {formatDate(activity.event_start_time)} -{" "}
-                    {formatDate(activity.event_end_time)}
+                    {formatDate(activity.activityStart)} -{" "}
+                    {formatDate(activity.activityEnd)}
                   </p>
                 </div>
               </div>
@@ -455,7 +455,7 @@ const ActivityDetail: FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">创建时间</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {formatDateTime(activity.created_at)}
+                    {formatDateTime(activity.createdAt)}
                   </p>
                 </div>
               </div>
@@ -497,7 +497,7 @@ const ActivityDetail: FC = () => {
                     <h3 className="text-sm font-semibold text-gray-900 mb-2">
                       活动简介
                     </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
                       {activity.description || "暂无活动简介"}
                     </p>
                   </div>

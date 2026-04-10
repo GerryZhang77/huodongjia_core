@@ -29,7 +29,7 @@ export async function getMatchResult(
   activityId: string
 ): Promise<GetMatchResultResponse> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const response = await api.get<any>(`/api/match-groups/${activityId}`);
+  const response = await api.get<any>(`/api/match/${activityId}/results`);
 
   const data = response.data;
 

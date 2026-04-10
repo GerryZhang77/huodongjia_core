@@ -31,6 +31,9 @@ import { Tag } from "@/components/ui";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
 import { NFCTouchModal } from "@/components/business/NFCTouchModal";
 import { useActivityDetail } from "@/features/user";
+import { useBestMatches } from "@/features/user/hooks/useBestMatches";
+import { useMyGroup } from "@/features/user/hooks/useMyGroup";
+import { generateDefaultAvatar } from "@/utils/avatar";
 import dayjs from "dayjs";
 
 // ============================================
@@ -125,7 +128,7 @@ const mockMatchResult: EnhancedMatchResult = {
       {
         id: "m1",
         name: "小明",
-        avatar: "https://i.pravatar.cc/100?img=1",
+        avatar: generateDefaultAvatar("m1"),
         role: "产品经理",
         occupation: "高级产品经理",
         city: "北京",
@@ -136,7 +139,7 @@ const mockMatchResult: EnhancedMatchResult = {
       {
         id: "m2",
         name: "小红",
-        avatar: "https://i.pravatar.cc/100?img=2",
+        avatar: generateDefaultAvatar("m2"),
         role: "创业者",
         occupation: "联合创始人",
         city: "上海",
@@ -146,7 +149,7 @@ const mockMatchResult: EnhancedMatchResult = {
       {
         id: "m3",
         name: "大伟",
-        avatar: "https://i.pravatar.cc/100?img=3",
+        avatar: generateDefaultAvatar("m3"),
         role: "设计师",
         occupation: "UI/UX 设计总监",
         city: "深圳",
@@ -156,7 +159,7 @@ const mockMatchResult: EnhancedMatchResult = {
       {
         id: "m4",
         name: "婷婷",
-        avatar: "https://i.pravatar.cc/100?img=4",
+        avatar: generateDefaultAvatar("m4"),
         role: "运营",
         occupation: "增长负责人",
         city: "北京",
@@ -195,7 +198,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m2",
       name: "小红",
-      avatar: "https://i.pravatar.cc/100?img=2",
+      avatar: generateDefaultAvatar("m2"),
       role: "创业者",
       occupation: "联合创始人",
       city: "上海",
@@ -208,7 +211,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m5",
       name: "阿杰",
-      avatar: "https://i.pravatar.cc/100?img=5",
+      avatar: generateDefaultAvatar("m5"),
       role: "投资人",
       occupation: "投资总监",
       city: "北京",
@@ -221,7 +224,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m6",
       name: "小美",
-      avatar: "https://i.pravatar.cc/100?img=6",
+      avatar: generateDefaultAvatar("m6"),
       role: "产品经理",
       occupation: "产品专家",
       city: "北京",
@@ -234,7 +237,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m7",
       name: "老王",
-      avatar: "https://i.pravatar.cc/100?img=7",
+      avatar: generateDefaultAvatar("m7"),
       role: "技术专家",
       occupation: "架构师",
       city: "杭州",
@@ -247,7 +250,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m8",
       name: "小李",
-      avatar: "https://i.pravatar.cc/100?img=8",
+      avatar: generateDefaultAvatar("m8"),
       role: "市场营销",
       occupation: "市场总监",
       city: "广州",
@@ -260,7 +263,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m9",
       name: "大刘",
-      avatar: "https://i.pravatar.cc/100?img=9",
+      avatar: generateDefaultAvatar("m9"),
       role: "创业者",
       occupation: "CEO",
       city: "成都",
@@ -273,7 +276,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m10",
       name: "小周",
-      avatar: "https://i.pravatar.cc/100?img=10",
+      avatar: generateDefaultAvatar("m10"),
       role: "设计师",
       occupation: "产品设计师",
       city: "北京",
@@ -286,7 +289,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m11",
       name: "阿芳",
-      avatar: "https://i.pravatar.cc/100?img=11",
+      avatar: generateDefaultAvatar("m11"),
       role: "HR",
       occupation: "人力资源总监",
       city: "上海",
@@ -299,7 +302,7 @@ const mockMatchResult: EnhancedMatchResult = {
     {
       id: "m12",
       name: "小陈",
-      avatar: "https://i.pravatar.cc/100?img=12",
+      avatar: generateDefaultAvatar("m12"),
       role: "研发工程师",
       occupation: "全栈工程师",
       city: "深圳",
@@ -455,20 +458,97 @@ const UserMatchResult: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<TabType>("group");
+  // 默认显示"最佳匹配" Tab
+  const [activeTab, setActiveTab] = useState<TabType>("topMatches");
   const [showNFCModal, setShowNFCModal] = useState(false);
 
   // 使用 hooks 获取活动详情
   const { data: activityData, isLoading } = useActivityDetail(id);
 
+  // 获取用户的最佳匹配列表
+  const { data: bestMatchesData, loading: matchLoading, error: matchError } = useBestMatches(id);
+
+  // 获取用户的分组信息
+  const { data: myGroupData, loading: groupLoading, error: groupError } = useMyGroup(id);
+
   const activity = useMemo(() => {
     return activityData?.data;
   }, [activityData]);
 
-  const result = mockMatchResult;
+  // 使用真实数据或 Mock 数据
+  const result = useMemo(() => {
+    console.log("[UserMatchResult] bestMatchesData:", bestMatchesData);
+    console.log("[UserMatchResult] myGroupData:", myGroupData);
+
+    // 转换最佳匹配数据
+    let topMatches: TopMatchUser[] = mockMatchResult.topMatches;
+    if (bestMatchesData && bestMatchesData.length > 0) {
+      console.log("[UserMatchResult] ✅ 使用真实最佳匹配数据:", bestMatchesData);
+      topMatches = bestMatchesData.map((user) => ({
+        id: user.user_id,
+        name: user.name,
+        avatar: user.avatar || `https://i.pravatar.cc/100?u=${user.user_id}`,
+        role: user.occupation || "参与者",
+        occupation: user.occupation,
+        city: user.city,
+        tags: user.tags || [],
+        matchScore: user.matchScore,
+        rank: user.rank,
+        matchReasons: ["兴趣相似", "背景互补"], // TODO: 从后端获取匹配原因
+        commonTags: user.tags?.slice(0, 2) || [],
+      }));
+    }
+
+    // 转换分组数据
+    let myGroup: MatchGroup = mockMatchResult.myGroup;
+    if (myGroupData && myGroupData.groups && myGroupData.groups.length > 0) {
+      console.log("[UserMatchResult] 使用真实分组数据:", myGroupData);
+
+      // 取第一个分组作为"我的分组"（根据后端逻辑，可能需要调整）
+      const firstGroup = myGroupData.groups[0];
+
+      // 转换成员数据
+      const members: GroupMember[] = firstGroup.members.map((member, index) => ({
+        id: member.user_id,
+        name: member.name,
+        avatar: member.avatar || `https://i.pravatar.cc/100?u=${member.user_id}`,
+        role: member.occupation || "参与者",
+        occupation: member.occupation,
+        city: member.city,
+        tags: member.tags || [],
+        isCurrentUser: false, // TODO: 需要判断是否是当前用户
+        bgColor: `bg-${['blue', 'orange', 'purple', 'green', 'pink', 'yellow'][index % 6]}-100`,
+      }));
+
+      // 生成匹配理由（基于分组名称）
+      const reasons: MatchReason[] = [
+        {
+          id: "r1",
+          icon: Target,
+          title: firstGroup.groupName,
+          description: `基于"${firstGroup.groupName}"维度进行匹配`,
+          bgColor: "bg-purple-50",
+          iconColor: "text-purple-500",
+        },
+      ];
+
+      myGroup = {
+        groupName: firstGroup.groupName,
+        matchScore: Math.round((firstGroup.members[0]?.score || 85) * 100) / 100,
+        members,
+        reasons,
+      };
+    }
+
+    return {
+      ...mockMatchResult,
+      topMatches,
+      myGroup,
+    };
+  }, [bestMatchesData, myGroupData]);
 
   // 加载中状态
-  if (isLoading) {
+  if (isLoading || matchLoading || groupLoading) {
     return (
       <UserLayout showTabBar={true} showTopBar={true}>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -495,6 +575,29 @@ const UserMatchResult: FC = () => {
             className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
           >
             返回首页
+          </button>
+        </div>
+      </UserLayout>
+    );
+  }
+
+  // 匹配结果加载失败
+  if (matchError || groupError) {
+    return (
+      <UserLayout showTabBar={true} showTopBar={true}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
+          <AlertCircle
+            size={40}
+            className="text-orange-400 mb-3"
+          />
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+            {matchError || groupError}
+          </p>
+          <button
+            onClick={() => navigate(`/u/activities/${id}`)}
+            className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
+          >
+            返回活动详情
           </button>
         </div>
       </UserLayout>
@@ -904,8 +1007,8 @@ const TopMatchesTab: FC<TopMatchesTabProps> = ({
 
           {/* 查看详情 */}
           <button
-            onClick={() => onNavigateToProfile(user.id)}
-            className="w-full mt-3 py-2 text-xs text-primary-500 hover:text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg flex items-center justify-center gap-1 transition-colors"
+            disabled
+            className="w-full mt-3 py-2 text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center gap-1 cursor-not-allowed"
           >
             查看详情
             <ChevronRight size={14} />

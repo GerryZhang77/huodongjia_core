@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { Button, Tag } from "@/components/ui";
+import { generateDefaultAvatar } from "@/utils/avatar";
 
 // Mock 用户数据
 const mockUsers: Record<
@@ -48,7 +49,7 @@ const mockUsers: Record<
   m1: {
     id: "m1",
     name: "小明",
-    avatar: "https://i.pravatar.cc/200?img=1",
+    avatar: generateDefaultAvatar("m1"),
     role: "产品经理",
     occupation: "高级产品经理",
     company: "字节跳动",
@@ -63,7 +64,7 @@ const mockUsers: Record<
   m2: {
     id: "m2",
     name: "小红",
-    avatar: "https://i.pravatar.cc/200?img=2",
+    avatar: generateDefaultAvatar("m2"),
     role: "创业者",
     occupation: "联合创始人",
     company: "某AI创业公司",
@@ -78,7 +79,7 @@ const mockUsers: Record<
   m3: {
     id: "m3",
     name: "大伟",
-    avatar: "https://i.pravatar.cc/200?img=3",
+    avatar: generateDefaultAvatar("m3"),
     role: "设计师",
     occupation: "UI/UX 设计总监",
     company: "腾讯",
@@ -93,7 +94,7 @@ const mockUsers: Record<
   m4: {
     id: "m4",
     name: "婷婷",
-    avatar: "https://i.pravatar.cc/200?img=4",
+    avatar: generateDefaultAvatar("m4"),
     role: "运营专家",
     occupation: "增长负责人",
     company: "美团",

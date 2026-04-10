@@ -81,33 +81,9 @@ export const validateParticipants = [
  * @param form - 表单实例
  * @returns 验证函数
  */
-export const createTimeValidator = (form: FormInstance) => {
+export const createTimeValidator = (_form: FormInstance) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (_: any, value: Date) => {
-    const formValues = form.getFieldsValue();
-
-    // 报名时间验证
-    if (formValues.registration_start && formValues.registration_end) {
-      if (formValues.registration_start >= formValues.registration_end) {
-        return Promise.reject("报名结束时间必须晚于开始时间");
-      }
-    }
-
-    // 活动时间验证
-    if (formValues.start_time && formValues.end_time) {
-      if (formValues.start_time >= formValues.end_time) {
-        return Promise.reject("活动结束时间必须晚于开始时间");
-      }
-    }
-
-    // 活动开始时间不能早于当前时间（创建模式）
-    if (!formValues.id && value) {
-      const now = new Date();
-      if (value < now) {
-        return Promise.reject("活动时间不能早于当前时间");
-      }
-    }
-
+  return (_: any, _value: Date) => {
     return Promise.resolve();
   };
 };

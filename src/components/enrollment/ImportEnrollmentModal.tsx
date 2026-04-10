@@ -52,6 +52,7 @@ interface MappingTemplate {
 // 目标字段定义
 const TARGET_FIELDS = [
   { key: "name", label: "姓名", required: true },
+  { key: "account", label: "账号", required: false },
   { key: "gender", label: "性别", required: false },
   { key: "age", label: "年龄", required: false },
   { key: "phone", label: "手机号", required: false },
@@ -65,6 +66,11 @@ const TARGET_FIELDS = [
   { key: "skills", label: "技能", required: false },
   { key: "bio", label: "个人简介", required: false },
   { key: "matchingNeeds", label: "匹配需求", required: false },
+  // 后端匹配所需的额外字段
+  { key: "department", label: "所在职能部门", required: false },
+  { key: "industryDirection", label: "关注/从事的行业方向", required: false },
+  { key: "softwareSkills", label: "软件技能", required: false },
+  { key: "expertise", label: "擅长领域", required: false },
 ];
 
 // 扩展的字段名别名库（支持更多常见写法）
@@ -86,6 +92,17 @@ const FIELD_NAME_ALIASES: Record<string, string[]> = {
     "成员",
     "报名人",
     "报名者",
+  ],
+  account: [
+    "账号",
+    "account",
+    "用户账号",
+    "登录账号",
+    "账户",
+    "学号",
+    "工号",
+    "student_id",
+    "studentid",
   ],
   gender: ["性别", "gender", "sex", "男女", "性 别"],
   age: ["年龄", "age", "岁数", "年 龄", "出生年份"],
@@ -226,6 +243,44 @@ const FIELD_NAME_ALIASES: Record<string, string[]> = {
     "期望交流",
     "matching",
     "needs",
+  ],
+  // 后端匹配所需的额外字段别名
+  department: [
+    "所在职能部门",
+    "职能部门",
+    "部门",
+    "department",
+    "所在部门",
+    "工作部门",
+    "部门/职位",
+    "部门职位",
+  ],
+  industryDirection: [
+    "关注/从事的行业方向",
+    "关注从事的行业方向",
+    "行业方向",
+    "从事行业",
+    "关注行业",
+    "行业领域",
+    "industryDirection",
+    "industry_direction",
+  ],
+  softwareSkills: [
+    "软件技能",
+    "软件",
+    "工具",
+    "软件工具",
+    "softwareSkills",
+    "software_skills",
+    "tools",
+  ],
+  expertise: [
+    "擅长领域",
+    "擅长",
+    "专长领域",
+    "expertise",
+    "专业领域",
+    "核心能力",
   ],
 };
 

@@ -19,11 +19,10 @@ export const useEditActivity = (activityId: string) => {
 
     try {
       // 转换表单数据为 API 请求格式
-      const requestData = {
+      const requestData: any = {
         id: activityId,
         title: data.title,
         description: data.description,
-        coverImage: data.cover_image,
         registrationStart: data.registration_start.toISOString(),
         registrationEnd: data.registration_end.toISOString(),
         activityStart: data.start_time.toISOString(),
@@ -36,7 +35,13 @@ export const useEditActivity = (activityId: string) => {
         contactInfo: data.contact_info,
         isPublic: data.is_public,
         allowWaitlist: data.allow_waitlist,
+        status: "published",
       };
+
+      // 只有当有封面图片时才添加 coverImage 字段
+      if (data.cover_image) {
+        requestData.coverImage = data.cover_image;
+      }
 
       const activity = await updateActivity(activityId, requestData);
 
@@ -46,7 +51,7 @@ export const useEditActivity = (activityId: string) => {
       });
 
       setCurrentActivity(activity);
-      navigate(`/activities/${activity.id}`);
+      navigate(`/dashboard/activity/${activity.id}/detail`);
     } catch (error) {
       console.error("更新活动失败:", error);
       Toast.show({

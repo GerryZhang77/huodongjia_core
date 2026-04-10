@@ -73,5 +73,15 @@ export type {
   ActivityCategory,
 } from "./userApi";
 
+// 商家 API (B端)
+import * as merchantApi from "./merchantApi";
+export { merchantApi };
+export type {
+  MerchantProfile,
+  MerchantProfileResponse,
+  UpdateMerchantProfileRequest,
+} from "./merchantApi";
+export { uploadMerchantAvatar } from "./merchantApi";
+
 // 底层 API 实例 (用于自定义请求)
 export { api } from "@/services/api";

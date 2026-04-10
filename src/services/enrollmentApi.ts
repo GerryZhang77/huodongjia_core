@@ -151,13 +151,18 @@ export async function exportEnrollments(activityId: string): Promise<Blob> {
 
 /**
  * 发送通知
- * POST /api/events/{activityId}/enrollments/notify
+ * POST /api/notification/notify
  */
 export async function sendNotification(
   activityId: string,
   data: SendNotificationRequest
 ): Promise<{ success: boolean; sentCount?: number }> {
-  return api.post(`/api/events/${activityId}/enrollments/notify`, data);
+  return api.post(`/api/notification/notify`, {
+    enrollment_ids: data.enrollmentIds,
+    message: data.message,
+    title: '活动通知',
+    type: 'enrollment',
+  });
 }
 
 // ============================================

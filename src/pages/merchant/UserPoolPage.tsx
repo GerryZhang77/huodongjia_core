@@ -9,7 +9,7 @@
  * 5. 批量打标签、批量推送活动
  */
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -61,19 +61,14 @@ import {
   getActiveFilterCount,
 } from "@/features/merchant/user-pool/utils";
 import {
-  mockMerchantUsers,
-  getMerchantUserPoolStats,
-  getUsersByActivityId,
-  customTagsMap,
-} from "@/mocks/data/merchant-users";
-import { mockMerchantActivities } from "@/mocks/data/merchant";
+  getMerchantUserPool,
+  getPlatformUsers,
+  getDiscoveryQuota,
+} from "@/features/merchant/user-pool/services/userPoolApi";
+import { getMerchantActivities } from "@/features/merchant/activity-manage/services/activityManageApi";
 import {
-  mockPlatformUsers,
-  mockDiscoveryQuota,
   getDiscoveryFilterOptions,
   applyDiscoveryFilters,
-  unlockPlatformUser,
-  toggleFavoritePlatformUser,
 } from "@/mocks/data/platform-users";
 import type { ActivityOption } from "@/features/merchant/user-pool/components/ActivitySelector";
 
@@ -137,37 +132,45 @@ const UserPoolPage: React.FC = () => {
   const [batchTagVisible, setBatchTagVisible] = useState(false);
   const [pushActivityVisible, setPushActivityVisible] = useState(false);
   const [tagManagerVisible, setTagManagerVisible] = useState(false);
-  const [customTags, setCustomTags] = useState<CustomTag[]>(() => {
-    const tagCountMap = new Map<string, number>();
-    Object.values(customTagsMap).forEach((tags) => {
-      tags.forEach((tagName) => {
-        tagCountMap.set(tagName, (tagCountMap.get(tagName) || 0) + 1);
-      });
-    });
-    const colorKeys = [
-      "primary",
-      "secondary",
-      "accent",
-      "success",
-      "warning",
-      "error",
-    ];
-    return Array.from(tagCountMap.entries()).map(([name, count], idx) => ({
-      id: `tag_${idx + 1}`,
-      name,
-      color: colorKeys[idx % colorKeys.length],
-      createdAt: new Date().toISOString(),
-      userCount: count,
-    }));
-  });
+  const [customTags, setCustomTags] = useState<CustomTag[]>([]);
+
+  // ========================================
+  // API 数据加载
+  // ========================================
+  const [merchantUsers, setMerchantUsers] = useState<MerchantUser[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+
+  useEffect(() => {
+    getMerchantUserPool().then((res: any) => {
+      if (res.success) setMerchantUsers(res.data.users);
+    }).catch(() => {});
+
+    getPlatformUsers().then((res: any) => {
+      if (res.success) setPlatformUsers(res.data.users);
+    }).catch(() => {});
+
+    getDiscoveryQuota().then((res: any) => {
+      if (res.success) setDiscoveryQuota(res.data);
+    }).catch(() => {});
+
+    getMerchantActivities().then((res: any) => {
+      const list = res.events || res.data?.events || [];
+      setActivities(list);
+    }).catch(() => {});
+  }, []);
 
   // ========================================
   // 「发现用户」状态
   // ========================================
-  const [platformUsers, setPlatformUsers] =
-    useState<PlatformUser[]>(mockPlatformUsers);
-  const [discoveryQuota, setDiscoveryQuota] =
-    useState<DiscoveryQuota>(mockDiscoveryQuota);
+  const [platformUsers, setPlatformUsers] = useState<PlatformUser[]>([]);
+  const [discoveryQuota, setDiscoveryQuota] = useState<DiscoveryQuota>({
+    usedUnlocks: 0,
+    freeUnlockLimit: 10,
+    usedViews: 0,
+    freeViewLimit: 100,
+    planName: '免费版',
+    planExpiresAt: null,
+  });
   const [discoveryFilter, setDiscoveryFilter] =
     useState<DiscoveryFilterCriteria>({ ...DEFAULT_DISCOVERY_FILTER });
   const [discoveryDetailUser, setDiscoveryDetailUser] =
@@ -179,11 +182,8 @@ const UserPoolPage: React.FC = () => {
 
   // 根据选中的活动切换数据源
   const users: MerchantUser[] = useMemo(() => {
-    if (selectedActivityId === null) {
-      return mockMerchantUsers;
-    }
-    return getUsersByActivityId(selectedActivityId);
-  }, [selectedActivityId]);
+    return merchantUsers;
+  }, [merchantUsers]);
 
   // 应用搜索 + 筛选
   const filteredUsers = useMemo(() => {
@@ -212,7 +212,14 @@ const UserPoolPage: React.FC = () => {
   );
 
   // 统计数据
-  const stats = useMemo(() => getMerchantUserPoolStats(), []);
+  const stats = useMemo(() => ({
+    totalUsers: merchantUsers.length,
+    activeUsers: merchantUsers.filter((u: MerchantUser) => u.participationCount && u.participationCount > 1).length,
+    newUsersThisMonth: 0,
+    avgParticipation: merchantUsers.length > 0
+      ? (merchantUsers.reduce((s: number, u: MerchantUser) => s + (u.participationCount || 0), 0) / merchantUsers.length).toFixed(1)
+      : 0,
+  }), [merchantUsers]);
 
   // 活跃筛选数
   const activeFilterCount = useMemo(
@@ -223,28 +230,28 @@ const UserPoolPage: React.FC = () => {
   // 活动选项列表
   const activityOptions: ActivityOption[] = useMemo(
     () =>
-      mockMerchantActivities.map((a) => ({
+      activities.map((a: any) => ({
         id: a.id,
         title: a.title,
-        participantCount: a.currentParticipants,
+        participantCount: a.current_participants || 0,
         status: a.status,
       })),
-    [],
+    [activities],
   );
 
   // 推送活动选项列表
   const pushActivityOptions: PushActivityOption[] = useMemo(
     () =>
-      mockMerchantActivities.map((a) => ({
+      activities.map((a: any) => ({
         id: a.id,
         title: a.title,
-        startTime: a.eventStartTime,
+        startTime: a.start_time,
         location: a.location || "",
-        participantCount: a.currentParticipants,
-        maxParticipants: a.maxParticipants,
+        participantCount: a.current_participants || 0,
+        maxParticipants: a.max_participants || 0,
         status: a.status,
       })),
-    [],
+    [activities],
   );
 
   // ---- 发现用户数据派生 ----
@@ -261,16 +268,16 @@ const UserPoolPage: React.FC = () => {
   // 推送/邀请活动选项（复用）
   const inviteActivityOptions: InviteActivityOption[] = useMemo(
     () =>
-      mockMerchantActivities.map((a) => ({
+      activities.map((a: any) => ({
         id: a.id,
         title: a.title,
-        startTime: a.eventStartTime,
+        startTime: a.start_time,
         location: a.location || "",
-        participantCount: a.currentParticipants,
-        maxParticipants: a.maxParticipants,
+        participantCount: a.current_participants || 0,
+        maxParticipants: a.max_participants || 0,
         status: a.status,
       })),
-    [],
+    [activities],
   );
 
   // ---- 操作 ----
@@ -381,22 +388,18 @@ const UserPoolPage: React.FC = () => {
   // 解锁用户
   const handleUnlockConfirm = useCallback(
     (userId: string) => {
-      const updated = unlockPlatformUser(userId);
-      if (updated) {
-        setPlatformUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, isUnlocked: true } : u)),
+      setPlatformUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, isUnlocked: true } : u)),
+      );
+      setDiscoveryQuota((prev) => ({
+        ...prev,
+        usedUnlocks: prev.usedUnlocks + 1,
+      }));
+      Toast.show({ content: "解锁成功，可查看完整信息", position: "bottom" });
+      if (discoveryDetailUser?.id === userId) {
+        setDiscoveryDetailUser((prev) =>
+          prev ? { ...prev, isUnlocked: true } : null,
         );
-        setDiscoveryQuota((prev) => ({
-          ...prev,
-          usedUnlocks: prev.usedUnlocks + 1,
-        }));
-        Toast.show({ content: "解锁成功，可查看完整信息", position: "bottom" });
-        // 如果当前查看的是这个用户的详情，更新
-        if (discoveryDetailUser?.id === userId) {
-          setDiscoveryDetailUser((prev) =>
-            prev ? { ...prev, isUnlocked: true } : null,
-          );
-        }
       }
       setUnlockTarget(null);
     },
@@ -406,13 +409,11 @@ const UserPoolPage: React.FC = () => {
   // 收藏/取消收藏
   const handleToggleFavorite = useCallback(
     (userId: string) => {
-      toggleFavoritePlatformUser(userId);
       setPlatformUsers((prev) =>
         prev.map((u) =>
           u.id === userId ? { ...u, isFavorited: !u.isFavorited } : u,
         ),
       );
-      // 同步详情弹窗
       if (discoveryDetailUser?.id === userId) {
         setDiscoveryDetailUser((prev) =>
           prev ? { ...prev, isFavorited: !prev.isFavorited } : null,
@@ -461,7 +462,7 @@ const UserPoolPage: React.FC = () => {
         <UserPoolTabs
           activeTab={activeTab}
           onChange={setActiveTab}
-          myUserCount={mockMerchantUsers.length}
+          myUserCount={merchantUsers.length}
           platformUserCount={platformUsers.length}
         />
 
@@ -507,7 +508,7 @@ const UserPoolPage: React.FC = () => {
               <ActivitySelector
                 selectedActivityId={selectedActivityId}
                 activities={activityOptions}
-                totalUserCount={mockMerchantUsers.length}
+                totalUserCount={merchantUsers.length}
                 onSelect={handleActivityChange}
               />
               <div className="flex items-center gap-2">

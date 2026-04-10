@@ -18,9 +18,9 @@ export function useSubmitEnrollment(activityId: string) {
     onSuccess: () => {
       // 刷新我的报名列表
       queryClient.invalidateQueries({ queryKey: ["user", "enrollments"] });
-      // 刷新活动详情 (更新报名状态)
+      // 刷新活动详情 (更新报名状态) - 修复：使用正确的 queryKey
       queryClient.invalidateQueries({
-        queryKey: ["activity", "detail", activityId],
+        queryKey: ["user", "activity", activityId],
       });
       // 刷新报名状态
       queryClient.invalidateQueries({

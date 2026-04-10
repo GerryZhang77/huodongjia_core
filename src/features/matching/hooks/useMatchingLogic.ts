@@ -201,22 +201,26 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
         // 如果没有已发布结果，尝试加载最新的未发布匹配结果
         if (stage !== "published") {
-          const groupsData = await getMatchGroups(activityId).catch(
-            () => [] as MatchGroup[],
+          const matchResult = await getMatchGroups(activityId).catch(
+            () => ({ groups: [] as MatchGroup[], participants: [] }),
           );
-          if (groupsData && groupsData.length > 0) {
-            setGroups(groupsData);
+          if (matchResult.groups && matchResult.groups.length > 0) {
+            setGroups(matchResult.groups);
+            // 合并参与者数据：优先使用匹配结果中的参与者信息
+            if (matchResult.participants.length > 0) {
+              setParticipants(matchResult.participants);
+            }
             setStage("completed");
             setActiveTab("results");
 
-            const scores = groupsData.map((g) => g.score || 0);
+            const scores = matchResult.groups.map((g) => g.score || 0);
             if (scores.length > 0) {
               setMatchingStats({
                 avgScore: scores.reduce((a, b) => a + b, 0) / scores.length,
                 minScore: Math.min(...scores),
                 maxScore: Math.max(...scores),
-                totalGroups: groupsData.length,
-                totalParticipants: participantsData.length,
+                totalGroups: matchResult.groups.length,
+                totalParticipants: matchResult.participants.length,
               });
             }
           }
@@ -628,28 +632,65 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
       setIsPublishing(true);
       try {
-        // 如果没有指定 historyId，使用最新的历史记录
-        const targetHistoryId = historyId || history[0]?.id;
-        if (targetHistoryId) {
-          await publishMatchingResult(activityId, targetHistoryId);
+        // 获取所有参与者的 ID（从 groups.members 中提取）
+        const allMemberIds = groups.flatMap((g) => g.members);
+
+        if (allMemberIds.length === 0) {
+          Toast.show({ content: "没有可通知的参与者", icon: "fail" });
+          return;
         }
 
-        setStage("published");
-        Toast.show({ content: "结果发布成功", icon: "success" });
+        // 调用通知接口发送匹配结果通知
+        const token = (() => {
+          try {
+            const raw = localStorage.getItem("auth-storage");
+            return raw ? JSON.parse(raw)?.state?.token ?? null : null;
+          } catch { return null; }
+        })();
 
-        // 刷新历史记录
-        const historyData = await getMatchingHistory(activityId).catch(
-          () => [],
-        );
-        setHistory(historyData);
+        const response = await fetch(`/api/notification/notify`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: 'enrollment',
+            message: '您的匹配结果已出炉，快来查看您的分组信息吧！',
+            enrollment_ids: allMemberIds,
+            title: '匹配结果通知',
+            event_id: activityId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setStage("published");
+          Toast.show({
+            content: `结果发布成功，已通知 ${allMemberIds.length} 位参与者`,
+            icon: "success"
+          });
+
+          // 刷新历史记录
+          const historyData = await getMatchingHistory(activityId).catch(
+            () => [],
+          );
+          setHistory(historyData);
+        } else {
+          throw new Error(data.message || "发布失败");
+        }
       } catch (error) {
         console.error("Publish failed:", error);
-        Toast.show({ content: "发布失败，请重试", icon: "fail" });
+        Toast.show({
+          content: error instanceof Error ? error.message : "发布失败，请重试",
+          icon: "fail"
+        });
       } finally {
         setIsPublishing(false);
       }
     },
-    [groups, history, activityId],
+    [groups, activityId],
   );
 
   // === 查看历史记录 ===

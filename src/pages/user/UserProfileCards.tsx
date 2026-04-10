@@ -3,7 +3,7 @@
  * 整合个人资料卡片 + 我的活动列表 + 功能入口
  */
 
-import { FC, useState, useEffect, useMemo } from "react";
+import { FC, useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Edit3,
@@ -18,10 +18,14 @@ import {
   CheckCircle,
   XCircle,
   MoreHorizontal,
+  Camera,
 } from "lucide-react";
 import dayjs from "dayjs";
+import { Toast } from "antd-mobile";
+import { useQueryClient } from "@tanstack/react-query";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useUserProfile, useUserActivities } from "@/features/user";
+import { userApi } from "@/services";
 import type { InterestTag, UserProfile } from "@/services/userApi";
 import type { UserActivity } from "@/services/userApi";
 import { EditInterestsModal } from "./EditInterestsModal";
@@ -198,6 +202,8 @@ const getRandomColorType = (): InterestTag["colorType"] => {
 
 const UserProfileCards: FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 使用 hooks 获取数据
   const { data: profileData, isLoading: isLoadingProfile } = useUserProfile();
@@ -220,6 +226,9 @@ const UserProfileCards: FC = () => {
 
   // 兴趣编辑弹窗
   const [showEditInterests, setShowEditInterests] = useState(false);
+
+  // 头像上传状态
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   // 监听资料更新事件（用于本地刷新）
   useEffect(() => {
@@ -260,6 +269,41 @@ const UserProfileCards: FC = () => {
     }));
     // TODO: 调用 updateUserProfile API
     console.log("Save interests:", newInterestTags);
+  };
+
+  // 处理头像上传
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 验证文件类型
+    if (!file.type.startsWith("image/")) {
+      Toast.show({ icon: "fail", content: "请选择图片文件" });
+      return;
+    }
+
+    // 验证文件大小（限制 5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      Toast.show({ icon: "fail", content: "图片大小不能超过 5MB" });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const res = await userApi.uploadAvatar(file);
+      if (res.success && res.avatarUrl) {
+        queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+        Toast.show({ icon: "success", content: "头像更新成功" });
+      } else {
+        Toast.show({ icon: "fail", content: "上传失败，请重试" });
+      }
+    } catch (error) {
+      console.error("头像上传失败:", error);
+      Toast.show({ icon: "fail", content: "上传失败，请稍后重试" });
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   // 加载中状态
@@ -305,11 +349,28 @@ const UserProfileCards: FC = () => {
           {/* 头像和基本信息 */}
           <div className="p-4">
             <div className="flex items-start gap-3">
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white dark:ring-gray-700 shadow"
-              />
+              {/* 头像 */}
+              <div className="relative">
+                <img
+                  src={profile.avatar}
+                  alt={profile.name}
+                  className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white dark:ring-gray-700 shadow"
+                />
+                <button
+                  className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center shadow-md hover:bg-primary-600 active:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarUploading}
+                >
+                  <Camera size={10} className={avatarUploading ? "text-white animate-pulse" : "text-white"} />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+              </div>
               <div className="flex-1 min-w-0 pt-0.5">
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
@@ -340,17 +401,17 @@ const UserProfileCards: FC = () => {
             </div>
 
             {/* 兴趣标签 - 折叠显示 */}
-            {profile.interestTags.length > 0 && (
+            {(profile.interestTags?.length ?? 0) > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {profile.interestTags.slice(0, 5).map((tag) => (
+                {profile.interestTags!.slice(0, 5).map((tag) => (
                   <TagChip key={tag.id} tag={tag} />
                 ))}
-                {profile.interestTags.length > 5 && (
+                {profile.interestTags!.length > 5 && (
                   <button
                     onClick={() => setShowEditInterests(true)}
                     className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                   >
-                    +{profile.interestTags.length - 5}
+                    +{profile.interestTags!.length - 5}
                   </button>
                 )}
               </div>

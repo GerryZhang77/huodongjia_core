@@ -185,11 +185,15 @@ export const ActivityFormWithPreview: React.FC<
       }
 
       // 添加封面图片和图片数组
-      const submitData = {
+      const submitData: any = {
         ...values,
-        cover_image: fileList[0]?.url,
-        images: fileList.map((f) => f.url),
       };
+
+      // 只有当图片列表不为空时才添加图片字段
+      if (fileList.length > 0) {
+        submitData.cover_image = fileList[0].url;
+        submitData.images = fileList.map((f) => f.url);
+      }
 
       Toast.show({
         icon: "loading",

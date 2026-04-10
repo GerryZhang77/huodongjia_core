@@ -4,6 +4,7 @@
 import { http, HttpResponse, delay } from "msw";
 import { mockActivities, MockActivity } from "../data/activities";
 import { mockMerchantActivities } from "../data/merchant";
+import { generateDefaultAvatar } from "@/utils/avatar";
 
 // ========================================
 // 活动模块 Handlers
@@ -149,7 +150,7 @@ export const activityHandlers = [
           organizer: {
             id: "merchant_001",
             name: "活动家商家",
-            avatar: "https://picsum.photos/seed/merchant/100/100",
+            avatar: generateDefaultAvatar("merchant_001"),
           },
           created_at: merchantActivity.createdAt,
           updated_at: merchantActivity.updatedAt,
@@ -179,7 +180,7 @@ export const activityHandlers = [
         organizer: activity.organizer || {
           id: "user-001",
           name: "活动家官方",
-          avatar: "https://picsum.photos/seed/organizer/100/100",
+          avatar: generateDefaultAvatar("user-001"),
         },
       },
     });
@@ -241,7 +242,7 @@ export const activityHandlers = [
       organizer: {
         id: "merchant_456",
         name: "测试商家",
-        avatar: "https://i.pravatar.cc/150?img=2",
+        avatar: generateDefaultAvatar("merchant_456"),
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -300,7 +301,7 @@ export const activityHandlers = [
       organizer: {
         id: "merchant_456",
         name: "测试商家",
-        avatar: "https://i.pravatar.cc/150?img=2",
+        avatar: generateDefaultAvatar("merchant_456"),
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

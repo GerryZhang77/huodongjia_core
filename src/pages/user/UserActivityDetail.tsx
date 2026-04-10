@@ -363,14 +363,22 @@ const UserActivityDetail: FC = () => {
 
             {/* 主办方 */}
             <div className="flex items-center gap-3">
-              <img
-                src={activity.organizer.avatar}
-                alt={activity.organizer.name}
-                className="w-10 h-10 rounded-full object-cover"
-              />
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
+                {activity.organizer.avatar ? (
+                  <img
+                    src={activity.organizer.avatar}
+                    alt={activity.organizer.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-primary-500 font-semibold text-sm">
+                    {activity.organizer.name?.charAt(0) || "?"}
+                  </div>
+                )}
+              </div>
               <div>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {activity.organizer.name}
+                  {activity.organizer.name || "主办方"}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   主办方
@@ -386,9 +394,8 @@ const UserActivityDetail: FC = () => {
               <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 活动简介
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                探索前沿科技，结识行业精英。本次活动将邀请多位重量级嘉宾分享最新行业动态，
-                并通过智能匹配系统帮助参与者快速建立高质量人脉连接。
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                {activity.description || "暂无活动简介"}
               </p>
             </div>
 

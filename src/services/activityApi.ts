@@ -13,6 +13,7 @@ import { api } from "@/services/api";
 
 export type ActivityStatus =
   | "draft"
+  | "published"
   | "active"
   | "full"
   | "ended"

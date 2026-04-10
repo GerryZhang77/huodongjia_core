@@ -3,8 +3,9 @@
  * 显示商家资料、设置、退出登录等
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   User,
   Building,
@@ -27,7 +28,7 @@ import {
 } from "lucide-react";
 import { Dialog, Toast, Popup } from "antd-mobile";
 import { MerchantLayout } from "@/components/layout";
-import { mockMerchantProfile } from "@/mocks/data/merchant";
+import { merchantApi, uploadMerchantAvatar, type MerchantProfile } from "@/services";
 import { useStore } from "@/store";
 import { useThemeStore } from "@/store/themeStore";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
@@ -96,7 +97,55 @@ const ProfilePage: React.FC = () => {
   const { logout } = useStore();
   const { mode } = useThemeStore();
   const [showThemePopup, setShowThemePopup] = useState(false);
-  const profile = mockMerchantProfile;
+  const [profile, setProfile] = useState<MerchantProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+
+  // 加载商家资料
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await merchantApi.getMerchantProfile();
+        if (response.success) {
+          setProfile(response.profile);
+        } else {
+          Toast.show({ content: "获取商家信息失败" });
+        }
+      } catch (error) {
+        console.error("加载商家资料失败:", error);
+        Toast.show({ content: "加载失败，请稍后重试" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  // 处理头像上传
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const res = await uploadMerchantAvatar(file);
+      if (res.success && res.data?.url) {
+        setProfile((prev) => prev ? { ...prev, avatar: res.data!.url } : prev);
+        queryClient.invalidateQueries({ queryKey: ["merchant", "profile"] });
+        Toast.show({ icon: "success", content: "头像更新成功" });
+      } else {
+        Toast.show({ icon: "fail", content: res.message || "上传失败" });
+      }
+    } catch {
+      Toast.show({ icon: "fail", content: "上传失败，请稍后重试" });
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   // 获取当前主题模式显示文本
   const getThemeModeText = () => {
@@ -137,173 +186,194 @@ const ProfilePage: React.FC = () => {
 
   return (
     <MerchantLayout title="个人中心">
-      <div className="space-y-4 pb-6">
-        {/* 用户信息卡片 */}
-        <div className="bg-gradient-to-br from-primary-400 to-primary-500 rounded-2xl p-5 text-white">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              {/* 头像 */}
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
-                  {profile.avatar ? (
-                    <img
-                      src={profile.avatar}
-                      alt={profile.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User size={28} className="text-white/80" />
-                  )}
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-400">加载中...</div>
+        </div>
+      ) : !profile ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-400">加载失败</div>
+        </div>
+      ) : (
+        <div className="space-y-4 pb-6">
+          {/* 用户信息卡片 */}
+          <div className="bg-gradient-to-br from-primary-400 to-primary-500 rounded-2xl p-5 text-white">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                {/* 头像 */}
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+                    {profile.avatar ? (
+                      <img
+                        src={profile.avatar}
+                        alt={profile.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={28} className="text-white/80" />
+                    )}
+                  </div>
+                  <button
+                    className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={avatarUploading}
+                  >
+                    <Camera size={12} className={avatarUploading ? "text-gray-300" : "text-primary-500"} />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                 </div>
-                <button className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
-                  <Camera size={12} className="text-primary-500" />
-                </button>
+
+                {/* 基本信息 */}
+                <div>
+                  <h2 className="text-lg font-semibold mb-1">{profile.name}</h2>
+                  <p className="text-sm text-white/70">{profile.location || "未填写地址"}</p>
+                </div>
               </div>
 
-              {/* 基本信息 */}
-              <div>
-                <h2 className="text-lg font-semibold mb-1">{profile.name}</h2>
-                <p className="text-sm text-white/70">{profile.company}</p>
+              {/* 编辑按钮 */}
+              <button
+                onClick={() => navigate("/dashboard/profile/edit")}
+                className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+              >
+                <Edit size={14} className="text-white" />
+              </button>
+            </div>
+
+            {/* 统计数据 */}
+            <div className="flex items-center gap-6 mt-6 pt-4 border-t border-white/20">
+              <div className="text-center">
+                <p className="text-2xl font-bold">-</p>
+                <p className="text-xs text-white/70">创建活动</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold">-</p>
+                <p className="text-xs text-white/70">服务人数</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold">-</p>
+                <p className="text-xs text-white/70">好评率</p>
               </div>
             </div>
-
-            {/* 编辑按钮 */}
-            <button
-              onClick={() => navigate("/dashboard/profile/edit")}
-              className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
-            >
-              <Edit size={14} className="text-white" />
-            </button>
           </div>
 
-          {/* 统计数据 */}
-          <div className="flex items-center gap-6 mt-6 pt-4 border-t border-white/20">
-            <div className="text-center">
-              <p className="text-2xl font-bold">{profile.totalActivities}</p>
-              <p className="text-xs text-white/70">创建活动</p>
+          {/* 联系方式 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                联系方式
+              </h3>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">{profile.totalParticipants}</p>
-              <p className="text-xs text-white/70">服务人数</p>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              <MenuItem
+                icon={<Phone size={18} />}
+                label="手机号"
+                value={profile.phone ? profile.phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2") : "未绑定"}
+                onClick={() => Toast.show({ content: "修改手机号功能开发中" })}
+              />
+              <MenuItem
+                icon={<Mail size={18} />}
+                label="邮箱"
+                value={profile.email || "未绑定"}
+                onClick={() => Toast.show({ content: "绑定邮箱功能开发中" })}
+              />
+              <MenuItem
+                icon={<Building size={18} />}
+                label="地址"
+                value={profile.location || "未填写"}
+                onClick={() => Toast.show({ content: "编辑功能开发中" })}
+              />
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">4.9</p>
-              <p className="text-xs text-white/70">好评率</p>
+          </div>
+
+          {/* 账户信息 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                账户信息
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              <MenuItem
+                icon={<Calendar size={18} />}
+                label="注册时间"
+                value={formatDate(profile.created_at)}
+                showArrow={false}
+              />
+              <MenuItem
+                icon={<Activity size={18} />}
+                label="累计活动"
+                value="-"
+                showArrow={false}
+              />
+              <MenuItem
+                icon={<Users size={18} />}
+                label="服务人数"
+                value="-"
+                showArrow={false}
+              />
             </div>
           </div>
-        </div>
 
-        {/* 联系方式 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              联系方式
-            </h3>
+          {/* 设置与帮助 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                设置与帮助
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              <MenuItem
+                icon={<ThemeIcon size={18} />}
+                label="外观模式"
+                value={getThemeModeText()}
+                onClick={() => setShowThemePopup(true)}
+              />
+              <MenuItem
+                icon={<Settings size={18} />}
+                label="账户设置"
+                onClick={() => Toast.show({ content: "账户设置开发中" })}
+              />
+              <MenuItem
+                icon={<Shield size={18} />}
+                label="隐私与安全"
+                onClick={() => Toast.show({ content: "隐私设置开发中" })}
+              />
+              <MenuItem
+                icon={<FileText size={18} />}
+                label="用户协议"
+                onClick={() => Toast.show({ content: "用户协议" })}
+              />
+              <MenuItem
+                icon={<HelpCircle size={18} />}
+                label="帮助中心"
+                onClick={() => navigate("/dashboard/help")}
+              />
+            </div>
           </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            <MenuItem
-              icon={<Phone size={18} />}
-              label="手机号"
-              value={profile.phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2")}
-              onClick={() => Toast.show({ content: "修改手机号功能开发中" })}
-            />
-            <MenuItem
-              icon={<Mail size={18} />}
-              label="邮箱"
-              value={profile.email || "未绑定"}
-              onClick={() => Toast.show({ content: "绑定邮箱功能开发中" })}
-            />
-            <MenuItem
-              icon={<Building size={18} />}
-              label="公司/组织"
-              value={profile.company || "未填写"}
-              onClick={() => Toast.show({ content: "编辑功能开发中" })}
-            />
-          </div>
-        </div>
 
-        {/* 账户信息 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              账户信息
-            </h3>
-          </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          {/* 退出登录 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
             <MenuItem
-              icon={<Calendar size={18} />}
-              label="注册时间"
-              value={formatDate(profile.createdAt)}
+              icon={<LogOut size={18} />}
+              label="退出登录"
+              onClick={handleLogout}
+              danger
               showArrow={false}
             />
-            <MenuItem
-              icon={<Activity size={18} />}
-              label="累计活动"
-              value={profile.totalActivities}
-              showArrow={false}
-            />
-            <MenuItem
-              icon={<Users size={18} />}
-              label="服务人数"
-              value={profile.totalParticipants}
-              showArrow={false}
-            />
           </div>
-        </div>
 
-        {/* 设置与帮助 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              设置与帮助
-            </h3>
-          </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            <MenuItem
-              icon={<ThemeIcon size={18} />}
-              label="外观模式"
-              value={getThemeModeText()}
-              onClick={() => setShowThemePopup(true)}
-            />
-            <MenuItem
-              icon={<Settings size={18} />}
-              label="账户设置"
-              onClick={() => Toast.show({ content: "账户设置开发中" })}
-            />
-            <MenuItem
-              icon={<Shield size={18} />}
-              label="隐私与安全"
-              onClick={() => Toast.show({ content: "隐私设置开发中" })}
-            />
-            <MenuItem
-              icon={<FileText size={18} />}
-              label="用户协议"
-              onClick={() => Toast.show({ content: "用户协议" })}
-            />
-            <MenuItem
-              icon={<HelpCircle size={18} />}
-              label="帮助中心"
-              onClick={() => navigate("/dashboard/help")}
-            />
-          </div>
+          {/* 版本信息 */}
+          <p className="text-center text-xs text-gray-400 dark:text-gray-500 py-4">
+            活动家 v1.0.0
+          </p>
         </div>
-
-        {/* 退出登录 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <MenuItem
-            icon={<LogOut size={18} />}
-            label="退出登录"
-            onClick={handleLogout}
-            danger
-            showArrow={false}
-          />
-        </div>
-
-        {/* 版本信息 */}
-        <p className="text-center text-xs text-gray-400 dark:text-gray-500 py-4">
-          活动家 v1.0.0
-        </p>
-      </div>
+      )}
 
       {/* 主题选择弹窗 */}
       <Popup

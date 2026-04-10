@@ -3,7 +3,7 @@
  * 编辑个人名片信息
  */
 
-import { FC, useState, useMemo, useEffect } from "react";
+import { FC, useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Camera,
@@ -17,8 +17,10 @@ import {
   X,
 } from "lucide-react";
 import { Toast } from "antd-mobile";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Textarea } from "@/components/ui";
 import { useUserProfile, useUpdateProfile } from "@/features/user";
+import { userApi } from "@/services";
 import type { InterestTag } from "@/services/userApi";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { eventBus, EVENTS } from "@/utils/eventBus";
@@ -41,6 +43,8 @@ const interestOptions = [
 
 const UserEditProfile: FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 使用 hooks 获取用户资料
   const { data: profileData, isLoading } = useUserProfile();
@@ -62,6 +66,10 @@ const UserEditProfile: FC = () => {
     interests: [] as string[],
   });
 
+  // 头像上传状态
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [currentAvatar, setCurrentAvatar] = useState<string>("");
+
   // 当 profile 加载后初始化表单
   useEffect(() => {
     if (profile) {
@@ -75,6 +83,7 @@ const UserEditProfile: FC = () => {
         bio: profile.bio || "",
         interests: profile.interestTags?.map((t) => t.name) || [],
       });
+      setCurrentAvatar(profile.avatar || "");
     }
   }, [profile]);
 
@@ -99,6 +108,42 @@ const UserEditProfile: FC = () => {
       "interests",
       formData.interests.filter((i) => i !== interest),
     );
+  };
+
+  // 处理头像上传
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 验证文件类型
+    if (!file.type.startsWith("image/")) {
+      Toast.show({ icon: "fail", content: "请选择图片文件" });
+      return;
+    }
+
+    // 验证文件大小（限制 5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      Toast.show({ icon: "fail", content: "图片大小不能超过 5MB" });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const res = await userApi.uploadAvatar(file);
+      if (res.success && res.avatarUrl) {
+        setCurrentAvatar(res.avatarUrl);
+        queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+        Toast.show({ icon: "success", content: "头像更新成功" });
+      } else {
+        Toast.show({ icon: "fail", content: "上传失败，请重试" });
+      }
+    } catch (error) {
+      console.error("头像上传失败:", error);
+      Toast.show({ icon: "fail", content: "上传失败，请稍后重试" });
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   // 提交表单
@@ -208,16 +253,27 @@ const UserEditProfile: FC = () => {
         <div className="flex flex-col items-center py-6 bg-gradient-to-b from-slate-50 to-white dark:from-gray-800 dark:to-gray-900">
           <div className="relative">
             <img
-              src={profile.avatar}
+              src={currentAvatar || profile.avatar}
               alt="头像"
               className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg"
             />
-            <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg">
-              <Camera size={16} />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg hover:bg-primary-600 active:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              <Camera size={16} className={avatarUploading ? "animate-pulse" : ""} />
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
           </div>
           <p className="text-xs text-slate-400 dark:text-gray-500 mt-2">
-            点击更换头像
+            {avatarUploading ? "上传中..." : "点击更换头像"}
           </p>
         </div>
 

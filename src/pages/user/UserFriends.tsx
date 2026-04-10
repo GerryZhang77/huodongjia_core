@@ -14,65 +14,8 @@ import {
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 
-// Mock 好友数据
-const mockFriends = [
-  {
-    id: "f1",
-    name: "小红",
-    avatar: "https://i.pravatar.cc/100?img=5",
-    occupation: "产品经理",
-    company: "阿里巴巴",
-    commonActivities: 3,
-    isOnline: true,
-  },
-  {
-    id: "f2",
-    name: "大伟",
-    avatar: "https://i.pravatar.cc/100?img=11",
-    occupation: "前端工程师",
-    company: "字节跳动",
-    commonActivities: 2,
-    isOnline: true,
-  },
-  {
-    id: "f3",
-    name: "婷婷",
-    avatar: "https://i.pravatar.cc/100?img=9",
-    occupation: "UI设计师",
-    company: "美团",
-    commonActivities: 5,
-    isOnline: false,
-  },
-  {
-    id: "f4",
-    name: "阿杰",
-    avatar: "https://i.pravatar.cc/100?img=12",
-    occupation: "后端工程师",
-    company: "腾讯",
-    commonActivities: 1,
-    isOnline: false,
-  },
-  {
-    id: "f5",
-    name: "小丽",
-    avatar: "https://i.pravatar.cc/100?img=20",
-    occupation: "运营经理",
-    company: "拼多多",
-    commonActivities: 4,
-    isOnline: true,
-  },
-];
-
-// 好友请求数据
-const mockRequests = [
-  {
-    id: "r1",
-    name: "张三",
-    avatar: "https://i.pravatar.cc/100?img=15",
-    occupation: "数据分析师",
-    message: "我们在读书会认识的",
-  },
-];
+const mockFriends: never[] = [];
+const mockRequests: never[] = [];
 
 const UserFriends: FC = () => {
   const navigate = useNavigate();

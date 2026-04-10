@@ -18,6 +18,8 @@ import {
   markAsRead,
   markAllAsRead,
   type Notification,
+} from "../data/notifications";
+import { generateDefaultAvatar } from "@/utils/avatar";
 } from "../data/user-notifications";
 
 // ========================================
@@ -118,7 +120,7 @@ export const userHandlers = [
     }
 
     // 模拟上传成功，返回新头像 URL
-    const newAvatarUrl = `https://i.pravatar.cc/200?img=${Math.floor(Math.random() * 70)}`;
+    const newAvatarUrl = generateDefaultAvatar(`user-${Date.now()}`);
     mockUserProfile.avatar = newAvatarUrl;
 
     return HttpResponse.json({

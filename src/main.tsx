@@ -18,23 +18,29 @@ async function enableMocking() {
   // 开发环境：根据配置决定是否启用 MSW
   if (import.meta.env.DEV) {
     if (useMock !== "msw") {
+      console.log("🚫 MSW Mock 已禁用，使用真实后端");
       return;
     }
+    console.log("✅ MSW Mock 已启用");
     const { worker } = await import("./mocks/browser");
     return worker.start({
       onUnhandledRequest: "warn",
     });
   }
 
-  // 生产环境：临时演示模式，始终启用 MSW Mock
-  // TODO: 后端接口完善后移除此逻辑
-  const { worker } = await import("./mocks/browser");
-  return worker.start({
-    onUnhandledRequest: "bypass", // 生产环境静默忽略未匹配请求
-    serviceWorker: {
-      url: "/mockServiceWorker.js",
-    },
-  });
+  // 生产环境：仅在明确配置时启用 MSW Mock
+  if (useMock === "msw") {
+    console.log("✅ 生产环境 MSW Mock 已启用");
+    const { worker } = await import("./mocks/browser");
+    return worker.start({
+      onUnhandledRequest: "bypass", // 生产环境静默忽略未匹配请求
+      serviceWorker: {
+        url: "/mockServiceWorker.js",
+      },
+    });
+  }
+
+  console.log("🚫 生产环境 MSW Mock 已禁用");
 }
 
 // ========================================

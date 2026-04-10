@@ -320,10 +320,26 @@ const ActivityCard: FC<ActivityCardProps> = ({
 
 // 将后端 Activity 转换为 MerchantActivity 格式
 function toMerchantActivity(a: Activity): MerchantActivity {
+  // 状态映射：后端 -> 前端
+  let status: MerchantActivity["status"] = "draft";
+  if (a.status === "published" || a.status === "active" || a.status === "registration" as string) {
+    status = "recruiting";
+  } else if (a.status === "full") {
+    status = "full";
+  } else if (a.status === "ongoing" as string || a.status === "ended" as string) {
+    status = "ongoing";
+  } else if (a.status === "completed" as string) {
+    status = "completed";
+  } else if (a.status === "cancelled") {
+    status = "cancelled";
+  } else if (a.status === "draft") {
+    status = "draft";
+  }
+
   return {
     id: a.id,
     title: a.title,
-    status: (a.status === "active" ? "recruiting" : a.status) as MerchantActivity["status"],
+    status: status,
     registrationStartTime: a.created_at ?? "",
     registrationEndTime: a.registration_deadline ?? "",
     eventStartTime: a.start_time ?? "",

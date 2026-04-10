@@ -373,7 +373,7 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
 
   /**
    * 执行匹配
-   * 🔥 临时修改：Mock 生产环境专用，简化匹配流程
+   * 完整流程：execute → poll progress → fetch results
    */
   const handleStartMatching = useCallback(async () => {
     console.log("[开始匹配] 触发");
@@ -382,15 +382,12 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
     // 验证规则
     const enabledRules = rules.filter((r) => r.enabled);
     if (enabledRules.length === 0) {
-      console.error("[开始匹配] 错误: 没有启用的规则");
       Toast.show({
         content: "请先启用至少一条匹配规则",
         icon: "fail",
       });
       return;
     }
-
-    console.log(`[开始匹配] 验证通过，开始执行匹配算法`);
 
     setIsMatching(true);
     setMatchingProgress(0);
@@ -405,78 +402,175 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
     setEstimatedTimeRemaining(estimatedSeconds);
 
     try {
-      // 🔥 临时修改：Mock 生产环境专用，跳过耗时的 execute 接口，直接获取结果
-      // 原方案：调用 /api/match/{eventId}/execute（耗时过长）
-      // 新方案：直接调用 /api/match/{eventId}/results 获取已有结果
+      // Step 1: 提交匹配任务
+      console.log("[开始匹配] Step 1: 提交匹配任务");
+      setMatchingStage("extracting-keywords");
+      setMatchingProgress(5);
 
-      setMatchingProgress(20);
+      const rulesStr = enabledRules.map((r) => r.name).join(",");
+      const totalWeight = enabledRules.reduce((s, r) => s + r.weight, 0);
+      const weights = enabledRules.map((r) =>
+        totalWeight > 0
+          ? Math.round((r.weight / totalWeight) * 100)
+          : Math.round(100 / enabledRules.length)
+      );
 
-      console.log("[开始匹配] 直接获取匹配结果，跳过 execute 接口");
+      await api.post(`/api/match/${eventId}/execute`, {
+        rules: rulesStr,
+        weights,
+      });
 
-      const response = await api.get(`/api/match/${eventId}/results`);
+      console.log("[开始匹配] 匹配任务已提交，开始轮询进度");
 
-      console.log("[开始匹配] API 响应:", response);
+      // Step 2: 轮询匹配进度
+      const progressMap: Record<string, number> = {
+        pending: 5,
+        matching_extract: 20,
+        matching_embed: 40,
+        matching_cal_similarity: 60,
+        matching_totalScore: 75,
+        matching_calBestMatch: 90,
+        completed: 100,
+      };
 
-      setMatchingProgress(80);
+      const stageMap: Record<string, MatchingStage> = {
+        pending: "extracting-keywords",
+        matching_extract: "extracting-keywords",
+        matching_embed: "calculating-embedding",
+        matching_cal_similarity: "calculating-similarity",
+        matching_totalScore: "matching",
+        matching_calBestMatch: "matching",
+        completed: "done",
+      };
 
-      // 🔥 临时修改：适配真实后端返回结构
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const apiResponse = response as any;
+      const MAX_POLLS = 120; // 最多轮询 120 次 (6 分钟)
+      const POLL_INTERVAL = 3000; // 每 3 秒轮询一次
 
-      if (apiResponse.success !== false && apiResponse.data) {
-        setMatchingProgress(100);
-        setMatchingStage("done");
+      for (let poll = 0; poll < MAX_POLLS; poll++) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
 
-        // 处理后端返回的分组数据
-        const groups = apiResponse.data.groups || apiResponse.data || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const progressRes = (await api.get(
+          `/api/match/${eventId}/progress`
+        )) as any;
 
-        // 转换为前端需要的格式
-        const matchingGroups: MatchingGroup[] = groups.map(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (group: any, index: number) => ({
-            id: group.id || `group-${index + 1}`,
-            name: group.name || `第${index + 1}组`,
-            members: group.members || [],
-            score: group.score || 0,
-            reasons: group.reasons || [],
-            isLocked: group.isLocked || false,
-          })
-        );
+        const backendStatus = progressRes?.status || "pending";
+        console.log(`[开始匹配] 轮询 #${poll + 1}, 状态: ${backendStatus}`);
 
-        console.log("[开始匹配] 转换后的分组数据:", matchingGroups);
+        const progress = progressMap[backendStatus] ?? 50;
+        setMatchingProgress(progress);
+        setMatchingStage(stageMap[backendStatus] ?? "matching");
 
-        setMatchingGroups(matchingGroups);
-        setHasMatchResult(true);
-        setUngroupedParticipants([]);
+        if (backendStatus === "completed") {
+          console.log("[开始匹配] 匹配完成");
+          break;
+        }
 
-        // 🔥 临时修改：直接跳转到结果 Tab（不经过控制台）
-        setActiveTab("results");
-
-        Toast.show({
-          content: "匹配结果加载完成",
-          icon: "success",
-        });
-      } else {
-        throw new Error(apiResponse.message || "获取匹配结果失败");
+        if (backendStatus === "failed") {
+          throw new Error(progressRes?.message || "匹配执行失败");
+        }
       }
+
+      // Step 3: 获取匹配结果
+      console.log("[开始匹配] Step 3: 获取匹配结果");
+      setMatchingProgress(95);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const resultRes = (await api.get(
+        `/api/match/${eventId}/results`
+      )) as any;
+
+      // 🔍 诊断日志：打印完整的 API 响应
+      console.log("[诊断] 完整的 API 响应:", JSON.stringify(resultRes, null, 2));
+      console.log("[诊断] resultRes.success:", resultRes.success);
+      console.log("[诊断] resultRes.data:", resultRes.data);
+      console.log("[诊断] resultRes.data?.groups:", resultRes.data?.groups);
+
+      if (resultRes.success === false) {
+        throw new Error(resultRes.message || "获取匹配结果失败");
+      }
+
+      const rawGroups = resultRes.data?.groups || [];
+      console.log("[诊断] rawGroups 数量:", rawGroups.length);
+      console.log("[诊断] rawGroups 详情:", rawGroups);
+
+      // 🔍 诊断：检查每个 group 的 members
+      rawGroups.forEach((group: any, idx: number) => {
+        console.log(`[诊断] Group ${idx} (${group.name}):`, {
+          id: group.id,
+          name: group.name,
+          membersType: typeof group.members,
+          membersIsArray: Array.isArray(group.members),
+          membersLength: group.members?.length,
+          firstMember: group.members?.[0],
+        });
+      });
+
+      // 转换为前端需要的 MatchingGroup[] 格式
+      const matchingGroups: MatchingGroup[] = rawGroups.map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (group: any, index: number) => ({
+          id: group.id || `group-${index + 1}`,
+          name: group.name || `第${index + 1}组`,
+          members: (group.members || []).map((m: any) => ({
+            id: m.id || m.user_id || `member-${index}`,
+            user_id: m.user_id || m.id,
+            name: m.name || "未知用户",
+            gender: m.gender || "",
+            age: m.age || undefined,
+            phone: m.phone || "",
+            occupation: m.occupation || "",
+            company: m.company || "",
+            industry: m.industry || "",
+            city: m.city || "",
+            tags: m.tags || [],
+            avatar: m.avatar || "",
+            bio: m.bio || "",
+          })),
+          score: group.score || 0,
+          reasons: group.reasons || [],
+          isLocked: group.isLocked || false,
+        })
+      );
+
+      console.log("[开始匹配] 转换后的分组数据:", matchingGroups);
+
+      // 🔍 诊断：检查转换后的数据
+      matchingGroups.forEach((group, idx) => {
+        console.log(`[诊断] 转换后 Group ${idx} (${group.name}):`, {
+          id: group.id,
+          name: group.name,
+          membersCount: group.members.length,
+          members: group.members,
+          score: group.score,
+          reasons: group.reasons,
+        });
+      });
+
+      setMatchingProgress(100);
+      setMatchingStage("done");
+      setMatchingGroups(matchingGroups);
+      setHasMatchResult(true);
+      setUngroupedParticipants([]);
+
+      // 自动跳转到结果 Tab
+      setActiveTab("results");
+
+      Toast.show({
+        content: `匹配完成，共${matchingGroups.length}个规则分组`,
+        icon: "success",
+      });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "匹配失败，请重试";
       console.error("Execute matching error:", error);
       setMatchingError(errorMessage);
 
-      // 🔥 临时修改：Mock 生产环境专用 - 匹配失败跳转到人群画像页面
       Toast.show({
-        content: "匹配请求失败，即将为您展示活动人群画像",
+        content: errorMessage,
         icon: "fail",
-        duration: 2000,
+        duration: 3000,
       });
-
-      // 延迟跳转到人群画像页面
-      setTimeout(() => {
-        console.log("🔄 [匹配失败] 跳转到人群画像页面");
-        window.location.href = "/portrait.html";
-      }, 2000);
 
       setMatchingStage("idle");
     } finally {

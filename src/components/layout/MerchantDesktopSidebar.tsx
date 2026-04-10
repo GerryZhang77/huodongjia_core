@@ -16,6 +16,9 @@ import {
   UserSearch,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/stores";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/services/api/client";
+import { merchantApi } from "@/services";
 
 interface NavItem {
   key: string;
@@ -35,8 +38,18 @@ export const MerchantDesktopSidebar: FC = () => {
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
-  // TODO: 从通知数据获取未读数量
-  const unreadCount = 3;
+  const { data: notifData } = useQuery({
+    queryKey: ["merchant", "notifications"],
+    queryFn: () => api.get<{ success: boolean; data: { unreadCount: number } }>("/api/merchant/received-notifications"),
+  });
+  const unreadCount = notifData?.data?.unreadCount ?? 0;
+
+  const { data: profileData } = useQuery({
+    queryKey: ["merchant", "profile"],
+    queryFn: () => merchantApi.getMerchantProfile(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const avatarUrl = profileData?.profile?.avatar;
 
   // 商家端导航配置 - 5项: 活动管理 | 创建活动 | 用户管理 | 消息 | 我的
   const navItems: NavItem[] = [
@@ -118,10 +131,16 @@ export const MerchantDesktopSidebar: FC = () => {
         </button>
         {user && (
           <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 rounded-xl border border-primary-100 dark:border-primary-800">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center shadow-md">
-              <span className="text-white font-semibold text-sm">
-                {user.name?.charAt(0) || "商"}
-              </span>
+            <div className="w-10 h-10 rounded-full overflow-hidden shadow-md flex-shrink-0">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                  <span className="text-white font-semibold text-sm">
+                    {user.name?.charAt(0) || "商"}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -163,7 +182,7 @@ export const MerchantDesktopSidebar: FC = () => {
                     strokeWidth={isActive ? 2.5 : 2}
                     className="transition-colors"
                   />
-                  {item.badge && item.badge > 0 && (
+                  {!!item.badge && item.badge > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[9px] font-bold text-white bg-error-500 rounded-full">
                       {item.badge > 99 ? "99+" : item.badge}
                     </span>

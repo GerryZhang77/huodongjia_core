@@ -210,6 +210,10 @@ export const executeMatching = async (
     body: JSON.stringify({ rules: rulesStr, weights }),
   });
 
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `HTTP ${response.status}`);
+  }
   const data = await response.json();
 
   if (!data.success) {
@@ -226,10 +230,12 @@ export const executeMatching = async (
 
 /**
  * 获取匹配结果
+ * 后端 organizer 视图返回按规则分组的 groups，每个 group 包含丰富的成员信息
+ * 返回：{ groups, participants } - groups.members 是ID数组，participants 包含完整成员信息
  */
 export const getMatchGroups = async (
   activityId: string,
-): Promise<MatchGroup[]> => {
+): Promise<{ groups: MatchGroup[]; participants: any[] }> => {
   const token = getToken();
 
   const response = await fetch(`/api/match/${activityId}/results`, {
@@ -245,25 +251,57 @@ export const getMatchGroups = async (
     throw new Error(data.message || "获取匹配结果失败");
   }
 
-  const rawGroups = data.data?.groups || data.groups || [];
+  const rawGroups = data.data?.groups || [];
+
+  // 收集所有参与者信息（去重）
+  const participantsMap = new Map<string, any>();
 
   // 转换后端数据格式到前端期望格式
-  return rawGroups.map((g: any, index: number) => ({
-    id: g.group_id || g.id || `group_${index}`,
-    name: g.group_name || g.name || `第${index + 1}组`,
-    members: Array.isArray(g.members)
-      ? g.members.map((m: any) =>
-          typeof m === "string" ? m : m.user_id || m.id,
-        )
-      : [],
-    score: Math.round(
-      (g.similarity_score ?? g.score ?? 0) *
-        (g.similarity_score !== undefined && g.similarity_score <= 1 ? 100 : 1),
-    ),
-    reasons: g.match_reasons || g.reasons || [],
-    warnings: g.warnings || [],
-    isLocked: g.is_locked ?? g.isLocked ?? false,
-  }));
+  const groups = rawGroups.map((g: any, index: number) => {
+    const memberIds: string[] = [];
+
+    // 处理成员数据
+    if (Array.isArray(g.members)) {
+      g.members.forEach((m: any) => {
+        if (typeof m === "string") {
+          memberIds.push(m);
+        } else if (m && typeof m === "object") {
+          const memberId = m.id || m.user_id || `member_${index}`;
+          memberIds.push(memberId);
+
+          // 将成员信息添加到 participantsMap
+          if (!participantsMap.has(memberId)) {
+            participantsMap.set(memberId, {
+              id: memberId,
+              name: m.name || "未知用户",
+              gender: m.gender || undefined,
+              age: m.age || undefined,
+              occupation: m.occupation || undefined,
+              industry: m.industry || undefined,
+              city: m.city || undefined,
+              tags: m.tags || [],
+              phone: m.phone || undefined,
+              email: m.email || undefined,
+            });
+          }
+        }
+      });
+    }
+
+    return {
+      id: g.id || `group_${index}`,
+      name: g.name || `第${index + 1}组`,
+      members: memberIds,
+      score: g.score ?? 0,
+      reasons: g.reasons || [],
+      isLocked: g.isLocked ?? g.is_locked ?? false,
+    };
+  });
+
+  // 将 Map 转换为数组
+  const participants = Array.from(participantsMap.values());
+
+  return { groups, participants };
 };
 
 /**

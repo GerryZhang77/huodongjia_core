@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { Toast } from "antd-mobile";
-import { executeMatching, getMatchGroups } from "../services";
+import { submitMatchingTask, getMatchingTaskStatus, getMatchGroups } from "../services";
 import { useMatchingStore } from "../stores";
 
 export const useExecuteMatching = () => {
@@ -26,30 +26,60 @@ export const useExecuteMatching = () => {
     setMatchingProgress(0);
 
     try {
-      // 模拟进度更新
-      let progress = 0;
-      const progressInterval = setInterval(() => {
-        progress += 10;
-        if (progress >= 90) {
-          clearInterval(progressInterval);
-        } else {
-          setMatchingProgress(progress);
-        }
-      }, 300);
-
-      const result = await executeMatching({ activityId, rules: enabledRules });
-
-      clearInterval(progressInterval);
-      setMatchingProgress(100);
-
-      setGroups(result.groups);
+      // 1. 提交匹配任务
+      await submitMatchingTask(activityId, enabledRules);
 
       Toast.show({
         icon: "success",
-        content: `匹配完成！共生成 ${result.groups.length} 个小组`,
+        content: "匹配任务已提交，正在后台执行...",
       });
 
-      return result;
+      // 2. 轮询查询匹配进度
+      let pollCount = 0;
+      const maxPolls = 60; // 最多轮询60次（5分钟）
+
+      const pollProgress = async (): Promise<boolean> => {
+        try {
+          const statusData = await getMatchingTaskStatus(activityId);
+
+          // 更新进度条
+          setMatchingProgress(statusData.progress);
+
+          if (statusData.status === "completed") {
+            return true; // 匹配完成
+          } else if (statusData.status === "failed") {
+            throw new Error(statusData.message || "匹配失败");
+          }
+
+          // 继续轮询
+          pollCount++;
+          if (pollCount >= maxPolls) {
+            throw new Error("匹配超时，请稍后查看结果");
+          }
+
+          // 等待3秒后继续轮询
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          return pollProgress();
+
+        } catch (error) {
+          throw error;
+        }
+      };
+
+      // 开始轮询
+      await pollProgress();
+
+      // 3. 匹配完成，获取结果
+      setMatchingProgress(100);
+      const groups = await getMatchGroups(activityId);
+      setGroups(groups);
+
+      Toast.show({
+        icon: "success",
+        content: `匹配完成！共生成 ${groups.length} 个小组`,
+      });
+
+      return { groups };
     } catch (error) {
       console.error("执行匹配失败:", error);
       Toast.show({

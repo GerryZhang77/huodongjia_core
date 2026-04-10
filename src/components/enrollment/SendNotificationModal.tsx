@@ -16,7 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import type { Enrollment } from "@/types/enrollment";
-import { useStore } from "@/store";
+import { useAuthStore } from "@/features/auth/stores/authStore";
 
 // ========================================
 // 类型定义
@@ -88,8 +88,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
   );
   console.log("[SendNotificationModal] selectedIds:", selectedIds);
 
-  // 从 store 获取 token
-  const { token } = useStore();
+  const token = useAuthStore((state) => state.token);
 
   // 通知类型
   const [notificationType, setNotificationType] =
@@ -155,7 +154,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
 
     try {
       const response = await fetch(
-        `/api/events/${activityId}/enrollments/notify`,
+        `/api/notification/notify`,
         {
           method: "POST",
           headers: {
@@ -163,10 +162,12 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            type: notificationType,
+            type: 'enrollment',
             message: currentContent,
-            recipients: recipients.map((r) => r.id),
-            activityTitle,
+            enrollment_ids: recipients.map((r) => r.id),
+            title: activityTitle ? `活动通知 - ${activityTitle}` : '活动通知',
+            event_id: activityId,
+            event_name: activityTitle,
           }),
         },
       );

@@ -6,8 +6,9 @@
 import { FC } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Bell, User, Settings, LogOut } from "lucide-react";
-import { getUnreadCount } from "@/mocks/data/user-notifications";
 import { useAuthStore } from "@/features/auth/stores";
+import { useNotifications } from "@/features/user/profile/hooks/useNotifications";
+import { useUserProfile } from "@/features/user";
 
 interface NavItem {
   key: string;
@@ -23,7 +24,13 @@ export const DesktopSidebar: FC = () => {
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
-  const unreadCount = getUnreadCount();
+  // 获取用户资料（包含头像）
+  const { data: profileData } = useUserProfile();
+  const profile = profileData?.profile;
+
+  // 获取未读消息数 - 使用 React Query 实现响应式更新
+  const { data: notificationsData } = useNotifications();
+  const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
   // 导航配置 - 3Tab: 首页 | 消息 | 我的
   const navItems: NavItem[] = [
@@ -69,14 +76,22 @@ export const DesktopSidebar: FC = () => {
         </button>
         {user && (
           <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-100 to-accent-100 rounded-full flex items-center justify-center">
-              <span className="text-primary-600 font-semibold text-sm">
-                {user.name?.charAt(0) || "U"}
-              </span>
-            </div>
+            {profile?.avatar ? (
+              <img
+                src={profile.avatar}
+                alt={profile.name || user.name || "用户"}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-100 to-accent-100 rounded-full flex items-center justify-center">
+                <span className="text-primary-600 font-semibold text-sm">
+                  {user.name?.charAt(0) || "U"}
+                </span>
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {user.name || "用户"}
+                {profile?.name || user.name || "用户"}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 C端用户
@@ -113,7 +128,7 @@ export const DesktopSidebar: FC = () => {
                     strokeWidth={isActive ? 2.5 : 2}
                     className="transition-colors"
                   />
-                  {item.badge && item.badge > 0 && (
+                  {!!item.badge && item.badge > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[9px] font-bold text-white bg-error-500 rounded-full">
                       {item.badge > 99 ? "99+" : item.badge}
                     </span>

@@ -13,9 +13,11 @@ import {
   Calendar,
   AlertCircle,
 } from "lucide-react";
+import { Toast } from "antd-mobile";
 import { Button, Input, Checkbox } from "@/components/ui";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useActivityDetail } from "@/features/user";
+import { useSubmitEnrollment } from "@/features/user/enrollment/hooks/useSubmitEnrollment";
 import dayjs from "dayjs";
 
 // 兴趣标签选项
@@ -51,6 +53,9 @@ const UserRegistration: FC = () => {
   // 使用 hooks 获取活动详情
   const { data: activityData, isLoading } = useActivityDetail(id);
 
+  // 使用报名 hook
+  const { mutateAsync: submitEnrollment, isPending: isSubmitting } = useSubmitEnrollment(id || "");
+
   const activity = useMemo(() => {
     return activityData?.data;
   }, [activityData]);
@@ -74,8 +79,6 @@ const UserRegistration: FC = () => {
     emergencyContact: "",
     agreed: false,
   });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!activity) {
     return (
@@ -119,16 +122,45 @@ const UserRegistration: FC = () => {
       !formData.gender ||
       !formData.agreed
     ) {
+      Toast.show({
+        icon: "fail",
+        content: "请填写完整信息",
+      });
       return;
     }
 
-    setIsSubmitting(true);
-    // 模拟提交
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSubmitting(false);
+    try {
+      // 调用真实的报名 API
+      await submitEnrollment({
+        name: formData.name,
+        phone: formData.phone,
+        gender: formData.gender as "male" | "female",
+        age: formData.ageGroup ? parseInt(formData.ageGroup.split("-")[0]) : undefined,
+        tags: formData.interests,
+        customFields: {
+          emergencyContact: formData.emergencyContact,
+        },
+      });
 
-    // 跳转到活动详情页
-    navigate(`/u/activities/${id}`, { replace: true });
+      // 显示成功提示
+      Toast.show({
+        icon: "success",
+        content: "报名成功！",
+        duration: 2000,
+      });
+
+      // 延迟跳转，让用户看到成功提示
+      setTimeout(() => {
+        navigate(`/u/activities/${id}`, { replace: true });
+      }, 2000);
+    } catch (error: any) {
+      console.error("报名失败:", error);
+      Toast.show({
+        icon: "fail",
+        content: error.message || "报名失败，请稍后重试",
+        duration: 3000,
+      });
+    }
   };
 
   const isFormValid =

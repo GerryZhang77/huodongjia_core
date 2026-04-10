@@ -7,7 +7,7 @@ import { FC, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, SlidersHorizontal, MapPin, Calendar } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
-import { useUserActivities } from "@/features/user";
+import { useRecommendedActivities } from "@/features/user";
 import type { UserActivity } from "@/services/userApi";
 import dayjs from "dayjs";
 
@@ -52,7 +52,7 @@ const UserDiscover: FC = () => {
   const [showSortMenu, setShowSortMenu] = useState(false);
 
   // 使用 hooks 获取活动数据
-  const { data: activitiesData, isLoading } = useUserActivities();
+  const { data: activitiesData, isLoading } = useRecommendedActivities();
 
   const allActivities = useMemo(() => {
     return activitiesData?.data?.activities || [];

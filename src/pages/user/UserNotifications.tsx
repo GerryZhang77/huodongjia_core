@@ -5,6 +5,7 @@
 
 import { FC, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle,
   Users,
@@ -88,7 +89,8 @@ const notificationConfig: Record<
 
 // 格式化时间
 const formatTime = (dateStr: string): string => {
-  const date = dayjs(dateStr);
+  // Supabase 返回的时间戳不带 Z，需手动标记为 UTC
+  const date = dayjs(dateStr.endsWith("Z") ? dateStr : dateStr + "Z");
   const now = dayjs();
   const diffMinutes = now.diff(date, "minute");
 
@@ -159,6 +161,7 @@ const NotificationItem: FC<{
 
 const UserNotifications: FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // 使用 hooks 获取通知数据
   const { data: notificationsData, isLoading } = useNotifications();
@@ -179,6 +182,7 @@ const UserNotifications: FC = () => {
   const handleNotificationClick = (notification: Notification) => {
     markReadMutation.mutate(notification.id);
     if (notification.activityId) {
+      queryClient.invalidateQueries({ queryKey: ["user", "activity", notification.activityId] });
       navigate(`/u/activities/${notification.activityId}`);
     }
   };
