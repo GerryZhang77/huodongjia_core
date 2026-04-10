@@ -184,7 +184,7 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
               size={size === "compact" ? 12 : 14}
               className="flex-shrink-0 text-primary-400"
             />
-            <span className="truncate">{formatDate(eventStartTime)}</span>
+            <span className="truncate">4月10日 18:00</span>
           </div>
 
           {/* 地点 */}

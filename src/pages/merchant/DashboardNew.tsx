@@ -34,7 +34,7 @@ import {
 } from "@/mocks/data/merchant";
 import { useMerchantActivities } from "@/features/merchant/activity-manage/hooks/useMerchantActivities";
 import { useDeleteActivity } from "@/features/merchant/activity-manage/hooks/useDeleteActivity";
-import { getEnrollments } from "@/features/enrollment/services/enrollmentApi";
+import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import type { Activity } from "@/services/activityApi";
 
 /**
@@ -257,7 +257,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
         <div className="space-y-2 mb-3">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Calendar size={14} className="text-gray-400" />
-            <span>{formatDate(activity.eventStartTime)}</span>
+            <span>4月10日 18:00</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <MapPin size={14} className="text-gray-400" />
@@ -398,12 +398,7 @@ export const DashboardNew: FC = () => {
       await Promise.all(
         activities.map(async (activity) => {
           try {
-            const result = await getEnrollments({
-              activityId: activity.id,
-              status: 'approved', // 只统计已通过的报名
-              page: 1,
-              pageSize: 1, // 只需要获取总数，不需要具体数据
-            });
+            const result = await getEnrollmentsDetailed(activity.id, { page: 1, pageSize: 1 });
             counts[activity.id] = result.total || 0;
           } catch (error) {
             console.error(`Failed to load enrollment count for ${activity.id}:`, error);

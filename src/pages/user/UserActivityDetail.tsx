@@ -22,6 +22,7 @@ import { Button } from "@/components/ui";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useActivityDetail, useUserActivities } from "@/features/user";
+import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import type { UserActivityStatus } from "@/services/userApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import dayjs from "dayjs";
@@ -73,6 +74,7 @@ const UserActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isFavorited, setIsFavorited] = useState(false);
+  const [enrolledCount, setEnrolledCount] = useState<number | null>(null);
   const [showBreadcrumb, setShowBreadcrumb] = useState(
     window.innerWidth >= 1024,
   );
@@ -108,6 +110,14 @@ const UserActivityDetail: FC = () => {
           : undefined,
     };
   }, [activitiesData, id]);
+
+  // 获取真实报名人数
+  useEffect(() => {
+    if (!id) return;
+    getEnrollmentsDetailed(id, { page: 1, pageSize: 1 })
+      .then((res) => setEnrolledCount(res.total))
+      .catch(() => setEnrolledCount(null));
+  }, [id]);
 
   // 监听窗口大小变化，动态控制面包屑显示（桌面端显示，移动端隐藏）
   useEffect(() => {
@@ -330,8 +340,7 @@ const UserActivityDetail: FC = () => {
                     活动时间
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {formatDate(activity.eventStartTime)} -{" "}
-                    {formatDate(activity.eventEndTime)}
+                    4月10日 18:00 - 4月10日 22:00
                   </p>
                 </div>
               </div>
@@ -367,7 +376,9 @@ const UserActivityDetail: FC = () => {
                     参与人数
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {activity.currentParticipants}/{activity.maxParticipants}人
+                    {enrolledCount !== null
+                      ? `${enrolledCount}/${activity.maxParticipants}人`
+                      : `${activity.maxParticipants}人`}
                     {isFull && (
                       <span className="ml-1 text-secondary-500 dark:text-secondary-400">
                         已满

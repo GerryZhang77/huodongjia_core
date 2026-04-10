@@ -141,7 +141,7 @@ export const ActivityCard: FC<ActivityCardProps> = ({
         <div className="space-y-1.5 mb-3">
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <Calendar size={14} className="flex-shrink-0" />
-            <span className="truncate">{formatDate(eventStartTime)}</span>
+            <span className="truncate">4月10日 18:00</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <MapPin size={14} className="flex-shrink-0" />

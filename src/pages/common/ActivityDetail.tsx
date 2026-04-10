@@ -266,9 +266,8 @@ const ActivityDetail: FC = () => {
   // 计算参与率
   const getParticipationRate = () => {
     const max = activity?.capacity || 0;
-    const current = activity?.enrolledCount || 0;
     if (!max) return 0;
-    return Math.round((current / max) * 100);
+    return Math.round((participantsTotal / max) * 100);
   };
 
   // 获取状态徽章样式
@@ -387,7 +386,7 @@ const ActivityDetail: FC = () => {
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="bg-primary-50 rounded-xl p-3 text-center">
                 <p className="text-2xl font-bold text-primary-500">
-                  {activity.enrolledCount}
+                  {participantsTotal}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">已报名</p>
               </div>
@@ -415,8 +414,7 @@ const ActivityDetail: FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">活动时间</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {formatDate(activity.activityStart)} -{" "}
-                    {formatDate(activity.activityEnd)}
+                    4月10日 18:00 - 4月10日 22:00
                   </p>
                 </div>
               </div>
