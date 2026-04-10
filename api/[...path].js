@@ -9,7 +9,10 @@
  * - 使用 Serverless Function 部署在 hkg1 (香港)，绕过跨境限制
  */
 
-const BACKEND_URL = "http://8.160.180.91:10203";
+const http = require("http");
+
+const BACKEND_HOST = "8.160.180.91";
+const BACKEND_PORT = 10203;
 
 module.exports = async (req, res) => {
   // 设置 CORS 头
@@ -25,64 +28,89 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
-  // 从 req.url 提取完整 API 路径
-  // Vercel 会把 /api/events?page=1 路由到此函数，req.url = /api/events?page=1
-  const targetUrl = `${BACKEND_URL}${req.url}`;
+  const path = req.url || "/";
+  console.log(`[Proxy] ${req.method} ${path} -> ${BACKEND_HOST}:${BACKEND_PORT}${path}`);
 
-  console.log(`[Proxy] ${req.method} ${req.url} -> ${targetUrl}`);
-
-  try {
-    // 准备请求头（透传关键头部）
-    const headers = {};
-
-    if (req.headers["content-type"]) {
-      headers["Content-Type"] = req.headers["content-type"];
-    }
-    if (req.headers.authorization) {
-      headers["Authorization"] = req.headers.authorization;
-    }
-    if (req.headers.accept) {
-      headers["Accept"] = req.headers.accept;
-    }
-
-    // 准备请求体
-    let body = undefined;
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      if (req.body) {
-        body =
-          typeof req.body === "string" ? req.body : JSON.stringify(req.body);
-        if (!headers["Content-Type"]) {
-          headers["Content-Type"] = "application/json";
-        }
-      }
-    }
-
-    // 发送请求到后端
-    const response = await fetch(targetUrl, {
-      method: req.method,
-      headers,
-      body,
-    });
-
-    // 透传后端响应头
-    const contentType = response.headers.get("content-type");
-    if (contentType) {
-      res.setHeader("Content-Type", contentType);
-    }
-
-    // 返回响应
-    if (contentType && contentType.includes("application/json")) {
-      const data = await response.json();
-      return res.status(response.status).json(data);
-    } else {
-      const text = await response.text();
-      return res.status(response.status).send(text);
-    }
-  } catch (error) {
-    console.error("[Proxy Error]", error.message);
-    return res.status(502).json({
-      error: "Proxy Error",
-      message: error.message || "Failed to connect to backend",
-    });
+  // 准备请求头（透传关键头部）
+  const proxyHeaders = {};
+  if (req.headers["content-type"]) {
+    proxyHeaders["content-type"] = req.headers["content-type"];
   }
+  if (req.headers.authorization) {
+    proxyHeaders["authorization"] = req.headers.authorization;
+  }
+  if (req.headers.accept) {
+    proxyHeaders["accept"] = req.headers.accept;
+  }
+
+  // 准备请求体
+  let bodyData = null;
+  if (req.method !== "GET" && req.method !== "HEAD" && req.body) {
+    bodyData = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+    if (!proxyHeaders["content-type"]) {
+      proxyHeaders["content-type"] = "application/json";
+    }
+    proxyHeaders["content-length"] = Buffer.byteLength(bodyData);
+  }
+
+  return new Promise((resolve) => {
+    const proxyReq = http.request(
+      {
+        hostname: BACKEND_HOST,
+        port: BACKEND_PORT,
+        path: path,
+        method: req.method,
+        headers: proxyHeaders,
+        timeout: 25000,
+      },
+      (proxyRes) => {
+        const chunks = [];
+        proxyRes.on("data", (chunk) => chunks.push(chunk));
+        proxyRes.on("end", () => {
+          const body = Buffer.concat(chunks).toString("utf-8");
+          const contentType = proxyRes.headers["content-type"] || "";
+
+          if (contentType) {
+            res.setHeader("Content-Type", contentType);
+          }
+
+          res.status(proxyRes.statusCode);
+
+          if (contentType.includes("application/json")) {
+            try {
+              res.json(JSON.parse(body));
+            } catch {
+              res.send(body);
+            }
+          } else {
+            res.send(body);
+          }
+          resolve();
+        });
+      }
+    );
+
+    proxyReq.on("error", (err) => {
+      console.error("[Proxy Error]", err.message);
+      res.status(502).json({
+        error: "Proxy Error",
+        message: err.message || "Failed to connect to backend",
+      });
+      resolve();
+    });
+
+    proxyReq.on("timeout", () => {
+      proxyReq.destroy();
+      res.status(504).json({
+        error: "Gateway Timeout",
+        message: "Backend connection timed out",
+      });
+      resolve();
+    });
+
+    if (bodyData) {
+      proxyReq.write(bodyData);
+    }
+    proxyReq.end();
+  });
 };
