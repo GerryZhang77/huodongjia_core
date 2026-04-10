@@ -1,9 +1,15 @@
 {
   "buildCommand": "npm run build:staging",
+  "regions": ["hkg1"],
+  "functions": {
+    "api/proxy.js": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://8.160.180.91:10203/api/:path*"
+      "destination": "/api/proxy"
     },
     {
       "source": "/((?!api).*)",
