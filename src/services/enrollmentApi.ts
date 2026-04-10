@@ -73,7 +73,7 @@ export interface EnrollmentFormData {
   姓名: string;
   性别: string;
   student_id: string;
-  联系方式: string;
+  联系方式?: string;
   学院专业?: string;
   年级?: string;
   一句话自我介绍?: string;

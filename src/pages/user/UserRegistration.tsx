@@ -1,10 +1,11 @@
 /**
  * 用户端活动报名页面
+ * 字段参考：北京大学学生创新学社骨干大团建画像收集问卷
  */
 
 import { FC, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Phone, Calendar, MapPin, AlertCircle } from "lucide-react";
+import { User, Phone, Calendar, MapPin, AlertCircle } from "lucide-react";
 import { Toast } from "antd-mobile";
 import { Button, Input } from "@/components/ui";
 import { UserLayout } from "@/components/layout/UserLayout";
@@ -14,35 +15,35 @@ import type { EnrollmentFormData } from "@/features/user/enrollment/types";
 import dayjs from "dayjs";
 
 // ============================================
-// 选项配置
+// 选项配置（按问卷更新）
 // ============================================
 
 const industryOptions = [
-  "人工智能", "互联网与平台经济", "元宇宙与区块链科技",
-  "金融科技", "医疗健康", "新能源与环保", "消费与零售",
-  "文化与娱乐", "教育科技", "硬件与IoT", "企业服务", "其他",
+  "人工智能", "硬科技与智能制造", "互联网与平台经济", "绿色科技与碳中和",
+  "文创与消费创新", "教育与公益创新", "元宇宙与区块链科技", "金融", "医疗健康与生命科技",
 ];
 
 const softwareSkillOptions = [
   "PS", "PR", "Excel", "PPT", "Notion", "飞书", "编程",
-  "Python", "Java", "React", "Figma", "Axure", "SQL", "Word", "其他",
 ];
 
 const expertiseOptions = [
-  "设计", "文案", "技术", "数据", "策划", "产品", "运营", "销售", "市场", "其他",
+  "策划", "文案", "设计", "新媒体", "主持", "外联", "技术", "数据",
 ];
 
-const workSceneOptions = ["对内统筹", "活动现场", "远程协作", "对外合作"];
+const workSceneOptions = ["对内统筹", "对外对接", "活动现场", "文案宣传", "资源拓展"];
 
-const motivationOptions = ["能力提升", "项目经验", "视野", "资源"];
+const motivationOptions = ["人脉", "能力提升", "项目经验", "资源", "视野"];
 
-const departmentOptions = [
-  "技术部", "产品部", "设计部", "运营部", "品牌管理部", "市场部", "其他",
-];
+const departmentOptions = ["综合管理部", "品牌管理部", "外联部"];
+
+const clubOptions = ["创业者关系部", "政策支持部", "科转创新部"];
 
 const gradeOptions = [
-  "24本", "23本", "22本", "25硕", "24硕", "23硕", "博士", "其他",
+  "25本", "24本", "23本", "22本", "25硕", "24硕", "23硕", "博士", "其他",
 ];
+
+const workStyleOptions = ["偏执行", "偏策划", "偏沟通", "偏统筹"];
 
 // ============================================
 // 多选标签组件
@@ -67,7 +68,6 @@ const MultiSelectTags: FC<{
     }
     setCustomInput("");
   };
-  // 区分预设和自定义
   const customItems = selected.filter((s) => !options.includes(s));
   return (
     <div>
@@ -154,21 +154,25 @@ const UserRegistration: FC = () => {
     对社团的理解: "",
   });
 
-  // 多选字段（存为数组，提交时转 comma-separated string）
+  // 多选字段
   const [industrySelected, setIndustrySelected] = useState<string[]>([]);
   const [softwareSelected, setSoftwareSelected] = useState<string[]>([]);
   const [expertiseSelected, setExpertiseSelected] = useState<string[]>([]);
   const [workSceneSelected, setWorkSceneSelected] = useState<string[]>([]);
   const [motivationSelected, setMotivationSelected] = useState<string[]>([]);
 
-  // 所在职能部门：是否处于"其他"自定义输入模式
+  // 所在职能部门：标签 + 自定义输入
   const [deptIsCustom, setDeptIsCustom] = useState(false);
   const [deptCustomValue, setDeptCustomValue] = useState("");
+
+  // 所在创投俱乐部：标签 + 自定义输入
+  const [clubIsCustom, setClubIsCustom] = useState(false);
+  const [clubCustomValue, setClubCustomValue] = useState("");
 
   const set = (field: string, value: string | boolean) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-  // 必填匹配字段是否已填
+  // 必填匹配字段
   const matchingFieldsFilled =
     formData["兴趣爱好"].trim() &&
     formData["所在职能部门"].trim() &&
@@ -180,7 +184,6 @@ const UserRegistration: FC = () => {
     formData["姓名"].trim() &&
     formData["性别"] &&
     formData["student_id"].trim() &&
-    formData["联系方式"].trim() &&
     matchingFieldsFilled;
 
   const handleSubmit = async () => {
@@ -193,7 +196,7 @@ const UserRegistration: FC = () => {
       姓名: formData["姓名"],
       性别: formData["性别"],
       student_id: formData["student_id"],
-      联系方式: formData["联系方式"],
+      联系方式: formData["联系方式"] || undefined,
       学院专业: formData["学院专业"] || undefined,
       年级: formData["年级"] || undefined,
       一句话自我介绍: formData["一句话自我介绍"] || undefined,
@@ -275,11 +278,12 @@ const UserRegistration: FC = () => {
         </div>
 
         <div className="px-4 py-5 md:px-6 space-y-6">
-          {/* ====== 基本信息 ====== */}
+
+          {/* ====== 一、基础信息 ====== */}
           <section>
             <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <span className="w-1 h-4 bg-primary-400 rounded-full" />
-              基本信息
+              基础信息
             </h2>
             <div className="space-y-4">
               {/* 姓名 */}
@@ -333,21 +337,10 @@ const UserRegistration: FC = () => {
                 </div>
               </div>
 
-              {/* 联系方式 */}
-              <Input
-                label="联系方式"
-                type="tel"
-                placeholder="请输入手机号"
-                value={formData["联系方式"]}
-                onChange={(e) => set("联系方式", e.target.value)}
-                prefix={<Phone size={18} />}
-                required
-              />
-
               {/* 学院专业 */}
               <Input
                 label="学院专业（选填）"
-                placeholder="如：心理与认知科学学院应用心理学"
+                placeholder="例：法学院法学"
                 value={formData["学院专业"]}
                 onChange={(e) => set("学院专业", e.target.value)}
               />
@@ -374,54 +367,88 @@ const UserRegistration: FC = () => {
                 </select>
               </div>
 
+              {/* 联系方式 */}
+              <Input
+                label="联系方式（选填）"
+                type="tel"
+                placeholder="微信号或手机号"
+                value={formData["联系方式"]}
+                onChange={(e) => set("联系方式", e.target.value)}
+                prefix={<Phone size={18} />}
+              />
+            </div>
+          </section>
+
+          {/* ====== 二、个人名片 ====== */}
+          <section>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <span className="w-1 h-4 bg-blue-400 rounded-full" />
+              个人名片
+            </h2>
+            <div className="space-y-4">
               {/* 一句话自我介绍 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  一句话自我介绍（选填）
+                  一句话自我介绍/个人slogan（选填）
                 </label>
                 <input
                   type="text"
                   value={formData["一句话自我介绍"]}
                   onChange={(e) => set("一句话自我介绍", e.target.value)}
-                  placeholder="用一句话介绍自己"
+                  placeholder="例：爱创新、善统筹，期待和大家一起搞事情！"
                   maxLength={50}
                   className="w-full h-12 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all"
                 />
               </div>
-            </div>
-          </section>
 
-          {/* ====== 匹配信息（必填） ====== */}
-          <section>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-1 h-4 bg-warning-400 rounded-full" />
-              <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">匹配信息</h2>
-              <span className="px-2 py-0.5 bg-warning-50 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400 text-[10px] font-medium rounded-full">必填</span>
-            </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 ml-3">以下信息用于智能分组匹配，请认真填写</p>
-
-            <div className="bg-warning-50/50 dark:bg-warning-900/10 border border-warning-200 dark:border-warning-800/50 rounded-2xl p-4 space-y-5">
-              {/* 兴趣爱好 */}
+              {/* 兴趣爱好 — 匹配必填 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   兴趣爱好 <span className="text-error-500">*</span>
+                  <span className="ml-2 px-1.5 py-0.5 bg-warning-50 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400 text-[10px] font-medium rounded-full">匹配必填</span>
                 </label>
                 <input
                   type="text"
                   value={formData["兴趣爱好"]}
                   onChange={(e) => set("兴趣爱好", e.target.value)}
-                  placeholder="如：篮球、编程、阅读"
+                  placeholder="例：徒步、辩论、关注硬科技动态"
                   className="w-full h-12 px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all"
                 />
               </div>
 
-              {/* 所在职能部门 */}
+              {/* 过往相关经历 */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  过往相关经历（选填）
+                </label>
+                <textarea
+                  value={formData["过往相关经历"]}
+                  onChange={(e) => set("过往相关经历", e.target.value)}
+                  placeholder="例：曾任班级班长，参与校级创新大赛，有互联网实习经历"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all resize-none"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* ====== 三、学社相关 / 匹配信息 ====== */}
+          <section>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-1 h-4 bg-warning-400 rounded-full" />
+              <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">学社相关</h2>
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 ml-3">标记 * 的字段用于智能分组匹配，请认真填写</p>
+
+            <div className="space-y-5">
+              {/* 所在职能部门 — 匹配必填 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   所在职能部门 <span className="text-error-500">*</span>
+                  <span className="ml-2 px-1.5 py-0.5 bg-warning-50 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400 text-[10px] font-medium rounded-full">匹配必填</span>
                 </label>
                 <div className="flex gap-2 flex-wrap mb-2">
-                  {departmentOptions.filter((d) => d !== "其他").map((dept) => (
+                  {departmentOptions.map((dept) => (
                     <button
                       key={dept}
                       type="button"
@@ -450,14 +477,14 @@ const UserRegistration: FC = () => {
                         : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50"
                     }`}
                   >
-                    其他
+                    不在以上部门
                   </button>
                 </div>
                 {deptIsCustom && (
                   <input
                     type="text"
                     value={deptCustomValue}
-                    placeholder="请输入所在部门"
+                    placeholder="请输入所在部门/职位，例：综合管理部骨干"
                     className="w-full h-10 px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all"
                     onChange={(e) => {
                       setDeptCustomValue(e.target.value);
@@ -467,10 +494,63 @@ const UserRegistration: FC = () => {
                 )}
               </div>
 
-              {/* 关注/从事的行业方向 */}
+              {/* 所在创投俱乐部 */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  所在创投俱乐部（选填）
+                </label>
+                <div className="flex gap-2 flex-wrap mb-2">
+                  {clubOptions.map((club) => (
+                    <button
+                      key={club}
+                      type="button"
+                      onClick={() => {
+                        set("所在创投俱乐部", club);
+                        setClubIsCustom(false);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        !clubIsCustom && formData["所在创投俱乐部"] === club
+                          ? "bg-primary-400 text-white"
+                          : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {club}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClubIsCustom(true);
+                      set("所在创投俱乐部", clubCustomValue);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      clubIsCustom
+                        ? "bg-primary-400 text-white"
+                        : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    不在以上部门
+                  </button>
+                </div>
+                {clubIsCustom && (
+                  <input
+                    type="text"
+                    value={clubCustomValue}
+                    placeholder="请输入所在俱乐部名称"
+                    className="w-full h-10 px-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all"
+                    onChange={(e) => {
+                      setClubCustomValue(e.target.value);
+                      set("所在创投俱乐部", e.target.value);
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* 关注/从事的行业方向 — 匹配必填 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   关注/从事的行业方向 <span className="text-error-500">*</span>
+                  <span className="ml-2 px-1.5 py-0.5 bg-warning-50 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400 text-[10px] font-medium rounded-full">匹配必填</span>
                 </label>
                 <MultiSelectTags
                   options={industryOptions}
@@ -479,11 +559,35 @@ const UserRegistration: FC = () => {
                   allowCustom
                 />
               </div>
+            </div>
+          </section>
 
-              {/* 软件技能 */}
+          {/* ====== 四、能力与资源 ====== */}
+          <section>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <span className="w-1 h-4 bg-green-400 rounded-full" />
+              能力与资源
+            </h2>
+            <div className="space-y-5">
+              {/* 擅长领域 — 匹配必填 */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  擅长领域 <span className="text-error-500">*</span>
+                  <span className="ml-2 px-1.5 py-0.5 bg-warning-50 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400 text-[10px] font-medium rounded-full">匹配必填</span>
+                </label>
+                <MultiSelectTags
+                  options={expertiseOptions}
+                  selected={expertiseSelected}
+                  onChange={setExpertiseSelected}
+                  allowCustom
+                />
+              </div>
+
+              {/* 软件技能 — 匹配必填 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   软件技能 <span className="text-error-500">*</span>
+                  <span className="ml-2 px-1.5 py-0.5 bg-warning-50 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400 text-[10px] font-medium rounded-full">匹配必填</span>
                 </label>
                 <MultiSelectTags
                   options={softwareSkillOptions}
@@ -493,84 +597,55 @@ const UserRegistration: FC = () => {
                 />
               </div>
 
-              {/* 擅长领域 */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  擅长领域 <span className="text-error-500">*</span>
-                </label>
-                <MultiSelectTags
-                  options={expertiseOptions}
-                  selected={expertiseSelected}
-                  onChange={setExpertiseSelected}
-                  allowCustom
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* ====== 补充信息（选填） ====== */}
-          <section>
-            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-gray-300 dark:bg-gray-500 rounded-full" />
-              补充信息（选填）
-            </h2>
-            <div className="space-y-4">
-              {/* 过往相关经历 */}
+              {/* 过往成果/资源能力 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                  过往相关经历
-                </label>
-                <textarea
-                  value={formData["过往相关经历"]}
-                  onChange={(e) => set("过往相关经历", e.target.value)}
-                  placeholder="请描述过往与活动/社团/创业相关的经历"
-                  rows={3}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all resize-none"
-                />
-              </div>
-
-              {/* 所在创投俱乐部 */}
-              <Input
-                label="所在创投俱乐部"
-                placeholder="如：PKU Innovation Club，或不在以上部门"
-                value={formData["所在创投俱乐部"]}
-                onChange={(e) => set("所在创投俱乐部", e.target.value)}
-              />
-
-              {/* 过往成果 */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                  过往成果
+                  过往成果/资源能力（选填）
                 </label>
                 <textarea
                   value={formData["过往成果"]}
                   onChange={(e) => set("过往成果", e.target.value)}
-                  placeholder="请描述过往的项目成果、获奖经历等"
+                  placeholder="例：曾获校级竞赛一等奖，擅长对接企业资源，有论文发表"
                   rows={3}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all resize-none"
                 />
               </div>
 
               {/* 核心人脉资源 */}
-              <Input
-                label="核心人脉资源"
-                placeholder="如：学院内的老师、投资人等"
-                value={formData["核心人脉资源"]}
-                onChange={(e) => set("核心人脉资源", e.target.value)}
-              />
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  核心人脉资源（选填）
+                </label>
+                <textarea
+                  value={formData["核心人脉资源"]}
+                  onChange={(e) => set("核心人脉资源", e.target.value)}
+                  placeholder="例：地方政府相关资源、企业合作资源、赞助资源、高校资源等"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all resize-none"
+                />
+              </div>
+            </div>
+          </section>
 
+          {/* ====== 五、工作与期待 ====== */}
+          <section>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <span className="w-1 h-4 bg-gray-300 dark:bg-gray-500 rounded-full" />
+              工作与期待（选填）
+            </h2>
+            <div className="space-y-4">
               {/* 工作风格 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   工作风格
                 </label>
-                <div className="flex gap-2">
-                  {["偏执行", "偏策划", "均衡"].map((style) => (
+                <div className="flex gap-2 flex-wrap">
+                  {workStyleOptions.map((style) => (
                     <button
                       key={style}
                       type="button"
-                      onClick={() => set("工作风格", style)}
-                      className={`flex-1 h-10 rounded-xl border-2 text-sm font-medium transition-all ${
+                      onClick={() => set("工作风格", formData["工作风格"] === style ? "" : style)}
+                      className={`px-4 h-10 rounded-xl border-2 text-sm font-medium transition-all ${
                         formData["工作风格"] === style
                           ? "border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400"
                           : "border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400"
@@ -582,10 +657,10 @@ const UserRegistration: FC = () => {
                 </div>
               </div>
 
-              {/* 擅长工作场景 */}
+              {/* 擅长的工作场景 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  擅长工作场景
+                  擅长的工作场景
                 </label>
                 <MultiSelectTags
                   options={workSceneOptions}
@@ -597,32 +672,33 @@ const UserRegistration: FC = () => {
               {/* 加入初衷 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  加入初衷
+                  加入学社骨干的初衷
                 </label>
                 <MultiSelectTags
                   options={motivationOptions}
                   selected={motivationSelected}
                   onChange={setMotivationSelected}
+                  allowCustom
                 />
               </div>
 
               {/* 可投入时间 */}
               <Input
-                label="可投入时间"
-                placeholder="如：周末、周中都可以"
+                label="可投入时间/忙季时间段"
+                placeholder="例：每周可投入3小时，期末为忙季"
                 value={formData["可投入时间"]}
                 onChange={(e) => set("可投入时间", e.target.value)}
               />
 
-              {/* 对社团的理解 */}
+              {/* 对创新学社的理解或期待 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                  对社团的理解
+                  对创新学社的理解或期待
                 </label>
                 <textarea
                   value={formData["对社团的理解"]}
                   onChange={(e) => set("对社团的理解", e.target.value)}
-                  placeholder="你对这个社团的期望和理解是什么？"
+                  placeholder="简单表达即可，让我们一起变得更好"
                   rows={3}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all resize-none"
                 />
