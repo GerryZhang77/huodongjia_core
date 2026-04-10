@@ -19,20 +19,9 @@ export async function login(
   credentials: LoginCredentials
 ): Promise<LoginResponse> {
   try {
-    console.log("🔐 [authApi] 发送登录请求:", {
-      identifier: credentials.identifier,
-    });
-
     const response = await api.post<LoginResponse>("/api/auth/login", {
       identifier: credentials.identifier,
       password: credentials.password,
-    });
-
-    console.log("✅ [authApi] 登录响应:", {
-      success: response.success,
-      message: response.message,
-      hasToken: !!response.token,
-      hasUser: !!response.user,
     });
 
     return response;
@@ -97,8 +86,6 @@ export async function sendSmsCode(
   type: "register" | "login" | "reset_password" = "register"
 ): Promise<{ success: boolean; message: string }> {
   try {
-    console.log("📱 [authApi] 发送短信验证码:", { phone, type });
-
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       return {
         success: false,
@@ -107,7 +94,6 @@ export async function sendSmsCode(
     }
 
     // 后端未实现，返回提示
-    console.warn("⚠️ [authApi] 短信验证码接口后端未实现，使用模拟模式");
     await new Promise((resolve) => setTimeout(resolve, 500));
     return {
       success: true,
@@ -132,8 +118,6 @@ export async function verifySmsCode(
   code: string
 ): Promise<{ success: boolean; message: string; verified?: boolean }> {
   try {
-    console.log("🔍 [authApi] 验证短信验证码:", { phone, code });
-
     // 后端未实现，使用固定验证码
     if (code === "123456") {
       return {

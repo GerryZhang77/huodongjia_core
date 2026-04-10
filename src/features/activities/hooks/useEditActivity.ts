@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toast } from "antd-mobile";
+import { useQueryClient } from "@tanstack/react-query";
 import { updateActivity } from "../services";
 import { useActivityStore } from "../stores";
 import type { ActivityFormData } from "../types";
@@ -12,6 +13,7 @@ import type { ActivityFormData } from "../types";
 export const useEditActivity = (activityId: string) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { setCurrentActivity } = useActivityStore();
 
   const edit = async (data: ActivityFormData) => {
@@ -48,6 +50,14 @@ export const useEditActivity = (activityId: string) => {
       Toast.show({
         icon: "success",
         content: "活动更新成功",
+      });
+
+      // 手动失效相关查询缓存，确保数据更新
+      queryClient.invalidateQueries({
+        queryKey: ["activity", "detail", activityId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["merchant", "activities"],
       });
 
       setCurrentActivity(activity);

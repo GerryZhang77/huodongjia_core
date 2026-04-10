@@ -41,17 +41,12 @@ export const LoginForm: React.FC = () => {
     setError("");
 
     if (!identifier) {
-      setError("请输入邮箱地址");
+      setError("请输入账号");
       return;
     }
 
     if (!password) {
       setError("请输入密码");
-      return;
-    }
-
-    if (!agreeTerms) {
-      setError("请先阅读并同意用户协议和隐私政策");
       return;
     }
 
@@ -97,7 +92,7 @@ export const LoginForm: React.FC = () => {
 
           {/* 标题 - 32px font-size */}
           <h1 className="text-[32px] max-md:text-3xl max-sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            活动俱乐部
+            活动+
           </h1>
 
           {/* 副标题 - 16px font-size */}
@@ -111,13 +106,13 @@ export const LoginForm: React.FC = () => {
           onSubmit={handleSubmit}
           className="space-y-[30px] max-sm:space-y-5"
         >
-          {/* 邮箱输入框 - 使用通用 Input 组件 */}
+          {/* 账号输入框 - 使用通用 Input 组件 */}
           <Input
-            label="邮箱地址"
+            label="账号"
             type="text"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="请输入邮箱地址"
+            placeholder="请输入账号"
             autoComplete="username"
             size="large"
             suffix={<Mail className="w-5 h-5 text-gray-400" />}
@@ -151,8 +146,8 @@ export const LoginForm: React.FC = () => {
             required
           />
 
-          {/* 记住我 & 忘记密码 */}
-          <div className="flex items-center justify-between">
+          {/* 记住我 */}
+          <div className="flex items-center">
             <Checkbox
               checked={rememberMe}
               onChange={(checked) => setRememberMe(checked)}
@@ -162,18 +157,10 @@ export const LoginForm: React.FC = () => {
                 记住我
               </span>
             </Checkbox>
-
-            <button
-              type="button"
-              onClick={() => navigate("/forgot-password")}
-              className="text-sm font-semibold text-primary-400 hover:text-primary-500 transition-colors"
-            >
-              忘记密码？
-            </button>
           </div>
 
-          {/* 用户协议勾选 */}
-          <div className="flex items-center gap-2">
+          {/* 用户协议勾选 - 暂时隐藏 */}
+          {/* <div className="flex items-center gap-2">
             <Checkbox
               checked={agreeTerms}
               onChange={(checked) => setAgreeTerms(checked)}
@@ -205,7 +192,7 @@ export const LoginForm: React.FC = () => {
                 《隐私政策》
               </button>
             </span>
-          </div>
+          </div> */}
 
           {/* 错误提示 */}
           {error && (
@@ -280,8 +267,8 @@ export const LoginForm: React.FC = () => {
           </button>
         </div> */}
 
-        {/* 注册链接 */}
-        <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600 dark:text-gray-400">
+        {/* 注册链接 - 暂时隐藏 */}
+        {/* <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600 dark:text-gray-400">
           还没有账号？
           <button
             type="button"
@@ -290,7 +277,7 @@ export const LoginForm: React.FC = () => {
           >
             立即注册
           </button>
-        </p>
+        </p> */}
 
         {/* 测试账号折叠区域 - 仅开发环境 */}
         {import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
