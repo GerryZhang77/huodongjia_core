@@ -28,6 +28,8 @@ import {
 } from "@/components/business/ParticipantAvatar";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
 import { useAuthStore } from "@/features/auth/stores/authStore";
+import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
+import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import dayjs from "dayjs";
 
 // 活动接口定义 (与后端 camelCase 格式匹配)
@@ -113,14 +115,9 @@ const statusConfig: Record<
   },
 };
 
-// 格式化日期
-const formatDate = (dateStr: string): string => {
-  return dayjs(dateStr).format("M月D日 HH:mm");
-};
-
-const formatDateTime = (dateStr: string): string => {
-  return dayjs(dateStr).format("YYYY年M月D日 HH:mm");
-};
+const normalizeUtc = (s: string) => s.includes('+') || s.endsWith('Z') ? s : s + 'Z';
+const formatDate = (dateStr: string): string => dayjs(normalizeUtc(dateStr)).format("M月D日 HH:mm");
+const formatDateTime = (dateStr: string): string => dayjs(normalizeUtc(dateStr)).format("YYYY年M月D日 HH:mm");
 
 const ActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -175,6 +172,7 @@ const ActivityDetail: FC = () => {
         occupation: e.occupation,
         company: e.company,
         city: e.city,
+        interests: e.tags,
         status: (e.status === "approved" ? "confirmed" : e.status) as ParticipantInfo["status"],
         registration_time: e.enrolledAt,
       })));
@@ -366,7 +364,7 @@ const ActivityDetail: FC = () => {
                         key={i}
                         className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
                       >
-                        {tag}
+                        {getTagLabel(tag)}
                       </span>
                     ))}
                   </div>
@@ -400,7 +398,7 @@ const ActivityDetail: FC = () => {
                 <p className="text-2xl font-bold text-secondary-500">
                   {getParticipationRate()}%
                 </p>
-                <p className="text-xs text-gray-500 mt-1">报名率</p>
+                <p className="text-xs text-gray-500 mt-1">报名进度</p>
               </div>
             </div>
 
@@ -414,10 +412,27 @@ const ActivityDetail: FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">活动时间</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    4月10日 18:00 - 4月10日 22:00
+                    {formatDate(activity.activityStart)} - {formatDate(activity.activityEnd)}
                   </p>
                 </div>
               </div>
+
+              {/* 报名时间 */}
+              {(activity.registrationStart || activity.registrationEnd) && (
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-warning-50 flex items-center justify-center flex-shrink-0">
+                    <Clock size={16} className="text-warning-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">报名时间</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {activity.registrationStart ? formatDate(activity.registrationStart) : "即时开放"}
+                      {" - "}
+                      {activity.registrationEnd ? formatDate(activity.registrationEnd) : "截止未设置"}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* 地点 */}
               <div className="flex items-start gap-3">
@@ -440,7 +455,7 @@ const ActivityDetail: FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">活动分类</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {activity.category}
+                    {getCategoryLabel(activity.category)}
                   </p>
                 </div>
               </div>
@@ -501,25 +516,37 @@ const ActivityDetail: FC = () => {
                   </div>
 
                   {/* 参与要求 */}
-                  {activity.requirements && (
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                        参与要求
-                      </h3>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {activity.requirements}
-                      </p>
-                    </div>
-                  )}
+                  {activity.requirements && (() => {
+                    const items = parseRequirements(activity.requirements);
+                    if (items.length === 0) return null;
+                    return (
+                      <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/10 dark:to-amber-900/10 rounded-xl p-4 border border-orange-100 dark:border-orange-800/30">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                          <span className="w-1 h-4 bg-orange-400 rounded-full" />
+                          参与要求
+                        </h3>
+                        <ul className="space-y-2">
+                          {items.map((item, idx) => (
+                            <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                              <span className="w-5 h-5 flex items-center justify-center text-xs font-medium text-orange-500 bg-orange-100 dark:bg-orange-900/30 rounded-full flex-shrink-0 mt-0.5">
+                                {idx + 1}
+                              </span>
+                              <span className="leading-relaxed">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })()}
 
                   {/* 联系方式 */}
-                  {activity.contact_info && (
+                  {activity.contactInfo && (
                     <div className="bg-gray-50 rounded-xl p-4">
                       <h3 className="text-sm font-semibold text-gray-900 mb-2">
                         联系方式
                       </h3>
                       <p className="text-sm text-gray-600 leading-relaxed">
-                        {activity.contact_info}
+                        {activity.contactInfo}
                       </p>
                     </div>
                   )}

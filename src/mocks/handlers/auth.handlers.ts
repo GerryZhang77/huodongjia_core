@@ -14,15 +14,15 @@ import {
 export const authHandlers = [
   /**
    * 发送短信验证码
-   * POST /api/auth/send-sms
+   * POST /api/auth/send-code
    */
-  http.post("/api/auth/send-sms", async ({ request }) => {
+  http.post("/api/auth/send-code", async ({ request }) => {
     await delay(300);
 
-    const body = (await request.json()) as { phone: string };
+    const body = (await request.json()) as { phoneNumber: string };
 
     // 验证手机号格式
-    if (!/^1[3-9]\d{9}$/.test(body.phone)) {
+    if (!/^1[3-9]\d{9}$/.test(body.phoneNumber)) {
       return HttpResponse.json(
         {
           success: false,
@@ -34,8 +34,32 @@ export const authHandlers = [
 
     return HttpResponse.json({
       success: true,
-      message: "验证码发送成功",
-      code: "123456", // 测试环境固定验证码
+      message: "验证码发送成功（mock，验证码为 123456）",
+    });
+  }),
+
+  /**
+   * 校验短信验证码
+   * POST /api/auth/verify-code
+   */
+  http.post("/api/auth/verify-code", async ({ request }) => {
+    await delay(300);
+
+    const body = (await request.json()) as { phoneNumber: string; code: string };
+
+    if (body.code !== "123456") {
+      return HttpResponse.json(
+        {
+          success: false,
+          message: "验证码错误或已过期",
+        },
+        { status: 401 }
+      );
+    }
+
+    return HttpResponse.json({
+      success: true,
+      message: "验证码验证成功",
     });
   }),
 

@@ -662,7 +662,7 @@ const UserMatchResult: FC = () => {
               group={result.myGroup}
               otherGroups={result.otherGroups}
               onNavigateToProfile={(userId) =>
-                navigate(`/u/profile/${userId}?activityId=${id}`)
+                navigate(`/u/profile/${userId}?activityId=${id}&activityName=${encodeURIComponent(activity.title)}`)
               }
             />
           )}
@@ -672,7 +672,7 @@ const UserMatchResult: FC = () => {
             <TopMatchesTab
               topMatches={result.topMatches}
               onNavigateToProfile={(userId) =>
-                navigate(`/u/profile/${userId}?activityId=${id}`)
+                navigate(`/u/profile/${userId}?activityId=${id}&activityName=${encodeURIComponent(activity.title)}`)
               }
             />
           )}
@@ -1007,8 +1007,8 @@ const TopMatchesTab: FC<TopMatchesTabProps> = ({
 
           {/* 查看详情 */}
           <button
-            disabled
-            className="w-full mt-3 py-2 text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center gap-1 cursor-not-allowed"
+            onClick={() => onNavigateToProfile(user.id)}
+            className="w-full mt-3 py-2 text-xs text-accent-500 bg-accent-50 dark:bg-accent-900/20 rounded-lg flex items-center justify-center gap-1 hover:bg-accent-100 dark:hover:bg-accent-900/30 transition-colors"
           >
             查看详情
             <ChevronRight size={14} />

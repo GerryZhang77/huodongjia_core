@@ -24,13 +24,21 @@ const transformFormDataToRequest = (
     title: data.title,
     description: data.description,
     cover_image: data.cover_image,
+    images: data.images || [],
     start_time: data.start_time.toISOString(),
     end_time: data.end_time.toISOString(),
     location: data.location,
     max_participants: data.max_participants,
-    fee: 0, // 默认免费，后续可扩展
+    fee: 0,
+    category: Array.isArray(data.category) ? data.category[0] || "other" : data.category || "other",
     tags: tags,
-    expectation: data.requirements || "", // 将参与要求映射为期望
+    requirements: data.requirements || "",
+    contact_info: data.contact_info || "",
+    is_public: data.is_public !== false,
+    allow_waitlist: data.allow_waitlist === true,
+    enable_nfc: data.enable_nfc === true,
+    registration_form_schema: data.registration_form_schema || undefined,
+    registration_start: data.registration_start.toISOString(),
     registration_deadline: (
       data.registration_end < data.start_time
         ? data.registration_end

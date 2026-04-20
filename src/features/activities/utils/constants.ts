@@ -70,3 +70,32 @@ export const getDefaultDateTimes = () => {
  */
 export const CATEGORY_OPTIONS = ACTIVITY_CATEGORY_OPTIONS;
 export const TAG_OPTIONS = ACTIVITY_TAG_OPTIONS;
+
+/**
+ * 将分类 value 映射为中文标签
+ * 预设值走映射表，自定义值（custom_xxx）去掉前缀
+ */
+const CATEGORY_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  ACTIVITY_CATEGORY_OPTIONS.map((o) => [o.value, o.label]),
+);
+
+export const getCategoryLabel = (value?: string): string => {
+  if (!value) return "其他";
+  if (CATEGORY_LABEL_MAP[value]) return CATEGORY_LABEL_MAP[value];
+  // 自定义分类: custom_xxx → xxx
+  if (value.startsWith("custom_")) return value.slice(7);
+  return value;
+};
+
+/**
+ * 将标签 value 映射为中文标签
+ */
+const TAG_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  ACTIVITY_TAG_OPTIONS.map((o) => [o.value, o.label]),
+);
+
+export const getTagLabel = (value: string): string => {
+  if (TAG_LABEL_MAP[value]) return TAG_LABEL_MAP[value];
+  if (value.startsWith("custom_")) return value.slice(7);
+  return value;
+};

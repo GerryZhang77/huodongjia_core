@@ -335,7 +335,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
           </p>
           <p className="text-[11px] text-slate-500 dark:text-gray-400 flex items-center gap-1">
             <Calendar size={12} className="flex-shrink-0" />
-            <span>4月10日 18:00</span>
+            <span>{formatDate(activity.eventStartTime)}</span>
           </p>
         </div>
 

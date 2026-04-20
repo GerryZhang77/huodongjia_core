@@ -5,6 +5,7 @@
  */
 
 import { api } from "@/services/api";
+import type { RegistrationFormField } from "@/features/activities/types";
 
 // ============================================
 // 类型定义
@@ -26,6 +27,7 @@ export interface UserProfile {
   role?: string;
   tags?: string[];
   interestTags?: InterestTag[];
+  photos?: string[];
   stats?: UserProfileStats;
   contact?: {
     phone?: string;
@@ -61,6 +63,9 @@ export interface UpdateProfileRequest {
   role?: string;
   tags?: string[];
   interestTags?: InterestTag[];
+  photos?: string[];
+  email?: string;
+  phone?: string;
 }
 
 export interface Notification {
@@ -114,10 +119,17 @@ export interface UserActivity {
   images?: string[]; // 活动图片数组（支持多图轮播）
   eventStartTime: string;
   eventEndTime: string;
+  activityStart?: string;
+  activityEnd?: string;
+  registrationStart?: string;
+  registrationEnd?: string;
   location: string;
   maxParticipants: number;
   currentParticipants: number;
   tags: string[];
+  category?: string;
+  requirements?: string;
+  contactInfo?: string;
   userStatus: UserActivityStatus;
   activityStatus: "recruiting" | "ongoing" | "completed";
   isFavorite?: boolean;
@@ -126,6 +138,7 @@ export interface UserActivity {
     name: string;
     avatar: string;
   };
+  registrationFormSchema?: RegistrationFormField[] | null;
 }
 
 export interface UserActivityListResponse {
@@ -160,6 +173,17 @@ export async function getUserProfile(): Promise<{
 }
 
 /**
+ * 获取他人公开资料
+ * GET /api/user/profile/:userId
+ */
+export async function getPublicProfile(userId: string): Promise<{
+  success: boolean;
+  profile?: UserProfile;
+}> {
+  return api.get(`/api/user/profile/${userId}`);
+}
+
+/**
  * 更新用户资料
  * PUT /api/user/profile
  */
@@ -184,6 +208,24 @@ export async function uploadAvatar(file: File): Promise<{
   return api.post("/api/user/profile/avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+}
+
+/**
+ * 上传照片墙图片
+ * POST /api/file/upload
+ */
+export async function uploadPhoto(file: File): Promise<{
+  success: boolean;
+  url?: string;
+}> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post<{ success: boolean; url?: string }>(
+    "/api/file/upload-image",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+  return { success: res.success, url: res.url };
 }
 
 /**

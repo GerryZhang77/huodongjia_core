@@ -6,33 +6,21 @@
 import { FC, useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search,
-  MapPin,
-  Calendar,
-  SlidersHorizontal,
-  ChevronRight,
-  ChevronDown,
-  Flame,
-  X,
-  LayoutGrid,
-  List,
+  Search, MapPin, Calendar, SlidersHorizontal, ChevronRight,
+  ChevronDown, Flame, X, LayoutGrid, List, UserCircle,
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import {
-  HotActivityCarousel,
-  ActivityCard,
-  ActivityListItem,
+  HotActivityCarousel, ActivityCard, ActivityListItem,
 } from "@/components/business";
 import { ActivityFilterDrawer } from "@/components/business/ActivityFilterDrawer";
 import { CitySelector } from "@/components/ui/CitySelector";
 import { Tag } from "@/components/ui";
 import { useUserActivities, useRecommendedActivities } from "@/features/user";
+import { useUserProfile } from "@/features/user";
 import dayjs from "dayjs";
 import {
-  type ActivityFilters,
-  defaultFilters,
-  timeRangeOptions,
-  priceRangeOptions,
+  type ActivityFilters, defaultFilters, timeRangeOptions, priceRangeOptions,
 } from "@/components/business/ActivityFilterDrawer/types";
 
 // ============ 类型定义 ============
@@ -74,7 +62,24 @@ const UserHome: FC = () => {
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 状态
+  // 资料完善引导
+  const { data: profileData } = useUserProfile();
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => sessionStorage.getItem("profile_banner_dismissed") === "1"
+  );
+  const showProfileBanner = useMemo(() => {
+    if (bannerDismissed) return false;
+    const p = profileData?.profile;
+    if (!p) return false;
+    const fields = [p.name, p.avatar, p.bio, p.occupation, p.tags?.length];
+    const filled = fields.filter(Boolean).length;
+    return filled / fields.length < 0.6;
+  }, [profileData, bannerDismissed]);
+
+  const dismissBanner = () => {
+    sessionStorage.setItem("profile_banner_dismissed", "1");
+    setBannerDismissed(true);
+  };
   const [searchText, setSearchText] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedCity, setSelectedCity] = useState("全国");
@@ -536,6 +541,26 @@ const UserHome: FC = () => {
 
       {/* 页面内容 */}
       <div className="min-h-screen pb-20">
+        {/* 资料完善引导 Banner */}
+        {showProfileBanner && (
+          <div className="mx-4 mt-3 flex items-center gap-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-2xl px-4 py-3">
+            <UserCircle size={20} className="text-primary-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-primary-700 dark:text-primary-300">完善你的资料</p>
+              <p className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">补充头像、简介和兴趣，让匹配更精准</p>
+            </div>
+            <button
+              onClick={() => navigate("/u/profile/edit")}
+              className="flex-shrink-0 px-3 py-1.5 bg-primary-500 text-white text-xs font-medium rounded-full"
+            >
+              去完善
+            </button>
+            <button onClick={dismissBanner} className="flex-shrink-0 text-primary-400 hover:text-primary-600">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
         {/* 热门活动轮播区 */}
         <section className="py-4">
           <div className="px-4 flex items-center justify-between mb-3">

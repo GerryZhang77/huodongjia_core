@@ -9,6 +9,7 @@ import {
   Edit3,
   MapPin,
   Briefcase,
+  Building2,
   Calendar,
   Users,
   Heart,
@@ -19,6 +20,12 @@ import {
   XCircle,
   MoreHorizontal,
   Camera,
+  Images,
+  Phone,
+  Mail,
+  Fingerprint,
+  Copy,
+  Check,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { Toast } from "antd-mobile";
@@ -26,33 +33,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useUserProfile, useUserActivities } from "@/features/user";
 import { userApi } from "@/services";
-import type { InterestTag, UserProfile } from "@/services/userApi";
+import type { UserProfile } from "@/services/userApi";
 import type { UserActivity } from "@/services/userApi";
-import { EditInterestsModal } from "./EditInterestsModal";
 import { eventBus, EVENTS } from "@/utils/eventBus";
 
-// 标签颜色映射
-const tagColorMap: Record<string, { bg: string; text: string }> = {
-  primary: { bg: "bg-primary-50", text: "text-primary-600" },
-  secondary: { bg: "bg-secondary-50", text: "text-secondary-600" },
-  accent: { bg: "bg-accent-50", text: "text-accent-600" },
-  warning: { bg: "bg-yellow-50", text: "text-yellow-600" },
-  default: { bg: "bg-gray-100", text: "text-gray-600" },
-};
-
 // ==================== 子组件 ====================
-
-// 标签组件
-const TagChip: FC<{ tag: InterestTag }> = ({ tag }) => {
-  const colors = tagColorMap[tag.colorType];
-  return (
-    <span
-      className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}
-    >
-      {tag.name}
-    </span>
-  );
-};
 
 // 菜单项组件
 const MenuItem: FC<{
@@ -184,20 +169,6 @@ const MyActivityCard: FC<{
   );
 };
 
-// 标签颜色类型池（用于随机分配）
-const TAG_COLOR_TYPES: InterestTag["colorType"][] = [
-  "primary",
-  "secondary",
-  "accent",
-  "warning",
-  "default",
-];
-
-// 获取随机颜色类型
-const getRandomColorType = (): InterestTag["colorType"] => {
-  return TAG_COLOR_TYPES[Math.floor(Math.random() * TAG_COLOR_TYPES.length)];
-};
-
 // ==================== 主组件 ====================
 
 const UserProfileCards: FC = () => {
@@ -224,11 +195,9 @@ const UserProfileCards: FC = () => {
     return activitiesData?.data?.activities || [];
   }, [activitiesData]);
 
-  // 兴趣编辑弹窗
-  const [showEditInterests, setShowEditInterests] = useState(false);
-
   // 头像上传状态
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
 
   // 监听资料更新事件（用于本地刷新）
   useEffect(() => {
@@ -259,17 +228,6 @@ const UserProfileCards: FC = () => {
       }
     });
   }, [myActivities, activeStatusTab]);
-
-  // 保存兴趣标签 - TODO: 使用 mutation hook
-  const handleSaveInterests = (tags: string[]) => {
-    const newInterestTags: InterestTag[] = tags.map((name, index) => ({
-      id: `tag_${Date.now()}_${index}`,
-      name,
-      colorType: getRandomColorType(),
-    }));
-    // TODO: 调用 updateUserProfile API
-    console.log("Save interests:", newInterestTags);
-  };
 
   // 处理头像上传
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -376,19 +334,31 @@ const UserProfileCards: FC = () => {
                   <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
                     {profile.name}
                   </h2>
-                  <span className="px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-[10px] font-medium rounded">
-                    {profile.role}
-                  </span>
+                  {profile.role && (
+                    <span className="px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-[10px] font-medium rounded">
+                      {profile.role}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  <span className="flex items-center gap-1">
-                    <Briefcase size={11} />
-                    {profile.occupation}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin size={11} />
-                    {profile.city}
-                  </span>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {profile.occupation && (
+                    <span className="flex items-center gap-1">
+                      <Briefcase size={11} />
+                      {profile.occupation}
+                    </span>
+                  )}
+                  {profile.company && (
+                    <span className="flex items-center gap-1">
+                      <Building2 size={11} />
+                      {profile.company}
+                    </span>
+                  )}
+                  {profile.city && (
+                    <span className="flex items-center gap-1">
+                      <MapPin size={11} />
+                      {profile.city}
+                    </span>
+                  )}
                 </div>
               </div>
               {/* 编辑按钮 */}
@@ -400,25 +370,94 @@ const UserProfileCards: FC = () => {
               </button>
             </div>
 
-            {/* 兴趣标签 - 折叠显示 */}
-            {(profile.interestTags?.length ?? 0) > 0 && (
+            {/* 个人简介 */}
+            {profile.bio && (
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mt-3 px-0.5">
+                {profile.bio}
+              </p>
+            )}
+
+            {/* 兴趣标签 */}
+            {(profile.tags?.length ?? 0) > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {profile.interestTags!.slice(0, 5).map((tag) => (
-                  <TagChip key={tag.id} tag={tag} />
-                ))}
-                {profile.interestTags!.length > 5 && (
-                  <button
-                    onClick={() => setShowEditInterests(true)}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                {profile.tags!.slice(0, 5).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-600"
                   >
-                    +{profile.interestTags!.length - 5}
-                  </button>
+                    {tag}
+                  </span>
+                ))}
+                {profile.tags!.length > 5 && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                    +{profile.tags!.length - 5}
+                  </span>
                 )}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* 联系方式 & 账号信息 */}
+      <div className="px-4 md:px-6 lg:px-8 mt-4 max-w-2xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+          {profile.phone && (
+            <div className="flex items-center gap-3 px-4 py-3">
+              <Phone size={16} className="text-gray-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400">手机号</p>
+                <p className="text-sm text-gray-700 dark:text-gray-200">{profile.phone}</p>
+              </div>
+            </div>
+          )}
+          {profile.email && (
+            <div className="flex items-center gap-3 px-4 py-3">
+              <Mail size={16} className="text-gray-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400">邮箱</p>
+                <p className="text-sm text-gray-700 dark:text-gray-200">{profile.email}</p>
+              </div>
+            </div>
+          )}
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Fingerprint size={16} className="text-gray-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400">用户 ID</p>
+              <p className="text-sm text-gray-700 dark:text-gray-200 font-mono truncate">{profile.id}</p>
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(profile.id);
+                setIdCopied(true);
+                Toast.show({ content: "已复制", duration: 1000 });
+                setTimeout(() => setIdCopied(false), 1500);
+              }}
+              className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              {idCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="text-gray-400" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 照片墙 */}
+      {profile.photos && profile.photos.length > 0 && (
+        <div className="px-4 md:px-6 lg:px-8 mt-4 max-w-2xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden p-4">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Images size={14} />照片墙
+            </h3>
+            <div className="grid grid-cols-3 gap-1.5">
+              {profile.photos.map((url, i) => (
+                <div key={i} className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 我的活动区域 */}
       <div className="px-4 md:px-6 lg:px-8 mt-4 max-w-2xl mx-auto">
@@ -509,13 +548,6 @@ const UserProfileCards: FC = () => {
         </div>
       </div>
 
-      {/* 编辑兴趣标签弹窗 */}
-      <EditInterestsModal
-        open={showEditInterests}
-        onClose={() => setShowEditInterests(false)}
-        currentTags={profile.interestTags}
-        onSave={handleSaveInterests}
-      />
     </UserLayout>
   );
 };

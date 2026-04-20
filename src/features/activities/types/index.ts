@@ -16,27 +16,31 @@ export type ActivityStatus =
 /**
  * 活动分类
  */
-export type ActivityCategory =
-  | "business" // 商务会议
-  | "tech" // 技术交流
-  | "social" // 社交聚会
-  | "training" // 培训学习
-  | "culture" // 文化活动
-  | "sports" // 体育运动
-  | "other"; // 其他
+export type ActivityCategory = string;
 
 /**
  * 活动标签
  */
-export type ActivityTag =
-  | "online" // 线上
-  | "offline" // 线下
-  | "free" // 免费
-  | "paid" // 付费
-  | "limited" // 限时
-  | "popular" // 热门
-  | "beginner" // 新手友好
-  | "professional"; // 专业级
+export type ActivityTag = string;
+
+/**
+ * 报名表字段类型
+ */
+export type FormFieldType = "text" | "textarea" | "select" | "multi-select" | "radio";
+
+/**
+ * 报名表字段定义
+ */
+export interface RegistrationFormField {
+  key: string;
+  label: string;
+  type: FormFieldType;
+  required: boolean;
+  preset: boolean; // 预设字段不可删除
+  deletable?: boolean; // 预设字段中允许删除的（如性别）
+  placeholder?: string;
+  options?: string[]; // select/multi-select/radio 时的选项
+}
 
 /**
  * 活动实体
@@ -56,6 +60,7 @@ export interface Activity {
   enrolledCount: number;
   createdAt: string;
   updatedAt: string;
+  images?: string[];
   // 扩展字段 (from ActivityForm)
   category?: ActivityCategory;
   tags?: ActivityTag[];
@@ -63,6 +68,8 @@ export interface Activity {
   contactInfo?: string;
   isPublic?: boolean;
   allowWaitlist?: boolean;
+  enableNfc?: boolean;
+  registrationFormSchema?: RegistrationFormField[] | null;
 }
 
 /**
@@ -94,6 +101,7 @@ export interface ActivityFormData {
    * 开启后，参与者可在活动现场通过 NFC 碰一碰功能快速交换联系方式
    */
   enable_nfc?: boolean;
+  registration_form_schema?: RegistrationFormField[];
 }
 
 /**
@@ -102,15 +110,23 @@ export interface ActivityFormData {
 export interface CreateActivityRequest {
   title: string;
   description: string;
-  cover_image: string; // 必填字段
-  start_time: string; // ISO 8601 格式
-  end_time: string; // ISO 8601 格式
+  cover_image: string;
+  images?: string[];
+  start_time: string;
+  end_time: string;
   location: string;
   max_participants: number;
-  fee: number; // 活动费用（单位：元）
+  fee: number;
+  category?: string;
   tags?: string[];
-  expectation?: string; // 对参与者的期望
-  registration_deadline: string; // ISO 8601 格式 - 报名截止时间
+  requirements?: string;
+  contact_info?: string;
+  is_public?: boolean;
+  allow_waitlist?: boolean;
+  enable_nfc?: boolean;
+  registration_start?: string;
+  registration_deadline: string;
+  registration_form_schema?: RegistrationFormField[];
 }
 
 /**
@@ -120,6 +136,7 @@ export interface UpdateActivityRequest {
   title?: string;
   description?: string;
   coverImage?: string;
+  images?: string[];
   registrationStart?: string;
   registrationEnd?: string;
   activityStart?: string;
@@ -133,6 +150,8 @@ export interface UpdateActivityRequest {
   contactInfo?: string;
   isPublic?: boolean;
   allowWaitlist?: boolean;
+  enableNfc?: boolean;
+  registrationFormSchema?: RegistrationFormField[];
 }
 
 /**

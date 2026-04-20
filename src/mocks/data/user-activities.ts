@@ -33,6 +33,14 @@ export interface UserActivity {
     name: string;
     avatar: string;
   };
+  registrationStart?: string | null;
+  registrationEnd?: string | null;
+  registrationFormSchema?: import("@/features/activities/types").RegistrationFormField[] | null;
+  category?: string;
+  requirements?: string;
+  contactInfo?: string;
+  enrolledCount?: number;
+  enableNfc?: boolean;
 }
 
 export const mockUserActivities: UserActivity[] = [
@@ -52,6 +60,10 @@ export const mockUserActivities: UserActivity[] = [
     maxParticipants: 50,
     currentParticipants: 42,
     tags: ["创业", "社交", "投资"],
+    category: "social",
+    requirements: '["年满18岁","具有创业经验或创业意向","请携带名片"]',
+    contactInfo: "微信：startup2026",
+    enableNfc: true,
     userStatus: "recruiting",
     activityStatus: "recruiting",
     organizer: {
@@ -71,6 +83,9 @@ export const mockUserActivities: UserActivity[] = [
     maxParticipants: 30,
     currentParticipants: 28,
     tags: ["投资", "硬科技", "AI"],
+    category: "tech",
+    requirements: '["从事硬科技相关行业","需提前提交个人简介"]',
+    contactInfo: "电话：010-12345678",
     userStatus: "pending",
     activityStatus: "recruiting",
     organizer: {

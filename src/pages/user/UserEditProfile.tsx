@@ -15,13 +15,13 @@ import {
   Phone,
   Plus,
   X,
+  ImagePlus,
 } from "lucide-react";
 import { Toast } from "antd-mobile";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Textarea } from "@/components/ui";
 import { useUserProfile, useUpdateProfile } from "@/features/user";
 import { userApi } from "@/services";
-import type { InterestTag } from "@/services/userApi";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { eventBus, EVENTS } from "@/utils/eventBus";
 
@@ -66,9 +66,21 @@ const UserEditProfile: FC = () => {
     interests: [] as string[],
   });
 
+  // 自定义兴趣输入
+  const [customInterest, setCustomInterest] = useState("");
+  const isComposingRef = useRef(false);
+  const MAX_INTEREST_LEN = 8;
+
   // 头像上传状态
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [currentAvatar, setCurrentAvatar] = useState<string>("");
+
+  // 照片墙状态
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_PHOTOS = 9;
 
   // 当 profile 加载后初始化表单
   useEffect(() => {
@@ -81,9 +93,10 @@ const UserEditProfile: FC = () => {
         email: profile.contact?.email || profile.email || "",
         phone: profile.contact?.phone || profile.phone || "",
         bio: profile.bio || "",
-        interests: profile.interestTags?.map((t) => t.name) || [],
+        interests: profile.tags || [],
       });
       setCurrentAvatar(profile.avatar || "");
+      setPhotos(profile.photos || []);
     }
   }, [profile]);
 
@@ -109,6 +122,26 @@ const UserEditProfile: FC = () => {
       formData.interests.filter((i) => i !== interest),
     );
   };
+
+  // 处理照片墙上传
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const remaining = MAX_PHOTOS - photos.length;
+    const toUpload = files.slice(0, remaining);
+    setPhotoUploading(true);
+    try {
+      const results = await Promise.all(toUpload.map((f) => userApi.uploadPhoto(f)));
+      const urls = results.filter((r) => r.success && r.url).map((r) => r.url!);
+      if (urls.length) setPhotos((prev) => [...prev, ...urls]);
+      else Toast.show({ icon: "fail", content: "上传失败，请重试" });
+    } finally {
+      setPhotoUploading(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
+
+  const removePhoto = (idx: number) => setPhotos((prev) => prev.filter((_, i) => i !== idx));
 
   // 处理头像上传
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,24 +182,7 @@ const UserEditProfile: FC = () => {
   // 提交表单
   const handleSubmit = () => {
     try {
-      // 1. 构建新的兴趣标签数据（添加 id 和随机颜色）
-      const TAG_COLOR_TYPES: InterestTag["colorType"][] = [
-        "primary",
-        "secondary",
-        "accent",
-        "warning",
-        "default",
-      ];
-      const newInterestTags: InterestTag[] = formData.interests.map(
-        (name, index) => ({
-          id: `tag_${Date.now()}_${index}`,
-          name,
-          colorType:
-            TAG_COLOR_TYPES[Math.floor(Math.random() * TAG_COLOR_TYPES.length)],
-        }),
-      );
-
-      // 2. 使用 mutation 更新用户资料
+      // 使用 mutation 更新用户资料
       updateProfileMutation.mutate(
         {
           name: formData.name,
@@ -174,7 +190,10 @@ const UserEditProfile: FC = () => {
           company: formData.company,
           city: formData.city,
           bio: formData.bio,
-          interestTags: newInterestTags,
+          tags: formData.interests,
+          photos,
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
         },
         {
           onSuccess: () => {
@@ -407,6 +426,100 @@ const UserEditProfile: FC = () => {
                   </button>
                 ))}
             </div>
+
+            {/* 自定义兴趣 */}
+            {formData.interests.length < 6 && (
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={customInterest}
+                    onCompositionStart={() => { isComposingRef.current = true; }}
+                    onCompositionEnd={(e) => {
+                      isComposingRef.current = false;
+                      const val = (e.target as HTMLInputElement).value;
+                      if (val.length > MAX_INTEREST_LEN) {
+                        setCustomInterest(val.slice(0, MAX_INTEREST_LEN));
+                      }
+                    }}
+                    onChange={(e) => {
+                      if (isComposingRef.current) {
+                        setCustomInterest(e.target.value);
+                      } else {
+                        setCustomInterest(e.target.value.slice(0, MAX_INTEREST_LEN));
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !isComposingRef.current) {
+                        e.preventDefault();
+                        const val = customInterest.trim();
+                        if (val && !formData.interests.includes(val)) {
+                          addInterest(val);
+                          setCustomInterest("");
+                        }
+                      }
+                    }}
+                    placeholder="添加其他兴趣爱好"
+                    className="w-full px-3 py-1.5 text-xs rounded-full border border-slate-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-slate-700 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/30"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
+                    {customInterest.length}/{MAX_INTEREST_LEN}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    const val = customInterest.trim();
+                    if (val && !formData.interests.includes(val)) {
+                      addInterest(val);
+                      setCustomInterest("");
+                    }
+                  }}
+                  disabled={!customInterest.trim() || formData.interests.includes(customInterest.trim())}
+                  className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-full bg-primary-500 text-white hover:bg-primary-600 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-gray-700 dark:disabled:text-gray-500 transition-colors"
+                >
+                  添加
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 照片墙 */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-gray-100">照片墙</h3>
+              <span className="text-xs text-slate-400 dark:text-gray-500">{photos.length}/{MAX_PHOTOS}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {photos.map((url, idx) => (
+                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-gray-700">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => removePhoto(idx)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={photoUploading}
+                  className="aspect-square rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-600 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-gray-500 hover:border-primary-400 hover:text-primary-400 transition-colors disabled:opacity-50"
+                >
+                  <ImagePlus size={20} />
+                  <span className="text-xs">{photoUploading ? "上传中" : "添加"}</span>
+                </button>
+              )}
+            </div>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handlePhotoUpload}
+            />
           </div>
 
           {/* 底部保存按钮 - 在表单内容流中，自然对齐 */}

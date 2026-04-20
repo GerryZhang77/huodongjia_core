@@ -6,7 +6,6 @@
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   User,
   Bell,
   Lock,
@@ -18,10 +17,15 @@ import {
   ChevronRight,
   Moon,
   Volume2,
+  Trash2,
+  Copy,
+  Check,
 } from "lucide-react";
+import { Toast } from "antd-mobile";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { useThemeStore } from "@/store/themeStore";
+import { deleteAccount } from "@/features/auth/services/authApi";
 
 // 设置项类型
 interface SettingItem {
@@ -44,11 +48,21 @@ interface SettingGroup {
 const UserSettings: FC = () => {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const user = useAuthStore((state) => state.user);
   const { isDark, toggleTheme } = useThemeStore();
 
-  // 本地状态
   const [notifications, setNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [idCopied, setIdCopied] = useState(false);
+
+  const handleCopyId = () => {
+    if (!user?.id) return;
+    navigator.clipboard.writeText(user.id).then(() => {
+      setIdCopied(true);
+      Toast.show({ content: "ID 已复制" });
+      setTimeout(() => setIdCopied(false), 2000);
+    });
+  };
 
   // 设置组数据
   const settingGroups: SettingGroup[] = [
@@ -160,6 +174,26 @@ const UserSettings: FC = () => {
             navigate("/login");
           },
         },
+        {
+          id: "delete-account",
+          icon: Trash2,
+          label: "注销账号",
+          description: "永久删除账号及所有数据",
+          type: "action",
+          danger: true,
+          onClick: async () => {
+            if (!window.confirm("确定要注销账号吗？此操作不可撤销，所有数据将被永久删除。")) {
+              return;
+            }
+            const result = await deleteAccount();
+            if (result.success) {
+              clearAuth();
+              navigate("/login");
+            } else {
+              alert(result.message);
+            }
+          },
+        },
       ],
     },
   ];
@@ -172,6 +206,21 @@ const UserSettings: FC = () => {
       breadcrumbItems={[{ label: "首页", path: "/u/home" }, { label: "设置" }]}
     >
       <div className="md:py-6 lg:py-8">
+        {/* 用户 ID - 仅自己可见 */}
+        {user?.id && (
+          <div className="px-4 md:px-6 pt-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-400 dark:text-gray-500">我的 ID</p>
+                <p className="text-sm font-mono text-gray-700 dark:text-gray-300 mt-0.5">{user.id}</p>
+              </div>
+              <button onClick={handleCopyId} className="p-2 rounded-xl bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors">
+                {idCopied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 设置列表 */}
         <div className="px-4 md:px-6 py-4 space-y-6">
           {settingGroups.map((group, groupIndex) => (

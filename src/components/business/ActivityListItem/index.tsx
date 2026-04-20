@@ -29,7 +29,8 @@ const userStatusConfig = {
  * 格式化日期显示
  */
 const formatDate = (dateStr: string): string => {
-  const d = dayjs(dateStr);
+  const normalized = dateStr.includes('+') || dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+  const d = dayjs(normalized);
   const today = dayjs();
   const tomorrow = today.add(1, "day");
   const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -54,6 +55,7 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
     title,
     coverImage,
     eventStartTime,
+    eventEndTime,
     location,
     maxParticipants,
     currentParticipants,
@@ -184,7 +186,7 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
               size={size === "compact" ? 12 : 14}
               className="flex-shrink-0 text-primary-400"
             />
-            <span className="truncate">4月10日 18:00</span>
+            <span className="truncate">{formatDate(eventStartTime)} - {formatDate(eventEndTime)}</span>
           </div>
 
           {/* 地点 */}

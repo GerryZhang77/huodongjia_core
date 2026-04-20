@@ -31,18 +31,23 @@ export const useEditActivity = (activityId: string) => {
         activityEnd: data.end_time.toISOString(),
         location: data.location,
         capacity: data.max_participants,
-        category: data.category,
+        category: Array.isArray(data.category) ? data.category[0] || "other" : data.category || "other",
         tags: data.tags,
         requirements: data.requirements,
         contactInfo: data.contact_info,
         isPublic: data.is_public,
         allowWaitlist: data.allow_waitlist,
+        enableNfc: data.enable_nfc === true,
         status: "published",
+        registrationFormSchema: data.registration_form_schema || undefined,
       };
 
-      // 只有当有封面图片时才添加 coverImage 字段
+      // 只有当有封面图片时才添加 coverImage 和 images 字段
       if (data.cover_image) {
         requestData.coverImage = data.cover_image;
+      }
+      if (data.images) {
+        requestData.images = data.images;
       }
 
       const activity = await updateActivity(activityId, requestData);

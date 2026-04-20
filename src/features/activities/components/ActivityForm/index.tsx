@@ -31,8 +31,11 @@ import {
   validateParticipants,
   createTimeValidationRules,
 } from "../../utils";
-import type { ActivityFormData } from "../../types";
+import type { ActivityFormData, RegistrationFormField } from "../../types";
 import { DatePickerField } from "./DatePickerField";
+import { CustomSelector } from "./CustomSelector";
+import { RequirementListEditor } from "./RequirementListEditor";
+import { RegistrationFormBuilder } from "../RegistrationFormBuilder";
 
 interface ActivityFormProps {
   /**
@@ -77,14 +80,16 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         end_time: new Date(activity.activityEnd),
         location: activity.location,
         max_participants: activity.capacity,
-        registration_start: new Date(activity.registrationStart),
-        registration_end: new Date(activity.registrationEnd),
+        registration_start: activity.registrationStart ? new Date(activity.registrationStart) : new Date(),
+        registration_end: activity.registrationEnd ? new Date(activity.registrationEnd) : new Date(),
         category: activity.category,
         tags: activity.tags || [],
         requirements: activity.requirements,
         contact_info: activity.contactInfo,
         is_public: activity.isPublic !== false,
         allow_waitlist: activity.allowWaitlist === true,
+        enable_nfc: activity.enableNfc === true,
+        registration_form_schema: activity.registrationFormSchema || undefined,
       });
 
       if (activity.coverImage) {
@@ -304,17 +309,17 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           </Form.Item>
 
           <Form.Item name="category" label="活动分类">
-            <Selector
+            <CustomSelector
               options={CATEGORY_OPTIONS}
-              style={{ "--border-radius": "8px" } as any}
+              placeholder="自定义分类（最多7字）"
             />
           </Form.Item>
 
           <Form.Item name="tags" label="活动标签">
-            <Selector
+            <CustomSelector
               options={TAG_OPTIONS}
-              {...({ multiple: true } as any)}
-              style={{ "--border-radius": "8px" } as any}
+              multiple
+              placeholder="自定义标签（最多7字）"
             />
           </Form.Item>
 
@@ -448,12 +453,24 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
             />
           </Form.Item>
 
-          <Form.Item name="allow_waitlist" label="允许候补">
+          {/* 暂时隐藏：允许候补 & 公开活动 */}
+          {/* <Form.Item name="allow_waitlist" label="允许候补">
             <Switch />
           </Form.Item>
 
           <Form.Item name="is_public" label="公开活动">
             <Switch />
+          </Form.Item> */}
+        </Card>
+
+        {/* 报名信息收集 */}
+        <Card
+          title="报名信息收集"
+          className="mb-4"
+          style={{ "--border-radius": "12px" } as any}
+        >
+          <Form.Item name="registration_form_schema">
+            <RegistrationFormBuilder />
           </Form.Item>
         </Card>
 
@@ -492,13 +509,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           style={{ "--border-radius": "12px" } as any}
         >
           <Form.Item name="requirements" label="参与要求">
-            <TextArea
-              placeholder="请描述参与者需要满足的条件或准备的物品"
-              maxLength={200}
-              {...({ showCount: true } as any)}
-              rows={3}
-              style={{ "--border-radius": "8px" } as any}
-            />
+            <RequirementListEditor />
           </Form.Item>
 
           <Form.Item name="contact_info" label="联系方式">

@@ -25,6 +25,9 @@ import {
   Moon,
   Sun,
   Monitor,
+  Copy,
+  Check,
+  Fingerprint,
 } from "lucide-react";
 import { Dialog, Toast, Popup } from "antd-mobile";
 import { MerchantLayout } from "@/components/layout";
@@ -100,6 +103,7 @@ const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -273,7 +277,7 @@ const ProfilePage: React.FC = () => {
               <MenuItem
                 icon={<Phone size={18} />}
                 label="手机号"
-                value={profile.phone ? profile.phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2") : "未绑定"}
+                value={profile.phone || "未绑定"}
                 onClick={() => Toast.show({ content: "修改手机号功能开发中" })}
               />
               <MenuItem
@@ -299,6 +303,32 @@ const ProfilePage: React.FC = () => {
               </h3>
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              <MenuItem
+                icon={<User size={18} />}
+                label="登录账号"
+                value={profile.account}
+                showArrow={false}
+              />
+              <div className="flex items-center justify-between py-3 px-4">
+                <div className="flex items-center gap-3">
+                  <Fingerprint size={18} className="text-gray-400 dark:text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">商家 ID</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-400 dark:text-gray-500 font-mono truncate max-w-[160px]">{profile.id}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(profile.id);
+                      setIdCopied(true);
+                      Toast.show({ content: "已复制", duration: 1000 });
+                      setTimeout(() => setIdCopied(false), 1500);
+                    }}
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {idCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="text-gray-400" />}
+                  </button>
+                </div>
+              </div>
               <MenuItem
                 icon={<Calendar size={18} />}
                 label="注册时间"

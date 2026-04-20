@@ -9,6 +9,21 @@ import { api } from "@/services/api";
 import type { LoginCredentials, LoginResponse } from "../types";
 
 /**
+ * 检查账号是否可用
+ * GET /api/auth/check-account?account=xxx
+ */
+export async function checkAccount(account: string): Promise<{ available: boolean; message?: string }> {
+  try {
+    const response = await api.get<{ success: boolean; available: boolean; message?: string }>(
+      `/api/auth/check-account?account=${encodeURIComponent(account)}`
+    );
+    return { available: response.available, message: response.message };
+  } catch {
+    return { available: false, message: "检查失败" };
+  }
+}
+
+/**
  * 用户登录
  * POST /api/auth/login
  *
@@ -77,13 +92,11 @@ export async function getCurrentUser(): Promise<LoginResponse> {
 
 /**
  * 发送短信验证码
- *
- * 注意：后端目前未实现短信验证码接口
- * 联调时此功能暂不可用，保留接口定义以备后续实现
+ * POST /api/auth/send-code
  */
 export async function sendSmsCode(
   phone: string,
-  type: "register" | "login" | "reset_password" = "register"
+  _type: "register" | "login" | "reset_password" = "register"
 ): Promise<{ success: boolean; message: string }> {
   try {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
@@ -93,50 +106,50 @@ export async function sendSmsCode(
       };
     }
 
-    // 后端未实现，返回提示
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return {
-      success: true,
-      message: "验证码已发送（模拟模式，验证码为 123456）",
-    };
+    const response = await api.post<{ success: boolean; message: string }>(
+      "/api/auth/send-code",
+      { phoneNumber: phone }
+    );
+
+    return response;
   } catch (error) {
     console.error("❌ [authApi] 发送验证码失败:", error);
+    const axiosError = error as { response?: { data?: { message?: string } } };
+    const message =
+      axiosError?.response?.data?.message || "发送验证码失败，请稍后重试";
     return {
       success: false,
-      message: "发送验证码失败，请稍后重试",
+      message,
     };
   }
 }
 
 /**
  * 验证短信验证码
- *
- * 注意：后端目前未实现，使用固定验证码 123456
+ * POST /api/auth/verify-code
  */
 export async function verifySmsCode(
   phone: string,
   code: string
 ): Promise<{ success: boolean; message: string; verified?: boolean }> {
   try {
-    // 后端未实现，使用固定验证码
-    if (code === "123456") {
-      return {
-        success: true,
-        message: "验证成功",
-        verified: true,
-      };
-    }
+    const response = await api.post<{ success: boolean; message: string }>(
+      "/api/auth/verify-code",
+      { phoneNumber: phone, code }
+    );
 
     return {
-      success: false,
-      message: "验证码错误或已过期",
-      verified: false,
+      ...response,
+      verified: response.success,
     };
   } catch (error) {
     console.error("❌ [authApi] 验证码验证失败:", error);
+    const axiosError = error as { response?: { data?: { message?: string } } };
+    const message =
+      axiosError?.response?.data?.message || "验证失败，请稍后重试";
     return {
       success: false,
-      message: "验证失败，请稍后重试",
+      message,
       verified: false,
     };
   }
@@ -182,6 +195,28 @@ export async function register(credentials: {
     const message =
       axiosError?.response?.data?.message || "注册失败，请稍后重试";
 
+    return {
+      success: false,
+      message,
+    };
+  }
+}
+
+/**
+ * 注销账号
+ * DELETE /api/auth/account
+ */
+export async function deleteAccount(): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await api.delete<{ success: boolean; message: string }>(
+      "/api/auth/account"
+    );
+    return response;
+  } catch (error) {
+    console.error("❌ [authApi] 注销账号失败:", error);
+    const axiosError = error as { response?: { data?: { message?: string } } };
+    const message =
+      axiosError?.response?.data?.message || "注销失败，请稍后重试";
     return {
       success: false,
       message,

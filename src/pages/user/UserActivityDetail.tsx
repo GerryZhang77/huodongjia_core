@@ -17,6 +17,8 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  Tag,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
@@ -25,6 +27,8 @@ import { useActivityDetail, useUserActivities } from "@/features/user";
 import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import type { UserActivityStatus } from "@/services/userApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
+import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
+import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import dayjs from "dayjs";
 
 // 状态配置
@@ -65,10 +69,8 @@ const statusConfig: Record<
   },
 };
 
-// 格式化日期
-const formatDate = (dateStr: string): string => {
-  return dayjs(dateStr).format("M月D日 HH:mm");
-};
+const normalizeUtc = (s: string) => s.includes('+') || s.endsWith('Z') ? s : s + 'Z';
+const formatDate = (dateStr: string): string => dayjs(normalizeUtc(dateStr)).format("M月D日 HH:mm");
 
 const UserActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -313,7 +315,7 @@ const UserActivityDetail: FC = () => {
                       key={i}
                       className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
                     >
-                      {tag}
+                      {getTagLabel(tag)}
                     </span>
                   ))}
                 </div>
@@ -340,10 +342,28 @@ const UserActivityDetail: FC = () => {
                     活动时间
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    4月10日 18:00 - 4月10日 22:00
+                    {formatDate(activity.eventStartTime)} -{" "}
+                    {formatDate(activity.eventEndTime)}
                   </p>
                 </div>
               </div>
+
+              {/* 报名时间 */}
+              {(activity.registrationStart || activity.registrationEnd) && (
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-warning-50 dark:bg-warning-900/20 flex items-center justify-center flex-shrink-0">
+                    <Clock size={16} className="text-warning-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">报名时间</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {activity.registrationStart ? formatDate(activity.registrationStart) : "即时开放"}
+                      {" - "}
+                      {activity.registrationEnd ? formatDate(activity.registrationEnd) : "截止未设置"}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* 地点 */}
               <div className="flex items-start gap-3">
@@ -387,6 +407,21 @@ const UserActivityDetail: FC = () => {
                   </p>
                 </div>
               </div>
+
+              {/* 分类 */}
+              {activity.category && (
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
+                    <Tag size={16} className="text-purple-500 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">活动分类</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {getCategoryLabel(activity.category)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 分隔线 */}
@@ -429,6 +464,45 @@ const UserActivityDetail: FC = () => {
                 {activity.description || "暂无活动简介"}
               </p>
             </div>
+
+            {/* 参与要求 */}
+            {activity.requirements && (() => {
+              const items = parseRequirements(activity.requirements);
+              if (items.length === 0) return null;
+              return (
+                <div className="mt-5 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/10 dark:to-amber-900/10 rounded-xl p-4 border border-orange-100 dark:border-orange-800/30">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-orange-400 rounded-full" />
+                    参与要求
+                  </h3>
+                  <ul className="space-y-2">
+                    {items.map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                        <span className="w-5 h-5 flex items-center justify-center text-xs font-medium text-orange-500 bg-orange-100 dark:bg-orange-900/30 rounded-full flex-shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="leading-relaxed">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
+
+            {/* 联系方式 */}
+            {activity.contactInfo && (
+              <div className="mt-5 flex items-start gap-3 bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
+                <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0">
+                  <Phone size={16} className="text-primary-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">联系方式</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {activity.contactInfo}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* 状态提示 */}
             {activity.userStatus === "approved" && (

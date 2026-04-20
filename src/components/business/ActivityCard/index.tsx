@@ -25,9 +25,10 @@ const userStatusConfig = {
   completed: { color: "gray" as const, text: "已结束" },
 };
 
-// 格式化日期
+// 格式化日期（确保 UTC 解析）
 const formatDate = (dateStr: string): string => {
-  return dayjs(dateStr).format("M月D日 HH:mm");
+  const normalized = dateStr.includes('+') || dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+  return dayjs(normalized).format("M月D日 HH:mm");
 };
 
 /**
@@ -49,6 +50,7 @@ export const ActivityCard: FC<ActivityCardProps> = ({
     title,
     coverImage,
     eventStartTime,
+    eventEndTime,
     location,
     maxParticipants,
     currentParticipants,
@@ -141,7 +143,7 @@ export const ActivityCard: FC<ActivityCardProps> = ({
         <div className="space-y-1.5 mb-3">
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <Calendar size={14} className="flex-shrink-0" />
-            <span className="truncate">4月10日 18:00</span>
+            <span className="truncate">{formatDate(eventStartTime)} - {formatDate(eventEndTime)}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <MapPin size={14} className="flex-shrink-0" />

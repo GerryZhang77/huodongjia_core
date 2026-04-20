@@ -67,6 +67,7 @@ const UserActivityHistory = lazy(
   () => import("./pages/user/UserActivityHistory"),
 );
 const UserPublicProfile = lazy(() => import("./pages/user/UserPublicProfile"));
+const NFCResultPage = lazy(() => import("./pages/user/NFCResultPage"));
 
 // 开发调试页面 - 懒加载
 const ComponentShowcase = lazy(() => import("./pages/dev/ComponentShowcase"));
@@ -91,6 +92,9 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+
+                {/* NFC 碰一碰结果页（公开，无需登录） */}
+                <Route path="/nfc/:eventId/:userId" element={<NFCResultPage />} />
 
                 {/* ========== B端商家路由 ========== */}
                 {/* 商家后台首页 */}
@@ -392,16 +396,6 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserActivityHistory />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* 查看他人用户资料页 */}
-                <Route
-                  path="/u/profile/:userId"
-                  element={
-                    <ProtectedRoute requiredRole="user">
-                      <UserPublicProfile />
                     </ProtectedRoute>
                   }
                 />

@@ -91,7 +91,7 @@ const HotActivitySlide: FC<HotActivitySlideProps> = ({ activity, onClick }) => {
         </h3>
         <div className="flex items-center justify-between text-xs lg:text-sm text-white/90">
           <span className="drop-shadow-sm">
-            4/10 18:00
+            {formatShortDate(activity.eventStartTime)} - {formatShortDate(activity.eventEndTime)}
           </span>
           <span className="truncate max-w-[50%] drop-shadow-sm">
             {activity.location.split(" ")[0]}

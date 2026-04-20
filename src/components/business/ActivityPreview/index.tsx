@@ -14,9 +14,12 @@ import {
   ArrowLeft,
   User,
   Image as ImageIcon,
+  Phone,
 } from "lucide-react";
 import dayjs from "dayjs";
 import type { ActivityFormData } from "@/features/activities/types";
+import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
+import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import { ImageCarousel } from "../ImageCarousel";
 
 export interface ActivityPreviewProps {
@@ -34,29 +37,6 @@ export interface ActivityPreviewProps {
     avatar?: string;
   };
 }
-
-// 分类名称映射
-const CATEGORY_NAMES: Record<string, string> = {
-  business: "商务会议",
-  tech: "技术交流",
-  social: "社交聚会",
-  training: "培训学习",
-  culture: "文化活动",
-  sports: "体育运动",
-  other: "其他",
-};
-
-// 标签名称映射
-const TAG_NAMES: Record<string, string> = {
-  online: "线上",
-  offline: "线下",
-  free: "免费",
-  paid: "付费",
-  limited: "限时",
-  popular: "热门",
-  beginner: "新手友好",
-  professional: "专业级",
-};
 
 /**
  * 格式化日期时间
@@ -159,12 +139,12 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
                   key={i}
                   className="px-1.5 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-medium rounded-full"
                 >
-                  {TAG_NAMES[tag] || tag}
+                  {getTagLabel(tag)}
                 </span>
               ))}
               {previewData.tags.length === 0 && previewData.category && (
                 <span className="px-1.5 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-medium rounded-full">
-                  {CATEGORY_NAMES[previewData.category] || previewData.category}
+                  {getCategoryLabel(previewData.category as string)}
                 </span>
               )}
             </div>
@@ -279,16 +259,41 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
         </div>
 
         {/* 参与要求 */}
-        {previewData.requirements && (
+        {previewData.requirements && (() => {
+          const items = parseRequirements(previewData.requirements);
+          if (items.length === 0) return null;
+          return (
+            <>
+              <div className="h-px bg-gray-100 dark:bg-gray-700 my-4" />
+              <div className="bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-900/5 dark:to-amber-900/5 rounded-lg p-3 border border-orange-100/50 dark:border-orange-800/20">
+                <h3 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1.5 flex items-center gap-1.5">
+                  <span className="w-0.5 h-3 bg-orange-400 rounded-full" />
+                  参与要求
+                </h3>
+                <ul className="space-y-1">
+                  {items.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-1.5 text-[11px] text-gray-600 dark:text-gray-400">
+                      <span className="w-3.5 h-3.5 flex items-center justify-center text-[9px] font-medium text-orange-500 bg-orange-100 dark:bg-orange-900/30 rounded-full flex-shrink-0 mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <span className="leading-relaxed">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          );
+        })()}
+
+        {/* 联系方式 */}
+        {previewData.contactInfo && (
           <>
             <div className="h-px bg-gray-100 dark:bg-gray-700 my-4" />
-            <div>
-              <h3 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1.5">
-                参与要求
-              </h3>
-              <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                {previewData.requirements}
-              </p>
+            <div className="flex items-center gap-2">
+              <Phone size={12} className="text-primary-400 flex-shrink-0" />
+              <span className="text-[11px] text-gray-600 dark:text-gray-400">
+                {previewData.contactInfo}
+              </span>
             </div>
           </>
         )}
@@ -351,13 +356,12 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
                     key={i}
                     className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
                   >
-                    {TAG_NAMES[tag] || tag}
+                    {getTagLabel(tag)}
                   </span>
                 ))}
                 {previewData.tags.length === 0 && previewData.category && (
                   <span className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full">
-                    {CATEGORY_NAMES[previewData.category] ||
-                      previewData.category}
+                    {getCategoryLabel(previewData.category as string)}
                   </span>
                 )}
               </div>
@@ -470,19 +474,31 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
           </div>
 
           {/* 参与要求 */}
-          {previewData.requirements && (
-            <>
-              <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  参与要求
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                  {previewData.requirements}
-                </p>
-              </div>
-            </>
-          )}
+          {previewData.requirements && (() => {
+            const items = parseRequirements(previewData.requirements);
+            if (items.length === 0) return null;
+            return (
+              <>
+                <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />
+                <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/10 dark:to-amber-900/10 rounded-xl p-4 border border-orange-100 dark:border-orange-800/30">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                    <span className="w-1 h-4 bg-orange-400 rounded-full" />
+                    参与要求
+                  </h3>
+                  <ul className="space-y-2">
+                    {items.map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                        <span className="w-5 h-5 flex items-center justify-center text-xs font-medium text-orange-500 bg-orange-100 dark:bg-orange-900/30 rounded-full flex-shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="leading-relaxed">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         {/* 底部操作栏 */}

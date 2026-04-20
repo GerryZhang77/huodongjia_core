@@ -1,0 +1,442 @@
+/**
+ * 报名信息收集 编辑器组件
+ * 商家创建活动时，用于自定义用户报名时需要填写的内容
+ * 以 Drawer 弹窗形式编辑，主表单中只显示入口摘要
+ */
+
+import React, { useState } from "react";
+import {
+  Plus,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  X,
+  ClipboardList,
+  Settings2,
+  Lock,
+} from "lucide-react";
+import { Drawer } from "@/components/ui/Drawer";
+import { Button } from "@/components/ui/Button";
+import { Switch } from "@/components/ui/Switch";
+import type {
+  RegistrationFormField,
+  FormFieldType,
+} from "../../types";
+
+// 完全锁定（不可展开编辑）的预设项
+const LOCKED_PRESET_KEYS: string[] = [];
+const DEFAULT_PRESET_FIELDS: RegistrationFormField[] = [
+  {
+    key: "name",
+    label: "姓名",
+    type: "text",
+    required: true,
+    preset: true,
+    deletable: true,
+    placeholder: "请输入姓名",
+  },
+  {
+    key: "phone",
+    label: "手机号",
+    type: "text",
+    required: true,
+    preset: true,
+    deletable: true,
+    placeholder: "请输入手机号",
+  },
+  {
+    key: "gender",
+    label: "性别",
+    type: "radio",
+    required: false,
+    preset: true,
+    deletable: true,
+    options: ["男", "女"],
+  },
+];
+
+// 类型配置
+const FIELD_TYPE_OPTIONS: { value: FormFieldType; label: string }[] = [
+  { value: "text", label: "单行输入" },
+  { value: "textarea", label: "多行输入" },
+  { value: "radio", label: "单选" },
+  { value: "select", label: "下拉选择" },
+  { value: "multi-select", label: "多选" },
+];
+
+const TYPE_LABEL_MAP: Record<FormFieldType, string> = {
+  text: "单行输入",
+  textarea: "多行输入",
+  radio: "单选",
+  select: "下拉选择",
+  "multi-select": "多选",
+};
+
+interface RegistrationFormBuilderProps {
+  value?: RegistrationFormField[];
+  onChange?: (fields: RegistrationFormField[]) => void;
+}
+
+/**
+ * 单个编辑项卡片
+ */
+const FieldEditCard: React.FC<{
+  field: RegistrationFormField;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onChange: (field: RegistrationFormField) => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
+}> = ({
+  field,
+  isExpanded,
+  onToggleExpand,
+  onChange,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+}) => {
+  const [newOption, setNewOption] = useState("");
+  const needsOptions = ["select", "multi-select", "radio"].includes(field.type);
+  const isLocked = LOCKED_PRESET_KEYS.includes(field.key);
+  // 未命名的自定义项不允许折叠（强制展开编辑），锁定项不允许展开
+  const canExpand = !isLocked;
+
+  const addOption = () => {
+    const trimmed = newOption.trim();
+    if (!trimmed || field.options?.includes(trimmed)) return;
+    onChange({ ...field, options: [...(field.options || []), trimmed] });
+    setNewOption("");
+  };
+
+  const removeOption = (idx: number) => {
+    const opts = [...(field.options || [])];
+    opts.splice(idx, 1);
+    onChange({ ...field, options: opts });
+  };
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 overflow-hidden">
+      {/* 折叠头部 */}
+      <div
+        className={`flex items-center gap-2 px-3 py-2.5 transition-colors ${canExpand ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750" : "cursor-default opacity-70"}`}
+        onClick={() => canExpand && onToggleExpand()}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+              {field.label || "未命名"}
+            </span>
+            {field.required && (
+              <span className="text-[10px] text-red-500 font-medium">必填</span>
+            )}
+            {field.preset && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400 rounded">
+                预设
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {TYPE_LABEL_MAP[field.type]}
+            {needsOptions && field.options?.length
+              ? ` · ${field.options.length}个选项`
+              : ""}
+          </span>
+        </div>
+        {isLocked ? (
+          <Lock size={14} className="text-gray-300 flex-shrink-0" />
+        ) : (
+          <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            {(!field.preset || field.deletable) && (
+              <button
+                type="button"
+                onClick={onRemove}
+                className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+                title="删除"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+            {isExpanded ? (
+              <ChevronUp size={16} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={16} className="text-gray-400" />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 展开内容 */}
+      {isExpanded && (
+        <div className="px-3 pb-3 border-t border-gray-100 dark:border-gray-700 pt-3 space-y-3">
+          {/* 预设字段：只显示必填开关 */}
+          {field.preset ? (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 dark:text-gray-400">必须填写</span>
+              <Switch
+                checked={field.required}
+                onChange={(checked) => onChange({ ...field, required: checked })}
+                size="small"
+              />
+            </div>
+          ) : (
+            <>
+              {/* 名称 */}
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">名称</label>
+                <input
+                  type="text"
+                  value={field.label}
+                  onChange={(e) => onChange({ ...field, label: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary-400 transition-colors"
+                  placeholder="输入名称"
+                />
+              </div>
+
+              {/* 类型 */}
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">填写方式</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {FIELD_TYPE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        const updated: RegistrationFormField = { ...field, type: opt.value };
+                        if (["select", "multi-select", "radio"].includes(opt.value) && !updated.options?.length) {
+                          updated.options = [];
+                        }
+                        onChange(updated);
+                      }}
+                      className={`px-2.5 py-1.5 text-xs rounded-lg border transition-colors ${
+                        field.type === opt.value
+                          ? "border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+                          : "border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 提示文字 */}
+              {(field.type === "text" || field.type === "textarea") && (
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">提示文字</label>
+                  <input
+                    type="text"
+                    value={field.placeholder || ""}
+                    onChange={(e) => onChange({ ...field, placeholder: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary-400 transition-colors"
+                    placeholder="用户看到的输入提示"
+                  />
+                </div>
+              )}
+
+              {/* 选项编辑 */}
+              {needsOptions && (
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">可选项</label>
+                  <div className="space-y-1.5">
+                    {(field.options || []).map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="flex-1 px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300">{opt}</span>
+                        <button type="button" onClick={() => removeOption(idx)} className="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newOption}
+                        onChange={(e) => setNewOption(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addOption(); } }}
+                        className="flex-1 px-3 py-1.5 text-sm border border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary-400 transition-colors"
+                        placeholder="输入选项名，按回车添加"
+                      />
+                      <button type="button" onClick={addOption} className="px-2.5 py-1.5 text-xs text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors">
+                        添加
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 是否必填 */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500 dark:text-gray-400">必须填写</span>
+                <Switch
+                  checked={field.required}
+                  onChange={(checked) => onChange({ ...field, required: checked })}
+                  size="small"
+                />
+              </div>
+
+              {/* 上移/下移 */}
+              <div className="flex items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex gap-1">
+                  <button type="button" onClick={onMoveUp} disabled={isFirst} className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 transition-colors" title="上移">
+                    <ChevronUp size={14} />
+                  </button>
+                  <button type="button" onClick={onMoveDown} disabled={isLast} className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 transition-colors" title="下移">
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * 报名信息收集 编辑器主组件
+ */
+export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = ({
+  value,
+  onChange,
+}) => {
+  const fields =
+    value && value.length > 0 ? value : DEFAULT_PRESET_FIELDS;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
+  const updateFields = (newFields: RegistrationFormField[]) => {
+    onChange?.(newFields);
+  };
+
+  const addField = () => {
+    const newField: RegistrationFormField = {
+      key: `custom_${Date.now()}`,
+      label: "",
+      type: "text",
+      required: false,
+      preset: false,
+      placeholder: "",
+    };
+    const newFields = [...fields, newField];
+    updateFields(newFields);
+    setExpandedIndex(newFields.length - 1);
+  };
+
+  const updateField = (index: number, field: RegistrationFormField) => {
+    const newFields = [...fields];
+    newFields[index] = field;
+    updateFields(newFields);
+  };
+
+  const removeField = (index: number) => {
+    const newFields = fields.filter((_, i) => i !== index);
+    updateFields(newFields);
+    setExpandedIndex(null);
+  };
+
+  const moveField = (from: number, to: number) => {
+    if (to < 0 || to >= fields.length) return;
+    const newFields = [...fields];
+    const [moved] = newFields.splice(from, 1);
+    newFields.splice(to, 0, moved);
+    updateFields(newFields);
+    setExpandedIndex(to);
+  };
+
+  // 摘要信息
+  const requiredCount = fields.filter((f) => f.required).length;
+  const optionalCount = fields.length - requiredCount;
+
+  return (
+    <>
+      {/* 入口卡片 */}
+      <div
+        onClick={() => setDrawerOpen(true)}
+        className="flex items-center gap-3 p-3 border border-dashed border-primary-200 dark:border-primary-700 bg-primary-50/50 dark:bg-primary-900/10 rounded-xl cursor-pointer hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors group"
+      >
+        <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+          <ClipboardList size={20} className="text-primary-500 dark:text-primary-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-primary-700 dark:text-primary-300">
+            配置报名收集信息
+          </div>
+          <div className="text-xs text-primary-400 dark:text-primary-500 mt-0.5">
+            已设置 {fields.length} 项（{requiredCount} 必填
+            {optionalCount > 0 && `，${optionalCount} 选填`}）· 点击编辑
+          </div>
+        </div>
+        <Settings2
+          size={16}
+          className="text-primary-300 group-hover:text-primary-500 transition-colors flex-shrink-0"
+        />
+      </div>
+
+      {/* 编辑抽屉 */}
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="报名信息收集"
+        placement="bottom"
+        size="85vh"
+        footer={
+          <div className="px-4 py-3">
+            <Button
+              variant="primary"
+              block
+              onClick={() => setDrawerOpen(false)}
+            >
+              完成设置
+            </Button>
+          </div>
+        }
+      >
+        <div className="px-4 py-4 space-y-3">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            设置用户报名活动时需要填写的内容，拖动可调整顺序
+          </p>
+
+          {/* 列表 */}
+          <div className="space-y-2">
+            {fields.map((field, index) => (
+              <FieldEditCard
+                key={field.key}
+                field={field}
+                isExpanded={expandedIndex === index}
+                onToggleExpand={() => {
+                  // 未命名的自定义项强制保持展开
+                  if (!field.preset && !field.label.trim()) return;
+                  setExpandedIndex(expandedIndex === index ? null : index);
+                }}
+                onChange={(f) => updateField(index, f)}
+                onRemove={() => removeField(index)}
+                onMoveUp={() => moveField(index, index - 1)}
+                onMoveDown={() => moveField(index, index + 1)}
+                isFirst={index === 0}
+                isLast={index === fields.length - 1}
+              />
+            ))}
+          </div>
+
+          {/* 添加按钮 */}
+          <button
+            type="button"
+            onClick={addField}
+            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:border-primary-300 hover:text-primary-500 transition-colors"
+          >
+            <Plus size={16} />
+            添加收集项
+          </button>
+        </div>
+      </Drawer>
+    </>
+  );
+};
+
+export default RegistrationFormBuilder;

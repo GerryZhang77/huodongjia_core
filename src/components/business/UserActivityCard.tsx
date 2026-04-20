@@ -13,6 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { UserActivity, UserActivityStatus } from "@/mocks/data/user-activities";
+import { getTagLabel } from "@/features/activities/utils/constants";
 import dayjs from "dayjs";
 
 interface UserActivityCardProps {
@@ -136,7 +137,7 @@ export const UserActivityCard: FC<UserActivityCardProps> = ({
                 key={i}
                 className="px-2.5 py-1 bg-white/90 backdrop-blur-sm text-gray-700 text-[11px] font-medium rounded-md shadow-sm"
               >
-                #{tag}
+                #{getTagLabel(tag)}
               </span>
             ))}
             {activity.tags.length > 3 && (

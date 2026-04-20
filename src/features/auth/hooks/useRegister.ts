@@ -1,20 +1,25 @@
 /**
  * useRegister Hook - 用户注册逻辑
- * 支持学号 + 密码注册，可选头像上传
+ * 支持手机号 + 验证码 + 密码注册
  */
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/authStore";
 import * as authApi from "../services/authApi";
-import { uploadAvatar } from "@/services/userApi";
 
 export interface UseRegisterReturn {
-  /** 注册（学号 + 密码，可选头像文件） */
-  register: (account: string, password: string, avatarFile?: File) => Promise<boolean>;
+  /** 注册（手机号 + 验证码 + 密码 + 用户名） */
+  register: (phone: string, smsCode: string, password: string, username?: string) => Promise<boolean>;
+  /** 发送验证码 */
+  sendCode: (phone: string) => Promise<boolean>;
   /** 加载状态 */
   loading: boolean;
+  /** 发送验证码中 */
+  sendingCode: boolean;
+  /** 倒计时秒数（0 表示可重新发送） */
+  countdown: number;
   /** 错误信息 */
   error: string | null;
   /** 清除错误 */
@@ -27,17 +32,68 @@ export function useRegister(): UseRegisterReturn {
   const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
 
-  const register = async (account: string, password: string, avatarFile?: File): Promise<boolean> => {
+  const startCountdown = useCallback(() => {
+    setCountdown(60);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const sendCode = async (phone: string): Promise<boolean> => {
+    setError(null);
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      setError("请输入正确的手机号");
+      return false;
+    }
+
+    setSendingCode(true);
+    try {
+      const result = await authApi.sendSmsCode(phone, "register");
+      if (result.success) {
+        startCountdown();
+        return true;
+      }
+      setError(result.message);
+      return false;
+    } catch {
+      setError("发送验证码失败");
+      return false;
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const register = async (phone: string, smsCode: string, password: string, username?: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
 
     try {
+      // 先验证短信验证码
+      const verifyResult = await authApi.verifySmsCode(phone, smsCode);
+      if (!verifyResult.success || !verifyResult.verified) {
+        setError(verifyResult.message || "验证码错误");
+        return false;
+      }
+
+      // 注册 — 使用 username 作为 account（若未提供则用手机号）
       const response = await authApi.register({
-        account,
+        account: username || phone,
         password,
-        name: account,
+        phone,
+        sms_code: smsCode,
+        name: username || phone,
         userType: "user",
       });
 
@@ -48,19 +104,7 @@ export function useRegister(): UseRegisterReturn {
 
       if (response.token && response.user) {
         setAuth(response.user, response.token);
-
-        // 清除旧用户的 React Query 缓存
         queryClient.clear();
-
-        // 上传头像（非关键步骤，失败不影响注册）
-        if (avatarFile) {
-          try {
-            await uploadAvatar(avatarFile);
-          } catch (e) {
-            console.warn("⚠️ [useRegister] 头像上传失败:", e);
-          }
-        }
-
         navigate("/u/home", { replace: true });
       }
 
@@ -76,5 +120,5 @@ export function useRegister(): UseRegisterReturn {
 
   const clearError = () => setError(null);
 
-  return { register, loading, error, clearError };
+  return { register, sendCode, loading, sendingCode, countdown, error, clearError };
 }

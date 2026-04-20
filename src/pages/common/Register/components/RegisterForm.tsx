@@ -1,62 +1,76 @@
 /**
  * 注册表单组件
- * 学号 + 密码注册，支持自定义头像
+ * 手机号 + 验证码 + 密码注册
  */
 
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input, Button } from "@/components/ui";
 import { useRegister } from "@/features/auth/hooks";
-import { Lock, Eye, EyeOff, AlertCircle, ArrowLeft, Camera, User } from "lucide-react";
+import { checkAccount } from "@/features/auth/services/authApi";
+import { Lock, Eye, EyeOff, AlertCircle, Phone, Shield, User, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 
 export const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
-  const { register, loading, error } = useRegister();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { register, sendCode, loading, sendingCode, countdown, error, clearError } = useRegister();
 
-  const [account, setAccount] = useState("");
+  const [phone, setPhone] = useState("");
+  const [smsCode, setSmsCode] = useState("");
+  const [username, setUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
-
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
+  const handleUsernameChange = (val: string) => {
+    setUsername(val);
+    setUsernameStatus("idle");
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setAvatarFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+  const handleUsernameBlur = async () => {
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return;
+    setUsernameStatus("checking");
+    const res = await checkAccount(username);
+    setUsernameStatus(res.available ? "available" : "taken");
+  };
+
+  const handleSendCode = async () => {
+    setFormError("");
+    clearError();
+    if (!phone) {
+      setFormError("请输入手机号");
+      return;
+    }
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      setFormError("请输入正确的手机号");
+      return;
+    }
+    await sendCode(phone);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setFormError("");
+    clearError();
 
-    if (!account) {
-      setFormError("请输入学号");
+    if (!username || !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      setFormError("请输入正确的用户名（3-20位字母、数字或下划线）");
       return;
     }
-    if (!/^\d+$/.test(account)) {
-      setFormError("学号只能包含数字");
+    if (usernameStatus === "taken") {
+      setFormError("该用户名已被使用");
       return;
     }
-    if (account.length < 2 || account.length > 20) {
-      setFormError("学号长度需在 2-20 位之间");
+    if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
+      setFormError("请输入正确的手机号");
       return;
     }
-    if (!password) {
-      setFormError("请设置密码");
+    if (!smsCode || !/^\d{4,6}$/.test(smsCode)) {
+      setFormError("请输入正确的验证码");
       return;
     }
-    if (password.length < 6) {
+    if (!password || password.length < 6) {
       setFormError("密码至少 6 位");
       return;
     }
@@ -65,7 +79,7 @@ export const RegisterForm: React.FC = () => {
       return;
     }
 
-    await register(account, password, avatarFile || undefined);
+    await register(phone, smsCode, password, username);
   };
 
   return (
@@ -87,57 +101,80 @@ export const RegisterForm: React.FC = () => {
             创建账号
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            使用学号注册，开启精彩活动之旅
+            使用手机号注册，开启精彩活动之旅
           </p>
-        </div>
-
-        {/* 头像选择 */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative">
-            <div
-              className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
-              onClick={handleAvatarClick}
-            >
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="头像" className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-10 h-10 text-gray-300 dark:text-gray-500" />
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={handleAvatarClick}
-              className="absolute bottom-0 right-0 w-6 h-6 bg-primary-400 rounded-full flex items-center justify-center shadow-md hover:bg-primary-500 transition-colors"
-            >
-              <Camera className="w-3.5 h-3.5 text-white" />
-            </button>
-          </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-            {avatarPreview ? "点击更换头像" : "点击上传头像（可选）"}
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
         </div>
 
         {/* 注册表单 */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* 学号 */}
+          {/* 用户名 */}
+          <div>
+            <Input
+              label="用户名"
+              type="text"
+              value={username}
+              onChange={(e) => handleUsernameChange(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))}
+              onBlur={handleUsernameBlur}
+              placeholder="3-20位字母、数字或下划线"
+              size="large"
+              prefix={<User className="w-5 h-5 text-gray-400" />}
+              suffix={
+                usernameStatus === "available" ? <CheckCircle className="w-5 h-5 text-green-500" /> :
+                usernameStatus === "taken" ? <XCircle className="w-5 h-5 text-red-500" /> :
+                usernameStatus === "checking" ? <span className="text-xs text-gray-400">检查中...</span> : null
+              }
+              maxLength={20}
+              required
+            />
+            {usernameStatus === "available" && <p className="text-xs text-green-500 mt-1">用户名可用</p>}
+            {usernameStatus === "taken" && <p className="text-xs text-red-500 mt-1">该用户名已被使用</p>}
+          </div>
+
+          {/* 手机号 */}
           <Input
-            label="学号"
-            type="text"
-            value={account}
-            onChange={(e) => setAccount(e.target.value.replace(/\D/g, ""))}
-            placeholder="请输入学号（如 56785679）"
+            label="手机号"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+            placeholder="请输入手机号"
             size="large"
-            prefix={<User className="w-5 h-5 text-gray-400" />}
-            maxLength={20}
+            prefix={<Phone className="w-5 h-5 text-gray-400" />}
+            maxLength={11}
             required
           />
+
+          {/* 验证码 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              验证码
+            </label>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  value={smsCode}
+                  onChange={(e) => setSmsCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="请输入验证码"
+                  size="large"
+                  prefix={<Shield className="w-5 h-5 text-gray-400" />}
+                  maxLength={6}
+                  required
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={countdown > 0 || sendingCode || !phone}
+                className="flex-shrink-0 px-4 h-12 bg-primary-400 text-white text-sm font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-500 transition-colors whitespace-nowrap"
+              >
+                {sendingCode
+                  ? "发送中..."
+                  : countdown > 0
+                    ? `${countdown}s 后重发`
+                    : "获取验证码"}
+              </button>
+            </div>
+          </div>
 
           {/* 密码 */}
           <Input

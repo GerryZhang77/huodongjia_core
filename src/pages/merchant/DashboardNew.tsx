@@ -136,17 +136,12 @@ const ActivityCard: FC<ActivityCardProps> = ({
     gray: "bg-gray-100 text-gray-600",
   };
 
-  // 格式化日期
+  // 格式化日期（确保 UTC 解析，避免无时区后缀时被当作本地时间）
   const formatDate = (dateStr: string) => {
-    if (!dateStr) {
-      console.warn('⚠️ formatDate: dateStr is empty');
-      return "待定";
-    }
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) {
-      console.warn('⚠️ formatDate: invalid date', dateStr);
-      return "日期格式错误";
-    }
+    if (!dateStr) return "待定";
+    const normalized = dateStr.includes('+') || dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+    const date = new Date(normalized);
+    if (isNaN(date.getTime())) return "日期格式错误";
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const hours = date.getHours().toString().padStart(2, "0");
@@ -257,7 +252,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
         <div className="space-y-2 mb-3">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Calendar size={14} className="text-gray-400" />
-            <span>4月10日 18:00</span>
+            <span>{formatDate(activity.eventStartTime)} - {formatDate(activity.eventEndTime)}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <MapPin size={14} className="text-gray-400" />

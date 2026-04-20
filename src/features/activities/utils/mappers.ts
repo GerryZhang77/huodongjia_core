@@ -48,6 +48,8 @@ export interface ApiActivityData {
   isPublic?: boolean;
   allow_waitlist?: boolean;
   allowWaitlist?: boolean;
+  enable_nfc?: boolean;
+  enableNfc?: boolean;
 }
 
 /**
@@ -92,6 +94,7 @@ export const mapApiActivityToActivity = (
       contactInfo: apiActivity.contactInfo || apiActivity.contact_info,
       isPublic: apiActivity.isPublic ?? apiActivity.is_public,
       allowWaitlist: apiActivity.allowWaitlist ?? apiActivity.allow_waitlist,
+      enableNfc: apiActivity.enableNfc ?? apiActivity.enable_nfc,
     };
 
     console.log("mapApiActivityToActivity - ✅ 转换成功:", result);

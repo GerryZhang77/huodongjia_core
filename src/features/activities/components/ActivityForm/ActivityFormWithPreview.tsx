@@ -36,6 +36,9 @@ import {
 } from "../../utils";
 import type { ActivityFormData, ActivityCategory } from "../../types";
 import { DatePickerField } from "./DatePickerField";
+import { CustomSelector } from "./CustomSelector";
+import { RequirementListEditor } from "./RequirementListEditor";
+import { RegistrationFormBuilder } from "../RegistrationFormBuilder";
 import { ActivityPreview } from "@/components/business";
 import { useAuthStore } from "@/features/auth/stores";
 
@@ -84,6 +87,7 @@ export const ActivityFormWithPreview: React.FC<
   // 编辑模式：填充表单数据
   useEffect(() => {
     if (isEdit && activity) {
+      console.log("[EditForm] activity from API:", { isPublic: activity.isPublic, allowWaitlist: activity.allowWaitlist, enableNfc: activity.enableNfc, category: activity.category, requirements: activity.requirements, contactInfo: activity.contactInfo });
       const initialValues = {
         title: activity.title,
         description: activity.description,
@@ -91,25 +95,24 @@ export const ActivityFormWithPreview: React.FC<
         end_time: new Date(activity.activityEnd),
         location: activity.location,
         max_participants: activity.capacity,
-        registration_start: new Date(activity.registrationStart),
-        registration_end: new Date(activity.registrationEnd),
-        category: activity.category,
+        registration_start: activity.registrationStart ? new Date(activity.registrationStart) : new Date(),
+        registration_end: activity.registrationEnd ? new Date(activity.registrationEnd) : new Date(),
+        category: activity.category ? [activity.category] : ["other"],
         tags: activity.tags || [],
-        requirements: activity.requirements,
-        contact_info: activity.contactInfo,
+        requirements: activity.requirements || "",
+        contact_info: activity.contactInfo || "",
         is_public: activity.isPublic !== false,
         allow_waitlist: activity.allowWaitlist === true,
+        enable_nfc: activity.enableNfc === true,
+        registration_form_schema: activity.registrationFormSchema || undefined,
       };
       form.setFieldsValue(initialValues);
-      setFormValues(initialValues);
+      setFormValues(initialValues as any);
 
-      if (activity.coverImage) {
-        setFileList([
-          {
-            url: activity.coverImage,
-            key: "cover",
-          },
-        ]);
+      if (activity.images && activity.images.length > 0) {
+        setFileList(activity.images.map((url, i) => ({ url, key: `img-${i}` })));
+      } else if (activity.coverImage) {
+        setFileList([{ url: activity.coverImage, key: "cover" }]);
       }
     }
   }, [isEdit, activity, form]);
@@ -121,7 +124,7 @@ export const ActivityFormWithPreview: React.FC<
         max_participants: 50,
         is_public: true,
         allow_waitlist: false,
-        category: "business" as ActivityCategory,
+        category: ["business"] as unknown as ActivityCategory,
         tags: [],
       };
       form.setFieldsValue(defaultValues);
@@ -166,6 +169,15 @@ export const ActivityFormWithPreview: React.FC<
         Toast.show({
           icon: "fail",
           content: "请填写活动标题和描述",
+        });
+        return;
+      }
+
+      // 验证图片
+      if (fileList.length === 0) {
+        Toast.show({
+          icon: "fail",
+          content: "请至少上传一张活动图片",
         });
         return;
       }
@@ -295,17 +307,17 @@ export const ActivityFormWithPreview: React.FC<
         </Form.Item>
 
         <Form.Item name="category" label="活动分类">
-          <Selector
+          <CustomSelector
             options={CATEGORY_OPTIONS}
-            style={{ "--border-radius": "8px" } as any}
+            placeholder="自定义分类（最多7字）"
           />
         </Form.Item>
 
         <Form.Item name="tags" label="活动标签">
-          <Selector
+          <CustomSelector
             options={TAG_OPTIONS}
-            {...({ multiple: true } as any)}
-            style={{ "--border-radius": "8px" } as any}
+            multiple
+            placeholder="自定义标签（最多7字）"
           />
         </Form.Item>
 
@@ -319,16 +331,7 @@ export const ActivityFormWithPreview: React.FC<
               </span>
             </div>
           }
-          rules={[
-            {
-              validator: () => {
-                if (fileList.length === 0) {
-                  return Promise.reject(new Error("请至少上传一张活动图片"));
-                }
-                return Promise.resolve();
-              },
-            },
-          ]}
+          rules={[]}
         >
           <div className="space-y-2">
             <ImageUploader
@@ -446,12 +449,24 @@ export const ActivityFormWithPreview: React.FC<
           />
         </Form.Item>
 
-        <Form.Item name="allow_waitlist" label="允许候补">
+        {/* 暂时隐藏：允许候补 & 公开活动 */}
+        {/* <Form.Item name="allow_waitlist" label="允许候补">
           <Switch onChange={handleFormChange} />
         </Form.Item>
 
         <Form.Item name="is_public" label="公开活动">
           <Switch onChange={handleFormChange} />
+        </Form.Item> */}
+      </Card>
+
+      {/* 报名信息收集 */}
+      <Card
+        title="报名信息收集"
+        className="mb-4"
+        style={{ "--border-radius": "12px" } as any}
+      >
+        <Form.Item name="registration_form_schema">
+          <RegistrationFormBuilder />
         </Form.Item>
       </Card>
 
@@ -463,6 +478,7 @@ export const ActivityFormWithPreview: React.FC<
       >
         <Form.Item
           name="enable_nfc"
+          valuePropName="checked"
           label={
             <div className="flex items-center gap-2">
               <span>NFC 碰一碰</span>
@@ -489,13 +505,7 @@ export const ActivityFormWithPreview: React.FC<
         style={{ "--border-radius": "12px" } as any}
       >
         <Form.Item name="requirements" label="参与要求">
-          <TextArea
-            placeholder="请描述参与者需要满足的条件或准备的物品"
-            maxLength={200}
-            {...({ showCount: true } as any)}
-            rows={3}
-            style={{ "--border-radius": "8px" } as any}
-          />
+          <RequirementListEditor />
         </Form.Item>
 
         <Form.Item name="contact_info" label="联系方式">

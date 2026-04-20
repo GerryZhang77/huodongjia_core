@@ -1,0 +1,153 @@
+/**
+ * 支持自定义选项的 Selector 组件
+ * 在预设选项基础上，允许用户添加自定义选项（限制字数）
+ */
+
+import React, { useState } from "react";
+import { Selector } from "antd-mobile";
+import { Plus, X } from "lucide-react";
+
+interface CustomSelectorProps {
+  options: { label: string; value: string }[];
+  value?: string[];
+  onChange?: (value: string[]) => void;
+  multiple?: boolean;
+  maxCustomLength?: number;
+  placeholder?: string;
+}
+
+export const CustomSelector: React.FC<CustomSelectorProps> = ({
+  options,
+  value = [],
+  onChange,
+  multiple = false,
+  maxCustomLength = 7,
+  placeholder = "输入自定义选项",
+}) => {
+  const [showInput, setShowInput] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const [customOptions, setCustomOptions] = useState<
+    { label: string; value: string }[]
+  >(() => {
+    // 从 value 中找出不在预设选项中的值，恢复为自定义选项
+    const presetValues = new Set(options.map((o) => o.value));
+    return value
+      .filter((v) => !presetValues.has(v))
+      .map((v) => ({ label: v, value: v }));
+  });
+
+  const allOptions = [...options, ...customOptions];
+
+  const addCustomOption = () => {
+    const trimmed = inputValue.trim();
+    if (!trimmed) return;
+    if (allOptions.some((o) => o.value === trimmed || o.label === trimmed))
+      return;
+
+    const newOption = { label: trimmed, value: `custom_${trimmed}` };
+    const newCustomOptions = [...customOptions, newOption];
+    setCustomOptions(newCustomOptions);
+
+    // 自动选中新添加的选项
+    if (multiple) {
+      onChange?.([...value, newOption.value]);
+    } else {
+      onChange?.([newOption.value]);
+    }
+
+    setInputValue("");
+    setShowInput(false);
+  };
+
+  const removeCustomOption = (optValue: string) => {
+    setCustomOptions((prev) => prev.filter((o) => o.value !== optValue));
+    onChange?.(value.filter((v) => v !== optValue));
+  };
+
+  return (
+    <div>
+      <Selector
+        options={allOptions}
+        value={value}
+        onChange={(v) => onChange?.(v as string[])}
+        {...(multiple ? { multiple: true } : {})}
+        style={{ "--border-radius": "8px" } as any}
+      />
+
+      {/* 自定义选项标签（显示删除按钮） */}
+      {customOptions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {customOptions.map((opt) => (
+            <span
+              key={opt.value}
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full"
+            >
+              {opt.label}
+              <button
+                type="button"
+                onClick={() => removeCustomOption(opt.value)}
+                className="p-0.5 hover:text-red-500 transition-colors"
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* 添加自定义选项 */}
+      {showInput ? (
+        <div className="flex items-center gap-2 mt-2">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => {
+              if (e.target.value.length <= maxCustomLength) {
+                setInputValue(e.target.value);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addCustomOption();
+              }
+            }}
+            className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary-400 transition-colors"
+            placeholder={placeholder}
+            maxLength={maxCustomLength}
+            autoFocus
+          />
+          <span className="text-xs text-gray-400 whitespace-nowrap">
+            {inputValue.length}/{maxCustomLength}
+          </span>
+          <button
+            type="button"
+            onClick={addCustomOption}
+            className="px-3 py-1.5 text-xs text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            添加
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowInput(false);
+              setInputValue("");
+            }}
+            className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowInput(true)}
+          className="flex items-center gap-1 mt-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-300 hover:text-primary-500 transition-colors"
+        >
+          <Plus size={12} />
+          自定义
+        </button>
+      )}
+    </div>
+  );
+};
