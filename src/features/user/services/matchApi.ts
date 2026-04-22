@@ -27,7 +27,7 @@ export async function getBestMatches(eventId: string) {
  * @returns 参与者列表
  */
 export async function getParticipants(eventId: string) {
-  const response = await api.get(`/api/match/${eventId}/participants`);
+  const response = await api.get(`/api/enrollments/${eventId}`);
   console.log("[matchApi] getParticipants 原始响应:", response);
   return response;
 }
