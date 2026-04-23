@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "lsof -ti:5174 | xargs kill -9 2>/dev/null; vite --mode development --port 5174 --strictPort",
-    "dev:local": "lsof -ti:5174 | xargs kill -9 2>/dev/null; vite --mode localdev --port 5174 --strictPort",
+    "dev:local": "lsof -ti:5174 | xargs kill -9 2>/dev/null; LOCAL_IP=$(ipconfig getifaddr en0) && sed -i '' \"s|VITE_API_BASE_URL=.*|VITE_API_BASE_URL=http://$LOCAL_IP:3006|\" env/.env.localdev; vite --mode localdev --port 5174 --strictPort",
     "dev:staging": "lsof -ti:5174 | xargs kill -9 2>/dev/null; vite --mode staging --port 5174 --strictPort",
     "dev:test": "lsof -ti:5174 | xargs kill -9 2>/dev/null; vite --mode test --port 5174 --strictPort",
     "build": "tsc -b && vite build --mode production",
