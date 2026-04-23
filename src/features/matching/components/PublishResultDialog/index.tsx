@@ -57,10 +57,13 @@ export interface PublishResultDialogProps {
   participantCount: number;
   /** 参与者预览列表 */
   participants?: ParticipantPreview[];
+  /** 匹配质量统计（来自后端；avgScore/minScore/maxScore 均为 0-1 的 cosine 相似度） */
   matchingStats?: {
     avgScore: number;
     minScore: number;
     maxScore: number;
+    /** 每人推荐候选数；缺省为 5 */
+    topK?: number;
   };
   onConfirm: (
     sendNotification: boolean,
@@ -80,7 +83,6 @@ const DEFAULT_NOTIFICATION_CONTENT =
 export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
   visible,
   groups,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   participantCount,
   participants = [],
   matchingStats,
@@ -101,29 +103,35 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
   const [showParticipantPreview, setShowParticipantPreview] = useState(false);
 
   // 计算统计数据
+  // 当前匹配模型是 per-user top5：每个参与者一条记录，上层传入时会把每人 top5 合成一个"伪组"。
+  // 所以要对所有组的 members 去重后才是真实的独立参与者数。
   const stats = useMemo(() => {
-    const totalGroups = groups.length;
-    const totalMembers = groups.reduce((sum, g) => sum + g.members.length, 0);
+    const uniqueMemberIds = new Set<string>();
+    groups.forEach((g) => g.members.forEach((id) => uniqueMemberIds.add(id)));
+    const totalMembers = uniqueMemberIds.size;
+
     const lockedCount = groups.filter((g) => g.isLocked).length;
     const warningCount = groups.filter(
       (g) => g.warnings && g.warnings.length > 0,
     ).length;
 
-    // 计算组大小范围
-    const groupSizes = groups.map((g) => g.members.length);
-    const minGroupSize = groupSizes.length > 0 ? Math.min(...groupSizes) : 0;
-    const maxGroupSize = groupSizes.length > 0 ? Math.max(...groupSizes) : 0;
+    // 分数是否可用（后端有返回才展示；全为 0 视为无数据）
+    const hasScoreData = !!(
+      matchingStats &&
+      (matchingStats.avgScore > 0 ||
+        matchingStats.maxScore > 0 ||
+        matchingStats.minScore > 0)
+    );
 
     return {
-      totalGroups,
       totalMembers,
       lockedCount,
       warningCount,
-      minGroupSize,
-      maxGroupSize,
-      avgScore: matchingStats?.avgScore || 0,
-      minScore: matchingStats?.minScore || 0,
-      maxScore: matchingStats?.maxScore || 0,
+      hasScoreData,
+      avgScore: matchingStats?.avgScore ?? 0,
+      minScore: matchingStats?.minScore ?? 0,
+      maxScore: matchingStats?.maxScore ?? 0,
+      topK: matchingStats?.topK ?? 5,
     };
   }, [groups, matchingStats]);
 
@@ -132,11 +140,14 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
     const withPhone = participants.filter((p) => p.phone).length;
     const withEmail = participants.filter((p) => p.email).length;
     return {
-      inApp: stats.totalMembers,
+      inApp: participantCount,
       sms: withPhone,
       email: withEmail,
     };
-  }, [participants, stats.totalMembers]);
+  }, [participants, participantCount]);
+
+  // 0-1 的 cosine 相似度 → 0-100 百分比展示
+  const toPercent = (v: number) => Math.round(v * 100);
 
   // 切换通知渠道
   const toggleChannel = (channel: NotificationChannel) => {
@@ -200,27 +211,29 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="text-center p-2 bg-white rounded-lg">
                 <p className="text-2xl font-bold text-primary-600">
-                  {stats.totalGroups}
+                  {participantCount}
                 </p>
-                <p className="text-xs text-gray-500">分组数</p>
+                <p className="text-xs text-gray-500">参与者人数</p>
               </div>
               <div className="text-center p-2 bg-white rounded-lg">
                 <p className="text-2xl font-bold text-green-600">
-                  {stats.totalMembers}
+                  Top {stats.topK}
                 </p>
-                <p className="text-xs text-gray-500">已分组人数</p>
+                <p className="text-xs text-gray-500">每人推荐候选</p>
               </div>
               <div className="text-center p-2 bg-white rounded-lg">
                 <p className="text-2xl font-bold text-purple-600">
-                  {stats.avgScore.toFixed(0)}
+                  {stats.hasScoreData ? `${toPercent(stats.avgScore)}%` : "—"}
                 </p>
-                <p className="text-xs text-gray-500">平均分数</p>
+                <p className="text-xs text-gray-500">平均匹配分</p>
               </div>
               <div className="text-center p-2 bg-white rounded-lg">
                 <p className="text-lg font-bold text-gray-600">
-                  {stats.minGroupSize}-{stats.maxGroupSize}
+                  {stats.hasScoreData
+                    ? `${toPercent(stats.minScore)}%-${toPercent(stats.maxScore)}%`
+                    : "—"}
                 </p>
-                <p className="text-xs text-gray-500">组人数范围</p>
+                <p className="text-xs text-gray-500">得分范围</p>
               </div>
             </div>
           </div>
@@ -521,7 +534,7 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
             onClick={handleConfirm}
             disabled={
               isLoading ||
-              stats.totalGroups === 0 ||
+              participantCount === 0 ||
               (sendNotification && selectedChannels.length === 0)
             }
             className="flex-1"
@@ -553,8 +566,9 @@ export interface PublishResultFeedbackProps {
   success: boolean;
   /** 成功时的统计 */
   stats?: {
-    groupCount: number;
-    memberCount: number;
+    /** 参与者人数（= 收到推荐的独立用户数） */
+    participantCount: number;
+    /** 已发送通知的人数 */
     notifiedCount?: number;
     channels?: NotificationChannel[];
   };
@@ -609,15 +623,15 @@ export const PublishResultFeedback: React.FC<PublishResultFeedbackProps> = ({
                   <div className="grid grid-cols-2 gap-3 text-center">
                     <div>
                       <p className="text-2xl font-bold text-primary-600">
-                        {stats.groupCount}
+                        {stats.participantCount}
                       </p>
-                      <p className="text-xs text-gray-500">分组数</p>
+                      <p className="text-xs text-gray-500">参与者人数</p>
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-green-600">
-                        {stats.memberCount}
+                        {stats.notifiedCount ?? stats.participantCount}
                       </p>
-                      <p className="text-xs text-gray-500">已分组人数</p>
+                      <p className="text-xs text-gray-500">已通知人数</p>
                     </div>
                   </div>
 

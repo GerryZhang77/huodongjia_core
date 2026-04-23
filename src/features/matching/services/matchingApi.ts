@@ -226,13 +226,29 @@ export const executeMatching = async (
  * 获取匹配结果（商家视图）
  *
  * 后端返回：
- *   { success, message, groups: [{ id, event_id, user_id, match_id, best_match_users: [uuid×5], created_at }] }
- * 每条记录代表"某个参与者的 top5 匹配"。同时并行拉取 /api/enrollments/:eventId
- * 获取所有参与者的详情用于渲染。
+ *   { success, message, groups: [{ id, event_id, user_id, match_id, best_match_users: [uuid×5], created_at }],
+ *     stats?: { totalParticipants, averageScore, minScore, maxScore, topK } }
+ * 每条 group 记录代表"某个参与者的 top5 匹配"。同时并行拉取 /api/enrollments/:eventId
+ * 获取所有参与者的详情用于渲染。stats 为可选字段，老版本后端可能不返回。
  */
+export interface MatchStatsResponse {
+  /** 参与者（= 收到推荐的独立用户）数量 */
+  totalParticipants: number;
+  /** 平均匹配分（0-1 的 cosine 相似度） */
+  averageScore: number;
+  minScore: number;
+  maxScore: number;
+  /** 每人推荐候选数（通常为 5） */
+  topK: number;
+}
+
 export const getMatchGroups = async (
   activityId: string,
-): Promise<{ results: ParticipantMatchResult[]; participants: any[] }> => {
+): Promise<{
+  results: ParticipantMatchResult[];
+  participants: any[];
+  stats: MatchStatsResponse | null;
+}> => {
   const token = getToken();
 
   const [resultsResp, enrollResp] = await Promise.all([
@@ -296,7 +312,30 @@ export const getMatchGroups = async (
     });
   }
 
-  return { results, participants };
+  // 解析后端返回的 stats（可选字段，老版本后端不返回时为 null）
+  let stats: MatchStatsResponse | null = null;
+  const rawStats = data.stats || data.data?.stats;
+  if (rawStats && typeof rawStats === "object") {
+    const avg = Number(rawStats.averageScore ?? rawStats.average_score);
+    const min = Number(rawStats.minScore ?? rawStats.min_score);
+    const max = Number(rawStats.maxScore ?? rawStats.max_score);
+    const total = Number(
+      rawStats.totalParticipants ?? rawStats.total_participants,
+    );
+    const topK = Number(rawStats.topK ?? rawStats.top_k);
+    // 至少有一项分数有效才认为 stats 可用
+    if (Number.isFinite(avg) || Number.isFinite(min) || Number.isFinite(max)) {
+      stats = {
+        totalParticipants: Number.isFinite(total) ? total : results.length,
+        averageScore: Number.isFinite(avg) ? avg : 0,
+        minScore: Number.isFinite(min) ? min : 0,
+        maxScore: Number.isFinite(max) ? max : 0,
+        topK: Number.isFinite(topK) && topK > 0 ? topK : 5,
+      };
+    }
+  }
+
+  return { results, participants, stats };
 };
 
 /**

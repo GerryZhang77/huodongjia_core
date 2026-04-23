@@ -214,9 +214,11 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         }
 
         if (!publishedResolved) {
-          const matchResult = await getMatchGroups(activityId).catch(
-            () => ({ results: [] as ParticipantMatchResult[], participants: [] as any[] }),
-          );
+          const matchResult = await getMatchGroups(activityId).catch(() => ({
+            results: [] as ParticipantMatchResult[],
+            participants: [] as any[],
+            stats: null,
+          }));
           if (aborted) return;
           if (matchResult.results.length > 0) {
             setMatchResults(matchResult.results);
@@ -225,13 +227,20 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
             }
             setStage("completed");
             setActiveTab("results");
-            setMatchingStats({
-              avgScore: 0,
-              minScore: 0,
-              maxScore: 0,
-              totalGroups: matchResult.results.length,
-              totalParticipants: matchResult.participants.length,
-            });
+            // 后端返回了 stats 才写入真实分数；没有则留 null，UI 会显示 "—"
+            if (matchResult.stats) {
+              setMatchingStats({
+                avgScore: matchResult.stats.averageScore,
+                minScore: matchResult.stats.minScore,
+                maxScore: matchResult.stats.maxScore,
+                totalGroups: matchResult.results.length,
+                totalParticipants:
+                  matchResult.stats.totalParticipants ||
+                  matchResult.participants.length,
+              });
+            } else {
+              setMatchingStats(null);
+            }
           }
         }
       } catch (error) {
@@ -428,9 +437,11 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
           // 重新加载数据（per-user top5 + 历史）
           const [matchData, historyData] = await Promise.all([
-            getMatchGroups(activityId).catch(
-              () => ({ results: [] as ParticipantMatchResult[], participants: [] as any[] }),
-            ),
+            getMatchGroups(activityId).catch(() => ({
+              results: [] as ParticipantMatchResult[],
+              participants: [] as any[],
+              stats: null,
+            })),
             getMatchingHistory(activityId).catch(() => [] as MatchingHistory[]),
           ]);
 
@@ -441,13 +452,20 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
             }
             setStage("completed");
             setActiveTab("results");
-            setMatchingStats({
-              avgScore: 0,
-              minScore: 0,
-              maxScore: 0,
-              totalGroups: matchData.results.length,
-              totalParticipants: matchData.participants.length || participants.length,
-            });
+            if (matchData.stats) {
+              setMatchingStats({
+                avgScore: matchData.stats.averageScore,
+                minScore: matchData.stats.minScore,
+                maxScore: matchData.stats.maxScore,
+                totalGroups: matchData.results.length,
+                totalParticipants:
+                  matchData.stats.totalParticipants ||
+                  matchData.participants.length ||
+                  participants.length,
+              });
+            } else {
+              setMatchingStats(null);
+            }
           }
 
           if (historyData) {

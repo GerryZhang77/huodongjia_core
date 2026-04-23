@@ -298,6 +298,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   onPublish,
   onRematch,
   isRematching,
+  matchingStats,
   history = [],
   currentHistoryId = null,
   onViewHistory,
@@ -633,6 +634,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         groups={publishGroupStats}
         participantCount={matchResults.length}
         participants={participantPreviews}
+        matchingStats={matchingStats}
         onConfirm={handlePublishClick}
         onCancel={() => setShowPublishDialog(false)}
         isLoading={isPublishing}
