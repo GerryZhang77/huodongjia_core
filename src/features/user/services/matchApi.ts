@@ -31,11 +31,18 @@ export async function getBestMatches(eventId: string) {
 /**
  * 获取活动参与者列表
  *
+ * 注意：后端默认 pageSize=20，而本接口用于把 best-matches 返回的 user_id
+ * 映射成完整参与者信息。报名人数 >20 时若不显式传大分页，top5 里排名靠后、
+ * 报名较早的用户会落在第二页之后，在前端被无声过滤掉，导致展示少于应有数量。
+ * 这里与商户侧 / 匹配管理侧保持一致，传 pageSize=1000 拉取全量。
+ *
  * @param eventId - 活动 ID
  * @returns 参与者列表
  */
 export async function getParticipants(eventId: string) {
-  const response = await api.get(`/api/enrollments/${eventId}`);
+  const response = await api.get(`/api/enrollments/${eventId}`, {
+    params: { page: 1, pageSize: 1000 },
+  });
   console.log("[matchApi] getParticipants 原始响应:", response);
   return response;
 }
