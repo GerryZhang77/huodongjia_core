@@ -62,10 +62,12 @@ export function useLogin() {
         console.log("🔍 [useLogin] localStorage 内容:", stored);
 
         // 显示成功通知
-        authNotification.success(
-          "登录成功",
-          `欢迎回来，${response.user.name}！`
-        );
+        // User.name 可能为空（只设置了账号）——回退到 account，最后再回退到 '你'
+        const displayName =
+          (response.user.name && response.user.name.trim()) ||
+          response.user.account ||
+          "你";
+        authNotification.success("登录成功", `欢迎回来，${displayName}！`);
 
         // 延迟跳转，确保通知显示
         debugLogger.log("[useLogin] 准备跳转");

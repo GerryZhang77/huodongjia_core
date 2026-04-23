@@ -11,7 +11,7 @@
  * - 完整响应式支持 (移动端/平板/桌面)
  */
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input, Modal, Checkbox } from "@/components/ui";
 import { useLogin } from "@/features/auth/hooks";
@@ -31,6 +31,7 @@ export const LoginForm: React.FC = () => {
   const [agreeTerms, setAgreeTerms] = useState<boolean>(false);
   const [showTestAccounts, setShowTestAccounts] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   // 协议弹窗状态
   const [showUserAgreement, setShowUserAgreement] = useState<boolean>(false);
@@ -111,21 +112,33 @@ export const LoginForm: React.FC = () => {
             label="账号"
             type="text"
             value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
+            onChange={(e) => {
+              setIdentifier(e.target.value);
+              if (error) setError("");
+            }}
             placeholder="请输入账号"
             autoComplete="username"
             size="large"
             suffix={<Mail className="w-5 h-5 text-gray-400" />}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                passwordRef.current?.focus();
+              }
+            }}
             required
           />
 
           {/* 密码输入框 - 使用通用 Input 组件 */}
           <Input
+            ref={passwordRef}
             label="密码"
             type={showPassword ? "text" : "password"}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (error) setError("");
+            }}
             placeholder="••••••••"
             autoComplete="current-password"
             size="large"
@@ -142,7 +155,6 @@ export const LoginForm: React.FC = () => {
                 )}
               </button>
             }
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             required
           />
 
