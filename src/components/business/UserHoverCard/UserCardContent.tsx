@@ -4,20 +4,22 @@
  */
 
 import { FC } from "react";
-import { MapPin, Briefcase, ChevronRight } from "lucide-react";
+import { MapPin, Briefcase, ChevronRight, Building2, Cake } from "lucide-react";
 import { clsx } from "clsx";
 import type { UserCardContentProps } from "./types";
 
-/**
- * 用户卡片内容
- */
+const GENDER_LABEL: Record<string, string> = {
+  male: "男",
+  female: "女",
+  other: "其他",
+};
+
 export const UserCardContent: FC<UserCardContentProps> = ({
   user,
   matchScore,
   onViewProfile,
   className,
 }) => {
-  // 获取头像显示内容
   const getAvatarContent = () => {
     if (user.avatar) {
       return (
@@ -35,10 +37,13 @@ export const UserCardContent: FC<UserCardContentProps> = ({
     );
   };
 
+  const genderLabel = user.gender ? GENDER_LABEL[user.gender] : undefined;
+  const hasMeta = genderLabel || user.age !== undefined;
+
   return (
     <div
       className={clsx(
-        "w-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg",
+        "w-72 bg-white dark:bg-gray-800 rounded-xl shadow-lg",
         "border border-gray-100 dark:border-gray-700",
         "overflow-hidden",
         className
@@ -46,7 +51,6 @@ export const UserCardContent: FC<UserCardContentProps> = ({
     >
       {/* 顶部背景 + 头像 */}
       <div className="relative h-16 bg-gradient-to-br from-primary-400 to-primary-500">
-        {/* 头像 */}
         <div className="absolute -bottom-6 left-4">
           <div className="w-14 h-14 rounded-full bg-white dark:bg-gray-800 p-0.5 shadow-md">
             <div className="w-full h-full rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center overflow-hidden">
@@ -55,7 +59,6 @@ export const UserCardContent: FC<UserCardContentProps> = ({
           </div>
         </div>
 
-        {/* 匹配度标签 */}
         {matchScore !== undefined && (
           <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 dark:bg-gray-800/90 rounded-full">
             <span className="text-xs font-semibold text-primary-600 dark:text-primary-400">
@@ -67,8 +70,8 @@ export const UserCardContent: FC<UserCardContentProps> = ({
 
       {/* 用户信息 */}
       <div className="pt-8 px-4 pb-3">
-        {/* 姓名和角色 */}
-        <div className="flex items-center gap-2 mb-1">
+        {/* 姓名 + 角色 + 性别/年龄 */}
+        <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-1">
           <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">
             {user.name}
           </h4>
@@ -77,10 +80,17 @@ export const UserCardContent: FC<UserCardContentProps> = ({
               {user.role}
             </span>
           )}
+          {hasMeta && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] rounded">
+              {genderLabel}
+              {genderLabel && user.age !== undefined && " · "}
+              {user.age !== undefined && `${user.age}岁`}
+            </span>
+          )}
         </div>
 
-        {/* 职业和城市 */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
+        {/* 职业 · 城市 */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-1.5">
           {user.occupation && (
             <span className="flex items-center gap-1">
               <Briefcase size={12} />
@@ -94,6 +104,38 @@ export const UserCardContent: FC<UserCardContentProps> = ({
             </span>
           )}
         </div>
+
+        {/* 公司 · 行业 */}
+        {(user.company || user.industry) && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+            {user.company && (
+              <span className="flex items-center gap-1 truncate">
+                <Building2 size={12} />
+                <span className="truncate">{user.company}</span>
+              </span>
+            )}
+            {user.industry && (
+              <span className="flex items-center gap-1 truncate">
+                <Cake size={12} />
+                <span className="truncate">{user.industry}</span>
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* 简介 */}
+        {user.bio && (
+          <p
+            className="text-xs text-gray-500 dark:text-gray-400 mb-2 overflow-hidden leading-relaxed"
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
+            {user.bio}
+          </p>
+        )}
 
         {/* 标签 */}
         {user.tags && user.tags.length > 0 && (
@@ -118,9 +160,9 @@ export const UserCardContent: FC<UserCardContentProps> = ({
         {onViewProfile && (
           <button
             onClick={onViewProfile}
-            className="w-full flex items-center justify-center gap-1 py-2 text-xs font-medium text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
+            className="w-full flex items-center justify-center gap-1 py-2 text-xs font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 rounded-lg transition-colors"
           >
-            查看详情
+            查看个人主页
             <ChevronRight size={14} />
           </button>
         )}

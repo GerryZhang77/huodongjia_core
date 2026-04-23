@@ -10,6 +10,16 @@ export interface UserBrief {
   occupation?: string;
   city?: string;
   tags?: string[];
+  /** 性别 */
+  gender?: "male" | "female" | "other";
+  /** 年龄 */
+  age?: number;
+  /** 所在公司 */
+  company?: string;
+  /** 所属行业 */
+  industry?: string;
+  /** 个人简介 */
+  bio?: string;
 }
 
 export interface UserHoverCardProps {

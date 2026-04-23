@@ -324,11 +324,12 @@ function App() {
                   }
                 />
 
-                {/* 用户公开资料页 (查看其他用户) */}
+                {/* 用户公开资料页 (查看其他用户)
+                    商家侧在匹配结果中点击参与者也会进入此页 */}
                 <Route
                   path="/u/profile/:userId"
                   element={
-                    <ProtectedRoute requiredRole="user">
+                    <ProtectedRoute requiredRole={["user", "organizer", "admin"]}>
                       <UserPublicProfile />
                     </ProtectedRoute>
                   }
