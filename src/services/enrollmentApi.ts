@@ -148,6 +148,7 @@ export async function importEnrollments(
 ): Promise<ImportEnrollmentResult> {
   return api.post(`/api/enrollments/${activityId}/import`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 60_000,
   });
 }
 

@@ -80,5 +80,6 @@ export async function uploadMerchantAvatar(
   formData.append("file", file);
   return api.post("/api/merchant/profile/avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 60_000,
   });
 }

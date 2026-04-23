@@ -185,6 +185,7 @@ export const uploadCoverImage = async (file: File): Promise<string> => {
     headers: {
       "Content-Type": "multipart/form-data",
     },
+    timeout: 60_000,
   })) as ApiResponse<{
     url: string;
     filename: string;

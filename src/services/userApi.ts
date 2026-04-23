@@ -207,6 +207,7 @@ export async function uploadAvatar(file: File): Promise<{
 
   return api.post("/api/user/profile/avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 60_000,
   });
 }
 
@@ -223,7 +224,10 @@ export async function uploadPhoto(file: File): Promise<{
   const res = await api.post<{ success: boolean; url?: string }>(
     "/api/file/upload-image",
     formData,
-    { headers: { "Content-Type": "multipart/form-data" } }
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 60_000,
+    }
   );
   return { success: res.success, url: res.url };
 }

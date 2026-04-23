@@ -26,6 +26,7 @@ export const fileUploadApi = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 60_000,
       }
     );
 
