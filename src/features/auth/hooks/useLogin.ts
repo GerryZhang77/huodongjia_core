@@ -62,12 +62,28 @@ export function useLogin() {
         console.log("🔍 [useLogin] localStorage 内容:", stored);
 
         // 显示成功通知
-        // User.name 可能为空（只设置了账号）——回退到 account，最后再回退到 '你'
-        const displayName =
-          (response.user.name && response.user.name.trim()) ||
-          response.user.account ||
-          "你";
-        authNotification.success("登录成功", `欢迎回来，${displayName}！`);
+        // 兜底顺序：服务端 name → 服务端 account → 用户刚输入的 identifier（手机号脱敏） → 空
+        // 全空时不要再强塞"你"，改用无称呼问候
+        const rawName = response.user.name?.trim();
+        const rawAccount = response.user.account?.trim();
+        const rawIdentifier = credentials.identifier?.trim();
+        const maskedIdentifier =
+          rawIdentifier && /^1[3-9]\d{9}$/.test(rawIdentifier)
+            ? rawIdentifier.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2")
+            : rawIdentifier;
+        const displayName = rawName || rawAccount || maskedIdentifier || "";
+
+        if (!rawName && !rawAccount) {
+          console.warn(
+            "[useLogin] 服务端未返回 name/account，回退到用户输入的 identifier",
+            { userId: response.user.id },
+          );
+        }
+
+        authNotification.success(
+          "登录成功",
+          displayName ? `欢迎回来，${displayName}！` : "欢迎回来！",
+        );
 
         // 延迟跳转，确保通知显示
         debugLogger.log("[useLogin] 准备跳转");
