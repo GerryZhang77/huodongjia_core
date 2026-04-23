@@ -9,7 +9,7 @@
 import React, { useState, useMemo } from "react";
 import { Toast } from "antd-mobile";
 import {
-  Sparkles,
+  FileText,
   Plus,
   Trash2,
   ChevronDown,
@@ -21,9 +21,6 @@ import {
   Users,
   Scale,
   Building2,
-  Lock,
-  X,
-  RefreshCw,
 } from "lucide-react";
 import { Button, Switch } from "@/components/ui";
 import { WeightSlider } from "../WeightSlider";
@@ -54,20 +51,14 @@ interface RulesTabProps {
   participantCount: number;
   /** 规则是否锁定（匹配过程中不可编辑） */
   isRulesLocked?: boolean;
-  /** 是否处于重新匹配模式 */
-  isRematchMode?: boolean;
-  /** 重新匹配时锁定的分组数量 */
-  lockedGroupsCount?: number;
-  /** 取消重新匹配模式 */
-  onCancelRematchMode?: () => void;
   /** 已保存的配置列表 */
   savedConfigs?: SavedConfig[];
   /** 加载已保存的配置 */
   onLoadConfig?: (config: SavedConfig) => void;
   /** 删除已保存的配置 */
   onDeleteConfig?: (configId: string) => void;
-  /** AI 生成规则（传入自然语言描述） */
-  onGenerateRules?: (description: string) => Promise<void>;
+  /** 从报名表字段派生匹配规则 */
+  onGenerateRules?: () => Promise<void>;
   /** 是否正在生成规则 */
   isGeneratingRules?: boolean;
 }
@@ -190,9 +181,6 @@ const RulesTab: React.FC<RulesTabProps> = ({
   matchingProgress,
   participantCount,
   isRulesLocked = false,
-  isRematchMode = false,
-  lockedGroupsCount = 0,
-  onCancelRematchMode,
   savedConfigs = [],
   onLoadConfig,
   onDeleteConfig,
@@ -202,7 +190,6 @@ const RulesTab: React.FC<RulesTabProps> = ({
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showConstraints, setShowConstraints] = useState(false);
-  const [aiInput, setAiInput] = useState("");
 
   // 保存配置弹窗状态
   const [showSaveConfigDialog, setShowSaveConfigDialog] = useState(false);
@@ -255,7 +242,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
       await onSaveRules(configName);
       setShowSaveConfigDialog(false);
       Toast.show({ content: `配置"${configName}"已保存`, icon: "success" });
-    } catch (error) {
+    } catch {
       Toast.show({ content: "保存失败，请重试", icon: "fail" });
     } finally {
       setIsSavingConfig(false);
@@ -286,78 +273,31 @@ const RulesTab: React.FC<RulesTabProps> = ({
 
   return (
     <div className="pb-32">
-      {/* AI 生成规则区域 */}
-      {onGenerateRules && !isRulesLocked && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles size={18} className="text-primary-500" />
-            <h3 className="text-base font-semibold text-gray-900">AI 生成规则</h3>
+      {/* 报名表派生规则说明 */}
+      {onGenerateRules && !isRulesLocked && rules.length === 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4 text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-primary-50 flex items-center justify-center">
+            <FileText size={22} className="text-primary-500" />
           </div>
-          <textarea
-            value={aiInput}
-            onChange={(e) => setAiInput(e.target.value)}
-            placeholder="描述你的匹配需求，例如：希望将兴趣相近、行业相同的参与者分在一组"
-            rows={3}
-            disabled={isGeneratingRules}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400 disabled:opacity-50"
-          />
+          <h3 className="text-base font-semibold text-gray-900 mb-1">
+            暂无匹配规则
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            规则来源于活动报名表中配置的信息收集字段，点击下方按钮自动生成
+          </p>
           <button
-            onClick={async () => {
-              if (!aiInput.trim()) {
-                Toast.show({ content: "请输入匹配需求描述", icon: "fail" });
-                return;
-              }
-              await onGenerateRules(aiInput);
-            }}
-            disabled={isGeneratingRules || !aiInput.trim()}
-            className="mt-2 w-full py-2.5 flex items-center justify-center gap-2 bg-gradient-to-r from-primary-500 to-accent-500 text-white text-sm font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => onGenerateRules()}
+            disabled={isGeneratingRules}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGeneratingRules ? (
               <><Loader2 size={16} className="animate-spin" />生成中...</>
             ) : (
-              <><Sparkles size={16} />生成匹配规则</>
+              <><FileText size={16} />从报名表生成规则</>
             )}
           </button>
         </div>
       )}
-      {/* 重新匹配模式提示 Banner */}
-      {isRematchMode && (
-        <div className="mb-4 p-4 bg-gradient-to-r from-primary-50 to-accent-50 border border-primary-200 rounded-xl">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-400 flex items-center justify-center flex-shrink-0 shadow-sm">
-              <RefreshCw size={20} className="text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <h4 className="text-sm font-semibold text-gray-900">
-                  重新匹配模式
-                </h4>
-                {onCancelRematchMode && (
-                  <button
-                    onClick={onCancelRematchMode}
-                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 rounded-lg transition-colors"
-                  >
-                    <X size={14} />
-                    取消
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-600 mt-1">
-                调整规则后点击"开始匹配"重新计算未锁定的分组
-              </p>
-              {lockedGroupsCount > 0 && (
-                <div className="flex items-center gap-1.5 mt-2 px-2 py-1 bg-white/60 rounded-lg w-fit">
-                  <Lock size={12} className="text-amber-500" />
-                  <span className="text-xs font-medium text-amber-700">
-                    {lockedGroupsCount} 个分组已锁定，将保持不变
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 匹配进行中提示 */}
       {isRulesLocked && (
         <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
@@ -385,14 +325,31 @@ const RulesTab: React.FC<RulesTabProps> = ({
                 {rules.length} 条
               </span>
             </div>
-            {enabledRules.length > 0 && (
-              <div className="text-sm">
-                <span className="text-gray-500">权重总和: </span>
-                <span className="font-semibold text-primary-500">
-                  {totalWeight}%
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {enabledRules.length > 0 && (
+                <div className="text-sm">
+                  <span className="text-gray-500">权重总和: </span>
+                  <span className="font-semibold text-primary-500">
+                    {totalWeight}%
+                  </span>
+                </div>
+              )}
+              {onGenerateRules && !isRulesLocked && (
+                <button
+                  onClick={() => onGenerateRules()}
+                  disabled={isGeneratingRules}
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
+                  title="用报名表的最新字段覆盖当前规则（不含自定义条目）"
+                >
+                  {isGeneratingRules ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <FileText size={12} />
+                  )}
+                  重新从报名表生成
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 权重说明 */}

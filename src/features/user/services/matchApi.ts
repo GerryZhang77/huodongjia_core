@@ -3,21 +3,29 @@
  */
 
 import { api } from "@/services/api";
+import { AxiosError } from "axios";
 
 /**
  * 获取用户的最佳匹配列表（TopK）
  *
+ * 404（"未找到最佳匹配记录"）在业务上等同于"尚未匹配"——
+ * 统一降级为空数据，由调用方走空态 UI，而不是报错 Toast。
+ *
  * @param eventId - 活动 ID
- * @returns 最佳匹配用户列表
+ * @returns 最佳匹配用户列表（或空数组）
  */
 export async function getBestMatches(eventId: string) {
-  const response = await api.get(`/api/match/${eventId}/best-matches`);
-
-  // 注意：api.get 已经通过拦截器返回了 response.data
-  // 所以这里的 response 就是后端返回的数据对象
-  console.log("[matchApi] getBestMatches 原始响应:", response);
-
-  return response;
+  try {
+    const response = await api.get(`/api/match/${eventId}/best-matches`);
+    console.log("[matchApi] getBestMatches 原始响应:", response);
+    return response;
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      console.info("[matchApi] getBestMatches: 该用户尚未在此活动中被匹配，按空态处理");
+      return { success: true, data: [], message: "尚未匹配" };
+    }
+    throw err;
+  }
 }
 
 /**
@@ -44,14 +52,3 @@ export async function getMatchMessage(eventId: string, userId: string) {
   return response;
 }
 
-/**
- * 获取用户的分组信息（匹配结果）
- *
- * @param eventId - 活动 ID
- * @returns 用户的分组信息
- */
-export async function getMyGroup(eventId: string) {
-  const response = await api.get(`/api/match/${eventId}/results`);
-  console.log("[matchApi] getMyGroup 原始响应:", response);
-  return response;
-}

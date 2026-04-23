@@ -11,7 +11,7 @@
 
 import React, { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Settings, Users, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Settings, Users, Loader2, AlertCircle } from "lucide-react";
 import MerchantLayout from "@/components/layout/MerchantLayout";
 import { Button } from "@/components/ui";
 import { RulesTab, ResultsTab } from "@/features/matching/components";
@@ -40,7 +40,6 @@ const MatchingConfigPage: React.FC = () => {
   // 使用匹配逻辑 Hook
   const {
     // 状态
-    stage,
     activeTab,
     isLoading,
     isMatching,
@@ -48,17 +47,14 @@ const MatchingConfigPage: React.FC = () => {
     matchingProgress,
     matchingMessage,
 
-    // 重新匹配相关状态
-    isRematchMode,
     isBackgroundMatching,
-    lockedGroupsForRematch,
     currentHistoryId,
 
     // 数据
     rules,
     constraints,
     participants,
-    groups,
+    matchResults,
     history,
     matchingStats,
 
@@ -66,12 +62,10 @@ const MatchingConfigPage: React.FC = () => {
     setActiveTab,
     setRules,
     setConstraints,
-    setGroups,
 
     // 操作方法
     handleSaveRules,
     handleStartMatching,
-    handleRematch,
     handlePublish,
     handleViewHistory,
     handleRestoreHistory,
@@ -83,9 +77,8 @@ const MatchingConfigPage: React.FC = () => {
     handleGenerateRules,
     isGeneratingRules,
 
-    // 重新匹配操作
+    // 重新匹配入口
     handleEnterRematchMode,
-    handleCancelRematchMode,
 
     // 后台匹配操作
     handleMinimizeMatching,
@@ -94,11 +87,8 @@ const MatchingConfigPage: React.FC = () => {
 
   // 计算结果 Tab 的徽章
   const resultsBadge = useMemo(() => {
-    if (groups.length > 0) {
-      return groups.length;
-    }
-    return undefined;
-  }, [groups]);
+    return matchResults.length > 0 ? matchResults.length : undefined;
+  }, [matchResults]);
 
   // 处理返回 - 返回到活动详情页
   const handleBack = () => {
@@ -108,10 +98,7 @@ const MatchingConfigPage: React.FC = () => {
   // 适配器：将 handlePublish 转换为 ResultsTab 期望的签名
   // ResultsTab 期望: (sendNotification?: boolean, notificationConfig?: NotificationConfig) => Promise<void | { success: boolean; error?: string }>
   // Hook 提供: (historyId?: string) => Promise<void>
-  const handlePublishAdapter = async (
-    _sendNotification?: boolean,
-    _notificationConfig?: unknown,
-  ): Promise<void | { success: boolean; error?: string }> => {
+  const handlePublishAdapter = async (): Promise<void | { success: boolean; error?: string }> => {
     try {
       await handlePublish();
       return { success: true };
@@ -222,9 +209,6 @@ const MatchingConfigPage: React.FC = () => {
             isMatching={isMatching}
             matchingProgress={matchingProgress}
             participantCount={participants.length}
-            isRematchMode={isRematchMode}
-            lockedGroupsCount={lockedGroupsForRematch.length}
-            onCancelRematchMode={handleCancelRematchMode}
             savedConfigs={savedConfigs}
             onLoadConfig={handleLoadConfig}
             onDeleteConfig={handleDeleteConfig}
@@ -233,8 +217,7 @@ const MatchingConfigPage: React.FC = () => {
           />
         ) : (
           <ResultsTab
-            groups={groups}
-            onGroupsChange={setGroups}
+            matchResults={matchResults}
             participants={participants}
             rules={rules}
             isPublishing={isPublishing}

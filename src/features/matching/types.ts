@@ -58,7 +58,7 @@ export interface Participant {
   customFields?: Record<string, any>;
 }
 
-// 匹配分组
+// 匹配分组（旧模型保留给历史数据/兼容）
 export interface MatchingGroup {
   id: string;
   name?: string;
@@ -67,6 +67,23 @@ export interface MatchingGroup {
   reasons?: string[]; // 匹配理由
   warnings?: string[]; // 警告信息
   isLocked: boolean; // 是否锁定
+}
+
+/**
+ * 参与者 top5 匹配结果
+ * 当前后端模型：每个参与者对应一组 top5 候选用户（来自 best_matches 表）
+ */
+export interface ParticipantMatchResult {
+  /** best_matches 记录主键 */
+  id: string;
+  /** 参与者本人 ID（即 user_id） */
+  userId: string;
+  /** 所属 match 任务 ID */
+  matchId: string;
+  /** top5 候选用户 ID（按相似度降序） */
+  bestMatchUserIds: string[];
+  /** 记录创建时间 */
+  createdAt: string;
 }
 
 // 匹配结果

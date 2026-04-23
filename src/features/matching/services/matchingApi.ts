@@ -5,7 +5,7 @@
 
 import type {
   MatchingRule,
-  MatchingGroup,
+  ParticipantMatchResult,
   GenerateRulesRequest,
   GenerateRulesResponse,
   ExecuteMatchRequest,
@@ -14,7 +14,6 @@ import type {
 
 // 兼容别名
 type MatchRule = MatchingRule;
-type MatchGroup = MatchingGroup;
 
 /**
  * 获取 token
@@ -153,26 +152,21 @@ export const deleteMatchRule = async (ruleId: string): Promise<void> => {
 };
 
 /**
- * 使用 AI 生成匹配规则
+ * 从活动的报名表 schema 派生匹配规则
+ * 不再需要自然语言描述 —— 规则直接来源于商家配置的信息收集字段
  */
 export const generateMatchRules = async (
   request: GenerateRulesRequest,
 ): Promise<GenerateRulesResponse> => {
   const token = getToken();
 
-  const response = await fetch(
-    `/api/generate-match-rules/${request.activityId}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        description: request.description,
-      }),
+  const response = await fetch(`/api/match/${request.activityId}/generate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-  );
+  });
 
   const data = await response.json();
 
@@ -229,79 +223,80 @@ export const executeMatching = async (
 };
 
 /**
- * 获取匹配结果
- * 后端 organizer 视图返回按规则分组的 groups，每个 group 包含丰富的成员信息
- * 返回：{ groups, participants } - groups.members 是ID数组，participants 包含完整成员信息
+ * 获取匹配结果（商家视图）
+ *
+ * 后端返回：
+ *   { success, message, groups: [{ id, event_id, user_id, match_id, best_match_users: [uuid×5], created_at }] }
+ * 每条记录代表"某个参与者的 top5 匹配"。同时并行拉取 /api/enrollments/:eventId
+ * 获取所有参与者的详情用于渲染。
  */
 export const getMatchGroups = async (
   activityId: string,
-): Promise<{ groups: MatchGroup[]; participants: any[] }> => {
+): Promise<{ results: ParticipantMatchResult[]; participants: any[] }> => {
   const token = getToken();
 
-  const response = await fetch(`/api/match/${activityId}/results`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
+  const [resultsResp, enrollResp] = await Promise.all([
+    fetch(`/api/match/${activityId}/results`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }),
+    fetch(`/api/enrollments/${activityId}?page=1&pageSize=1000`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }),
+  ]);
 
-  const data = await response.json();
-
+  const data = await resultsResp.json();
   if (!data.success) {
     throw new Error(data.message || "获取匹配结果失败");
   }
 
-  const rawGroups = data.data?.groups || [];
+  // 后端新 shape：data.groups 是 per-user top5 数组
+  const rawRecords: any[] = data.groups || data.data?.groups || [];
 
-  // 收集所有参与者信息（去重）
-  const participantsMap = new Map<string, any>();
+  const results: ParticipantMatchResult[] = rawRecords.map((r: any) => ({
+    id: r.id,
+    userId: r.user_id,
+    matchId: r.match_id,
+    bestMatchUserIds: Array.isArray(r.best_match_users) ? r.best_match_users : [],
+    createdAt: r.created_at,
+  }));
 
-  // 转换后端数据格式到前端期望格式
-  const groups = rawGroups.map((g: any, index: number) => {
-    const memberIds: string[] = [];
+  // 并行拉参与者详情
+  let participants: any[] = [];
+  if (enrollResp.ok) {
+    const enrollData = await enrollResp.json();
+    const enrollments: any[] = enrollData?.data?.enrollments || [];
+    participants = enrollments.map((e: any) => {
+      const f = e.formData || {};
+      return {
+        id: e.userId,
+        enrollmentId: e.id,
+        name: e.name || f["姓名"] || f.name || "未知用户",
+        phone: f["手机号"] || f.phone,
+        gender: f["性别"] || f.gender,
+        age: f["年龄"] ?? f.age,
+        occupation: f["职业"] || f.occupation,
+        company: f["公司"] || f.company,
+        industry: e.industry || f["行业"] || f["关注/从事的行业方向"],
+        city: f["城市"] || f.city,
+        bio: f["个人简介"] || f.bio,
+        interests: e.interests || f["兴趣爱好"],
+        department: e.department || f["所在职能部门"],
+        skills: e.skills || f["软件技能"],
+        expertise: e.expertise || f["擅长领域"],
+        tags: Array.isArray(f["标签"]) ? f["标签"] : [],
+        status: e.status,
+        formData: f,
+      };
+    });
+  }
 
-    // 处理成员数据
-    if (Array.isArray(g.members)) {
-      g.members.forEach((m: any) => {
-        if (typeof m === "string") {
-          memberIds.push(m);
-        } else if (m && typeof m === "object") {
-          const memberId = m.id || m.user_id || `member_${index}`;
-          memberIds.push(memberId);
-
-          // 将成员信息添加到 participantsMap
-          if (!participantsMap.has(memberId)) {
-            participantsMap.set(memberId, {
-              id: memberId,
-              name: m.name || "未知用户",
-              gender: m.gender || undefined,
-              age: m.age || undefined,
-              occupation: m.occupation || undefined,
-              industry: m.industry || undefined,
-              city: m.city || undefined,
-              tags: m.tags || [],
-              phone: m.phone || undefined,
-              email: m.email || undefined,
-            });
-          }
-        }
-      });
-    }
-
-    return {
-      id: g.id || `group_${index}`,
-      name: g.name || `第${index + 1}组`,
-      members: memberIds,
-      score: g.score ?? 0,
-      reasons: g.reasons || [],
-      isLocked: g.isLocked ?? g.is_locked ?? false,
-    };
-  });
-
-  // 将 Map 转换为数组
-  const participants = Array.from(participantsMap.values());
-
-  return { groups, participants };
+  return { results, participants };
 };
 
 /**

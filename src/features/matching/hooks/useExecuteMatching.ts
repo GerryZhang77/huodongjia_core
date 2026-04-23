@@ -69,17 +69,17 @@ export const useExecuteMatching = () => {
       // 开始轮询
       await pollProgress();
 
-      // 3. 匹配完成，获取结果
+      // 3. 匹配完成，获取结果（新 shape：per-user top5）
       setMatchingProgress(100);
-      const groups = await getMatchGroups(activityId);
-      setGroups(groups);
+      const { results } = await getMatchGroups(activityId);
+      setGroups([]); // 新模型下 groups 已弃用，置空避免旧 UI 误渲染
 
       Toast.show({
         icon: "success",
-        content: `匹配完成！共生成 ${groups.length} 个小组`,
+        content: `匹配完成！共 ${results.length} 位参与者已生成 top5`,
       });
 
-      return { groups };
+      return { groups: [] };
     } catch (error) {
       console.error("执行匹配失败:", error);
       Toast.show({
@@ -97,8 +97,8 @@ export const useExecuteMatching = () => {
     setLoading(true);
 
     try {
-      const groups = await getMatchGroups(activityId);
-      setGroups(groups);
+      await getMatchGroups(activityId);
+      setGroups([]); // 新模型下 groups 已弃用
     } catch (error) {
       console.error("获取匹配结果失败:", error);
       Toast.show({
