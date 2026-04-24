@@ -56,6 +56,37 @@ export async function login(
 }
 
 /**
+ * 手机号 + 短信验证码登录
+ * POST /api/auth/login-sms
+ *
+ * 后端接受 { phone, code }
+ * 验证码校验在后端完成（调用阿里云），前端不要预先调用 /verify-code。
+ */
+export async function loginBySms(
+  phone: string,
+  code: string,
+): Promise<LoginResponse> {
+  try {
+    const response = await api.post<LoginResponse>("/api/auth/login-sms", {
+      phone,
+      code,
+    });
+    return response;
+  } catch (error: unknown) {
+    console.error("❌ [authApi] 验证码登录错误:", error);
+    const axiosError = error as {
+      response?: { data?: { message?: string; code?: string } };
+    };
+    const message =
+      axiosError?.response?.data?.message || "登录失败，请检查网络连接";
+    return {
+      success: false,
+      message,
+    };
+  }
+}
+
+/**
  * 用户登出
  * POST /api/auth/logout
  */
@@ -225,11 +256,11 @@ export async function deleteAccount(): Promise<{ success: boolean; message: stri
 }
 
 /**
- * 重置密码
- * PUT /api/auth/password
+ * 重置密码（忘记密码场景）
+ * POST /api/auth/reset-password-by-sms
  *
- * 后端接受 { oldPassword, newPassword }，需要认证
- * 注意：后端不支持通过短信验证码重置密码，仅支持已登录用户修改密码
+ * 后端接受 { phone, code, newPassword }
+ * 验证码校验在后端完成（调用阿里云），前端不要预先调用 /verify-code。
  */
 export async function resetPassword(credentials: {
   phone: string;
@@ -237,19 +268,23 @@ export async function resetPassword(credentials: {
   new_password: string;
 }): Promise<{ success: boolean; message: string }> {
   try {
-    console.log("🔑 [authApi] 重置密码:", { phone: credentials.phone });
-
-    // 后端当前仅支持已登录用户通过旧密码修改，不支持短信验证码重置
-    console.warn("⚠️ [authApi] 后端不支持短信验证码重置密码，此功能暂不可用");
-    return {
-      success: false,
-      message: "暂不支持短信验证码重置密码，请联系管理员",
-    };
+    const response = await api.post<{ success: boolean; message: string }>(
+      "/api/auth/reset-password-by-sms",
+      {
+        phone: credentials.phone,
+        code: credentials.sms_code,
+        newPassword: credentials.new_password,
+      }
+    );
+    return response;
   } catch (error) {
     console.error("❌ [authApi] 重置密码失败:", error);
+    const axiosError = error as { response?: { data?: { message?: string } } };
+    const message =
+      axiosError?.response?.data?.message || "重置密码失败，请稍后重试";
     return {
       success: false,
-      message: "重置密码失败，请稍后重试",
+      message,
     };
   }
 }

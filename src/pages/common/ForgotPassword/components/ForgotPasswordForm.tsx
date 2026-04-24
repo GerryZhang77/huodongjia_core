@@ -9,6 +9,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input, Button } from "@/components/ui";
 import { useForgotPassword } from "@/features/auth/hooks";
+
+const SMS_CODE_LENGTH = 4;
 import {
   Phone,
   Lock,
@@ -25,7 +27,7 @@ type Step = "phone" | "verify" | "reset" | "success";
 
 export const ForgotPasswordForm: React.FC = () => {
   const navigate = useNavigate();
-  const { sendSmsCode, verifyCode, resetPassword, loading, sendingCode } =
+  const { sendSmsCode, resetPassword, loading, sendingCode } =
     useForgotPassword();
 
   // 当前步骤
@@ -73,22 +75,22 @@ export const ForgotPasswordForm: React.FC = () => {
     }
   };
 
-  // 验证验证码
-  const handleVerifyCode = async () => {
+  // 进入"重置密码"步骤
+  //
+  // 安全考虑：阿里云验证码在校验成功后即失效，如果这里提前调用 /verify-code，
+  // 后续的 /reset-password-by-sms 将无法再次校验。因此此步骤只做前端格式校验，
+  // 真正的验证码消费在 resetPassword 接口内部完成。
+  const handleVerifyCode = () => {
     if (!smsCode) {
       setError("请输入验证码");
       return;
     }
-    if (smsCode.length !== 6) {
-      setError("请输入6位验证码");
+    if (smsCode.length !== SMS_CODE_LENGTH) {
+      setError(`请输入${SMS_CODE_LENGTH}位验证码`);
       return;
     }
-
     setError("");
-    const success = await verifyCode(phone, smsCode);
-    if (success) {
-      setStep("reset");
-    }
+    setStep("reset");
   };
 
   // 重置密码
@@ -198,11 +200,14 @@ export const ForgotPasswordForm: React.FC = () => {
       <Input
         label="验证码"
         type="text"
+        inputMode="numeric"
         value={smsCode}
-        onChange={(e) => setSmsCode(e.target.value.replace(/\D/g, ""))}
-        placeholder="请输入6位验证码"
+        onChange={(e) =>
+          setSmsCode(e.target.value.replace(/\D/g, "").slice(0, SMS_CODE_LENGTH))
+        }
+        placeholder={`请输入${SMS_CODE_LENGTH}位验证码`}
         size="large"
-        maxLength={6}
+        maxLength={SMS_CODE_LENGTH}
         required
       />
 

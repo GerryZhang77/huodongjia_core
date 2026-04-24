@@ -6,10 +6,35 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores";
-import { login as loginApi } from "../services";
-import type { LoginCredentials } from "../types";
+import { login as loginApi, loginBySms as loginBySmsApi } from "../services";
+import type { LoginCredentials, LoginResponse, User } from "../types";
 import { authNotification } from "@/components/ui/AuthNotification/manager";
 import { debugLogger } from "@/utils/debugLogger";
+
+const phoneRe = /^1[3-9]\d{9}$/;
+const maskPhone = (v: string) =>
+  v.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2");
+
+/**
+ * 计算欢迎语展示名：
+ * 1. 优先选"不是手机号形态"的 name / account（用户真实昵称或账号）
+ * 2. 都没有就从 phone / name / account / 输入 identifier 里挑一个手机号并脱敏
+ * 3. 全空时返回空串（上层会降级为无称呼欢迎语）
+ */
+function computeDisplayName(user: User, rawIdentifier?: string): string {
+  const name = user.name?.trim();
+  const account = user.account?.trim();
+  const phone = user.phone?.trim();
+  const id = rawIdentifier?.trim();
+
+  const realName = [name, account].find((v) => v && !phoneRe.test(v));
+  if (realName) return realName;
+
+  const phoneSource = [phone, name, account, id].find(
+    (v) => v && phoneRe.test(v),
+  );
+  return phoneSource ? maskPhone(phoneSource) : "";
+}
 
 export function useLogin() {
   const navigate = useNavigate();
@@ -18,104 +43,95 @@ export function useLogin() {
   const [loading, setLoading] = useState(false);
 
   /**
-   * 执行登录
-   *
+   * 登录成功的通用收尾：保存认证信息、清缓存、提示欢迎语、跳转
+   */
+  const handleLoginSuccess = (
+    response: LoginResponse,
+    rawIdentifier?: string,
+  ) => {
+    if (!response.user || !response.token) return;
+
+    setAuth(response.user, response.token);
+    queryClient.clear();
+
+    const displayName = computeDisplayName(response.user, rawIdentifier);
+    if (!response.user.name?.trim() && !response.user.account?.trim()) {
+      console.warn(
+        "[useLogin] 服务端未返回 name/account，回退到输入 identifier",
+        { userId: response.user.id },
+      );
+    }
+
+    authNotification.success(
+      "登录成功",
+      displayName ? `欢迎回来，${displayName}！` : "欢迎回来！",
+    );
+
+    const targetPath =
+      response.user.user_type === "user" ? "/u/home" : "/dashboard";
+    setTimeout(() => {
+      navigate(targetPath, { replace: true });
+    }, 1000);
+  };
+
+  /**
+   * 账号/手机号 + 密码 登录
    * 注意：只有登录成功才跳转到 Dashboard
    * 失败时停留在登录页，显示错误通知
    */
   const login = async (credentials: LoginCredentials) => {
     setLoading(true);
-
     try {
-      debugLogger.log("[useLogin] 开始登录流程");
-      console.log("🚀 [useLogin] 开始登录流程");
-
+      debugLogger.log("[useLogin] 开始登录流程(password)");
       const response = await loginApi(credentials);
 
-      debugLogger.log("[useLogin] 收到响应", {
-        success: response.success,
-        hasToken: !!response.token,
-        hasUser: !!response.user,
-      });
-      console.log("📥 [useLogin] 收到响应:", {
-        success: response.success,
-        hasToken: !!response.token,
-        hasUser: !!response.user,
-      });
-
-      // 登录成功
       if (response.success && response.token && response.user) {
         debugLogger.log("[useLogin] 登录成功，保存认证信息");
-        console.log("✅ [useLogin] 登录成功，保存认证信息");
-
-        // 保存认证信息到 Store
-        setAuth(response.user, response.token);
-
-        // 清除旧用户的 React Query 缓存，避免数据残留
-        queryClient.clear();
-
-        debugLogger.log("[useLogin] 认证信息已保存，检查 localStorage");
-        console.log("💾 [useLogin] 认证信息已保存，检查 localStorage");
-
-        const stored = localStorage.getItem("auth-storage");
-        debugLogger.log("[useLogin] localStorage 内容", stored);
-        console.log("🔍 [useLogin] localStorage 内容:", stored);
-
-        // 显示成功通知
-        // 兜底顺序：服务端 name → 服务端 account → 用户刚输入的 identifier（手机号脱敏） → 空
-        // 全空时不要再强塞"你"，改用无称呼问候
-        const rawName = response.user.name?.trim();
-        const rawAccount = response.user.account?.trim();
-        const rawIdentifier = credentials.identifier?.trim();
-        const maskedIdentifier =
-          rawIdentifier && /^1[3-9]\d{9}$/.test(rawIdentifier)
-            ? rawIdentifier.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2")
-            : rawIdentifier;
-        const displayName = rawName || rawAccount || maskedIdentifier || "";
-
-        if (!rawName && !rawAccount) {
-          console.warn(
-            "[useLogin] 服务端未返回 name/account，回退到用户输入的 identifier",
-            { userId: response.user.id },
-          );
-        }
-
-        authNotification.success(
-          "登录成功",
-          displayName ? `欢迎回来，${displayName}！` : "欢迎回来！",
-        );
-
-        // 延迟跳转，确保通知显示
-        debugLogger.log("[useLogin] 准备跳转");
-        console.log("🔄 [useLogin] 准备跳转");
-
-        // 根据用户角色跳转到不同页面
-        const targetPath =
-          response.user.user_type === "user" ? "/u/home" : "/dashboard";
-
-        setTimeout(() => {
-          debugLogger.log(`[useLogin] 执行跳转到 ${targetPath}`);
-          console.log(`➡️  [useLogin] 执行跳转到 ${targetPath}`);
-          navigate(targetPath, { replace: true });
-        }, 1000); // 延长到 1 秒，确保用户看到成功提示
-
+        handleLoginSuccess(response, credentials.identifier);
         return true;
-      } else {
-        console.warn("⚠️  [useLogin] 登录失败:", response.message);
-
-        const errorMessage = getErrorMessage(response.code, response.message);
-        authNotification.error("登录失败", errorMessage);
-
-        return false;
       }
+
+      const errorMessage = getErrorMessage(response.code, response.message);
+      authNotification.error("登录失败", errorMessage);
+      return false;
     } catch (error) {
       console.error("❌ [useLogin] 捕获异常:", error);
-
       authNotification.error(
         "网络错误",
-        "无法连接到服务器，请检查网络连接"
+        "无法连接到服务器，请检查网络连接",
       );
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  /**
+   * 手机号 + 短信验证码 登录
+   */
+  const loginBySms = async (phone: string, code: string) => {
+    setLoading(true);
+    try {
+      debugLogger.log("[useLogin] 开始登录流程(sms)");
+      const response = await loginBySmsApi(phone, code);
+
+      if (response.success && response.token && response.user) {
+        debugLogger.log("[useLogin] 验证码登录成功，保存认证信息");
+        handleLoginSuccess(response, phone);
+        return true;
+      }
+
+      authNotification.error(
+        "登录失败",
+        response.message || "登录失败，请重试",
+      );
+      return false;
+    } catch (error) {
+      console.error("❌ [useLogin] 验证码登录捕获异常:", error);
+      authNotification.error(
+        "网络错误",
+        "无法连接到服务器，请检查网络连接",
+      );
       return false;
     } finally {
       setLoading(false);
@@ -124,6 +140,7 @@ export function useLogin() {
 
   return {
     login,
+    loginBySms,
     loading,
   };
 }
