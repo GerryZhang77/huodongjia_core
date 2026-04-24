@@ -59,13 +59,14 @@ export const UserCardContent: FC<UserCardContentProps> = ({
           </div>
         </div>
 
-        {matchScore !== undefined && (
+        {/* 匹配分数 - 暂时隐藏 */}
+        {/* {matchScore !== undefined && (
           <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 dark:bg-gray-800/90 rounded-full">
             <span className="text-xs font-semibold text-primary-600 dark:text-primary-400">
               匹配 {matchScore}%
             </span>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* 用户信息 */}

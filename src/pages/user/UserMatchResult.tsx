@@ -274,13 +274,13 @@ const UserMatchResult: FC = () => {
                       )}
                     </div>
 
-                    {/* 匹配分数 */}
-                    <div className="text-right flex-shrink-0">
+                    {/* 匹配分数 - 暂时隐藏 */}
+                    {/* <div className="text-right flex-shrink-0">
                       <p className="text-xl font-bold text-accent-500">
                         {user.matchScore}
                       </p>
                       <p className="text-[10px] text-gray-400">匹配分</p>
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* 查看详情 */}
