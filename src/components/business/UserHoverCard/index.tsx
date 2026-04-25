@@ -37,6 +37,7 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
   placement = "bottom",
   disabled = false,
   onViewProfile,
+  actionsSlot,
   className,
 }) => {
   const navigate = useNavigate();
@@ -230,6 +231,7 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
               user={user}
               matchScore={matchScore}
               onViewProfile={handleViewProfile}
+              actionsSlot={actionsSlot}
             />
           </div>,
           document.body

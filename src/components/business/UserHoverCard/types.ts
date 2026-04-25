@@ -35,6 +35,8 @@ export interface UserHoverCardProps {
   disabled?: boolean;
   /** 点击查看详情回调 */
   onViewProfile?: (userId: string) => void;
+  /** 自定义操作区（如关注/私信按钮）；显示在"查看主页"按钮上方 */
+  actionsSlot?: React.ReactNode;
   /** 额外的类名 */
   className?: string;
 }
@@ -46,6 +48,8 @@ export interface UserCardContentProps {
   matchScore?: number;
   /** 点击查看详情回调 */
   onViewProfile?: () => void;
+  /** 自定义操作区（如关注/私信按钮）；显示在"查看主页"按钮上方 */
+  actionsSlot?: React.ReactNode;
   /** 额外的类名 */
   className?: string;
 }

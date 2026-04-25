@@ -3,11 +3,13 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, MapPin, Briefcase, Building2, Heart,
-  MessageCircle, Sparkles, AlertCircle, Images,
+  Sparkles, AlertCircle, Images,
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { Button, Tag } from "@/components/ui";
 import { getPublicProfile } from "@/services/userApi";
+import { FollowButton, useSocialStats } from "@/features/social";
+import { useAuthStore } from "@/features/auth/stores/authStore";
 
 const UserPublicProfile: FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -25,6 +27,9 @@ const UserPublicProfile: FC = () => {
   });
 
   const profile = data?.profile;
+  const { user: currentUser } = useAuthStore();
+  const isSelf = currentUser?.id === userId;
+  const { data: stats } = useSocialStats(userId);
   const displayName =
     (profile?.name && profile.name.trim()) ||
     fallbackName ||
@@ -79,7 +84,7 @@ const UserPublicProfile: FC = () => {
         <div className="px-4 -mt-12 relative z-10 space-y-4 max-w-lg mx-auto">
           {/* 主卡片 */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-visible">
-            <div className="px-4 -mt-10">
+            <div className="px-4 -mt-10 flex items-end justify-between">
               <div className="w-20 h-20 rounded-full bg-white dark:bg-gray-800 p-1.5 shadow-xl">
                 <img
                   src={profile.avatar}
@@ -87,11 +92,39 @@ const UserPublicProfile: FC = () => {
                   className="w-full h-full rounded-full object-cover"
                 />
               </div>
+              {!isSelf && userId && (
+                <div className="pb-1">
+                  <FollowButton userId={userId} />
+                </div>
+              )}
             </div>
             <div className="px-4 pt-3 pb-4">
               <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 {displayName}
               </h1>
+              {/* 社交统计 */}
+              {stats && (
+                <div className="flex gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {stats.followingCount}
+                    </span>{" "}
+                    关注
+                  </span>
+                  <span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {stats.followersCount}
+                    </span>{" "}
+                    粉丝
+                  </span>
+                  <span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {stats.friendsCount}
+                    </span>{" "}
+                    好友
+                  </span>
+                </div>
+              )}
               {hasAnyDetail ? (
                 <>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400 mt-1">

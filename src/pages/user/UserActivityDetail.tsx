@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
+import { MerchantHoverCard } from "@/components/business/MerchantHoverCard";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useActivityDetail, useUserActivities } from "@/features/user";
 import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
@@ -417,29 +418,57 @@ const UserActivityDetail: FC = () => {
             <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />
 
             {/* 主办方 */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
-                {activity.organizer.avatar ? (
-                  <img
-                    src={activity.organizer.avatar}
-                    alt={activity.organizer.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-primary-500 font-semibold text-sm">
-                    {activity.organizer.name?.charAt(0) || "?"}
+            {activity.organizer?.id ? (
+              <MerchantHoverCard
+                merchantId={activity.organizer.id}
+                fallbackName={activity.organizer.name}
+                fallbackAvatar={activity.organizer.avatar}
+              >
+                <div
+                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-lg -mx-2 px-2 py-1 transition-colors"
+                  onClick={() => navigate(`/u/profile/${activity.organizer.id}`)}
+                  role="button"
+                >
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
+                    {activity.organizer.avatar ? (
+                      <img
+                        src={activity.organizer.avatar}
+                        alt={activity.organizer.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-primary-500 font-semibold text-sm">
+                        {activity.organizer.name?.charAt(0) || "?"}
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {activity.organizer.name || "主办方"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      主办方
+                    </p>
+                  </div>
+                </div>
+              </MerchantHoverCard>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
+                  <div className="w-full h-full flex items-center justify-center text-primary-500 font-semibold text-sm">
+                    ?
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    主办方
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    主办方
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {activity.organizer.name || "主办方"}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  主办方
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* 分隔线 */}
             <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />

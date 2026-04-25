@@ -18,6 +18,7 @@ export const UserCardContent: FC<UserCardContentProps> = ({
   user,
   matchScore,
   onViewProfile,
+  actionsSlot,
   className,
 }) => {
   const getAvatarContent = () => {
@@ -155,6 +156,11 @@ export const UserCardContent: FC<UserCardContentProps> = ({
               </span>
             )}
           </div>
+        )}
+
+        {/* 自定义操作区（如关注/私信按钮） */}
+        {actionsSlot && (
+          <div className="flex items-center gap-2 mb-2">{actionsSlot}</div>
         )}
 
         {/* 查看详情按钮 */}
