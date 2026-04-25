@@ -179,6 +179,9 @@ const UserChatRoom: FC = () => {
                 message={msg}
                 isMine={msg.sender_id === currentUser?.id}
                 peerAvatar={peer?.avatar}
+                peerName={peer?.name}
+                myAvatar={currentUser?.avatar}
+                myName={currentUser?.name}
                 showAvatar={showAvatar}
               />
             );

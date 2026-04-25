@@ -14,6 +14,8 @@ import {
   Clock,
   CheckCheck,
   Inbox,
+  UserPlus,
+  Contact,
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import {
@@ -84,6 +86,36 @@ const notificationConfig: Record<
     color: "text-gray-600 dark:text-gray-400",
     bg: "bg-gray-100",
     darkBg: "dark:bg-gray-700",
+  },
+  match: {
+    icon: Users,
+    color: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-50",
+    darkBg: "dark:bg-amber-900/30",
+  },
+  reminder: {
+    icon: Clock,
+    color: "text-gray-600 dark:text-gray-400",
+    bg: "bg-gray-100",
+    darkBg: "dark:bg-gray-700",
+  },
+  message: {
+    icon: MessageCircle,
+    color: "text-blue-600 dark:text-blue-400",
+    bg: "bg-blue-50",
+    darkBg: "dark:bg-blue-900/30",
+  },
+  follow: {
+    icon: UserPlus,
+    color: "text-purple-600 dark:text-purple-400",
+    bg: "bg-purple-50",
+    darkBg: "dark:bg-purple-900/30",
+  },
+  contact_request: {
+    icon: Contact,
+    color: "text-orange-600 dark:text-orange-400",
+    bg: "bg-orange-50",
+    darkBg: "dark:bg-orange-900/30",
   },
 };
 
@@ -181,6 +213,21 @@ const UserNotifications: FC = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     markReadMutation.mutate(notification.id);
+
+    // 社交类通知：跳到与发送者的聊天 / 发送者主页
+    if (
+      (notification.type === "message" ||
+        notification.type === "contact_request") &&
+      notification.senderId
+    ) {
+      navigate(`/u/messages/${notification.senderId}`);
+      return;
+    }
+    if (notification.type === "follow" && notification.senderId) {
+      navigate(`/u/profile/${notification.senderId}`);
+      return;
+    }
+
     if (notification.activityId) {
       queryClient.invalidateQueries({ queryKey: ["user", "activity", notification.activityId] });
       navigate(`/u/activities/${notification.activityId}`);

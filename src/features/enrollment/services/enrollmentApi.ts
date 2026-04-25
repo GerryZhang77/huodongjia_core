@@ -24,30 +24,41 @@ import type {
  */
 interface BackendEnrollment {
   id: string;
-  event_id: string;
-  user_id: string | null;
+  // 后端在不同接口返回字段名不统一，兼容 snake_case 和 camelCase
+  event_id?: string;
+  eventId?: string;
+  user_id?: string | null;
+  userId?: string | null;
   name: string;
-  sex: string | null; // 'male' | 'female' | 'other'
-  age: number | null;
-  occupation: string | null;
-  other_info: string | null; // JSON 字符串
-  status: string; // 'pending' | 'approved' | 'rejected' | 'cancelled'
-  created_at: string;
-  updated_at: string;
+  sex?: string | null;
+  age?: number | null;
+  occupation?: string | null;
+  other_info?: string | null;
+  formData?: Record<string, unknown> | null;
+  status: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
 }
 
 /**
  * 转换后端数据到前端 Enrollment 类型
  */
 const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
-  // 解析 other_info JSON 字符串
+  // 解析 other_info / formData（后端不同接口字段名不一致）
   let otherInfo: Record<string, unknown> = {};
-  if (backend.other_info) {
-    try {
-      otherInfo = JSON.parse(backend.other_info);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (_error) {
-      console.warn("Failed to parse other_info:", backend.other_info);
+  if (backend.formData && typeof backend.formData === "object") {
+    otherInfo = backend.formData as Record<string, unknown>;
+  } else if (backend.other_info) {
+    if (typeof backend.other_info === "string") {
+      try {
+        otherInfo = JSON.parse(backend.other_info);
+      } catch {
+        console.warn("Failed to parse other_info:", backend.other_info);
+      }
+    } else if (typeof backend.other_info === "object") {
+      otherInfo = backend.other_info as Record<string, unknown>;
     }
   }
 
@@ -68,8 +79,8 @@ const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
 
   return {
     id: backend.id,
-    activityId: backend.event_id,
-    userId: backend.user_id || undefined,
+    activityId: backend.event_id ?? backend.eventId ?? "",
+    userId: backend.user_id ?? backend.userId ?? undefined,
     name: backend.name,
     gender: (backend.sex as Gender) || undefined,
     age: backend.age || undefined,
@@ -79,10 +90,10 @@ const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
     company,
     industry,
     city,
-    customFields: otherInfo, // 保留完整的 other_info 作为 customFields
+    customFields: otherInfo,
     status: backend.status as EnrollmentStatus,
-    enrolledAt: backend.created_at,
-    updatedAt: backend.updated_at,
+    enrolledAt: backend.created_at ?? backend.createdAt ?? "",
+    updatedAt: backend.updated_at ?? backend.updatedAt ?? "",
   };
 };
 

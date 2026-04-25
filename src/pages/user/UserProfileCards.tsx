@@ -33,6 +33,7 @@ import { Toast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useUserProfile, useUserActivities } from "@/features/user";
+import { useUnreadCount } from "@/features/social";
 import { userApi } from "@/services";
 import type { UserProfile } from "@/services/userApi";
 import type { UserActivity } from "@/services/userApi";
@@ -45,8 +46,9 @@ const MenuItem: FC<{
   icon: React.ElementType;
   label: string;
   color?: string;
+  badge?: number;
   onClick?: () => void;
-}> = ({ icon: Icon, label, color = "text-gray-600", onClick }) => (
+}> = ({ icon: Icon, label, color = "text-gray-600", badge, onClick }) => (
   <button
     onClick={onClick}
     className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors"
@@ -55,7 +57,14 @@ const MenuItem: FC<{
       <Icon size={18} className={color} />
       <span className="text-sm text-gray-700 dark:text-gray-200">{label}</span>
     </div>
-    <ChevronRight size={16} className="text-gray-300 dark:text-gray-500" />
+    <div className="flex items-center gap-2">
+      {badge !== undefined && badge > 0 && (
+        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
+      <ChevronRight size={16} className="text-gray-300 dark:text-gray-500" />
+    </div>
   </button>
 );
 
@@ -181,6 +190,8 @@ const UserProfileCards: FC = () => {
   const { data: profileData, isLoading: isLoadingProfile } = useUserProfile();
   const { data: activitiesData, isLoading: isLoadingActivities } =
     useUserActivities();
+  // 私信未读数（用于菜单项 badge）
+  const { data: unreadMsgCount } = useUnreadCount({ pollInterval: 30000 });
 
   // 用户资料状态（从 API 获取）
   const profile = useMemo<UserProfile | null>(() => {
@@ -533,6 +544,7 @@ const UserProfileCards: FC = () => {
             icon={MessageCircle}
             label="我的私信"
             color="text-blue-500"
+            badge={unreadMsgCount}
             onClick={() => navigate("/u/messages")}
           />
           <MenuItem

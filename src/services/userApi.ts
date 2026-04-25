@@ -80,11 +80,24 @@ export interface Notification {
     | "approval"
     | "greeting"
     | "activity_change"
-    | "waitlist";
+    | "waitlist"
+    | "match"
+    | "reminder"
+    | "message"
+    | "follow"
+    | "contact_request";
   isRead: boolean;
   createdAt: string;
   activityId?: string;
   activityName?: string;
+  /** 发送者 id（如私信、关注等社交通知） */
+  senderId?: string;
+  /** 发送者基本信息 */
+  sender?: {
+    id: string;
+    name?: string | null;
+    avatar?: string | null;
+  } | null;
   data?: Record<string, unknown>;
 }
 

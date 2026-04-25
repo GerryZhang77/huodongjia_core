@@ -7,7 +7,6 @@ import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
-  Bell,
   Lock,
   Globe,
   HelpCircle,
@@ -16,7 +15,6 @@ import {
   LogOut,
   ChevronRight,
   Moon,
-  Volume2,
   Trash2,
   Copy,
   Check,
@@ -26,6 +24,7 @@ import { UserLayout } from "@/components/layout/UserLayout";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { useThemeStore } from "@/store/themeStore";
 import { deleteAccount } from "@/features/auth/services/authApi";
+import { NotificationPreferencesPanel } from "@/features/social";
 
 // 设置项类型
 interface SettingItem {
@@ -51,8 +50,6 @@ const UserSettings: FC = () => {
   const user = useAuthStore((state) => state.user);
   const { isDark, toggleTheme } = useThemeStore();
 
-  const [notifications, setNotifications] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
   const [idCopied, setIdCopied] = useState(false);
 
   const handleCopyId = () => {
@@ -90,29 +87,6 @@ const UserSettings: FC = () => {
           label: "账户安全",
           description: "密码、登录设备管理",
           type: "link",
-        },
-      ],
-    },
-    {
-      title: "通知",
-      items: [
-        {
-          id: "push",
-          icon: Bell,
-          label: "推送通知",
-          description: "接收活动更新和消息提醒",
-          type: "toggle",
-          value: notifications,
-          onClick: () => setNotifications(!notifications),
-        },
-        {
-          id: "sound",
-          icon: Volume2,
-          label: "通知声音",
-          description: "收到消息时播放提示音",
-          type: "toggle",
-          value: soundEnabled,
-          onClick: () => setSoundEnabled(!soundEnabled),
         },
       ],
     },
@@ -220,6 +194,14 @@ const UserSettings: FC = () => {
             </div>
           </div>
         )}
+
+        {/* 通知偏好（独立面板，直接接入 API） */}
+        <div className="px-4 md:px-6 pt-4">
+          <h3 className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-1">
+            通知
+          </h3>
+          <NotificationPreferencesPanel />
+        </div>
 
         {/* 设置列表 */}
         <div className="px-4 md:px-6 py-4 space-y-6">
