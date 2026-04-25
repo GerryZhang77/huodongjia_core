@@ -211,201 +211,210 @@ export const LoginForm: React.FC = () => {
           })}
         </div>
 
-        {/* 密码登录表单 */}
-        {mode === "password" && (
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-[30px] max-sm:space-y-5"
-          >
-            <Input
-              label="用户名 / 手机号"
-              type="text"
-              value={identifier}
-              onChange={(e) => {
-                setIdentifier(e.target.value);
-                if (error) setError("");
-              }}
-              placeholder="请输入用户名或手机号"
-              autoComplete="username"
-              size="large"
-              suffix={<Mail className="w-5 h-5 text-gray-400" />}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  passwordRef.current?.focus();
-                }
-              }}
-              required
-            />
+        {/* 表单容器：固定最小高度，避免切换时整体跳动 */}
+        <div className="min-h-[440px] max-sm:min-h-[380px]">
+          {/* 密码登录表单 */}
+          {mode === "password" && (
+            <form
+              key="password-form"
+              onSubmit={handleSubmit}
+              className="space-y-[30px] max-sm:space-y-5 animate-fade-in"
+            >
+              <Input
+                label="用户名 / 手机号"
+                type="text"
+                value={identifier}
+                onChange={(e) => {
+                  setIdentifier(e.target.value);
+                  if (error) setError("");
+                }}
+                placeholder="请输入用户名或手机号"
+                autoComplete="username"
+                size="large"
+                suffix={<Mail className="w-5 h-5 text-gray-400" />}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    passwordRef.current?.focus();
+                  }
+                }}
+                required
+              />
 
-            <Input
-              ref={passwordRef}
-              label="密码"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (error) setError("");
-              }}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              size="large"
-              suffix={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+              <Input
+                ref={passwordRef}
+                label="密码"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError("");
+                }}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                size="large"
+                suffix={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                }
+                required
+              />
+
+              {/* 记住我 */}
+              <div className="flex items-center">
+                <Checkbox
+                  checked={rememberMe}
+                  onChange={(checked) => setRememberMe(checked)}
+                  size="medium"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    记住我
+                  </span>
+                </Checkbox>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-shake">
+                  <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{error}</span>
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-[54px] flex items-center justify-center gap-2 text-base font-bold text-white rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    background: "linear-gradient(to right, #4facfe, #00c6ff)",
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>登录中...</span>
+                    </>
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    "登录"
                   )}
                 </button>
-              }
-              required
-            />
-
-            {/* 记住我 + 忘记密码 */}
-            <div className="flex items-center justify-between">
-              <Checkbox
-                checked={rememberMe}
-                onChange={(checked) => setRememberMe(checked)}
-                size="medium"
-              >
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  记住我
-                </span>
-              </Checkbox>
-              <button
-                type="button"
-                onClick={() => navigate("/forgot-password")}
-                className="text-sm font-medium text-primary-400 hover:text-primary-500 transition-colors"
-              >
-                忘记密码？
-              </button>
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-shake">
-                <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{error}</span>
-                </p>
               </div>
-            )}
+            </form>
+          )}
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-[54px] flex items-center justify-center gap-2 text-base font-bold text-white rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{
-                  background: "linear-gradient(to right, #4facfe, #00c6ff)",
+          {/* 验证码登录表单 */}
+          {mode === "sms" && (
+            <form
+              key="sms-form"
+              onSubmit={handleSmsSubmit}
+              className="space-y-[30px] max-sm:space-y-5 animate-fade-in"
+            >
+              <Input
+                label="手机号"
+                type="tel"
+                value={smsPhone}
+                onChange={(e) => {
+                  setSmsPhone(e.target.value.replace(/\D/g, "").slice(0, 11));
+                  if (error) setError("");
                 }}
-              >
-                {loading ? (
-                  <>
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>登录中...</span>
-                  </>
-                ) : (
-                  "登录"
-                )}
-              </button>
-            </div>
-          </form>
-        )}
+                placeholder="请输入手机号"
+                autoComplete="tel"
+                size="large"
+                maxLength={11}
+                suffix={<Phone className="w-5 h-5 text-gray-400" />}
+                required
+              />
 
-        {/* 验证码登录表单 */}
-        {mode === "sms" && (
-          <form
-            onSubmit={handleSmsSubmit}
-            className="space-y-[30px] max-sm:space-y-5"
-          >
-            <Input
-              label="手机号"
-              type="tel"
-              value={smsPhone}
-              onChange={(e) => {
-                setSmsPhone(e.target.value.replace(/\D/g, "").slice(0, 11));
-                if (error) setError("");
-              }}
-              placeholder="请输入手机号"
-              autoComplete="tel"
-              size="large"
-              maxLength={11}
-              suffix={<Phone className="w-5 h-5 text-gray-400" />}
-              required
-            />
+              {/* 验证码 + 发送按钮 */}
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <Input
+                    ref={smsCodeRef}
+                    label="验证码"
+                    type="text"
+                    inputMode="numeric"
+                    value={smsCode}
+                    onChange={(e) => {
+                      setSmsCode(
+                        e.target.value.replace(/\D/g, "").slice(0, SMS_CODE_LENGTH),
+                      );
+                      if (error) setError("");
+                    }}
+                    placeholder={`请输入${SMS_CODE_LENGTH}位验证码`}
+                    autoComplete="one-time-code"
+                    size="large"
+                    maxLength={SMS_CODE_LENGTH}
+                    suffix={<KeyRound className="w-5 h-5 text-gray-400" />}
+                    required
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSendSmsCode}
+                  disabled={smsCountdown > 0 || sendingSms}
+                  className="h-[54px] px-4 text-sm font-semibold text-primary-400 border border-primary-200 rounded-xl bg-primary-50 hover:bg-primary-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {sendingSms
+                    ? "发送中..."
+                    : smsCountdown > 0
+                      ? `${smsCountdown}s`
+                      : "获取验证码"}
+                </button>
+              </div>
 
-            {/* 验证码 + 发送按钮 */}
-            <div className="flex items-end gap-3">
-              <div className="flex-1">
-                <Input
-                  ref={smsCodeRef}
-                  label="验证码"
-                  type="text"
-                  inputMode="numeric"
-                  value={smsCode}
-                  onChange={(e) => {
-                    setSmsCode(
-                      e.target.value.replace(/\D/g, "").slice(0, SMS_CODE_LENGTH),
-                    );
-                    if (error) setError("");
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-shake">
+                  <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{error}</span>
+                  </p>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-[54px] flex items-center justify-center gap-2 text-base font-bold text-white rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    background: "linear-gradient(to right, #4facfe, #00c6ff)",
                   }}
-                  placeholder={`请输入${SMS_CODE_LENGTH}位验证码`}
-                  autoComplete="one-time-code"
-                  size="large"
-                  maxLength={SMS_CODE_LENGTH}
-                  suffix={<KeyRound className="w-5 h-5 text-gray-400" />}
-                  required
-                />
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>登录中...</span>
+                    </>
+                  ) : (
+                    "登录"
+                  )}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleSendSmsCode}
-                disabled={smsCountdown > 0 || sendingSms}
-                className="h-[54px] px-4 text-sm font-semibold text-primary-400 border border-primary-200 rounded-xl bg-primary-50 hover:bg-primary-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {sendingSms
-                  ? "发送中..."
-                  : smsCountdown > 0
-                    ? `${smsCountdown}s`
-                    : "获取验证码"}
-              </button>
-            </div>
+            </form>
+          )}
+        </div>
 
-            {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-shake">
-                <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{error}</span>
-                </p>
-              </div>
-            )}
-
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-[54px] flex items-center justify-center gap-2 text-base font-bold text-white rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{
-                  background: "linear-gradient(to right, #4facfe, #00c6ff)",
-                }}
-              >
-                {loading ? (
-                  <>
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>登录中...</span>
-                  </>
-                ) : (
-                  "登录"
-                )}
-              </button>
-            </div>
-          </form>
-        )}
+        {/* 辅助操作：忘记密码（统一显示，避免 Tab 切换时高度差异） */}
+        <div className="flex items-center justify-end mt-4">
+          <button
+            type="button"
+            onClick={() => navigate("/forgot-password")}
+            className="text-sm font-medium text-primary-400 hover:text-primary-500 transition-colors"
+          >
+            忘记密码？
+          </button>
+        </div>
 
         {/* 注册链接 */}
         <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600 dark:text-gray-400">
