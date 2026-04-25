@@ -62,6 +62,8 @@ const UserDiscover = lazy(() => import("./pages/user/UserDiscover"));
 const UserSettings = lazy(() => import("./pages/user/UserSettings"));
 const UserFavorites = lazy(() => import("./pages/user/UserFavorites"));
 const UserFriends = lazy(() => import("./pages/user/UserFriends"));
+const UserConversations = lazy(() => import("./pages/user/UserConversations"));
+const UserChatRoom = lazy(() => import("./pages/user/UserChatRoom"));
 const UserEditProfile = lazy(() => import("./pages/user/UserEditProfile"));
 const UserActivityHistory = lazy(
   () => import("./pages/user/UserActivityHistory"),
@@ -371,6 +373,26 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserFriends />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 私信会话列表 */}
+                <Route
+                  path="/u/messages"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserConversations />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 私信聊天室（与某用户/商家） */}
+                <Route
+                  path="/u/messages/:peerId"
+                  element={
+                    <ProtectedRoute requiredRole={["user", "organizer", "admin"]}>
+                      <UserChatRoom />
                     </ProtectedRoute>
                   }
                 />

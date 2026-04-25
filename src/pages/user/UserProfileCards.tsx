@@ -26,6 +26,7 @@ import {
   Fingerprint,
   Copy,
   Check,
+  MessageCircle,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { Toast } from "@/components/ui/Toast";
@@ -528,6 +529,12 @@ const UserProfileCards: FC = () => {
       {/* 功能菜单 */}
       <div className="px-4 md:px-6 lg:px-8 mt-4 mb-6 max-w-2xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+          <MenuItem
+            icon={MessageCircle}
+            label="我的私信"
+            color="text-blue-500"
+            onClick={() => navigate("/u/messages")}
+          />
           <MenuItem
             icon={Users}
             label="我的好友"

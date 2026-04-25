@@ -12,7 +12,7 @@ import { FC } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
-import { FollowButton } from "@/features/social";
+import { FollowButton, MessageButton } from "@/features/social";
 import { getPublicProfile } from "@/services/userApi";
 import type { UserBrief } from "@/components/business/UserHoverCard";
 
@@ -74,7 +74,10 @@ export const MerchantHoverCard: FC<MerchantHoverCardProps> = ({
       className={className}
       onViewProfile={(id) => navigate(`/u/profile/${id}`)}
       actionsSlot={
-        <FollowButton userId={merchantId} compact className="flex-1" />
+        <>
+          <FollowButton userId={merchantId} compact className="flex-1" />
+          <MessageButton userId={merchantId} compact className="flex-1" />
+        </>
       }
     >
       {children}

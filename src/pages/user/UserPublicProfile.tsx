@@ -8,7 +8,7 @@ import {
 import { UserLayout } from "@/components/layout/UserLayout";
 import { Button, Tag } from "@/components/ui";
 import { getPublicProfile } from "@/services/userApi";
-import { FollowButton, useSocialStats } from "@/features/social";
+import { FollowButton, MessageButton, useSocialStats } from "@/features/social";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 
 const UserPublicProfile: FC = () => {
@@ -93,8 +93,9 @@ const UserPublicProfile: FC = () => {
                 />
               </div>
               {!isSelf && userId && (
-                <div className="pb-1">
+                <div className="pb-1 flex items-center gap-2">
                   <FollowButton userId={userId} />
+                  <MessageButton userId={userId} />
                 </div>
               )}
             </div>
