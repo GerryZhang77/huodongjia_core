@@ -60,9 +60,12 @@ export function useToggleFavorite() {
 
   return useMutation({
     mutationFn: (activityId: string) => toggleFavorite(activityId),
-    onSuccess: () => {
+    onSuccess: (_, activityId) => {
       queryClient.invalidateQueries({ queryKey: ["user", "favorites"] });
       queryClient.invalidateQueries({ queryKey: ["user", "activities"] });
+      queryClient.invalidateQueries({
+        queryKey: ["user", "favorite-status", activityId],
+      });
     },
   });
 }

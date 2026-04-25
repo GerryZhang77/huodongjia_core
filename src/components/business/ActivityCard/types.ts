@@ -16,12 +16,19 @@ export interface ActivityCardProps {
   onMouseEnter?: (id: string) => void;
   /** 是否显示用户状态 */
   showUserStatus?: boolean;
-  /** 是否显示收藏按钮 */
+  /** 是否显示收藏按钮（外部受控；当传入 onToggleFavorite 时启用） */
   showFavorite?: boolean;
-  /** 收藏状态 */
+  /** 外部受控的收藏状态 */
   isFavorited?: boolean;
-  /** 收藏/取消收藏回调 */
+  /** 外部受控的收藏/取消收藏回调 */
   onToggleFavorite?: (id: string) => void;
+  /**
+   * 是否启用内置快捷收藏按钮（默认 true）。
+   * 不需要外部传 isFavorited / onToggleFavorite，组件内部用 useToggleFavorite，
+   * 自动从 activity.isFavorite 读初始状态。
+   * 商家端等场景可显式设为 false 关闭。
+   */
+  enableQuickFavorite?: boolean;
   /** 是否编辑模式 */
   editMode?: boolean;
   /** 删除回调 */

@@ -356,13 +356,13 @@ export async function removeFavorite(activityId: string): Promise<{
 
 /**
  * 切换收藏状态
- * POST /api/user/activities/:id/favorite
+ * POST /api/user/favorites/:id/toggle
  */
 export async function toggleFavorite(activityId: string): Promise<{
   success: boolean;
-  isFavorite?: boolean;
+  data?: { favorited: boolean };
 }> {
-  return api.post(`/api/user/activities/${activityId}/favorite`);
+  return api.post(`/api/user/favorites/${activityId}/toggle`);
 }
 
 // ============================================

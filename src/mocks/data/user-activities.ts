@@ -41,6 +41,8 @@ export interface UserActivity {
   contactInfo?: string;
   enrolledCount?: number;
   enableNfc?: boolean;
+  /** 当前用户是否已收藏 */
+  isFavorite?: boolean;
 }
 
 export const mockUserActivities: UserActivity[] = [

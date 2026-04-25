@@ -10,11 +10,13 @@
  * - 悬停效果: 上移 + 阴影增强
  */
 
-import { FC, memo } from "react";
+import { FC, memo, useState } from "react";
 import { clsx } from "clsx";
 import { Calendar, MapPin, Users, Heart, Trash2 } from "lucide-react";
 import { Tag } from "@/components/ui";
 import dayjs from "dayjs";
+import { useToggleFavorite } from "@/features/user/activity/hooks/useFavorites";
+import { Toast } from "@/components/ui/Toast";
 import type { ActivityCardProps } from "./types";
 
 // 用户状态配置
@@ -42,6 +44,7 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
   showFavorite = false,
   isFavorited = false,
   onToggleFavorite,
+  enableQuickFavorite = true,
   editMode = false,
   onRemove,
   className,
@@ -62,6 +65,19 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
 
   const statusConfig = userStatusConfig[userStatus];
 
+  // 内置快捷收藏：仅当外部未提供 onToggleFavorite，且未关闭，且非编辑模式时启用
+  const useInternalFav =
+    enableQuickFavorite && !showFavorite && !editMode && !onToggleFavorite;
+  const toggleFav = useToggleFavorite();
+  // 乐观更新：本地状态，初始来自 activity.isFavorite，点击立即翻转
+  const [internalFavorited, setInternalFavorited] = useState<boolean>(
+    !!activity.isFavorite,
+  );
+
+  const showFavoriteButton =
+    !editMode && (showFavorite || useInternalFav);
+  const favoritedState = useInternalFav ? internalFavorited : isFavorited;
+
   const handleClick = () => {
     if (!editMode) {
       onClick?.(id);
@@ -74,8 +90,23 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
     }
   };
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
+    if (useInternalFav) {
+      const next = !internalFavorited;
+      setInternalFavorited(next);
+      try {
+        await toggleFav.mutateAsync(id);
+      } catch (err) {
+        setInternalFavorited(!next);
+        Toast.show({
+          icon: "fail",
+          content: err instanceof Error ? err.message : "操作失败",
+        });
+      }
+      return;
+    }
     onToggleFavorite?.(id);
   };
 
@@ -83,6 +114,9 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
     e.stopPropagation();
     onRemove?.(id);
   };
+
+  const organizerInitial =
+    (organizer?.name && organizer.name.charAt(0)) || "?";
 
   return (
     <div
@@ -114,18 +148,20 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
         )}
 
         {/* 收藏按钮 */}
-        {showFavorite && !editMode && (
+        {showFavoriteButton && (
           <button
             onClick={handleFavoriteClick}
+            disabled={useInternalFav && toggleFav.isPending}
+            aria-label={favoritedState ? "取消收藏" : "收藏"}
             className={clsx(
               "absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center",
               "transition-all duration-200",
-              isFavorited
+              favoritedState
                 ? "bg-error-500 text-white"
-                : "bg-white/90 backdrop-blur-sm text-gray-400 hover:text-error-500"
+                : "bg-white/90 backdrop-blur-sm text-gray-400 hover:text-error-500",
             )}
           >
-            <Heart size={18} className={isFavorited ? "fill-current" : ""} />
+            <Heart size={18} className={favoritedState ? "fill-current" : ""} />
           </button>
         )}
 
@@ -178,13 +214,21 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
 
         {/* 组织者 */}
         <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <img
-            src={organizer.avatar}
-            alt={organizer.name}
-            className="w-6 h-6 rounded-full object-cover"
-          />
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {organizer.name}
+          <div className="w-6 h-6 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+            {organizer?.avatar ? (
+              <img
+                src={organizer.avatar}
+                alt={organizer.name || ""}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-[10px] font-semibold text-primary-600 dark:text-primary-300">
+                {organizerInitial}
+              </span>
+            )}
+          </div>
+          <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {organizer?.name || "主办方"}
           </span>
         </div>
       </div>

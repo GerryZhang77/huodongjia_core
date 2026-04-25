@@ -138,9 +138,9 @@ const UserChatRoom: FC = () => {
             <button
               type="button"
               onClick={() => navigate(`/u/profile/${peerId}`)}
-              className="flex items-center gap-2 hover:opacity-80"
+              className="flex-1 min-w-0 flex items-center gap-2 hover:opacity-80"
             >
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-100">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-100 flex-shrink-0">
                 {peer?.avatar ? (
                   <img src={peer.avatar} alt={peerName} className="w-full h-full object-cover" />
                 ) : (
@@ -149,10 +149,12 @@ const UserChatRoom: FC = () => {
                   </div>
                 )}
               </div>
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                 {peerName}
               </span>
             </button>
+            {/* 右侧：交换名片 */}
+            <ContactExchangeTrigger peerId={peerId} compact />
           </div>
         </header>
 
@@ -195,7 +197,6 @@ const UserChatRoom: FC = () => {
           <MessageInput
             disabled={!conversationId || sendMutation.isPending}
             onSend={handleSend}
-            leadingSlot={<ContactExchangeTrigger peerId={peerId} />}
           />
         </div>
       </div>

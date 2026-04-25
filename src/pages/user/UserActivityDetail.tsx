@@ -21,10 +21,14 @@ import {
   Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui";
+import { Toast } from "@/components/ui/Toast";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
 import { MerchantHoverCard } from "@/components/business/MerchantHoverCard";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useActivityDetail, useUserActivities } from "@/features/user";
+import { useToggleFavorite } from "@/features/user/activity/hooks/useFavorites";
+import { api } from "@/services/api/client";
+import { useQuery } from "@tanstack/react-query";
 import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import type { UserActivityStatus } from "@/services/userApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
@@ -77,9 +81,32 @@ const formatDate = (dateStr: string): string => dayjs(normalizeUtc(dateStr)).for
 const UserActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isFavorited, setIsFavorited] = useState(false);
   const [enrolledCount, setEnrolledCount] = useState<number | null>(null);
   const showBreadcrumb = useIsDesktop();
+
+  // 收藏状态：从后端拉取，避免页面间状态不同步
+  const { data: favStatus } = useQuery({
+    queryKey: ["user", "favorite-status", id],
+    queryFn: () =>
+      api.get<{ success: boolean; data: { favorited: boolean } }>(
+        `/api/user/favorites/${id}/status`,
+      ),
+    enabled: !!id,
+    staleTime: 30 * 1000,
+  });
+  const isFavorited = !!favStatus?.data?.favorited;
+  const toggleFav = useToggleFavorite();
+  const handleToggleFavorite = async () => {
+    if (!id) return;
+    try {
+      await toggleFav.mutateAsync(id);
+    } catch (err) {
+      Toast.show({
+        icon: "fail",
+        content: err instanceof Error ? err.message : "操作失败",
+      });
+    }
+  };
 
   // 获取当前用户信息
   const { user } = useAuthStore();
@@ -272,7 +299,7 @@ const UserActivityDetail: FC = () => {
                   </button>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setIsFavorited(!isFavorited)}
+                      onClick={handleToggleFavorite}
                       className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
                     >
                       <Heart
@@ -552,7 +579,7 @@ const UserActivityDetail: FC = () => {
             <div className="bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-4 lg:pb-6">
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setIsFavorited(!isFavorited)}
+                  onClick={handleToggleFavorite}
                   className="w-12 h-12 rounded-xl border border-gray-200 dark:border-gray-600 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <Heart
