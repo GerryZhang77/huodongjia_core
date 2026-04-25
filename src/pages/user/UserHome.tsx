@@ -3,7 +3,7 @@
  * 展示热门活动轮播和活动列表，支持搜索、筛选和视图切换
  */
 
-import { FC, useState, useMemo, useRef, useEffect } from "react";
+import { FC, useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, MapPin, Calendar, SlidersHorizontal, ChevronRight,
@@ -18,6 +18,7 @@ import { CitySelector } from "@/components/ui/CitySelector";
 import { Tag } from "@/components/ui";
 import { useUserActivities, useRecommendedActivities } from "@/features/user";
 import { useUserProfile } from "@/features/user";
+import { usePrefetchActivityDetail } from "@/hooks/usePrefetchActivity";
 import dayjs from "dayjs";
 import {
   type ActivityFilters, defaultFilters, timeRangeOptions, priceRangeOptions,
@@ -286,9 +287,14 @@ const UserHome: FC = () => {
     advancedFilters,
   ]);
 
-  const handleActivityClick = (id: string) => {
-    navigate(`/u/activities/${id}`);
-  };
+  const handleActivityClick = useCallback(
+    (id: string) => {
+      navigate(`/u/activities/${id}`);
+    },
+    [navigate]
+  );
+
+  const prefetchActivity = usePrefetchActivityDetail();
 
   const clearSearch = () => {
     setSearchText("");
@@ -704,6 +710,7 @@ const UserHome: FC = () => {
                   key={activity.id}
                   activity={activity}
                   onClick={handleActivityClick}
+                  onMouseEnter={prefetchActivity}
                   showUserStatus={false}
                 />
               ))}
@@ -716,6 +723,7 @@ const UserHome: FC = () => {
                   key={activity.id}
                   activity={activity}
                   onClick={handleActivityClick}
+                  onMouseEnter={prefetchActivity}
                   size="default"
                   showUserStatus={false}
                 />

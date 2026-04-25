@@ -3,7 +3,7 @@
  * 现代化卡片设计 - 圆角、阴影、动效
  */
 
-import { FC } from "react";
+import { FC, memo } from "react";
 
 import {
   Calendar,
@@ -19,6 +19,8 @@ import dayjs from "dayjs";
 interface UserActivityCardProps {
   activity: UserActivity;
   onClick?: (activity: UserActivity) => void;
+  /** 鼠标进入事件（用于详情预拉） */
+  onMouseEnter?: (id: string) => void;
 }
 
 // 状态配置
@@ -68,9 +70,10 @@ const formatEventDate = (startTime: string): string => {
 /**
  * 用户端活动卡片 - 现代化设计
  */
-export const UserActivityCard: FC<UserActivityCardProps> = ({
+const UserActivityCardInner: FC<UserActivityCardProps> = ({
   activity,
   onClick,
+  onMouseEnter,
 }) => {
   const config = statusConfig[activity.userStatus];
   const isFull = activity.currentParticipants >= activity.maxParticipants;
@@ -81,6 +84,7 @@ export const UserActivityCard: FC<UserActivityCardProps> = ({
   return (
     <article
       onClick={() => onClick?.(activity)}
+      onMouseEnter={() => onMouseEnter?.(activity.id)}
       className="group relative bg-white rounded-2xl overflow-hidden cursor-pointer
                  border border-gray-100/80
                  shadow-sm hover:shadow-xl hover:shadow-gray-200/50
@@ -209,5 +213,8 @@ export const UserActivityCard: FC<UserActivityCardProps> = ({
     </article>
   );
 };
+
+export const UserActivityCard = memo(UserActivityCardInner);
+UserActivityCard.displayName = "UserActivityCard";
 
 export default UserActivityCard;

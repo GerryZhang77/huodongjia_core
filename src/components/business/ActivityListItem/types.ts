@@ -12,6 +12,8 @@ export interface ActivityListItemProps {
   activity: UserActivity;
   /** 点击事件 */
   onClick?: (id: string) => void;
+  /** 鼠标进入事件（用于详情预拉） */
+  onMouseEnter?: (id: string) => void;
   /** 尺寸变体 */
   size?: "compact" | "default" | "large";
   /** 是否显示用户状态 */

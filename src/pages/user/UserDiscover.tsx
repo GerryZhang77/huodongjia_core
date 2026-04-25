@@ -3,11 +3,12 @@
  * 根据设计稿 06-activity-list.svg 实现
  */
 
-import { FC, useState, useMemo } from "react";
+import { FC, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, SlidersHorizontal, MapPin, Calendar } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useRecommendedActivities } from "@/features/user";
+import { usePrefetchActivityDetail } from "@/hooks/usePrefetchActivity";
 import type { UserActivity } from "@/services/userApi";
 import dayjs from "dayjs";
 
@@ -134,9 +135,14 @@ const UserDiscover: FC = () => {
     return result;
   }, [allActivities, searchText, activeFilter, sortBy]);
 
-  const handleActivityClick = (id: string) => {
-    navigate(`/u/activities/${id}`);
-  };
+  const handleActivityClick = useCallback(
+    (id: string) => {
+      navigate(`/u/activities/${id}`);
+    },
+    [navigate]
+  );
+
+  const prefetchActivity = usePrefetchActivityDetail();
 
   return (
     <UserLayout
@@ -251,6 +257,7 @@ const UserDiscover: FC = () => {
                 activity={activity}
                 colorIndex={index % cardColors.length}
                 onClick={handleActivityClick}
+                onMouseEnter={prefetchActivity}
               />
             ))
           )}
@@ -265,12 +272,14 @@ interface ActivityCardProps {
   activity: UserActivity;
   colorIndex: number;
   onClick: (id: string) => void;
+  onMouseEnter?: (id: string) => void;
 }
 
 const ActivityCard: FC<ActivityCardProps> = ({
   activity,
   colorIndex,
   onClick,
+  onMouseEnter,
 }) => {
   const isHot = activity.currentParticipants / activity.maxParticipants > 0.8;
   const isUpcoming =
@@ -280,6 +289,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
   return (
     <div
       onClick={() => onClick(activity.id)}
+      onMouseEnter={() => onMouseEnter?.(activity.id)}
       className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm shadow-slate-200/60 dark:shadow-none overflow-hidden flex cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
     >
       {/* 左侧彩色区域 */}

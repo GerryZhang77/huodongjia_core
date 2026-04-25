@@ -13,6 +13,7 @@ export function useUserProfile() {
   return useQuery<{ success: boolean; profile?: UserProfile }, Error>({
     queryKey: ["user", "profile"],
     queryFn: getUserProfile,
-    staleTime: 5 * 60 * 1000, // 5分钟
+    staleTime: 15 * 60 * 1000, // 15分钟（用户资料相对稳定，更新后由 mutation invalidate 即可）
+    gcTime: 30 * 60 * 1000,
   });
 }

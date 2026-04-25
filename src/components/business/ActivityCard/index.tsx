@@ -10,7 +10,7 @@
  * - 悬停效果: 上移 + 阴影增强
  */
 
-import { FC } from "react";
+import { FC, memo } from "react";
 import { clsx } from "clsx";
 import { Calendar, MapPin, Users, Heart, Trash2 } from "lucide-react";
 import { Tag } from "@/components/ui";
@@ -34,9 +34,10 @@ const formatDate = (dateStr: string): string => {
 /**
  * ActivityCard 组件
  */
-export const ActivityCard: FC<ActivityCardProps> = ({
+const ActivityCardInner: FC<ActivityCardProps> = ({
   activity,
   onClick,
+  onMouseEnter,
   showUserStatus = true,
   showFavorite = false,
   isFavorited = false,
@@ -67,6 +68,12 @@ export const ActivityCard: FC<ActivityCardProps> = ({
     }
   };
 
+  const handleMouseEnter = () => {
+    if (!editMode) {
+      onMouseEnter?.(id);
+    }
+  };
+
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onToggleFavorite?.(id);
@@ -87,6 +94,7 @@ export const ActivityCard: FC<ActivityCardProps> = ({
         className
       )}
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
     >
       {/* 封面图 */}
       <div className="relative h-40 overflow-hidden">
@@ -183,5 +191,8 @@ export const ActivityCard: FC<ActivityCardProps> = ({
     </div>
   );
 };
+
+export const ActivityCard = memo(ActivityCardInner);
+ActivityCard.displayName = "ActivityCard";
 
 export default ActivityCard;

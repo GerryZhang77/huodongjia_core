@@ -10,7 +10,7 @@
  * - PC 端封面更大，信息更丰富
  */
 
-import { FC } from "react";
+import { FC, memo } from "react";
 import { clsx } from "clsx";
 import { Calendar, MapPin, TrendingUp } from "lucide-react";
 import { Tag } from "@/components/ui";
@@ -43,9 +43,10 @@ const formatDate = (dateStr: string): string => {
 /**
  * ActivityListItem 组件
  */
-export const ActivityListItem: FC<ActivityListItemProps> = ({
+const ActivityListItemInner: FC<ActivityListItemProps> = ({
   activity,
   onClick,
+  onMouseEnter,
   size = "default",
   showUserStatus = false,
   className,
@@ -100,9 +101,14 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
     onClick?.(id);
   };
 
+  const handleMouseEnter = () => {
+    onMouseEnter?.(id);
+  };
+
   return (
     <article
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
       className={clsx(
         "bg-white dark:bg-gray-800 rounded-2xl shadow-card overflow-hidden flex cursor-pointer",
         "transition-all duration-200 ease-out",
@@ -235,5 +241,8 @@ export const ActivityListItem: FC<ActivityListItemProps> = ({
     </article>
   );
 };
+
+export const ActivityListItem = memo(ActivityListItemInner);
+ActivityListItem.displayName = "ActivityListItem";
 
 export default ActivityListItem;

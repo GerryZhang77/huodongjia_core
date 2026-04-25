@@ -13,6 +13,7 @@ export function useRecommendedActivities() {
   return useQuery<UserActivityListResponse, Error>({
     queryKey: ["user", "activities", "recommended"],
     queryFn: getRecommendedActivities,
-    staleTime: 5 * 60 * 1000, // 5分钟
+    staleTime: 15 * 60 * 1000, // 15分钟（首页推荐相对稳定）
+    gcTime: 30 * 60 * 1000,
   });
 }
