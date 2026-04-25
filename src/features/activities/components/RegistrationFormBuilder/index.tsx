@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Settings2,
   Lock,
+  AlertCircle,
 } from "lucide-react";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
@@ -30,7 +31,7 @@ const DEFAULT_PRESET_FIELDS: RegistrationFormField[] = [
     key: "name",
     label: "姓名",
     type: "text",
-    required: true,
+    required: false,
     preset: true,
     deletable: true,
     placeholder: "请输入姓名",
@@ -39,7 +40,7 @@ const DEFAULT_PRESET_FIELDS: RegistrationFormField[] = [
     key: "phone",
     label: "手机号",
     type: "text",
-    required: true,
+    required: false,
     preset: true,
     deletable: true,
     placeholder: "请输入手机号",
@@ -401,6 +402,15 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
           <p className="text-xs text-gray-400 dark:text-gray-500">
             设置用户报名活动时需要填写的内容，拖动可调整顺序
           </p>
+          <div className="flex items-start gap-2 px-3 py-2 bg-warning-50 dark:bg-warning-900/20 border border-warning-100 dark:border-warning-900/40 rounded-lg">
+            <AlertCircle
+              size={14}
+              className="text-warning-500 dark:text-warning-400 flex-shrink-0 mt-0.5"
+            />
+            <p className="text-xs text-warning-700 dark:text-warning-300 leading-relaxed">
+              姓名、手机号涉及用户隐私，建议仅在确实需要时启用必填
+            </p>
+          </div>
 
           {/* 列表 */}
           <div className="space-y-2">

@@ -19,9 +19,9 @@ import dayjs from "dayjs";
 // 默认报名表 schema（无自定义时使用）
 // ============================================
 const DEFAULT_FORM_SCHEMA: RegistrationFormField[] = [
-  { key: "name", label: "姓名", type: "text", required: true, preset: true, placeholder: "请输入您的姓名" },
-  { key: "phone", label: "手机号", type: "text", required: true, preset: true, placeholder: "请输入手机号" },
-  { key: "gender", label: "性别", type: "radio", required: true, preset: true, options: ["男", "女"] },
+  { key: "name", label: "姓名", type: "text", required: false, preset: true, placeholder: "请输入您的姓名" },
+  { key: "phone", label: "手机号", type: "text", required: false, preset: true, placeholder: "请输入手机号" },
+  { key: "gender", label: "性别", type: "radio", required: false, preset: true, options: ["男", "女"] },
 ];
 
 // ============================================
