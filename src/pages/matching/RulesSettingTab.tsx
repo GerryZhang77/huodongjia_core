@@ -7,8 +7,8 @@ import {
   Slider,
   Switch,
   Stepper,
-  Toast,
 } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { StarOutline, AddCircleOutline, SetOutline } from "antd-mobile-icons";
 import { MatchingRule, MatchConstraints } from "./types";
 import AddCustomRuleModal from "./AddCustomRuleModal";

@@ -4,7 +4,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { participantsApi } from "../services";
 import type {
   CreateParticipantsRequest,

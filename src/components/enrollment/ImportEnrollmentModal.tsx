@@ -18,7 +18,7 @@ import {
   Sparkles,
   RotateCcw,
 } from "lucide-react";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import * as XLSX from "xlsx";
 import { useAuthStore } from "@/features/auth/stores";
 

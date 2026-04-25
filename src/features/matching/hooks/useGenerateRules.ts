@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { generateMatchRules } from "../services";
 import { useMatchingStore } from "../stores";
 

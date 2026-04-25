@@ -28,7 +28,7 @@ import {
   Check,
 } from "lucide-react";
 import dayjs from "dayjs";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useUserProfile, useUserActivities } from "@/features/user";

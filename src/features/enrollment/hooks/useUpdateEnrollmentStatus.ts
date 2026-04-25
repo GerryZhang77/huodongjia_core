@@ -3,7 +3,7 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { updateEnrollmentStatus as updateStatusApi } from "../services";
 import type { EnrollmentStatus } from "../types";
 

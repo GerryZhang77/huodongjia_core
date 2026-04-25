@@ -9,7 +9,11 @@
  */
 
 import React, { useState } from "react";
-import { Popup, Dialog, Toast } from "antd-mobile";
+import {
+  Popup,
+  Dialog,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { X, Plus, Trash2, Tag as TagIcon, Settings } from "lucide-react";
 import type { CustomTag } from "@/features/merchant/user-pool/types";
 import { TAG_COLORS } from "@/features/merchant/user-pool/types";

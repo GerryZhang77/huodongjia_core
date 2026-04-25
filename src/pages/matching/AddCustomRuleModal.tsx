@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { Dialog, Input, TextArea, Selector, Slider, Toast } from "antd-mobile";
+import {
+  Dialog,
+  Input,
+  TextArea,
+  Selector,
+  Slider,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { MatchingRule } from "./types";
 
 interface AddCustomRuleModalProps {

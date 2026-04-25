@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { getMatchResult, publishMatchResult } from "../services/matchResultApi";
 import type {
   MatchResultData,

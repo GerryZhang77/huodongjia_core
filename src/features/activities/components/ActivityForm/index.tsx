@@ -5,13 +5,13 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate } from "react-router-dom";
 import {
   Form,
   Input,
   TextArea,
   Button,
-  Toast,
   ImageUploader,
   Selector,
   Stepper,
@@ -19,6 +19,7 @@ import {
   Card,
   Dialog,
 } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { PictureOutline } from "antd-mobile-icons";
 import { useActivityDetail } from "../../hooks";
 import { uploadCoverImage } from "../../services";

@@ -17,7 +17,7 @@ import {
   X,
   ImagePlus,
 } from "lucide-react";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Textarea } from "@/components/ui";
 import { useUserProfile, useUpdateProfile } from "@/features/user";

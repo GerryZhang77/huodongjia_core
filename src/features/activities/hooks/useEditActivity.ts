@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { updateActivity } from "../services";
 import { useActivityStore } from "../stores";

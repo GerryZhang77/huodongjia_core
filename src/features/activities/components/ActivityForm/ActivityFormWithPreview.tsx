@@ -6,13 +6,13 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate } from "react-router-dom";
 import {
   Form,
   Input,
   TextArea,
   Button,
-  Toast,
   ImageUploader,
   Selector,
   Stepper,
@@ -21,6 +21,7 @@ import {
   Dialog,
   Popup,
 } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { PictureOutline } from "antd-mobile-icons";
 import { Eye, EyeOff, Smartphone, Monitor } from "lucide-react";
 import { useActivityDetail } from "../../hooks";

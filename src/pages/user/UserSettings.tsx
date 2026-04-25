@@ -21,7 +21,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { useThemeStore } from "@/store/themeStore";

@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { getBestMatches, getParticipants } from "../services/matchApi";
 
 export interface BestMatchUser {

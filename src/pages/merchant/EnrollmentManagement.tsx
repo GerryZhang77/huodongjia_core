@@ -16,7 +16,6 @@ import {
   Card,
   List,
   Badge,
-  Toast,
   ActionSheet,
   Tabs,
   TextArea,
@@ -25,6 +24,7 @@ import {
   Empty,
   Checkbox,
 } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import {
   UploadOutline,
   DownlandOutline,

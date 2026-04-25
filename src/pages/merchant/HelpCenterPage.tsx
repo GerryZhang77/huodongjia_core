@@ -14,7 +14,11 @@ import {
   Phone,
   Mail,
 } from "lucide-react";
-import { Toast, SearchBar, Collapse } from "antd-mobile";
+import {
+  SearchBar,
+  Collapse,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
 
 // 帮助文章类型

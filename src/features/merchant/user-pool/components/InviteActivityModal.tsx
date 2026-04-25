@@ -9,7 +9,10 @@
  */
 
 import React, { useState, useMemo } from "react";
-import { Popup, Toast } from "antd-mobile";
+import {
+  Popup,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import {
   X,
   Send,

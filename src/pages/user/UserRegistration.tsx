@@ -7,7 +7,7 @@
 import { FC, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Calendar, MapPin, AlertCircle } from "lucide-react";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useActivityDetail } from "@/features/user";

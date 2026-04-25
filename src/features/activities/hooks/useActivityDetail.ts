@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { getActivityById } from "../services";
 import { useActivityStore } from "../stores";
 import type { Activity } from "../types";

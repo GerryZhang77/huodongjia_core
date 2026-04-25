@@ -5,7 +5,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { createActivity, getActivities } from "../services";
 import { activitiesKeys } from "./useActivities";
 import type { ActivityFormData, CreateActivityRequest } from "../types";

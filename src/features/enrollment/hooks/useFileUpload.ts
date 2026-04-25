@@ -4,7 +4,7 @@
  */
 
 import { useMutation } from "@tanstack/react-query";
-import { Toast } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { fileUploadApi } from "../services";
 import type { FileUploadResponse } from "../types";
 

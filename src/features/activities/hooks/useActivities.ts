@@ -5,8 +5,13 @@
  * 临时方案：当后端接口未实现时，返回静态演示数据
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, Toast } from "antd-mobile";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient } from "@tanstack/react-query";
+import { Dialog,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import {
   getActivities,
   deleteActivity,

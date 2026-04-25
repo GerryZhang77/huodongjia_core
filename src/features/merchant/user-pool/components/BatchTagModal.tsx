@@ -8,7 +8,10 @@
  */
 
 import React, { useState, useMemo } from "react";
-import { Popup, Toast } from "antd-mobile";
+import {
+  Popup,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { X, Plus, Tag as TagIcon, Check } from "lucide-react";
 import type { CustomTag } from "@/features/merchant/user-pool/types";
 import { TAG_COLORS } from "@/features/merchant/user-pool/types";

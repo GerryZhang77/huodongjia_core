@@ -5,19 +5,22 @@
  * 参考报名管理Tab的实现结构
  */
 
-import { FC, useState, useEffect } from "react";
+import {
+  FC,
+  useState,
+  useEffect } from "react";
 import {
   Button,
   Card,
   Empty,
   Tag,
-  Toast,
   Badge,
   Tabs,
   SpinLoading,
   Dialog,
   Checkbox,
 } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import {
   TeamOutline,
   SendOutline,

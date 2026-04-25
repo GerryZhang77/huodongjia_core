@@ -3,7 +3,10 @@
  * 使用新的 MerchantLayout 和设计系统
  */
 
-import { FC, useState, useEffect } from "react";
+import {
+  FC,
+  useState,
+  useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
@@ -24,8 +27,10 @@ import {
   Settings,
   HelpCircle,
   UserSearch,
-} from "lucide-react";
-import { Dialog, Toast } from "antd-mobile";
+  } from "lucide-react";
+import { Dialog,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
 import {
   MerchantActivity,

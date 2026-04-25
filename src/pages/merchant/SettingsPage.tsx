@@ -4,7 +4,8 @@
  */
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate } from "react-router-dom";
 import {
   User,
   Bell,
@@ -18,8 +19,11 @@ import {
   ChevronRight,
   Sun,
   Monitor,
-} from "lucide-react";
-import { Switch, Toast, Popup } from "antd-mobile";
+  } from "lucide-react";
+import { Switch,
+  Popup,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
 import { useThemeStore } from "@/store/themeStore";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";

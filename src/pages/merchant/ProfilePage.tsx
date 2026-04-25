@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   User,
@@ -28,8 +29,11 @@ import {
   Copy,
   Check,
   Fingerprint,
-} from "lucide-react";
-import { Dialog, Toast, Popup } from "antd-mobile";
+  } from "lucide-react";
+import { Dialog,
+  Popup,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
 import { merchantApi, uploadMerchantAvatar, type MerchantProfile } from "@/services";
 import { useStore } from "@/store";

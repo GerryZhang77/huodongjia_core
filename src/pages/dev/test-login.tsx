@@ -2,8 +2,13 @@
  * 测试登录 API - Apifox Mock
  */
 
-import { useState } from "react";
-import { Button, Toast, Input, Space } from "antd-mobile";
+import {
+  useState } from "react";
+import { Button,
+  Input,
+  Space,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { api } from "@/services/api";
 
 interface ApiResponse {

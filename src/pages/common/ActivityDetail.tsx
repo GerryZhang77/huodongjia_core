@@ -19,7 +19,11 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { Toast, Dialog, ActionSheet } from "antd-mobile";
+import {
+  Dialog,
+  ActionSheet,
+} from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import { Button } from "@/components/ui";
 import {
