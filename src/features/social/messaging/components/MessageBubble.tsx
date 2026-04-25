@@ -2,6 +2,7 @@ import { FC } from "react";
 import { clsx } from "clsx";
 import dayjs from "dayjs";
 import type { ChatMessage } from "../services/messageApi";
+import { ContactRequestCard } from "../../contact-exchange/components/ContactRequestCard";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -72,7 +73,7 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
     );
   }
 
-  // 联系方式交换卡片：P4 中实现专门组件，这里先按特殊样式占位
+  // 联系方式交换卡片
   if (
     message.message_type === "contact_request" ||
     message.message_type === "contact_response"
@@ -87,29 +88,7 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
         {!isMine && (
           <Avatar src={peerAvatar} name={peerName} visible={showAvatar} />
         )}
-        <div
-          className={clsx(
-            "max-w-[75%] rounded-xl border px-3 py-2",
-            "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50",
-          )}
-        >
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-            联系方式交换
-          </p>
-          <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
-            {message.content}
-          </p>
-          <p className="text-[10px] text-gray-400 mt-1">
-            状态：
-            {message.status === "pending"
-              ? "等待对方处理"
-              : message.status === "accepted"
-                ? "已接受"
-                : message.status === "rejected"
-                  ? "已拒绝"
-                  : message.status}
-          </p>
-        </div>
+        <ContactRequestCard message={message} isMine={isMine} />
         {isMine && (
           <Avatar src={myAvatar} name={myName} visible={showAvatar} />
         )}

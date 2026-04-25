@@ -16,6 +16,7 @@ export interface UserProfile {
   name: string;
   phone?: string;
   email?: string;
+  wechat?: string;
   avatar?: string;
   gender?: "male" | "female" | "other";
   age?: number;
@@ -66,6 +67,7 @@ export interface UpdateProfileRequest {
   photos?: string[];
   email?: string;
   phone?: string;
+  wechat?: string;
 }
 
 export interface Notification {

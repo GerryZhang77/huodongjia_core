@@ -47,6 +47,9 @@ export interface UpdateProfileRequest {
   interestTags?: InterestTag[];
   wechatQr?: string;
   photos?: string[];
+  email?: string;
+  phone?: string;
+  wechat?: string;
 }
 
 /**

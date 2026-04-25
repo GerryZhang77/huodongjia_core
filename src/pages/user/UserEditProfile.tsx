@@ -13,6 +13,7 @@ import {
   MapPin,
   Mail,
   Phone,
+  MessageCircle,
   Plus,
   X,
   ImagePlus,
@@ -62,6 +63,7 @@ const UserEditProfile: FC = () => {
     city: "",
     email: "",
     phone: "",
+    wechat: "",
     bio: "",
     interests: [] as string[],
   });
@@ -92,6 +94,7 @@ const UserEditProfile: FC = () => {
         city: profile.city || "",
         email: profile.contact?.email || profile.email || "",
         phone: profile.contact?.phone || profile.phone || "",
+        wechat: profile.contact?.wechat || profile.wechat || "",
         bio: profile.bio || "",
         interests: profile.tags || [],
       });
@@ -194,6 +197,7 @@ const UserEditProfile: FC = () => {
           photos,
           email: formData.email || undefined,
           phone: formData.phone || undefined,
+          wechat: formData.wechat || undefined,
         },
         {
           onSuccess: () => {
@@ -359,6 +363,15 @@ const UserEditProfile: FC = () => {
               value={formData.email}
               onChange={(e) => updateField("email", e.target.value)}
               prefix={<Mail size={18} />}
+            />
+
+            {/* 微信 */}
+            <Input
+              type="text"
+              placeholder="微信号"
+              value={formData.wechat}
+              onChange={(e) => updateField("wechat", e.target.value)}
+              prefix={<MessageCircle size={18} />}
             />
           </div>
 

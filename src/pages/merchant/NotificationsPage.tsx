@@ -15,17 +15,30 @@ import {
   CheckCheck,
   Trash2,
   ChevronRight,
+  MessageCircle,
+  Contact,
 } from "lucide-react";
 import { MerchantLayout } from "@/components/layout";
 import { api } from "@/services/api/client";
 
 interface MerchantNotification {
   id: string;
-  type: "enrollment" | "match" | "system" | "reminder" | "approval";
+  type:
+    | "enrollment"
+    | "match"
+    | "system"
+    | "reminder"
+    | "approval"
+    | "message"
+    | "follow"
+    | "contact_request";
   title: string;
   content: string;
   activityId?: string;
   activityTitle?: string;
+  /** 发送者 id（用于社交类通知跳转） */
+  senderId?: string;
+  sender?: { id: string; name?: string | null; avatar?: string | null } | null;
   isRead: boolean;
   createdAt: string;
 }
@@ -36,6 +49,9 @@ const notificationIcons: Record<string, React.ReactNode> = {
   match: <GitMerge size={18} />,
   system: <Settings size={18} />,
   reminder: <Clock size={18} />,
+  message: <MessageCircle size={18} />,
+  follow: <UserPlus size={18} />,
+  contact_request: <Contact size={18} />,
 };
 
 const notificationColors: Record<string, string> = {
@@ -44,6 +60,9 @@ const notificationColors: Record<string, string> = {
   match: "bg-accent-100 text-accent-500",
   system: "bg-gray-100 text-gray-500",
   reminder: "bg-orange-100 text-secondary-500",
+  message: "bg-blue-100 text-blue-500",
+  follow: "bg-purple-100 text-purple-500",
+  contact_request: "bg-orange-100 text-orange-500",
 };
 
 const formatTime = (dateStr: string) => {
@@ -151,7 +170,22 @@ const NotificationsPage: React.FC = () => {
 
   const handleClick = (notification: MerchantNotification) => {
     if (!notification.isRead) readMutation.mutate(notification.id);
-    if (notification.activityId) navigate(`/dashboard/activity/${notification.activityId}/enrollment`);
+    // 社交类通知：跳到与发送者的聊天 / 发送者主页
+    if (
+      (notification.type === "message" ||
+        notification.type === "contact_request") &&
+      notification.senderId
+    ) {
+      navigate(`/u/messages/${notification.senderId}`);
+      return;
+    }
+    if (notification.type === "follow" && notification.senderId) {
+      navigate(`/u/profile/${notification.senderId}`);
+      return;
+    }
+    if (notification.activityId) {
+      navigate(`/dashboard/activity/${notification.activityId}/enrollment`);
+    }
   };
 
   return (

@@ -20,6 +20,7 @@ import {
   useMarkConversationRead,
   MessageBubble,
   MessageInput,
+  ContactExchangeTrigger,
 } from "@/features/social";
 import { createConversation } from "@/features/social/messaging/services/messageApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
@@ -194,6 +195,7 @@ const UserChatRoom: FC = () => {
           <MessageInput
             disabled={!conversationId || sendMutation.isPending}
             onSend={handleSend}
+            leadingSlot={<ContactExchangeTrigger peerId={peerId} />}
           />
         </div>
       </div>
