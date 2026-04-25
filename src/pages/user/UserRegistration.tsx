@@ -279,7 +279,7 @@ const UserRegistration: FC = () => {
 
   return (
     <UserLayout
-      showTabBar={true}
+      showTabBar={false}
       showTopBar={true}
       showBreadcrumb={true}
       breadcrumbItems={[
@@ -289,7 +289,7 @@ const UserRegistration: FC = () => {
       ]}
       bgColor="bg-gray-50 dark:bg-gray-900"
     >
-      <div className="min-h-screen pb-[180px] md:pb-32">
+      <div className="min-h-screen pb-[140px] md:pb-28">
         {/* 活动预览卡片 */}
         <div className="px-4 pt-4 md:px-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-3 flex gap-3 shadow-sm">
@@ -333,8 +333,11 @@ const UserRegistration: FC = () => {
           ))}
         </div>
 
-        {/* 底部操作栏 */}
-        <div className="fixed bottom-14 left-0 right-0 z-40 md:bottom-0">
+        {/* 底部操作栏 - 报名页隐藏 TabBar，专注表单 */}
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
           <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_12px_rgba(0,0,0,0.3)]">
             <Button
               onClick={handleSubmit}

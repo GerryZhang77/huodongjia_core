@@ -27,6 +27,7 @@ import { useActivityDetail, useUserActivities } from "@/features/user";
 import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import type { UserActivityStatus } from "@/services/userApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
+import { useIsDesktop } from "@/hooks/useMediaQuery";
 import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import dayjs from "dayjs";
@@ -77,9 +78,7 @@ const UserActivityDetail: FC = () => {
   const navigate = useNavigate();
   const [isFavorited, setIsFavorited] = useState(false);
   const [enrolledCount, setEnrolledCount] = useState<number | null>(null);
-  const [showBreadcrumb, setShowBreadcrumb] = useState(
-    window.innerWidth >= 1024,
-  );
+  const showBreadcrumb = useIsDesktop();
 
   // 获取当前用户信息
   const { user } = useAuthStore();
@@ -120,16 +119,6 @@ const UserActivityDetail: FC = () => {
       .then((res) => setEnrolledCount(res.total))
       .catch(() => setEnrolledCount(null));
   }, [id]);
-
-  // 监听窗口大小变化，动态控制面包屑显示（桌面端显示，移动端隐藏）
-  useEffect(() => {
-    const handleResize = () => {
-      setShowBreadcrumb(window.innerWidth >= 1024);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   // 切换到上一个活动
   const goToPrevious = () => {
@@ -238,34 +227,33 @@ const UserActivityDetail: FC = () => {
             </button>
           )}
 
-          {/* 移动端切换按钮 - 显示在封面图中间两侧 */}
-          {prevActivity && (
-            <button
-              onClick={goToPrevious}
-              className="lg:hidden absolute left-3 top-[calc(50vw-24px)] md:top-[200px] z-30 w-11 h-11 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-md flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg active:scale-95 transition-all duration-150"
-              aria-label="上一个活动"
-            >
-              <ChevronLeft
-                size={24}
-                className="text-gray-600 dark:text-gray-300"
-              />
-            </button>
-          )}
-          {nextActivity && (
-            <button
-              onClick={goToNext}
-              className="lg:hidden absolute right-3 top-[calc(50vw-24px)] md:top-[200px] z-30 w-11 h-11 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-md flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg active:scale-95 transition-all duration-150"
-              aria-label="下一个活动"
-            >
-              <ChevronRight
-                size={24}
-                className="text-gray-600 dark:text-gray-300"
-              />
-            </button>
-          )}
-
-          {/* 封面区域 - 图片轮播 */}
-          <ImageCarousel
+          {/* 封面区域 - 图片轮播（与移动端切换按钮共用相对容器，确保按钮垂直居中） */}
+          <div className="relative">
+            {prevActivity && (
+              <button
+                onClick={goToPrevious}
+                className="lg:hidden absolute left-3 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-md flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg active:scale-95 transition-all duration-150"
+                aria-label="上一个活动"
+              >
+                <ChevronLeft
+                  size={24}
+                  className="text-gray-600 dark:text-gray-300"
+                />
+              </button>
+            )}
+            {nextActivity && (
+              <button
+                onClick={goToNext}
+                className="lg:hidden absolute right-3 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-md flex items-center justify-center hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg active:scale-95 transition-all duration-150"
+                aria-label="下一个活动"
+              >
+                <ChevronRight
+                  size={24}
+                  className="text-gray-600 dark:text-gray-300"
+                />
+              </button>
+            )}
+            <ImageCarousel
             images={
               activity.images?.length ? activity.images : [activity.coverImage]
             }
@@ -322,6 +310,7 @@ const UserActivityDetail: FC = () => {
               </>
             )}
           />
+          </div>
 
           {/* 内容区 */}
           <div className="px-4 py-5 md:px-6 lg:px-8">

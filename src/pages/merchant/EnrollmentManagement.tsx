@@ -9,7 +9,9 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  useNavigate,
+  useParams } from "react-router-dom";
 import {
   NavBar,
   Button,
@@ -612,19 +614,19 @@ const EnrollmentManagement: React.FC = () => {
           <div className="space-y-3">
             {/* 批量选择工具栏 */}
             {enrollments.length > 0 && (
-              <div className="flex items-center justify-between bg-white p-3 rounded-lg">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-white p-3 rounded-lg">
                 <Checkbox
                   checked={allSelected}
                   indeterminate={indeterminate}
                   onChange={handleSelectAll}
                 >
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 whitespace-nowrap">
                     {selectedIds.length > 0
                       ? `已选 ${selectedIds.length} 人`
                       : "全选"}
                   </span>
                 </Checkbox>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 whitespace-nowrap">
                   共 {filteredEnrollments.length} 人
                 </span>
               </div>
@@ -653,28 +655,30 @@ const EnrollmentManagement: React.FC = () => {
                       } as React.CSSProperties
                     }
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-900">
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-medium text-gray-900 truncate min-w-0">
                           {enrollment.name}
                         </h3>
-                        {getStatusBadge(enrollment.status)}
+                        <div className="flex-shrink-0">
+                          {getStatusBadge(enrollment.status)}
+                        </div>
                       </div>
 
                       {enrollment.email && (
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 break-all">
                           📧 {enrollment.email}
                         </div>
                       )}
 
                       {enrollment.phone && (
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 break-all">
                           📱 {enrollment.phone}
                         </div>
                       )}
 
                       {enrollment.city && (
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 truncate">
                           📍 {enrollment.city}
                         </div>
                       )}
@@ -699,11 +703,11 @@ const EnrollmentManagement: React.FC = () => {
                           </div>
                         )}
 
-                      <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
-                        <span>
+                      <div className="flex items-center justify-between gap-2 text-xs text-gray-500 pt-2 border-t border-gray-100">
+                        <span className="truncate min-w-0">
                           报名时间：{formatDateTime(enrollment.enrolledAt)}
                         </span>
-                        <div className="flex space-x-1">
+                        <div className="flex space-x-1 flex-shrink-0">
                           {enrollment.status === "approved" && (
                             <CheckCircleOutline className="text-green-500" />
                           )}
