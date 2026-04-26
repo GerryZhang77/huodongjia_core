@@ -50,6 +50,7 @@ const ActivityListItemInner: FC<ActivityListItemProps> = ({
   size = "default",
   showUserStatus = false,
   className,
+  priority = false,
 }) => {
   const {
     id,
@@ -127,7 +128,9 @@ const ActivityListItemInner: FC<ActivityListItemProps> = ({
             src={coverImage}
             alt={title}
             className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
+            {...(priority ? { fetchPriority: "high" as const } : {})}
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary-100 to-accent-100 flex items-center justify-center">

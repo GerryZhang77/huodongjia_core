@@ -717,20 +717,21 @@ const UserHome: FC = () => {
           ) : viewMode === "grid" ? (
             // 网格视图
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredActivities.map((activity) => (
+              {filteredActivities.map((activity, idx) => (
                 <ActivityCard
                   key={activity.id}
                   activity={activity}
                   onClick={handleActivityClick}
                   onMouseEnter={prefetchActivity}
                   showUserStatus={false}
+                  priority={idx < 4}
                 />
               ))}
             </div>
           ) : (
             // 列表视图
             <div className="space-y-3">
-              {filteredActivities.map((activity) => (
+              {filteredActivities.map((activity, idx) => (
                 <ActivityListItem
                   key={activity.id}
                   activity={activity}
@@ -738,6 +739,7 @@ const UserHome: FC = () => {
                   onMouseEnter={prefetchActivity}
                   size="default"
                   showUserStatus={false}
+                  priority={idx < 4}
                 />
               ))}
             </div>

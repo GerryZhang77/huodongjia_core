@@ -43,10 +43,13 @@ const HotActivitySlide: FC<HotActivitySlideProps> = ({ activity, onClick }) => {
       onClick={onClick}
       className="relative h-[180px] sm:h-[220px] lg:h-[320px] xl:h-[360px] rounded-2xl overflow-hidden cursor-pointer group"
     >
-      {/* 封面图片 - 无滤镜 */}
+      {/* 封面图片 - 首屏关键资源，立即加载 */}
       <img
         src={activity.coverImage}
         alt={activity.title}
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       />
 

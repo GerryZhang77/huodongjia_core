@@ -50,6 +50,7 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
   editMode = false,
   onRemove,
   className,
+  priority = false,
 }) => {
   const {
     id,
@@ -143,10 +144,13 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
       onMouseEnter={handleMouseEnter}
     >
       {/* 封面图 */}
-      <div className="relative h-40 overflow-hidden">
+      <div className="relative h-40 overflow-hidden bg-gray-100 dark:bg-gray-700">
         <img
           src={coverImage}
           alt={title}
+          loading={priority ? "eager" : "lazy"}
+          {...(priority ? { fetchPriority: "high" as const } : {})}
+          decoding="async"
           className="w-full h-full object-cover"
         />
 
@@ -231,6 +235,8 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
               <img
                 src={organizer.avatar}
                 alt={organizer.name || ""}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             ) : (

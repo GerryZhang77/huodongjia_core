@@ -20,4 +20,9 @@ export interface ActivityListItemProps {
   showUserStatus?: boolean;
   /** 自定义类名 */
   className?: string;
+  /**
+   * 高优先级：列表首屏前几张应设为 true（loading="eager"）。
+   * 默认 false 走 lazy。
+   */
+  priority?: boolean;
 }

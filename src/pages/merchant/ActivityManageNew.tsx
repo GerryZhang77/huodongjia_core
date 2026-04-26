@@ -120,6 +120,8 @@ export const ActivityManageNew: FC = () => {
                 <img
                   src={activity.coverImage}
                   alt={activity.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               ) : (

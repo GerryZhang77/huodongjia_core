@@ -220,6 +220,8 @@ const UserRow: FC<UserRowProps> = ({
           <img
             src={user.avatar}
             alt={user.name || ""}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover"
           />
         ) : (

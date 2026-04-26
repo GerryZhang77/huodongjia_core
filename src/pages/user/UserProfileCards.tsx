@@ -146,6 +146,8 @@ const MyActivityCard: FC<{
         <img
           src={activity.coverImage}
           alt={activity.title}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover"
         />
       </div>
@@ -324,6 +326,8 @@ const UserProfileCards: FC = () => {
                 <img
                   src={profile.avatar}
                   alt={profile.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white dark:ring-gray-700 shadow"
                 />
                 <button
@@ -463,7 +467,13 @@ const UserProfileCards: FC = () => {
             <div className="grid grid-cols-3 gap-1.5">
               {profile.photos.map((url, i) => (
                 <div key={i} className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={url}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               ))}
             </div>

@@ -35,4 +35,10 @@ export interface ActivityCardProps {
   onRemove?: (id: string) => void;
   /** 自定义类名 */
   className?: string;
+  /**
+   * 高优先级：列表首屏前几张应设为 true。
+   * - true: loading="eager" + fetchpriority="high"，确保首屏图片立刻并发解析
+   * - false（默认）: loading="lazy" + decoding="async"，滚动接近时再加载
+   */
+  priority?: boolean;
 }
