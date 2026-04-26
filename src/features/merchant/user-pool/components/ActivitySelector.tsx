@@ -160,10 +160,14 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                   所有活动参与者的汇总
                 </div>
               </div>
-              <span className="text-xs text-gray-400">{totalUserCount}人</span>
-              {selectedActivityId === null && (
-                <Check size={14} className="text-primary-400" />
-              )}
+              <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">
+                {totalUserCount}人
+              </span>
+              <span className="w-4 flex-shrink-0 flex justify-end">
+                {selectedActivityId === null && (
+                  <Check size={14} className="text-primary-400" />
+                )}
+              </span>
             </button>
 
             {/* 分割线 */}
@@ -211,15 +215,14 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                           </span>
                         </div>
                       </div>
-                      <span className="text-xs text-gray-400 flex-shrink-0">
+                      <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">
                         {activity.participantCount}人
                       </span>
-                      {isSelected && (
-                        <Check
-                          size={14}
-                          className="text-primary-400 flex-shrink-0"
-                        />
-                      )}
+                      <span className="w-4 flex-shrink-0 flex justify-end">
+                        {isSelected && (
+                          <Check size={14} className="text-primary-400" />
+                        )}
+                      </span>
                     </button>
                   );
                 })

@@ -9,8 +9,9 @@
  * 5. 批量打标签、批量推送活动
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   Filter,
@@ -142,9 +143,9 @@ const UserPoolPage: React.FC = () => {
   const [batchTagVisible, setBatchTagVisible] = useState(false);
   const [pushActivityVisible, setPushActivityVisible] = useState(false);
   const [tagManagerVisible, setTagManagerVisible] = useState(false);
-  const [customTags, setCustomTags] = useState<CustomTag[]>([]);
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   // sortMode 持久化到 URL，便于浏览器返回时保留视图
   const [searchParams, setSearchParams] = useSearchParams();
   const sortMode: "default" | "byActivity" =
@@ -160,75 +161,54 @@ const UserPoolPage: React.FC = () => {
   );
 
   // ========================================
-  // API 数据加载
+  // API 数据加载（React Query 统一缓存）
   // ========================================
-  const [merchantUsers, setMerchantUsers] = useState<MerchantUser[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  const USER_POOL_KEY = ["merchant", "user-pool"] as const;
+  const CUSTOM_TAGS_KEY = ["merchant", "user-pool", "custom-tags"] as const;
+  const ACTIVITIES_KEY = ["merchant", "activities"] as const;
+  const PLATFORM_USERS_KEY = ["merchant", "platform-users"] as const;
+  const DISCOVERY_QUOTA_KEY = ["merchant", "discovery-quota"] as const;
 
-  // 拉自定义标签
-  const reloadCustomTags = useCallback(() => {
-    listCustomTags()
-      .then((res) => {
-        if (res.success) {
-          setCustomTags(
-            (res.data?.tags || []).map((t) => ({
-              id: t.id,
-              name: t.name,
-              color: t.color,
-              userCount: t.userCount,
-              createdAt: t.createdAt,
-            })),
-          );
-        }
-      })
-      .catch(() => {});
-  }, []);
+  // 1) 商家私域用户池 - 列表常变；60s stale 平衡新鲜度和重复拉取
+  const { data: merchantUsers = [] } = useQuery({
+    queryKey: USER_POOL_KEY,
+    queryFn: async () => {
+      const res = await getMerchantUserPool();
+      return res.success ? (res.data?.users ?? []) : [];
+    },
+    staleTime: 60 * 1000,
+  });
 
-  // 拉用户池
-  const reloadMerchantUsers = useCallback(() => {
-    getMerchantUserPool()
-      .then((res: any) => {
-        if (res.success) setMerchantUsers(res.data.users);
-      })
-      .catch(() => {});
-  }, []);
+  // 2) 商家自定义标签 - 几乎不变；5min stale
+  const { data: customTags = [] } = useQuery<CustomTag[]>({
+    queryKey: CUSTOM_TAGS_KEY,
+    queryFn: async () => {
+      const res = await listCustomTags();
+      if (!res.success) return [];
+      return (res.data?.tags || []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        color: t.color,
+        userCount: t.userCount,
+        createdAt: t.createdAt,
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    reloadMerchantUsers();
-    reloadCustomTags();
-
-    getPlatformUsers()
-      .then((res: any) => {
-        if (res.success) setPlatformUsers(res.data.users);
-      })
-      .catch(() => {});
-
-    getDiscoveryQuota()
-      .then((res: any) => {
-        if (res.success) setDiscoveryQuota(res.data);
-      })
-      .catch(() => {});
-
-    getMerchantActivities()
-      .then((res: any) => {
-        const list = res.events || res.data?.events || [];
-        setActivities(list);
-      })
-      .catch(() => {});
-  }, [reloadMerchantUsers, reloadCustomTags]);
+  // 3) 商家自己的活动列表 - 5min stale；分组排序需要它做活动名兜底
+  const { data: activities = [] } = useQuery<any[]>({
+    queryKey: ACTIVITIES_KEY,
+    queryFn: async () => {
+      const res = await getMerchantActivities();
+      return (res.data?.activities || []) as any[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   // ========================================
   // 「发现用户」状态
   // ========================================
-  const [platformUsers, setPlatformUsers] = useState<PlatformUser[]>([]);
-  const [discoveryQuota, setDiscoveryQuota] = useState<DiscoveryQuota>({
-    usedUnlocks: 0,
-    freeUnlockLimit: 10,
-    usedViews: 0,
-    freeViewLimit: 100,
-    planName: '免费版',
-    planExpiresAt: null,
-  });
   const [discoveryFilter, setDiscoveryFilter] =
     useState<DiscoveryFilterCriteria>({ ...DEFAULT_DISCOVERY_FILTER });
   const [discoveryDetailUser, setDiscoveryDetailUser] =
@@ -236,12 +216,79 @@ const UserPoolPage: React.FC = () => {
   const [unlockTarget, setUnlockTarget] = useState<PlatformUser | null>(null);
   const [inviteTarget, setInviteTarget] = useState<PlatformUser | null>(null);
 
+  // 4) 平台公域用户库 - 仅在切到「发现用户」时拉取，省一次首屏请求
+  const { data: platformUsers = [] } = useQuery<PlatformUser[]>({
+    queryKey: PLATFORM_USERS_KEY,
+    queryFn: async () => {
+      const res = await getPlatformUsers();
+      return res.success ? (res.data?.users ?? []) : [];
+    },
+    staleTime: 2 * 60 * 1000,
+    enabled: activeTab === "discover",
+  });
+
+  // 5) 发现额度 - 同样仅在「发现用户」 tab 时拉取
+  const DEFAULT_QUOTA: DiscoveryQuota = {
+    usedUnlocks: 0,
+    freeUnlockLimit: 10,
+    usedViews: 0,
+    freeViewLimit: 100,
+    planName: "免费版",
+    planExpiresAt: null,
+  };
+  const { data: discoveryQuota = DEFAULT_QUOTA } = useQuery<DiscoveryQuota>({
+    queryKey: DISCOVERY_QUOTA_KEY,
+    queryFn: async () => {
+      const res = await getDiscoveryQuota();
+      return res.success ? res.data : DEFAULT_QUOTA;
+    },
+    staleTime: 60 * 1000,
+    enabled: activeTab === "discover",
+  });
+
+  // ---- 缓存级写入辅助：替代原本的 setXxx 乐观更新 ----
+  const patchPlatformUsers = useCallback(
+    (mutator: (prev: PlatformUser[]) => PlatformUser[]) => {
+      queryClient.setQueryData<PlatformUser[]>(PLATFORM_USERS_KEY, (old) =>
+        mutator(old ?? []),
+      );
+    },
+    [queryClient],
+  );
+  const patchDiscoveryQuota = useCallback(
+    (mutator: (prev: DiscoveryQuota) => DiscoveryQuota) => {
+      queryClient.setQueryData<DiscoveryQuota>(DISCOVERY_QUOTA_KEY, (old) =>
+        mutator(old ?? DEFAULT_QUOTA),
+      );
+    },
+    [queryClient],
+  );
+  const patchCustomTags = useCallback(
+    (mutator: (prev: CustomTag[]) => CustomTag[]) => {
+      queryClient.setQueryData<CustomTag[]>(CUSTOM_TAGS_KEY, (old) =>
+        mutator(old ?? []),
+      );
+    },
+    [queryClient],
+  );
+  const invalidateUserPool = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: USER_POOL_KEY }),
+    [queryClient],
+  );
+  const invalidateCustomTags = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: CUSTOM_TAGS_KEY }),
+    [queryClient],
+  );
+
   // ---- 数据 ----
 
-  // 根据选中的活动切换数据源
+  // 选活动后只保留参与过该活动的用户；selectedActivityId 为 null 表示全部
   const users: MerchantUser[] = useMemo(() => {
-    return merchantUsers;
-  }, [merchantUsers]);
+    if (!selectedActivityId) return merchantUsers;
+    return merchantUsers.filter((u) =>
+      (u.participatedActivityIds || []).includes(selectedActivityId),
+    );
+  }, [merchantUsers, selectedActivityId]);
 
   // 应用搜索 + 筛选
   const filteredUsers = useMemo(() => {
@@ -343,16 +390,29 @@ const UserPoolPage: React.FC = () => {
     [filterCriteria],
   );
 
+  // 每个活动在私域用户池中的人数：从 merchantUsers.participatedActivityIds 反向聚合
+  // 比 a.current_participants 更准（这是商家自己池子里的真实数）
+  const userCountByActivity = useMemo(() => {
+    const map = new Map<string, number>();
+    merchantUsers.forEach((u) => {
+      (u.participatedActivityIds || []).forEach((aid) => {
+        map.set(aid, (map.get(aid) ?? 0) + 1);
+      });
+    });
+    return map;
+  }, [merchantUsers]);
+
   // 活动选项列表
   const activityOptions: ActivityOption[] = useMemo(
     () =>
       activities.map((a: any) => ({
         id: a.id,
         title: a.title,
-        participantCount: a.current_participants || 0,
+        participantCount:
+          userCountByActivity.get(a.id) ?? (a.current_participants || 0),
         status: a.status,
       })),
-    [activities],
+    [activities, userCountByActivity],
   );
 
   // 推送活动选项列表
@@ -477,13 +537,13 @@ const UserPoolPage: React.FC = () => {
         });
         setBatchTagVisible(false);
         setSelectedUserIds(new Set());
-        reloadMerchantUsers();
-        reloadCustomTags();
+        invalidateUserPool();
+        invalidateCustomTags();
       } catch (err: any) {
         Toast.show({ icon: "fail", content: err?.message || "请求失败", position: "bottom" });
       }
     },
-    [selectedUserIds, customTags, reloadMerchantUsers, reloadCustomTags],
+    [selectedUserIds, customTags, invalidateUserPool, invalidateCustomTags],
   );
 
   // 推送活动确认
@@ -532,7 +592,7 @@ const UserPoolPage: React.FC = () => {
         }
         const t = res.data?.tag;
         if (t) {
-          setCustomTags((prev) => [
+          patchCustomTags((prev) => [
             ...prev,
             { id: t.id, name: t.name, color: t.color, userCount: t.userCount, createdAt: t.createdAt },
           ]);
@@ -543,7 +603,7 @@ const UserPoolPage: React.FC = () => {
         Toast.show({ icon: "fail", content: msg, position: "bottom" });
       }
     },
-    [],
+    [patchCustomTags],
   );
 
   // 删除自定义标签
@@ -551,21 +611,21 @@ const UserPoolPage: React.FC = () => {
     async (tagId: string) => {
       const prev = customTags;
       // 乐观删除
-      setCustomTags((arr) => arr.filter((t) => t.id !== tagId));
+      patchCustomTags((arr) => arr.filter((t) => t.id !== tagId));
       try {
         const res = await deleteCustomTagApi(tagId);
         if (!res.success) {
-          setCustomTags(prev);
+          patchCustomTags(() => prev);
           Toast.show({ icon: "fail", content: "删除失败", position: "bottom" });
           return;
         }
-        reloadMerchantUsers();
+        invalidateUserPool();
       } catch {
-        setCustomTags(prev);
+        patchCustomTags(() => prev);
         Toast.show({ icon: "fail", content: "请求失败", position: "bottom" });
       }
     },
-    [customTags, reloadMerchantUsers],
+    [customTags, patchCustomTags, invalidateUserPool],
   );
 
   // ========================================
@@ -581,11 +641,11 @@ const UserPoolPage: React.FC = () => {
           Toast.show({ icon: "fail", content: res.message || "解锁失败", position: "bottom" });
           return;
         }
-        setPlatformUsers((prev) =>
+        patchPlatformUsers((prev) =>
           prev.map((u) => (u.id === userId ? { ...u, isUnlocked: true } : u)),
         );
         if (!res.data?.alreadyUnlocked) {
-          setDiscoveryQuota((prev) => ({
+          patchDiscoveryQuota((prev) => ({
             ...prev,
             usedUnlocks: prev.usedUnlocks + 1,
           }));
@@ -607,7 +667,7 @@ const UserPoolPage: React.FC = () => {
         setUnlockTarget(null);
       }
     },
-    [discoveryDetailUser],
+    [discoveryDetailUser, patchPlatformUsers, patchDiscoveryQuota],
   );
 
   // 收藏/取消收藏：乐观更新，失败回滚
@@ -615,7 +675,7 @@ const UserPoolPage: React.FC = () => {
     async (userId: string) => {
       const prevList = platformUsers;
       const prevDetail = discoveryDetailUser;
-      setPlatformUsers((prev) =>
+      patchPlatformUsers((prev) =>
         prev.map((u) =>
           u.id === userId ? { ...u, isFavorited: !u.isFavorited } : u,
         ),
@@ -630,12 +690,12 @@ const UserPoolPage: React.FC = () => {
         if (!res.success) throw new Error("失败");
       } catch {
         // 回滚
-        setPlatformUsers(prevList);
+        patchPlatformUsers(() => prevList);
         setDiscoveryDetailUser(prevDetail);
         Toast.show({ icon: "fail", content: "操作失败", position: "bottom" });
       }
     },
-    [platformUsers, discoveryDetailUser],
+    [platformUsers, discoveryDetailUser, patchPlatformUsers],
   );
 
   // 邀请用户参加活动
