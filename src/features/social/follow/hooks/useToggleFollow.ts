@@ -1,22 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { followUser, unfollowUser } from "../services/followApi";
+import type { FollowRelation } from "../services/followApi";
 
 /**
  * 切换关注/取关（乐观更新关系数据，stats 由 onSettled 校准）
  * 入参：{ userId, currentlyFollowing }
+ *
+ * 注意：useFollowRelation 通过 getRelation() 写入缓存的是解包后的 FollowRelation
+ * 对象（{ isFollowing, isFollowedBy, isFriend, ... }），所以这里 setQueryData
+ * 必须用同一种形状，否则 FollowButton 读取 relation.isFollowing 会拿到 undefined。
  */
 export function useToggleFollow() {
   const queryClient = useQueryClient();
-
-  type Relation = {
-    success: boolean;
-    data: {
-      isSelf: boolean;
-      isFollowing: boolean;
-      isFollowedBy: boolean;
-      isFriend: boolean;
-    };
-  };
 
   return useMutation({
     mutationFn: async ({
@@ -36,18 +31,18 @@ export function useToggleFollow() {
     onMutate: async ({ userId, currentlyFollowing }) => {
       const relKey = ["social", "relation", userId];
       await queryClient.cancelQueries({ queryKey: relKey });
-      const prevRelation = queryClient.getQueryData<Relation>(relKey);
-      // 立即翻转关系
-      queryClient.setQueryData<Relation>(relKey, (old) => ({
-        success: true,
-        data: {
-          isSelf: old?.data?.isSelf ?? false,
-          isFollowing: !currentlyFollowing,
-          isFollowedBy: old?.data?.isFollowedBy ?? false,
-          isFriend:
-            (!currentlyFollowing) && (old?.data?.isFollowedBy ?? false),
-        },
-      }));
+      const prevRelation = queryClient.getQueryData<FollowRelation>(relKey);
+      // 立即翻转关系（保持 FollowRelation 解包形状，与 useFollowRelation 一致）
+      queryClient.setQueryData<FollowRelation>(relKey, (old) => {
+        const isFollowedBy = old?.isFollowedBy ?? false;
+        const nowFollowing = !currentlyFollowing;
+        return {
+          isSelf: old?.isSelf ?? false,
+          isFollowing: nowFollowing,
+          isFollowedBy,
+          isFriend: nowFollowing && isFollowedBy,
+        };
+      });
       return { prevRelation, relKey };
     },
     onError: (_err, _vars, ctx) => {
@@ -56,7 +51,7 @@ export function useToggleFollow() {
       }
     },
     onSettled: (_data, _err, variables) => {
-      // 数字类 stats 由后端校准，避免乐观偏差
+      // relation 的乐观值由 onMutate 写入；这里只校准数字类 stats，避免重新拉取关系导致按钮抖动
       queryClient.invalidateQueries({
         queryKey: ["social", "stats", variables.userId],
       });
