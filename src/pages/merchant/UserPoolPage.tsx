@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Filter,
@@ -21,6 +22,7 @@ import {
   Activity,
   X,
   Settings,
+  ChevronRight,
 } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
@@ -142,6 +144,21 @@ const UserPoolPage: React.FC = () => {
   const [tagManagerVisible, setTagManagerVisible] = useState(false);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
 
+  const navigate = useNavigate();
+  // sortMode 持久化到 URL，便于浏览器返回时保留视图
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sortMode: "default" | "byActivity" =
+    searchParams.get("sort") === "byActivity" ? "byActivity" : "default";
+  const setSortMode = useCallback(
+    (mode: "default" | "byActivity") => {
+      const next = new URLSearchParams(searchParams);
+      if (mode === "byActivity") next.set("sort", "byActivity");
+      else next.delete("sort");
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
   // ========================================
   // API 数据加载
   // ========================================
@@ -245,6 +262,64 @@ const UserPoolPage: React.FC = () => {
     // 再筛选
     return applyUserPoolFilters(result, filterCriteria);
   }, [users, searchKeyword, filterCriteria]);
+
+  // 按活动分组（仅 sortMode === "byActivity"）
+  // groupBgPalette：柔和、低饱和度，仅做视觉分隔，不抢戏
+  const groupBgPalette = useMemo(
+    () => [
+      "bg-blue-50/40",
+      "bg-amber-50/40",
+      "bg-rose-50/40",
+      "bg-emerald-50/40",
+      "bg-violet-50/40",
+      "bg-cyan-50/40",
+    ],
+    [],
+  );
+
+  // 活动 ID -> 活动名 查找表（fallback 用，确保不会出现 UUID）
+  const activityNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    activities.forEach((a: any) => {
+      if (a?.id && a?.title) map.set(a.id, a.title);
+    });
+    return map;
+  }, [activities]);
+
+  const resolveActivityName = useCallback(
+    (
+      id: string,
+      fallbackList?: string[],
+      fallbackIndex = 0,
+    ): string => {
+      if (id === "__other__") return "其他";
+      const fromList = fallbackList?.[fallbackIndex];
+      if (fromList && fromList.trim()) return fromList;
+      return activityNameById.get(id) || "未命名活动";
+    },
+    [activityNameById],
+  );
+
+  const groupedUsers = useMemo(() => {
+    if (sortMode !== "byActivity") return null;
+    // 按主参与活动（participatedActivityIds[0]）分组；无活动归入"其他"
+    const groupsMap = new Map<
+      string,
+      { id: string; name: string; users: MerchantUser[] }
+    >();
+    filteredUsers.forEach((u) => {
+      const aid = u.participatedActivityIds?.[0] || "__other__";
+      const aname = resolveActivityName(aid, u.participatedActivityNames, 0);
+      if (!groupsMap.has(aid)) {
+        groupsMap.set(aid, { id: aid, name: aname, users: [] });
+      }
+      groupsMap.get(aid)!.users.push(u);
+    });
+    // 按用户数降序，便于核心活动靠前
+    return Array.from(groupsMap.values()).sort(
+      (a, b) => b.users.length - a.users.length,
+    );
+  }, [filteredUsers, sortMode, resolveActivityName]);
 
   // 筛选选项
   const filterOptions = useMemo(
@@ -753,6 +828,29 @@ const UserPoolPage: React.FC = () => {
                     </span>
                   )}
                 </span>
+                {/* 排序模式切换 */}
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 ml-1">
+                  <button
+                    className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                      sortMode === "default"
+                        ? "bg-white text-gray-700 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                    onClick={() => setSortMode("default")}
+                  >
+                    默认
+                  </button>
+                  <button
+                    className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                      sortMode === "byActivity"
+                        ? "bg-white text-gray-700 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                    onClick={() => setSortMode("byActivity")}
+                  >
+                    按活动分组
+                  </button>
+                </div>
               </div>
               {selectedUserIds.size > 0 && (
                 <div className="flex items-center gap-2">
@@ -805,6 +903,57 @@ const UserPoolPage: React.FC = () => {
                     </button>
                   )}
                 </div>
+              ) : sortMode === "byActivity" && groupedUsers ? (
+                groupedUsers.map((group, groupIdx) => {
+                  const bg = groupBgPalette[groupIdx % groupBgPalette.length];
+                  const isOther = group.id === "__other__";
+                  return (
+                    <div key={group.id} className="space-y-2">
+                      <div className="sticky top-0 z-[1] -mx-1 px-1 py-1 bg-gray-50/95 backdrop-blur-sm">
+                        <button
+                          type="button"
+                          disabled={isOther}
+                          onClick={() => {
+                            if (!isOther) {
+                              navigate(
+                                `/dashboard/activity/${group.id}/detail`,
+                              );
+                            }
+                          }}
+                          className={`text-xs font-medium px-2 py-1 rounded-md inline-flex items-center gap-1.5 transition-colors ${
+                            isOther
+                              ? "text-gray-500 cursor-default"
+                              : "text-gray-700 hover:text-primary-600 hover:bg-primary-50"
+                          }`}
+                          title={isOther ? undefined : "查看活动详情"}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                          {group.name}
+                          <span className="text-gray-400">
+                            ({group.users.length} 人)
+                          </span>
+                          {!isOther && (
+                            <ChevronRight
+                              size={12}
+                              className="text-gray-400"
+                            />
+                          )}
+                        </button>
+                      </div>
+                      {group.users.map((user) => (
+                        <UserCard
+                          key={user.id}
+                          user={user}
+                          selected={selectedUserIds.has(user.id)}
+                          onSelect={() => handleSelectUser(user.id)}
+                          onClick={() => setDetailUser(user)}
+                          groupBg={bg}
+                          activityNameById={activityNameById}
+                        />
+                      ))}
+                    </div>
+                  );
+                })
               ) : (
                 filteredUsers.map((user) => (
                   <UserCard
@@ -813,6 +962,7 @@ const UserPoolPage: React.FC = () => {
                     selected={selectedUserIds.has(user.id)}
                     onSelect={() => handleSelectUser(user.id)}
                     onClick={() => setDetailUser(user)}
+                    activityNameById={activityNameById}
                   />
                 ))
               )}

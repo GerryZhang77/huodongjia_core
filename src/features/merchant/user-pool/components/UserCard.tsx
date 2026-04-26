@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import { Check, Activity, Calendar } from "lucide-react";
+import { Check, Activity, Calendar, CalendarRange } from "lucide-react";
 import type { MerchantUser } from "@/features/merchant/user-pool/types";
 import {
   ACTIVITY_LEVEL_LABELS,
@@ -23,6 +23,10 @@ export interface UserCardProps {
   selected: boolean;
   onSelect: () => void;
   onClick?: () => void;
+  /** 分组背景色（按活动分组时由父组件传入），不传则透明 */
+  groupBg?: string;
+  /** 活动 ID -> 活动名 查找表（用于补全后端缺失的活动名，避免显示 UUID） */
+  activityNameById?: Map<string, string>;
 }
 
 // ========================================
@@ -69,16 +73,35 @@ const UserCard: React.FC<UserCardProps> = ({
   selected,
   onSelect,
   onClick,
+  groupBg,
+  activityNameById,
 }) => {
   // 合并所有标签（自定义标签优先展示）
   const allTags = [...user.customTags, ...user.autoTags];
   const displayTags = allTags.slice(0, 4);
   const extraTagCount = allTags.length - displayTags.length;
 
+  // 来源活动展示（最多 2 个 + "+N"）
+  // 优先用后端返回的 participatedActivityNames，缺失时用 activityNameById 兜底
+  const activityIds = user.participatedActivityIds || [];
+  const activityNames = user.participatedActivityNames || [];
+  const resolvedActivities = activityIds.map((id, i) => {
+    const fromList = activityNames[i];
+    const name = (fromList && fromList.trim())
+      ? fromList
+      : (activityNameById?.get(id) || "未命名活动");
+    return { id, name };
+  });
+  const visibleActivities = resolvedActivities.slice(0, 2);
+  const extraActivityCount =
+    resolvedActivities.length - visibleActivities.length;
+
   return (
     <div
-      className={`bg-white rounded-xl border p-4 transition-all cursor-pointer hover:shadow-sm ${
-        selected ? "border-primary-400 bg-primary-50/30" : "border-gray-100"
+      className={`rounded-xl border p-4 transition-all cursor-pointer hover:shadow-sm ${
+        selected
+          ? "border-primary-400 bg-primary-50/30"
+          : `${groupBg || "bg-white"} border-gray-100`
       }`}
       onClick={onClick}
     >
@@ -140,6 +163,30 @@ const UserCard: React.FC<UserCardProps> = ({
               最近{formatDate(user.lastParticipatedAt)}
             </span>
           </div>
+
+          {/* 第四行：来源活动 */}
+          {visibleActivities.length > 0 && (
+            <div className="flex items-start gap-1 mt-1.5 text-xs text-gray-500">
+              <CalendarRange
+                size={12}
+                className="mt-0.5 flex-shrink-0 text-gray-400"
+              />
+              <div className="flex flex-wrap gap-1">
+                {visibleActivities.map((a) => (
+                  <span
+                    key={a.id}
+                    className="px-1.5 py-0.5 rounded bg-gray-50 text-gray-600 max-w-[160px] truncate"
+                    title={a.name}
+                  >
+                    {a.name}
+                  </span>
+                ))}
+                {extraActivityCount > 0 && (
+                  <span className="text-gray-400">+{extraActivityCount}</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 第四行：标签 */}
           {allTags.length > 0 && (
