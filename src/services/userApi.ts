@@ -35,6 +35,8 @@ export interface UserProfile {
     email?: string;
     wechat?: string;
   };
+  /** 是否对外公开在"发现用户"列表（用户级开关，opt-in） */
+  discoverable?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

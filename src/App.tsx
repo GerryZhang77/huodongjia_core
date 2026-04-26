@@ -69,6 +69,9 @@ const UserDiscover = lazy(() => import("./pages/user/UserDiscover"));
 const UserSettings = lazy(() => import("./pages/user/UserSettings"));
 const UserFavorites = lazy(() => import("./pages/user/UserFavorites"));
 const UserFriends = lazy(() => import("./pages/user/UserFriends"));
+const UserDiscoverPeople = lazy(
+  () => import("./pages/user/UserDiscoverPeople"),
+);
 const UserConversations = lazy(() => import("./pages/user/UserConversations"));
 const UserChatRoom = lazy(() => import("./pages/user/UserChatRoom"));
 const UserEditProfile = lazy(() => import("./pages/user/UserEditProfile"));
@@ -410,6 +413,16 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserFriends />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 发现用户（C 端 opt-in 列表） */}
+                <Route
+                  path="/u/discover/people"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserDiscoverPeople />
                     </ProtectedRoute>
                   }
                 />

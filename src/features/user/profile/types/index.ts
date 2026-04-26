@@ -50,6 +50,9 @@ export interface UpdateProfileRequest {
   email?: string;
   phone?: string;
   wechat?: string;
+  industry?: string;
+  /** opt-in 出现在"发现用户"列表 */
+  discoverable?: boolean;
 }
 
 /**

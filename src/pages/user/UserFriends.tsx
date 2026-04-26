@@ -5,7 +5,15 @@
 
 import { FC, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MessageCircle, Users, UserMinus, UserPlus2 } from "lucide-react";
+import {
+  Search,
+  MessageCircle,
+  Users,
+  UserMinus,
+  UserPlus2,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { Toast } from "@/components/ui/Toast";
 import {
@@ -92,9 +100,9 @@ const UserFriends: FC = () => {
       breadcrumbItems={[{ label: "首页", path: "/u/home" }, { label: "好友" }]}
     >
       <div className="md:py-6 lg:py-8">
-        {/* 搜索框 */}
+        {/* 搜索框 + 发现新朋友入口 */}
         <div className="bg-white dark:bg-gray-800">
-          <div className="max-w-3xl mx-auto px-4 md:px-6 py-3">
+          <div className="max-w-3xl mx-auto px-4 md:px-6 py-3 space-y-2">
             <div className="h-10 rounded-full bg-slate-100 dark:bg-gray-700 flex items-center px-4 gap-2">
               <Search size={16} className="text-slate-400 flex-shrink-0" />
               <input
@@ -105,6 +113,25 @@ const UserFriends: FC = () => {
                 className="flex-1 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder:text-slate-400 outline-none"
               />
             </div>
+            <button
+              onClick={() => navigate("/u/discover/people")}
+              className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20 border border-primary-100 dark:border-primary-800 text-left hover:shadow-sm transition-all"
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 flex items-center justify-center">
+                  <Sparkles size={14} className="text-primary-500" />
+                </span>
+                <span>
+                  <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">
+                    发现新朋友
+                  </span>
+                  <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+                    按共同兴趣推荐，对方不会被通知
+                  </span>
+                </span>
+              </span>
+              <ArrowRight size={16} className="text-primary-500" />
+            </button>
           </div>
         </div>
 
