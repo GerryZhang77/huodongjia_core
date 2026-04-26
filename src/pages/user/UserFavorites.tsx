@@ -3,9 +3,10 @@
  * 展示用户收藏的活动列表
  */
 
-import { FC, useState, useMemo } from "react";
+import { FC, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Calendar, MapPin, Trash2 } from "lucide-react";
+import { Heart, Calendar, MapPin } from "lucide-react";
+import { Toast } from "@/components/ui/Toast";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useFavorites, useRemoveFavorite } from "@/features/user";
 import type { UserActivity } from "@/services/userApi";
@@ -18,10 +19,9 @@ const formatDate = (dateStr: string): string => {
 
 const UserFavorites: FC = () => {
   const navigate = useNavigate();
-  const [editMode, setEditMode] = useState(false);
 
   // 使用 hooks 获取收藏数据
-  const { data: favoritesData, isLoading } = useFavorites();
+  const { data: favoritesData, isLoading: _isLoading } = useFavorites();
   const removeFavoriteMutation = useRemoveFavorite();
 
   const favorites = useMemo(() => {
@@ -29,13 +29,18 @@ const UserFavorites: FC = () => {
   }, [favoritesData]);
 
   const handleRemove = (id: string) => {
-    removeFavoriteMutation.mutate(id);
+    removeFavoriteMutation.mutate(id, {
+      onSuccess: () => Toast.show({ icon: "success", content: "已取消收藏" }),
+      onError: (err) =>
+        Toast.show({
+          icon: "fail",
+          content: err instanceof Error ? err.message : "操作失败",
+        }),
+    });
   };
 
   const handleActivityClick = (id: string) => {
-    if (!editMode) {
-      navigate(`/u/activities/${id}`);
-    }
+    navigate(`/u/activities/${id}`);
   };
 
   return (
@@ -47,14 +52,6 @@ const UserFavorites: FC = () => {
         { label: "首页", path: "/u/home" },
         { label: "我的收藏" },
       ]}
-      topBarRightContent={
-        <button
-          onClick={() => setEditMode(!editMode)}
-          className="text-sm text-primary-400 font-medium hover:text-primary-500 transition-colors"
-        >
-          {editMode ? "完成" : "编辑"}
-        </button>
-      }
     >
       <div className="md:py-6 lg:py-8">
         {/* 收藏数量 */}
@@ -88,7 +85,6 @@ const UserFavorites: FC = () => {
                 <FavoriteCard
                   key={activity.id}
                   activity={activity}
-                  editMode={editMode}
                   onRemove={handleRemove}
                   onClick={handleActivityClick}
                 />
@@ -104,33 +100,28 @@ const UserFavorites: FC = () => {
 // 收藏卡片组件
 interface FavoriteCardProps {
   activity: UserActivity;
-  editMode: boolean;
   onRemove: (id: string) => void;
   onClick: (id: string) => void;
 }
 
 const FavoriteCard: FC<FavoriteCardProps> = ({
   activity,
-  editMode,
   onRemove,
   onClick,
 }) => {
   return (
     <div
       onClick={() => onClick(activity.id)}
-      className="bg-white dark:bg-gray-800 rounded-2xl border border-slate-100 dark:border-gray-700 overflow-hidden flex cursor-pointer hover:shadow-md hover:border-slate-200 dark:hover:border-gray-600 transition-all duration-200"
+      className="group bg-white dark:bg-gray-800 rounded-2xl border border-slate-100 dark:border-gray-700 overflow-hidden flex cursor-pointer hover:shadow-md hover:border-slate-200 dark:hover:border-gray-600 transition-all duration-200"
     >
       {/* 封面 */}
-      <div className="w-24 h-24 flex-shrink-0 relative">
+      <div className="w-24 h-24 flex-shrink-0">
         <img
           src={activity.coverImage}
           alt={activity.title}
+          loading="lazy"
           className="w-full h-full object-cover"
         />
-        {/* 收藏心形 */}
-        <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white/90 dark:bg-gray-900/90 flex items-center justify-center">
-          <Heart size={14} className="text-red-500 fill-red-500" />
-        </div>
       </div>
 
       {/* 内容 */}
@@ -156,18 +147,18 @@ const FavoriteCard: FC<FavoriteCardProps> = ({
         </div>
       </div>
 
-      {/* 删除按钮（编辑模式） */}
-      {editMode && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(activity.id);
-          }}
-          className="w-12 flex items-center justify-center bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-        >
-          <Trash2 size={18} className="text-red-500" />
-        </button>
-      )}
+      {/* 取消收藏按钮（始终可见，单击直接取消） */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(activity.id);
+        }}
+        title="取消收藏"
+        aria-label="取消收藏"
+        className="w-12 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+      >
+        <Heart size={20} className="fill-red-500" />
+      </button>
     </div>
   );
 };

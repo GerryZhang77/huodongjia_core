@@ -30,7 +30,12 @@ export function useAddFavorite() {
 
   return useMutation({
     mutationFn: (activityId: string) => addFavorite(activityId),
-    onSuccess: () => {
+    onSuccess: (_data, activityId) => {
+      // 同步该活动的单卡收藏态缓存，避免其它列表页继续显示旧状态
+      queryClient.setQueryData(["user", "favorite-status", activityId], {
+        success: true,
+        data: { favorited: true },
+      });
       queryClient.invalidateQueries({ queryKey: ["user", "favorites"] });
       queryClient.invalidateQueries({ queryKey: ["user", "activities"] });
     },
@@ -45,7 +50,12 @@ export function useRemoveFavorite() {
 
   return useMutation({
     mutationFn: (activityId: string) => removeFavorite(activityId),
-    onSuccess: () => {
+    onSuccess: (_data, activityId) => {
+      // 同步该活动的单卡收藏态缓存
+      queryClient.setQueryData(["user", "favorite-status", activityId], {
+        success: true,
+        data: { favorited: false },
+      });
       queryClient.invalidateQueries({ queryKey: ["user", "favorites"] });
       queryClient.invalidateQueries({ queryKey: ["user", "activities"] });
     },

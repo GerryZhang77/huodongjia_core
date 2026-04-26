@@ -9,6 +9,7 @@ import { Calendar } from "lucide-react";
 import { ActivityCard } from "@/components/business/ActivityCard";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useUserActivities } from "@/features/user";
+import { useSeedFavoriteStatus } from "@/hooks/useSeedFavoriteStatus";
 import type { UserActivity, UserActivityStatus } from "@/services/userApi";
 
 // Tab 配置
@@ -31,6 +32,13 @@ const UserActivityHistory: FC = () => {
   const allActivities = useMemo(() => {
     return activitiesData?.data?.activities || [];
   }, [activitiesData]);
+
+  // 一次性预热收藏状态，避免列表里每张卡各自请求
+  const visibleIds = useMemo(
+    () => allActivities.map((a) => a.id).filter(Boolean),
+    [allActivities],
+  );
+  useSeedFavoriteStatus(visibleIds);
 
   // 统计各状态数量
   const counts = useMemo(() => {

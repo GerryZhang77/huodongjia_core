@@ -19,6 +19,7 @@ import { Tag } from "@/components/ui";
 import { useUserActivities, useRecommendedActivities } from "@/features/user";
 import { useUserProfile } from "@/features/user";
 import { usePrefetchActivityDetail } from "@/hooks/usePrefetchActivity";
+import { useSeedFavoriteStatus } from "@/hooks/useSeedFavoriteStatus";
 import dayjs from "dayjs";
 import {
   type ActivityFilters, defaultFilters, timeRangeOptions, priceRangeOptions,
@@ -114,6 +115,17 @@ const UserHome: FC = () => {
   const allActivities = useMemo(() => {
     return activitiesData?.data?.activities || [];
   }, [activitiesData]);
+
+  // 一次性批量预热当前可见列表的收藏状态，避免每张卡片各自 fetch
+  const visibleIds = useMemo(
+    () =>
+      [
+        ...allActivities.map((a) => a.id),
+        ...(recommendedData?.data?.activities || []).map((a) => a.id),
+      ].filter(Boolean),
+    [allActivities, recommendedData],
+  );
+  useSeedFavoriteStatus(visibleIds);
 
   // 热门活动（取参与率最高的前4个）
   const hotActivities = useMemo(() => {
