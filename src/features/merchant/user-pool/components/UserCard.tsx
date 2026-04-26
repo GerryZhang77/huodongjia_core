@@ -22,6 +22,7 @@ export interface UserCardProps {
   user: MerchantUser;
   selected: boolean;
   onSelect: () => void;
+  /** 卡片主点击：打开商家详情抽屉 */
   onClick?: () => void;
   /** 分组背景色（按活动分组时由父组件传入），不传则透明 */
   groupBg?: string;

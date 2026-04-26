@@ -21,6 +21,7 @@ import {
   Phone,
   Star,
   UserCircle,
+  ArrowUpRight,
 } from "lucide-react";
 import type { MerchantUser } from "@/features/merchant/user-pool/types";
 import {
@@ -44,6 +45,8 @@ export interface UserDetailDrawerProps {
   onTagUser?: (userId: string) => void;
   /** 推送活动回调 */
   onPushActivity?: (userId: string) => void;
+  /** 进入用户公开主页 */
+  onViewProfile?: (userId: string) => void;
 }
 
 // ========================================
@@ -138,6 +141,7 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
   onClose,
   onTagUser,
   onPushActivity,
+  onViewProfile,
 }) => {
   // 格式化日期
   const formatDateFull = (dateStr: string): string => {
@@ -164,12 +168,24 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
       {/* 头部 */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
         <h3 className="text-lg font-semibold text-gray-900">用户详情</h3>
-        <button
-          className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-          onClick={onClose}
-        >
-          <X size={20} className="text-gray-500" />
-        </button>
+        <div className="flex items-center gap-1">
+          {onViewProfile && (
+            <button
+              className="flex items-center gap-1 px-2.5 h-8 rounded-full text-sm text-primary-600 hover:bg-primary-50 transition-colors"
+              onClick={() => onViewProfile(user.id)}
+              title="查看用户公开主页"
+            >
+              查看主页
+              <ArrowUpRight size={14} />
+            </button>
+          )}
+          <button
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+            onClick={onClose}
+          >
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
       </div>
 
       {/* 内容区域 - 可滚动 */}

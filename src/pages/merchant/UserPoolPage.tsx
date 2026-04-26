@@ -1051,6 +1051,10 @@ const UserPoolPage: React.FC = () => {
           setSelectedUserIds(new Set([userId]));
           setTimeout(() => setPushActivityVisible(true), 300);
         }}
+        onViewProfile={(userId) => {
+          setDetailUser(null);
+          navigate(`/u/profile/${userId}`);
+        }}
       />
 
       {/* 批量打标签弹窗 */}
