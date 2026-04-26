@@ -949,6 +949,7 @@ const UserPoolPage: React.FC = () => {
                           onClick={() => setDetailUser(user)}
                           groupBg={bg}
                           activityNameById={activityNameById}
+                          customTagDefs={customTags}
                         />
                       ))}
                     </div>
@@ -963,6 +964,7 @@ const UserPoolPage: React.FC = () => {
                     onSelect={() => handleSelectUser(user.id)}
                     onClick={() => setDetailUser(user)}
                     activityNameById={activityNameById}
+                    customTagDefs={customTags}
                   />
                 ))
               )}
@@ -1055,6 +1057,7 @@ const UserPoolPage: React.FC = () => {
           setDetailUser(null);
           navigate(`/u/profile/${userId}`);
         }}
+        customTagDefs={customTags}
       />
 
       {/* 批量打标签弹窗 */}

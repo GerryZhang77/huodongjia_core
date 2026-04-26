@@ -23,12 +23,16 @@ import {
   UserCircle,
   ArrowUpRight,
 } from "lucide-react";
-import type { MerchantUser } from "@/features/merchant/user-pool/types";
+import type {
+  MerchantUser,
+  CustomTag,
+} from "@/features/merchant/user-pool/types";
 import {
   ACTIVITY_LEVEL_LABELS,
   ACTIVITY_LEVEL_COLORS,
   GENDER_LABELS,
 } from "@/features/merchant/user-pool/types";
+import { getCustomTagClassName } from "@/features/merchant/user-pool/utils/tagColors";
 
 // ========================================
 // 类型定义
@@ -47,6 +51,8 @@ export interface UserDetailDrawerProps {
   onPushActivity?: (userId: string) => void;
   /** 进入用户公开主页 */
   onViewProfile?: (userId: string) => void;
+  /** 商家自定义标签定义（含颜色），用于把 customTags 名字映射到颜色 */
+  customTagDefs?: CustomTag[];
 }
 
 // ========================================
@@ -76,25 +82,21 @@ interface TagGroupProps {
   title: string;
   tags: string[];
   variant: "custom" | "auto";
+  /** 仅 custom 用：name -> color 的查找 */
+  colorMap?: Map<string, string>;
 }
 
-const TagGroup: React.FC<TagGroupProps> = ({ title, tags, variant }) => {
+const TagGroup: React.FC<TagGroupProps> = ({
+  title,
+  tags,
+  variant,
+  colorMap,
+}) => {
   if (tags.length === 0) return null;
 
   const getTagStyle = (tag: string): string => {
     if (variant === "custom") {
-      // 自定义标签颜色映射
-      const customColors: Record<string, string> = {
-        高价值用户: "bg-orange-100 text-orange-600 border-orange-200",
-        种子用户: "bg-purple-100 text-purple-600 border-purple-200",
-        社交达人: "bg-blue-100 text-blue-600 border-blue-200",
-        "KOL/KOC": "bg-yellow-100 text-yellow-600 border-yellow-200",
-        待跟进: "bg-red-100 text-red-600 border-red-200",
-        企业客户: "bg-green-100 text-green-600 border-green-200",
-      };
-      return (
-        customColors[tag] || "bg-accent-50 text-accent-600 border-accent-200"
-      );
+      return getCustomTagClassName(colorMap?.get(tag));
     }
     return "bg-gray-100 text-gray-600 border-gray-200";
   };
@@ -106,7 +108,9 @@ const TagGroup: React.FC<TagGroupProps> = ({ title, tags, variant }) => {
         {tags.map((tag) => (
           <span
             key={tag}
-            className={`px-2.5 py-1 text-xs rounded-full border ${getTagStyle(tag)}`}
+            className={`px-2.5 py-1 text-xs rounded-full ${
+              variant === "auto" ? "border" : ""
+            } ${getTagStyle(tag)}`}
           >
             {tag}
           </span>
@@ -142,7 +146,13 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
   onTagUser,
   onPushActivity,
   onViewProfile,
+  customTagDefs,
 }) => {
+  const customTagColorMap = React.useMemo(() => {
+    const m = new Map<string, string>();
+    (customTagDefs || []).forEach((t) => m.set(t.name, t.color));
+    return m;
+  }, [customTagDefs]);
   // 格式化日期
   const formatDateFull = (dateStr: string): string => {
     const date = new Date(dateStr);
@@ -282,11 +292,16 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
             标签
           </h4>
           <TagGroup
-            title="自定义标签"
+            title="商家标签"
             tags={user.customTags}
             variant="custom"
+            colorMap={customTagColorMap}
           />
-          <TagGroup title="自动标签" tags={user.autoTags} variant="auto" />
+          <TagGroup
+            title="兴趣 / 自动标签"
+            tags={user.autoTags}
+            variant="auto"
+          />
           {user.customTags.length === 0 && user.autoTags.length === 0 && (
             <p className="text-sm text-gray-400 py-2">暂无标签</p>
           )}

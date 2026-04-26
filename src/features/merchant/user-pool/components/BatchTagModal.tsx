@@ -15,6 +15,7 @@ import { Toast } from "@/components/ui/Toast";
 import { X, Plus, Tag as TagIcon, Check } from "lucide-react";
 import type { CustomTag } from "@/features/merchant/user-pool/types";
 import { TAG_COLORS } from "@/features/merchant/user-pool/types";
+import { getCustomTagClassName } from "@/features/merchant/user-pool/utils/tagColors";
 
 // ========================================
 // 类型定义
@@ -31,23 +32,6 @@ export interface BatchTagModalProps {
   onConfirm: (tagNames: string[]) => void;
   /** 关闭回调 */
   onClose: () => void;
-}
-
-// ========================================
-// 预设标签颜色 CSS 映射
-// ========================================
-
-const TAG_COLOR_CSS: Record<string, string> = {
-  primary: "bg-primary-100 text-primary-600 border-primary-200",
-  secondary: "bg-orange-100 text-orange-600 border-orange-200",
-  accent: "bg-purple-100 text-purple-600 border-purple-200",
-  success: "bg-green-100 text-green-600 border-green-200",
-  warning: "bg-yellow-100 text-yellow-600 border-yellow-200",
-  error: "bg-red-100 text-red-600 border-red-200",
-};
-
-function getTagColorCSS(color: string): string {
-  return TAG_COLOR_CSS[color] || "bg-gray-100 text-gray-600 border-gray-200";
 }
 
 // ========================================
@@ -179,17 +163,17 @@ const BatchTagModal: React.FC<BatchTagModalProps> = ({
                 return (
                   <button
                     key={tag.name}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all ${getCustomTagClassName(tag.color)} ${
                       isSelected
-                        ? `${getTagColorCSS(tag.color)} ring-2 ring-offset-1 ring-primary-300`
-                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                        ? "ring-2 ring-offset-1 ring-primary-400 shadow-sm"
+                        : "opacity-80 hover:opacity-100"
                     }`}
                     onClick={() => toggleTag(tag.name)}
                   >
                     {isSelected && <Check size={14} />}
                     {tag.name}
                     {tag.isNew && (
-                      <span className="text-[10px] text-gray-400 ml-0.5">
+                      <span className="text-[10px] opacity-60 ml-0.5">
                         (新)
                       </span>
                     )}

@@ -17,6 +17,10 @@ import { Toast } from "@/components/ui/Toast";
 import { X, Plus, Trash2, Tag as TagIcon, Settings } from "lucide-react";
 import type { CustomTag } from "@/features/merchant/user-pool/types";
 import { TAG_COLORS } from "@/features/merchant/user-pool/types";
+import {
+  TAG_COLOR_OPTIONS as COLOR_OPTIONS,
+  getTagColorOption as getColorOption,
+} from "@/features/merchant/user-pool/utils/tagColors";
 
 // ========================================
 // 类型定义
@@ -33,67 +37,6 @@ export interface CustomTagManagerProps {
   onDelete: (tagId: string) => void;
   /** 关闭回调 */
   onClose: () => void;
-}
-
-// ========================================
-// 颜色选项配置
-// ========================================
-
-interface ColorOption {
-  key: string;
-  label: string;
-  bgClass: string;
-  textClass: string;
-  dotClass: string;
-}
-
-const COLOR_OPTIONS: ColorOption[] = [
-  {
-    key: "primary",
-    label: "蓝色",
-    bgClass: "bg-primary-100",
-    textClass: "text-primary-600",
-    dotClass: "bg-primary-400",
-  },
-  {
-    key: "secondary",
-    label: "橙色",
-    bgClass: "bg-orange-100",
-    textClass: "text-orange-600",
-    dotClass: "bg-orange-400",
-  },
-  {
-    key: "accent",
-    label: "紫色",
-    bgClass: "bg-purple-100",
-    textClass: "text-purple-600",
-    dotClass: "bg-purple-400",
-  },
-  {
-    key: "success",
-    label: "绿色",
-    bgClass: "bg-green-100",
-    textClass: "text-green-600",
-    dotClass: "bg-green-400",
-  },
-  {
-    key: "warning",
-    label: "黄色",
-    bgClass: "bg-yellow-100",
-    textClass: "text-yellow-600",
-    dotClass: "bg-yellow-400",
-  },
-  {
-    key: "error",
-    label: "红色",
-    bgClass: "bg-red-100",
-    textClass: "text-red-600",
-    dotClass: "bg-red-400",
-  },
-];
-
-function getColorOption(key: string): ColorOption {
-  return COLOR_OPTIONS.find((c) => c.key === key) || COLOR_OPTIONS[0];
 }
 
 // ========================================
