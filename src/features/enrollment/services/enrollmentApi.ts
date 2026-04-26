@@ -30,6 +30,11 @@ interface BackendEnrollment {
   user_id?: string | null;
   userId?: string | null;
   name: string;
+  /** 用户主页姓名（users.name） */
+  profileName?: string;
+  /** 报名表单中"姓名"字段（form_data['姓名']） */
+  formName?: string;
+  avatar?: string | null;
   sex?: string | null;
   age?: number | null;
   occupation?: string | null;
@@ -82,6 +87,9 @@ const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
     activityId: backend.event_id ?? backend.eventId ?? "",
     userId: backend.user_id ?? backend.userId ?? undefined,
     name: backend.name,
+    profileName: backend.profileName || undefined,
+    formName: backend.formName || undefined,
+    avatar: backend.avatar ?? null,
     gender: (backend.sex as Gender) || undefined,
     age: backend.age || undefined,
     phone,

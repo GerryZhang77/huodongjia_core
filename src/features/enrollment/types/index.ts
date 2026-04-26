@@ -25,6 +25,12 @@ export interface Enrollment {
   activityId: string;
   userId?: string;
   name: string;
+  /** 用户主页姓名（users.name），权威字段；与 formName 不同时建议在 UI 中提示 */
+  profileName?: string;
+  /** 报名表单中填写的"姓名"字段，原样保留（form_data['姓名']） */
+  formName?: string;
+  /** 用户头像（来自 users.avatar） */
+  avatar?: string | null;
   gender?: Gender;
   age?: number;
   phone?: string;

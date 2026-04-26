@@ -35,6 +35,12 @@ export interface Enrollment {
 
   // 个人信息
   name: string;
+  /** 用户主页姓名（users.name），权威字段 */
+  profileName?: string;
+  /** 报名表单中填写的"姓名"字段（form_data['姓名']） */
+  formName?: string;
+  /** 用户头像（users.avatar） */
+  avatar?: string | null;
   gender?: Gender;
   age?: number;
   ageGroup?: string; // 年龄段：如 "18-25", "26-35" 等

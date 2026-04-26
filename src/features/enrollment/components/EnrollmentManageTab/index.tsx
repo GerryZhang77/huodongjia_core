@@ -641,8 +641,15 @@ export const EnrollmentManageTab: FC<EnrollmentManageTabProps> = ({
                     }
                   >
                     <div className="font-medium text-gray-900">
-                      {enrollment.name}
+                      {enrollment.profileName || enrollment.name}
                     </div>
+                    {enrollment.formName &&
+                      enrollment.profileName &&
+                      enrollment.formName !== enrollment.profileName && (
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          报名时填写：{enrollment.formName}
+                        </div>
+                      )}
                   </List.Item>
                 ))}
               </List>

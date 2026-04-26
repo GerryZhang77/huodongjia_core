@@ -73,10 +73,23 @@ export const ParticipantList: FC<ParticipantListProps> = ({
                   }}
                 >
                   <span style={{ fontSize: "16px", fontWeight: 600 }}>
-                    {participant.name}
+                    {participant.profileName || participant.name}
                   </span>
                   <Tag color={status.color}>{status.text}</Tag>
                 </div>
+                {participant.formName &&
+                  participant.profileName &&
+                  participant.formName !== participant.profileName && (
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--adm-color-text-secondary)",
+                        marginBottom: "2px",
+                      }}
+                    >
+                      报名时填写：{participant.formName}
+                    </div>
+                  )}
 
                 <div
                   style={{
