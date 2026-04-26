@@ -96,25 +96,47 @@ export function useSendMessage() {
       }
       // 会话列表（最近消息）需要刷新
       queryClient.invalidateQueries({ queryKey: ["messages", "conversations"] });
+      // 配额可能因这次发送变化（陌生人会话已发条数 +1），刷新一次
+      queryClient.invalidateQueries({
+        queryKey: ["messaging", "quota", conversationId],
+      });
     },
-    onError: (_err, vars, ctx) => {
+    onError: (err, vars, ctx) => {
       const { conversationId } = vars;
       const tempId = ctx?.tempId;
       if (!tempId) return;
 
-      // 把临时项标记为 failed（保留在列表，用户可重试 / 删除）
+      // 后端 429 STRANGER_MSG_LIMIT：占位项整个移除（避免在 UI 上留下假装发出去的消息）
+      const isStrangerLimit = isStrangerMsgLimitError(err);
       const queries = queryClient.getQueriesData<MessagesData>({
         queryKey: ["messages", "list", conversationId],
       });
       for (const [key, value] of queries) {
         if (!value?.messages) continue;
-        const next = value.messages.map((m) =>
-          m.id === tempId ? { ...m, _clientState: "failed" as const } : m,
-        );
+        const next = isStrangerLimit
+          ? value.messages.filter((m) => m.id !== tempId)
+          : value.messages.map((m) =>
+              m.id === tempId ? { ...m, _clientState: "failed" as const } : m,
+            );
         queryClient.setQueryData<MessagesData>(key as unknown[], { messages: next });
+      }
+      // 触发配额刷新，让 banner 立刻显示"已用完"
+      if (isStrangerLimit) {
+        queryClient.invalidateQueries({
+          queryKey: ["messaging", "quota", conversationId],
+        });
       }
     },
   });
+}
+
+/** 判断错误是否为陌生人会话 3 条限额 */
+export function isStrangerMsgLimitError(err: unknown): boolean {
+  const e = err as { response?: { status?: number; data?: { code?: string } } };
+  return (
+    e?.response?.status === 429 &&
+    e?.response?.data?.code === "STRANGER_MSG_LIMIT"
+  );
 }
 
 /**

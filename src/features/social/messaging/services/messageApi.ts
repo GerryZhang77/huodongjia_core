@@ -110,3 +110,25 @@ export async function getUnreadCount(): Promise<number> {
   );
   return res.data.unreadCount;
 }
+
+export interface ConversationQuota {
+  /** 是否好友（互关）；好友直接 limited=false */
+  isFriend: boolean;
+  /** 是否处于陌生人会话限流状态 */
+  limited: boolean;
+  /** 当前用户已发送的消息数（限流期间统计） */
+  sentCount: number;
+  /** 限额（默认 3） */
+  limit: number;
+  /** 剩余可发条数；非限流时为 null */
+  remaining: number | null;
+}
+
+export async function getConversationQuota(
+  conversationId: string,
+): Promise<ConversationQuota> {
+  const res = await api.get<ApiResponse<ConversationQuota>>(
+    `/api/messages/conversations/${conversationId}/quota`,
+  );
+  return res.data;
+}

@@ -12,7 +12,8 @@
 import { FC, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, Info } from "lucide-react";
+import { Toast } from "@/components/ui/Toast";
 import { UserLayout } from "@/components/layout/UserLayout";
 import {
   useMessages,
@@ -22,7 +23,11 @@ import {
   MessageInput,
   ContactExchangeTrigger,
 } from "@/features/social";
-import { dropFailedMessage } from "@/features/social/messaging/hooks/useSendMessage";
+import {
+  dropFailedMessage,
+  isStrangerMsgLimitError,
+} from "@/features/social/messaging/hooks/useSendMessage";
+import { useConversationQuota } from "@/features/social/messaging/hooks/useConversationQuota";
 import { createConversation } from "@/features/social/messaging/services/messageApi";
 import type { ChatMessage } from "@/features/social/messaging/services/messageApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
@@ -85,13 +90,31 @@ const UserChatRoom: FC = () => {
   // 5) 发消息（pending+tempId 乐观更新；不再 await，输入框立刻可用）
   const sendMutation = useSendMessage();
   const queryClient = useQueryClient();
+  const { data: quota } = useConversationQuota(conversationId);
+  const blockedByLimit = !!quota?.limited && (quota?.remaining ?? 0) <= 0;
+
   const handleSend = (content: string) => {
     if (!conversationId) return;
-    sendMutation.mutate({
-      conversationId,
-      receiverId: peerId,
-      content,
-    });
+    if (blockedByLimit) {
+      Toast.show({
+        icon: "fail",
+        content: `对方未关注你前最多发送 ${quota?.limit ?? 3} 条`,
+      });
+      return;
+    }
+    sendMutation.mutate(
+      { conversationId, receiverId: peerId, content },
+      {
+        onError: (err) => {
+          if (isStrangerMsgLimitError(err)) {
+            Toast.show({
+              icon: "fail",
+              content: "已达上限，对方关注你后才能继续发送",
+            });
+          }
+        },
+      },
+    );
   };
 
   // 失败消息：重试 / 删除
@@ -184,6 +207,24 @@ const UserChatRoom: FC = () => {
           </div>
         </header>
 
+        {/* 陌生人会话限流提示 */}
+        {quota?.limited && (
+          <div
+            className={`flex items-start gap-2 px-3 py-2 text-xs ${
+              blockedByLimit
+                ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"
+                : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300"
+            }`}
+          >
+            <Info size={14} className="flex-shrink-0 mt-0.5" />
+            <p className="leading-relaxed max-w-3xl mx-auto w-full">
+              {blockedByLimit
+                ? `已达上限（${quota.sentCount}/${quota.limit}）。对方互相关注后即可继续发送。`
+                : `对方暂未关注你，未回复前最多发送 ${quota.limit} 条消息（已发 ${quota.sentCount}/${quota.limit}）。互相关注后无限制。`}
+            </p>
+          </div>
+        )}
+
         {/* 消息区 */}
         <div className="flex-1 overflow-y-auto px-3 py-3 max-w-3xl w-full mx-auto">
           {convLoading && (
@@ -223,7 +264,7 @@ const UserChatRoom: FC = () => {
         {/* 输入栏 */}
         <div className="flex-shrink-0 max-w-3xl w-full mx-auto">
           <MessageInput
-            disabled={!conversationId}
+            disabled={!conversationId || blockedByLimit}
             onSend={handleSend}
           />
         </div>
