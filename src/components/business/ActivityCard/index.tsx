@@ -10,12 +10,14 @@
  * - 悬停效果: 上移 + 阴影增强
  */
 
-import { FC, memo, useState } from "react";
+import { FC, memo } from "react";
 import { clsx } from "clsx";
 import { Calendar, MapPin, Users, Heart, Trash2 } from "lucide-react";
 import { Tag } from "@/components/ui";
 import dayjs from "dayjs";
+import { useQuery } from "@tanstack/react-query";
 import { useToggleFavorite } from "@/features/user/activity/hooks/useFavorites";
+import { api } from "@/services/api";
 import { Toast } from "@/components/ui/Toast";
 import type { ActivityCardProps } from "./types";
 
@@ -69,14 +71,26 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
   const useInternalFav =
     enableQuickFavorite && !showFavorite && !editMode && !onToggleFavorite;
   const toggleFav = useToggleFavorite();
-  // 乐观更新：本地状态，初始来自 activity.isFavorite，点击立即翻转
-  const [internalFavorited, setInternalFavorited] = useState<boolean>(
-    !!activity.isFavorite,
-  );
+  // 收藏状态由 React Query 缓存统一管理（乐观更新在 useToggleFavorite 中实现）
+  // 初始值优先用 activity.isFavorite 兜底，避免冷启动闪烁
+  const { data: favStatus } = useQuery({
+    queryKey: ["user", "favorite-status", id],
+    queryFn: () =>
+      api.get<{ success: boolean; data: { favorited: boolean } }>(
+        `/api/user/favorites/${id}/status`,
+      ),
+    enabled: useInternalFav,
+    initialData: activity.isFavorite
+      ? { success: true, data: { favorited: true } }
+      : undefined,
+    staleTime: 30 * 1000,
+  });
 
   const showFavoriteButton =
     !editMode && (showFavorite || useInternalFav);
-  const favoritedState = useInternalFav ? internalFavorited : isFavorited;
+  const favoritedState = useInternalFav
+    ? !!favStatus?.data?.favorited
+    : isFavorited;
 
   const handleClick = () => {
     if (!editMode) {
@@ -94,12 +108,10 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
     e.stopPropagation();
     e.preventDefault();
     if (useInternalFav) {
-      const next = !internalFavorited;
-      setInternalFavorited(next);
+      // 乐观更新由 useToggleFavorite 内部处理；失败时它已自动回滚
       try {
         await toggleFav.mutateAsync(id);
       } catch (err) {
-        setInternalFavorited(!next);
         Toast.show({
           icon: "fail",
           content: err instanceof Error ? err.message : "操作失败",

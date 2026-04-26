@@ -11,7 +11,7 @@
 
 import { FC, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import {
@@ -22,10 +22,11 @@ import {
   MessageInput,
   ContactExchangeTrigger,
 } from "@/features/social";
+import { dropFailedMessage } from "@/features/social/messaging/hooks/useSendMessage";
 import { createConversation } from "@/features/social/messaging/services/messageApi";
+import type { ChatMessage } from "@/features/social/messaging/services/messageApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { getPublicProfile } from "@/services/userApi";
-import { Toast } from "@/components/ui/Toast";
 
 const UserChatRoom: FC = () => {
   const { peerId } = useParams<{ peerId: string }>();
@@ -57,8 +58,19 @@ const UserChatRoom: FC = () => {
   const conversationId = convData?.id;
 
   // 3) 拉消息（依赖 conversationId）
+  //    乐观发送会按时间戳插入 pending 消息；server 返回顺序不一定与发送顺序一致，
+  //    因此渲染前按 created_at 升序兜底排序，避免多条快速发送后顺序错位
   const { data: msgData } = useMessages(conversationId);
-  const messages = useMemo(() => msgData?.messages ?? [], [msgData]);
+  const messages = useMemo(() => {
+    const list = msgData?.messages ?? [];
+    return [...list].sort((a, b) => {
+      // 同一时刻则保持稳定（按 id）
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      if (ta !== tb) return ta - tb;
+      return a.id.localeCompare(b.id);
+    });
+  }, [msgData]);
 
   // 4) 标记已读：当 conversationId 就绪、或新消息到达时
   const markRead = useMarkConversationRead();
@@ -70,19 +82,33 @@ const UserChatRoom: FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, messages.length]);
 
-  // 5) 发消息
+  // 5) 发消息（pending+tempId 乐观更新；不再 await，输入框立刻可用）
   const sendMutation = useSendMessage();
-  const handleSend = async (content: string) => {
+  const queryClient = useQueryClient();
+  const handleSend = (content: string) => {
     if (!conversationId) return;
-    try {
-      await sendMutation.mutateAsync({ conversationId, content });
-    } catch (err) {
-      Toast.show({
-        icon: "fail",
-        content: err instanceof Error ? err.message : "发送失败",
-      });
-      throw err;
-    }
+    sendMutation.mutate({
+      conversationId,
+      receiverId: peerId,
+      content,
+    });
+  };
+
+  // 失败消息：重试 / 删除
+  const handleRetry = (msg: ChatMessage) => {
+    if (!conversationId) return;
+    sendMutation.mutate({
+      conversationId,
+      receiverId: peerId,
+      content: msg.content,
+      message_type: msg.message_type,
+      payload: (msg.payload ?? undefined) as Record<string, unknown> | undefined,
+      _tempId: msg.id,
+    });
+  };
+  const handleDropFailed = (msg: ChatMessage) => {
+    if (!conversationId) return;
+    dropFailedMessage(queryClient, conversationId, msg.id);
   };
 
   // 6) 自动滚动到底部
@@ -186,6 +212,8 @@ const UserChatRoom: FC = () => {
                 myAvatar={currentUser?.avatar}
                 myName={currentUser?.name}
                 showAvatar={showAvatar}
+                onRetry={handleRetry}
+                onDropFailed={handleDropFailed}
               />
             );
           })}
@@ -195,7 +223,7 @@ const UserChatRoom: FC = () => {
         {/* 输入栏 */}
         <div className="flex-shrink-0 max-w-3xl w-full mx-auto">
           <MessageInput
-            disabled={!conversationId || sendMutation.isPending}
+            disabled={!conversationId}
             onSend={handleSend}
           />
         </div>

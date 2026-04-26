@@ -7,6 +7,10 @@ import { Toast } from "@/components/ui/Toast";
 import { updateEnrollmentStatus as updateStatusApi } from "../services";
 import type { EnrollmentStatus } from "../types";
 
+type EnrollmentListData = {
+  data?: { enrollments?: Array<{ id: string; status?: EnrollmentStatus }> };
+} | undefined;
+
 export const useUpdateEnrollmentStatus = (activityId: string) => {
   const queryClient = useQueryClient();
 
@@ -18,6 +22,29 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
       enrollmentIds: string[];
       status: EnrollmentStatus;
     }) => updateStatusApi({ activityId, enrollmentIds, status }),
+    onMutate: async ({ enrollmentIds, status }) => {
+      const listKey = ["merchant", "enrollment", "list", activityId];
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const queries = queryClient.getQueriesData<EnrollmentListData>({
+        queryKey: listKey,
+      });
+      const snapshots: Array<[unknown[], EnrollmentListData]> = [];
+      const idSet = new Set(enrollmentIds);
+      for (const [key, value] of queries) {
+        snapshots.push([key as unknown[], value]);
+        if (!value?.data?.enrollments) continue;
+        queryClient.setQueryData(key as unknown[], {
+          ...value,
+          data: {
+            ...value.data,
+            enrollments: value.data.enrollments.map((e) =>
+              idSet.has(e.id) ? { ...e, status } : e,
+            ),
+          },
+        });
+      }
+      return { snapshots };
+    },
     onSuccess: (_, { enrollmentIds, status }) => {
       const statusText =
         status === "approved" ? "通过" : status === "rejected" ? "拒绝" : "更新";
@@ -25,17 +52,23 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
         icon: "success",
         content: `已${statusText} ${enrollmentIds.length} 条报名`,
       });
+    },
+    onError: (error, _vars, ctx) => {
+      // 回滚
+      for (const [key, value] of ctx?.snapshots ?? []) {
+        queryClient.setQueryData(key, value);
+      }
+      Toast.show({
+        icon: "fail",
+        content: error instanceof Error ? error.message : "更新失败",
+      });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: ["merchant", "enrollment", "list", activityId],
       });
       queryClient.invalidateQueries({ queryKey: ["activity", "detail", activityId] });
       queryClient.invalidateQueries({ queryKey: ["merchant", "activities"] });
-    },
-    onError: (error) => {
-      Toast.show({
-        icon: "fail",
-        content: error instanceof Error ? error.message : "更新失败",
-      });
     },
   });
 

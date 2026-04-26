@@ -27,6 +27,8 @@ export interface ChatMessage {
   is_read: boolean;
   read_at?: string | null;
   created_at: string;
+  /** 仅前端用：'pending' = 发送中，'failed' = 发送失败可重试，未设置 = server 已确认 */
+  _clientState?: "pending" | "failed";
 }
 
 export interface ConversationListItem {

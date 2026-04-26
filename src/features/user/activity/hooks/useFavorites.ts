@@ -53,14 +53,31 @@ export function useRemoveFavorite() {
 }
 
 /**
- * 切换收藏状态
+ * 切换收藏状态（乐观更新：立即翻转本地缓存，失败回滚）
  */
 export function useToggleFavorite() {
   const queryClient = useQueryClient();
+  type FavStatus = { success: boolean; data: { favorited: boolean } };
 
   return useMutation({
     mutationFn: (activityId: string) => toggleFavorite(activityId),
-    onSuccess: (_, activityId) => {
+    onMutate: async (activityId) => {
+      const key = ["user", "favorite-status", activityId];
+      // 取消进行中的查询，避免覆盖乐观值
+      await queryClient.cancelQueries({ queryKey: key });
+      const prev = queryClient.getQueryData<FavStatus>(key);
+      // 立即翻转
+      queryClient.setQueryData<FavStatus>(key, (old) => ({
+        success: true,
+        data: { favorited: !old?.data?.favorited },
+      }));
+      return { prev, key };
+    },
+    onError: (_err, _activityId, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(ctx.key, ctx.prev);
+    },
+    onSettled: (_data, _err, activityId) => {
+      // 列表/聚合数据走 invalidate 校准；favorite-status 信任乐观值
       queryClient.invalidateQueries({ queryKey: ["user", "favorites"] });
       queryClient.invalidateQueries({ queryKey: ["user", "activities"] });
       queryClient.invalidateQueries({
