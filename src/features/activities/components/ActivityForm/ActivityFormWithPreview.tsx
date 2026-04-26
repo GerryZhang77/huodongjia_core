@@ -23,7 +23,19 @@ import {
 } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { PictureOutline } from "antd-mobile-icons";
-import { Eye, EyeOff, Smartphone, Monitor } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Smartphone,
+  Monitor,
+  FileText,
+  Save,
+} from "lucide-react";
+import {
+  TemplatePicker,
+  TemplateSaveModal,
+  type FormTemplate,
+} from "@/features/merchant/form-templates";
 import { useActivityDetail } from "../../hooks";
 import { uploadCoverImage } from "../../services";
 import {
@@ -76,6 +88,36 @@ export const ActivityFormWithPreview: React.FC<
     "mobile",
   ); // 预览模式
   const [formValues, setFormValues] = useState<Partial<ActivityFormData>>({});
+
+  // 模板相关弹窗状态
+  const [tplPickerType, setTplPickerType] = useState<
+    "registration_form" | "requirements" | null
+  >(null);
+  const [tplSaveType, setTplSaveType] = useState<
+    "registration_form" | "requirements" | null
+  >(null);
+
+  // 从模板写回 Form 字段
+  const applyTemplate = useCallback(
+    (template: FormTemplate) => {
+      if (template.type === "registration_form") {
+        form.setFieldsValue({ registration_form_schema: template.schema });
+      } else if (template.type === "requirements") {
+        form.setFieldsValue({ requirements: template.schema });
+      }
+      setFormValues((prev) => ({
+        ...prev,
+        ...(template.type === "registration_form"
+          ? { registration_form_schema: template.schema as any }
+          : { requirements: template.schema as any }),
+      }));
+      Toast.show({
+        icon: "success",
+        content: `已应用模板「${template.name}」`,
+      });
+    },
+    [form],
+  );
 
   // 获取用户信息作为主办方
   const user = useAuthStore((state) => state.user);
@@ -462,7 +504,31 @@ export const ActivityFormWithPreview: React.FC<
 
       {/* 报名信息收集 */}
       <Card
-        title="报名信息收集"
+        title={
+          <div className="flex items-center justify-between">
+            <span>报名信息收集</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTplPickerType("registration_form")}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg text-primary-600 hover:bg-primary-50 transition-colors"
+                title="从已保存的模板中导入"
+              >
+                <FileText size={12} />
+                从模板导入
+              </button>
+              <button
+                type="button"
+                onClick={() => setTplSaveType("registration_form")}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                title="把当前内容保存为可复用的模板"
+              >
+                <Save size={12} />
+                保存为模板
+              </button>
+            </div>
+          </div>
+        }
         className="mb-4"
         style={{ "--border-radius": "12px" } as any}
       >
@@ -505,7 +571,34 @@ export const ActivityFormWithPreview: React.FC<
         className="mb-4"
         style={{ "--border-radius": "12px" } as any}
       >
-        <Form.Item name="requirements" label="参与要求">
+        <Form.Item
+          name="requirements"
+          label={
+            <div className="flex items-center justify-between w-full">
+              <span>参与要求</span>
+              <span className="flex items-center gap-2 text-xs font-normal">
+                <button
+                  type="button"
+                  onClick={() => setTplPickerType("requirements")}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-primary-600 hover:bg-primary-50 transition-colors"
+                  title="从已保存的模板中导入"
+                >
+                  <FileText size={12} />
+                  从模板导入
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTplSaveType("requirements")}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                  title="把当前内容保存为可复用的模板"
+                >
+                  <Save size={12} />
+                  保存为模板
+                </button>
+              </span>
+            </div>
+          }
+        >
           <RequirementListEditor />
         </Form.Item>
 
@@ -736,6 +829,30 @@ export const ActivityFormWithPreview: React.FC<
           </div>
         </div>
       </Popup>
+
+      {/* 模板：从模板导入 */}
+      {tplPickerType && (
+        <TemplatePicker
+          visible
+          type={tplPickerType}
+          onClose={() => setTplPickerType(null)}
+          onPick={applyTemplate}
+        />
+      )}
+
+      {/* 模板：保存为模板 */}
+      {tplSaveType && (
+        <TemplateSaveModal
+          visible
+          type={tplSaveType}
+          schema={
+            tplSaveType === "registration_form"
+              ? form.getFieldValue("registration_form_schema")
+              : form.getFieldValue("requirements")
+          }
+          onClose={() => setTplSaveType(null)}
+        />
+      )}
     </div>
   );
 };
