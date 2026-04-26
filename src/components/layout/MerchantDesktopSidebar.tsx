@@ -19,6 +19,10 @@ import { useAuthStore } from "@/features/auth/stores";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/api/client";
 import { merchantApi } from "@/services";
+import {
+  usePrefetchMerchantProfile,
+  usePrefetchMerchantUserPool,
+} from "@/hooks/usePrefetchMerchant";
 
 interface NavItem {
   key: string;
@@ -37,6 +41,12 @@ export const MerchantDesktopSidebar: FC = () => {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const prefetchProfile = usePrefetchMerchantProfile();
+  const prefetchUserPool = usePrefetchMerchantUserPool();
+  const prefetchForKey = (key: string) => {
+    if (key === "profile") prefetchProfile();
+    else if (key === "user-pool") prefetchUserPool();
+  };
 
   const { data: notifData } = useQuery({
     queryKey: ["merchant", "notifications"],
@@ -165,6 +175,8 @@ export const MerchantDesktopSidebar: FC = () => {
               <button
                 key={item.key}
                 onClick={() => navigate(item.path)}
+                onPointerEnter={() => prefetchForKey(item.key)}
+                onFocus={() => prefetchForKey(item.key)}
                 title={item.tooltip}
                 className={`
                   w-full flex items-center gap-3 px-4 py-3 rounded-xl

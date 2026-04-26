@@ -14,6 +14,10 @@ import { LayoutDashboard, PlusCircle, Bell, User, UserSearch } from "lucide-reac
 import { MerchantDesktopSidebar } from "./MerchantDesktopSidebar";
 import { MerchantTopBar } from "./MerchantTopBar";
 import { BreadcrumbItem } from "./types";
+import {
+  usePrefetchMerchantProfile,
+  usePrefetchMerchantUserPool,
+} from "@/hooks/usePrefetchMerchant";
 
 interface MerchantLayoutProps {
   children: ReactNode;
@@ -71,9 +75,17 @@ export const MerchantLayout: FC<MerchantLayoutProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const prefetchProfile = usePrefetchMerchantProfile();
+  const prefetchUserPool = usePrefetchMerchantUserPool();
 
   // TODO: 获取未读消息数
   const unreadCount = 3;
+
+  // 根据 tab key 决定预拉哪些 query
+  const prefetchForTab = (key: string) => {
+    if (key === "profile") prefetchProfile();
+    else if (key === "user-pool") prefetchUserPool();
+  };
 
   // Tab 配置 - 5Tab: 活动 | 创建 | 用户 | 消息 | 我的
   const tabs: TabItem[] = [
@@ -197,6 +209,8 @@ export const MerchantLayout: FC<MerchantLayoutProps> = ({
                       <button
                         key={tab.key}
                         onClick={() => handleTabClick(tab)}
+                        onPointerEnter={() => prefetchForTab(tab.key)}
+                        onTouchStart={() => prefetchForTab(tab.key)}
                         className="flex-1 flex flex-col items-center justify-center h-full gap-1 transition-all duration-200"
                       >
                         <div className="relative leading-none">
