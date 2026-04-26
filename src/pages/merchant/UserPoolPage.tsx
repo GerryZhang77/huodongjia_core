@@ -64,6 +64,14 @@ import {
   getMerchantUserPool,
   getPlatformUsers,
   getDiscoveryQuota,
+  listCustomTags,
+  createCustomTag as createCustomTagApi,
+  deleteCustomTag as deleteCustomTagApi,
+  batchTagUsers,
+  pushActivityToUsers,
+  unlockDiscoveryUser,
+  toggleDiscoveryFavorite as toggleDiscoveryFavoriteApi,
+  inviteDiscoveryUser,
 } from "@/features/merchant/user-pool/services/userPoolApi";
 import { getMerchantActivities } from "@/features/merchant/activity-manage/services/activityManageApi";
 import {
@@ -140,24 +148,57 @@ const UserPoolPage: React.FC = () => {
   const [merchantUsers, setMerchantUsers] = useState<MerchantUser[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
 
-  useEffect(() => {
-    getMerchantUserPool().then((res: any) => {
-      if (res.success) setMerchantUsers(res.data.users);
-    }).catch(() => {});
-
-    getPlatformUsers().then((res: any) => {
-      if (res.success) setPlatformUsers(res.data.users);
-    }).catch(() => {});
-
-    getDiscoveryQuota().then((res: any) => {
-      if (res.success) setDiscoveryQuota(res.data);
-    }).catch(() => {});
-
-    getMerchantActivities().then((res: any) => {
-      const list = res.events || res.data?.events || [];
-      setActivities(list);
-    }).catch(() => {});
+  // 拉自定义标签
+  const reloadCustomTags = useCallback(() => {
+    listCustomTags()
+      .then((res) => {
+        if (res.success) {
+          setCustomTags(
+            (res.data?.tags || []).map((t) => ({
+              id: t.id,
+              name: t.name,
+              color: t.color,
+              userCount: t.userCount,
+              createdAt: t.createdAt,
+            })),
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  // 拉用户池
+  const reloadMerchantUsers = useCallback(() => {
+    getMerchantUserPool()
+      .then((res: any) => {
+        if (res.success) setMerchantUsers(res.data.users);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    reloadMerchantUsers();
+    reloadCustomTags();
+
+    getPlatformUsers()
+      .then((res: any) => {
+        if (res.success) setPlatformUsers(res.data.users);
+      })
+      .catch(() => {});
+
+    getDiscoveryQuota()
+      .then((res: any) => {
+        if (res.success) setDiscoveryQuota(res.data);
+      })
+      .catch(() => {});
+
+    getMerchantActivities()
+      .then((res: any) => {
+        const list = res.events || res.data?.events || [];
+        setActivities(list);
+      })
+      .catch(() => {});
+  }, [reloadMerchantUsers, reloadCustomTags]);
 
   // ========================================
   // 「发现用户」状态
@@ -337,98 +378,207 @@ const UserPoolPage: React.FC = () => {
 
   // 批量打标签确认
   const handleBatchTagConfirm = useCallback(
-    (tagNames: string[]) => {
-      // TODO: 调用 API 批量打标签
-      Toast.show({
-        content: `已为 ${selectedUserIds.size} 位用户添加 ${tagNames.length} 个标签`,
-        position: "bottom",
-      });
-      setBatchTagVisible(false);
-      setSelectedUserIds(new Set());
+    async (tagNames: string[]) => {
+      const userIds = Array.from(selectedUserIds);
+      // tagNames → tagIds
+      const nameToId = new Map(customTags.map((t) => [t.name, t.id]));
+      const tagIds = tagNames.map((n) => nameToId.get(n)).filter(Boolean) as string[];
+
+      if (userIds.length === 0 || tagIds.length === 0) {
+        Toast.show({ content: "请选择用户和标签", position: "bottom" });
+        return;
+      }
+
+      try {
+        const res = await batchTagUsers(userIds, tagIds);
+        if (!res.success) {
+          Toast.show({ icon: "fail", content: res.message || "打标签失败", position: "bottom" });
+          return;
+        }
+        Toast.show({
+          icon: "success",
+          content: `已为 ${userIds.length} 位用户添加 ${tagIds.length} 个标签`,
+          position: "bottom",
+        });
+        setBatchTagVisible(false);
+        setSelectedUserIds(new Set());
+        reloadMerchantUsers();
+        reloadCustomTags();
+      } catch (err: any) {
+        Toast.show({ icon: "fail", content: err?.message || "请求失败", position: "bottom" });
+      }
     },
-    [selectedUserIds.size],
+    [selectedUserIds, customTags, reloadMerchantUsers, reloadCustomTags],
   );
 
   // 推送活动确认
   const handlePushConfirm = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (_params: { activityId: string; message: string; channels: string[] }) => {
-      // TODO: 调用 API 推送活动
-      Toast.show({
-        content: `已向 ${selectedUserIds.size} 位用户推送活动邀请`,
-        position: "bottom",
-      });
-      setPushActivityVisible(false);
-      setSelectedUserIds(new Set());
+    async (params: { activityId: string; message: string; channels: string[] }) => {
+      const userIds = Array.from(selectedUserIds);
+      if (userIds.length === 0) return;
+      try {
+        const channels = (params.channels || []).filter((c) => c === "notification") as Array<"notification">;
+        const res = await pushActivityToUsers(
+          userIds,
+          params.activityId,
+          params.message,
+          channels.length > 0 ? channels : ["notification"],
+        );
+        if (!res.success) {
+          Toast.show({ icon: "fail", content: res.message || "推送失败", position: "bottom" });
+          return;
+        }
+        const pushed = res.data?.pushedCount ?? userIds.length;
+        const skipped = res.data?.skippedCount ?? 0;
+        Toast.show({
+          icon: "success",
+          content: skipped > 0
+            ? `已向 ${pushed} 位用户推送（${skipped} 位非私域，跳过）`
+            : `已向 ${pushed} 位用户推送活动邀请`,
+          position: "bottom",
+        });
+        setPushActivityVisible(false);
+        setSelectedUserIds(new Set());
+      } catch (err: any) {
+        Toast.show({ icon: "fail", content: err?.message || "请求失败", position: "bottom" });
+      }
     },
-    [selectedUserIds.size],
+    [selectedUserIds],
   );
 
   // 创建自定义标签
-  const handleCreateTag = useCallback((name: string, color: string) => {
-    const newTag: CustomTag = {
-      id: `tag_${Date.now()}`,
-      name,
-      color,
-      createdAt: new Date().toISOString(),
-      userCount: 0,
-    };
-    setCustomTags((prev) => [...prev, newTag]);
-  }, []);
+  const handleCreateTag = useCallback(
+    async (name: string, color: string) => {
+      try {
+        const res = await createCustomTagApi(name, color);
+        if (!res.success) {
+          Toast.show({ icon: "fail", content: "创建失败", position: "bottom" });
+          return;
+        }
+        const t = res.data?.tag;
+        if (t) {
+          setCustomTags((prev) => [
+            ...prev,
+            { id: t.id, name: t.name, color: t.color, userCount: t.userCount, createdAt: t.createdAt },
+          ]);
+          Toast.show({ icon: "success", content: "标签已创建", position: "bottom" });
+        }
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || "请求失败";
+        Toast.show({ icon: "fail", content: msg, position: "bottom" });
+      }
+    },
+    [],
+  );
 
   // 删除自定义标签
-  const handleDeleteTag = useCallback((tagId: string) => {
-    setCustomTags((prev) => prev.filter((t) => t.id !== tagId));
-  }, []);
+  const handleDeleteTag = useCallback(
+    async (tagId: string) => {
+      const prev = customTags;
+      // 乐观删除
+      setCustomTags((arr) => arr.filter((t) => t.id !== tagId));
+      try {
+        const res = await deleteCustomTagApi(tagId);
+        if (!res.success) {
+          setCustomTags(prev);
+          Toast.show({ icon: "fail", content: "删除失败", position: "bottom" });
+          return;
+        }
+        reloadMerchantUsers();
+      } catch {
+        setCustomTags(prev);
+        Toast.show({ icon: "fail", content: "请求失败", position: "bottom" });
+      }
+    },
+    [customTags, reloadMerchantUsers],
+  );
 
   // ========================================
   // 发现用户操作
   // ========================================
 
-  // 解锁用户
+  // 解锁用户：先调 API 扣额度，再乐观更新 UI
   const handleUnlockConfirm = useCallback(
-    (userId: string) => {
-      setPlatformUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, isUnlocked: true } : u)),
-      );
-      setDiscoveryQuota((prev) => ({
-        ...prev,
-        usedUnlocks: prev.usedUnlocks + 1,
-      }));
-      Toast.show({ content: "解锁成功，可查看完整信息", position: "bottom" });
-      if (discoveryDetailUser?.id === userId) {
-        setDiscoveryDetailUser((prev) =>
-          prev ? { ...prev, isUnlocked: true } : null,
+    async (userId: string) => {
+      try {
+        const res = await unlockDiscoveryUser(userId);
+        if (!res.success) {
+          Toast.show({ icon: "fail", content: res.message || "解锁失败", position: "bottom" });
+          return;
+        }
+        setPlatformUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, isUnlocked: true } : u)),
         );
+        if (!res.data?.alreadyUnlocked) {
+          setDiscoveryQuota((prev) => ({
+            ...prev,
+            usedUnlocks: prev.usedUnlocks + 1,
+          }));
+        }
+        if (discoveryDetailUser?.id === userId) {
+          setDiscoveryDetailUser((prev) =>
+            prev ? { ...prev, isUnlocked: true } : null,
+          );
+        }
+        Toast.show({
+          icon: "success",
+          content: res.data?.alreadyUnlocked ? "你已解锁过此用户" : "解锁成功",
+          position: "bottom",
+        });
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || "解锁失败";
+        Toast.show({ icon: "fail", content: msg, position: "bottom" });
+      } finally {
+        setUnlockTarget(null);
       }
-      setUnlockTarget(null);
     },
     [discoveryDetailUser],
   );
 
-  // 收藏/取消收藏
+  // 收藏/取消收藏：乐观更新，失败回滚
   const handleToggleFavorite = useCallback(
-    (userId: string) => {
+    async (userId: string) => {
+      const prevList = platformUsers;
+      const prevDetail = discoveryDetailUser;
       setPlatformUsers((prev) =>
         prev.map((u) =>
           u.id === userId ? { ...u, isFavorited: !u.isFavorited } : u,
         ),
       );
       if (discoveryDetailUser?.id === userId) {
-        setDiscoveryDetailUser((prev) =>
-          prev ? { ...prev, isFavorited: !prev.isFavorited } : null,
+        setDiscoveryDetailUser((p) =>
+          p ? { ...p, isFavorited: !p.isFavorited } : null,
         );
       }
+      try {
+        const res = await toggleDiscoveryFavoriteApi(userId);
+        if (!res.success) throw new Error("失败");
+      } catch {
+        // 回滚
+        setPlatformUsers(prevList);
+        setDiscoveryDetailUser(prevDetail);
+        Toast.show({ icon: "fail", content: "操作失败", position: "bottom" });
+      }
     },
-    [discoveryDetailUser],
+    [platformUsers, discoveryDetailUser],
   );
 
   // 邀请用户参加活动
   const handleInviteConfirm = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (_params: { userId: string; activityId: string; message: string }) => {
-      Toast.show({ content: "邀请已发送", position: "bottom" });
-      setInviteTarget(null);
+    async (params: { userId: string; activityId: string; message: string }) => {
+      try {
+        const res = await inviteDiscoveryUser(params.userId, params.activityId, params.message);
+        if (!res.success) {
+          Toast.show({ icon: "fail", content: res.message || "邀请失败", position: "bottom" });
+          return;
+        }
+        Toast.show({ icon: "success", content: "邀请已发送", position: "bottom" });
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || "邀请失败";
+        Toast.show({ icon: "fail", content: msg, position: "bottom" });
+      } finally {
+        setInviteTarget(null);
+      }
     },
     [],
   );
