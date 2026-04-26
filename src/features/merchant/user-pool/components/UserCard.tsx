@@ -99,10 +99,10 @@ const UserCard: React.FC<UserCardProps> = ({
 
   return (
     <div
-      className={`rounded-xl border p-4 transition-all cursor-pointer hover:shadow-sm ${
+      className={`group rounded-xl border p-4 transition-all duration-200 cursor-pointer hover:shadow-md hover:-translate-y-px ${
         selected
-          ? "border-primary-400 bg-primary-50/30"
-          : `${groupBg || "bg-white"} border-gray-100`
+          ? "border-primary-400 bg-primary-50/30 shadow-sm"
+          : `${groupBg || "bg-white"} border-gray-100 hover:border-gray-200`
       }`}
       onClick={onClick}
     >
