@@ -72,6 +72,7 @@ const statusConfig: Record<
     color: "bg-gray-400",
     btnLabel: "活动回顾",
     btnStyle: "bg-gray-100 text-gray-700 hover:bg-gray-200",
+    // 不再 disabled：approved 参与者可看回顾，非参与者点击会被跳走（PR5 接通）
   },
 };
 
@@ -605,6 +606,8 @@ const UserActivityDetail: FC = () => {
                       navigate(`/u/activities/${id}/register`);
                     } else if (activity.userStatus === "approved") {
                       navigate(`/u/activities/${id}/match-result`);
+                    } else if (activity.userStatus === "completed") {
+                      navigate(`/u/activities/${id}/recap`);
                     }
                   }}
                   className="flex-1 h-12"

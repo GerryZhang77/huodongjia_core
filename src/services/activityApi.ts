@@ -178,3 +178,13 @@ export async function cancelActivity(
 ): Promise<{ success: boolean; message?: string }> {
   return api.post(`/api/events/${id}/cancel`);
 }
+
+/**
+ * 结束活动（手动）
+ * POST /api/events/{id}/finish
+ */
+export async function finishActivity(
+  id: string
+): Promise<{ success: boolean; message?: string }> {
+  return api.post(`/api/events/${id}/finish`);
+}

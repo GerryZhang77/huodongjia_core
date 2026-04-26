@@ -6,10 +6,14 @@
 
 import { FC, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Users, GitMerge, ChevronRight, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Users, GitMerge, ChevronRight, Loader2, CheckSquare, Images } from "lucide-react";
+import { Dialog } from "antd-mobile";
+import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
 import { useActivityDetail } from "@/features/activities/hooks/useActivityDetail";
 import { EnrollmentManageTab } from "@/features/enrollment/components/EnrollmentManageTab";
+import { finishActivity } from "@/features/merchant/activity-manage/services/activityManageApi";
 
 /**
  * Tab 类型定义
@@ -21,8 +25,10 @@ type TabKey = "enroll" | "match";
  */
 export const ActivityManageNew: FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>("enroll");
+  const [finishing, setFinishing] = useState(false);
 
   // 获取活动详情
   const { activity, loading } = useActivityDetail(id!);
@@ -30,6 +36,43 @@ export const ActivityManageNew: FC = () => {
   // 返回上一页
   const handleBack = () => {
     navigate("/dashboard");
+  };
+
+  // 「结束活动」（仅在活动未结束 / 未取消时展示）
+  const ACTIVE_STATUSES = ["published", "registration", "ongoing", "recruiting", "recruiting_ended"];
+  const canFinish =
+    !!activity?.status && ACTIVE_STATUSES.includes(activity.status as string);
+  // 已结束活动允许编辑回顾（兼容后端 'completed' 与前端类型 'ended'）
+  const isCompleted = ["completed", "ended"].includes(
+    (activity?.status ?? "") as string,
+  );
+
+  const handleFinish = async () => {
+    if (!id) return;
+    const ok = await Dialog.confirm({
+      title: "结束活动",
+      content: "结束后用户将不能继续报名，且会通知所有已通过的参与者。是否继续？",
+      confirmText: "确认结束",
+      cancelText: "取消",
+    });
+    if (!ok) return;
+
+    setFinishing(true);
+    try {
+      const res = await finishActivity(id);
+      if (!res.success) {
+        Toast.show({ icon: "fail", content: res.message || "结束失败" });
+        return;
+      }
+      Toast.show({ icon: "success", content: "活动已结束" });
+      queryClient.invalidateQueries({ queryKey: ["activity", id] });
+      queryClient.invalidateQueries({ queryKey: ["merchant", "activities"] });
+      navigate("/dashboard");
+    } catch (err: any) {
+      Toast.show({ icon: "fail", content: err?.message || "结束失败，请稍后重试" });
+    } finally {
+      setFinishing(false);
+    }
   };
 
   // 加载态
@@ -101,6 +144,35 @@ export const ActivityManageNew: FC = () => {
               </div>
             </div>
           </div>
+
+          {/* 操作区：结束活动 / 管理回顾 */}
+          {(canFinish || isCompleted) && (
+            <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end gap-2">
+              {isCompleted && (
+                <button
+                  onClick={() => navigate(`/dashboard/activity/${id}/recap/edit`)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-200 bg-primary-50 text-sm text-primary-600 hover:bg-primary-100 transition-colors"
+                >
+                  <Images size={14} />
+                  管理回顾
+                </button>
+              )}
+              {canFinish && (
+                <button
+                  onClick={handleFinish}
+                  disabled={finishing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                >
+                  {finishing ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <CheckSquare size={14} />
+                  )}
+                  结束活动
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tab 导航 */}

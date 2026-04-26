@@ -10,6 +10,7 @@ import {
   deleteActivity,
   publishActivity,
   cancelActivity,
+  finishActivity,
 } from "@/services/activityApi";
 import type { CreateActivityRequest } from "../types";
 
@@ -64,4 +65,4 @@ export async function updateActivity(
   return updateActivityRaw(id, snakeData);
 }
 
-export { deleteActivity, publishActivity, cancelActivity };
+export { deleteActivity, publishActivity, cancelActivity, finishActivity };
