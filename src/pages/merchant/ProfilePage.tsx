@@ -3,10 +3,10 @@
  * 显示商家资料、设置、退出登录等
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   User,
   Building,
@@ -27,13 +27,24 @@ import {
   Copy,
   Check,
   Fingerprint,
+  Eye,
+  EyeOff,
+  Briefcase,
+  MapPin,
+  MessageCircle,
+  Layers,
+  Quote,
   } from "lucide-react";
 import { Dialog,
   Popup,
 } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
-import { merchantApi, type MerchantProfile } from "@/services";
+import {
+  merchantApi,
+  type MerchantProfileResponse,
+  type MerchantPrivacySettings,
+} from "@/services";
 import { useStore } from "@/store";
 import { useThemeStore } from "@/store/themeStore";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
@@ -50,7 +61,23 @@ interface MenuItemProps {
   onClick?: () => void;
   danger?: boolean;
   showArrow?: boolean;
+  /** 该字段在公开主页是否可见；undefined 时不展示标识 */
+  isPublic?: boolean;
 }
+
+const PublicBadge: React.FC<{ isPublic: boolean }> = ({ isPublic }) => (
+  <span
+    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+      isPublic
+        ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+        : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+    }`}
+    title={isPublic ? "其他用户可见" : "仅自己可见"}
+  >
+    {isPublic ? <Eye size={10} /> : <EyeOff size={10} />}
+    {isPublic ? "公开" : "私密"}
+  </span>
+);
 
 const MenuItem: React.FC<MenuItemProps> = ({
   icon,
@@ -59,6 +86,7 @@ const MenuItem: React.FC<MenuItemProps> = ({
   onClick,
   danger = false,
   showArrow = true,
+  isPublic,
 }) => {
   return (
     <button
@@ -76,10 +104,11 @@ const MenuItem: React.FC<MenuItemProps> = ({
           {icon}
         </span>
         <span className="text-sm font-medium">{label}</span>
+        {isPublic !== undefined && <PublicBadge isPublic={isPublic} />}
       </div>
       <div className="flex items-center gap-2">
         {value !== undefined && (
-          <span className="text-sm text-gray-400 dark:text-gray-500">
+          <span className="text-sm text-gray-400 dark:text-gray-500 max-w-[180px] truncate">
             {value}
           </span>
         )}
@@ -104,36 +133,35 @@ const ProfilePage: React.FC = () => {
   const { logout } = useStore();
   const { mode } = useThemeStore();
   const [showThemePopup, setShowThemePopup] = useState(false);
-  const [profile, setProfile] = useState<MerchantProfile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+
+  // 商家资料 - 与 ProfileEditPage 共享缓存键，避免编辑/返回的二次拉取
+  const PROFILE_KEY = ["merchant", "profile"] as const;
+  const {
+    data: profileResp,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: PROFILE_KEY,
+    queryFn: () => merchantApi.getMerchantProfile(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const profile = profileResp?.success ? profileResp.profile : null;
+
   const { data: socialStats } = useSocialStats(profile?.id);
   const merchantAvatarUpload = useImageUpload({ kind: "merchant-avatar" });
 
-  // 加载商家资料
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        setLoading(true);
-        const response = await merchantApi.getMerchantProfile();
-        if (response.success) {
-          setProfile(response.profile);
-        } else {
-          Toast.show({ content: "获取商家信息失败" });
-        }
-      } catch (error) {
-        console.error("加载商家资料失败:", error);
-        Toast.show({ content: "加载失败，请稍后重试" });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProfile();
-  }, []);
+  // 通过 setQueryData 直接修改缓存，避免本地 state 与 query 缓存双源不同步
+  const patchAvatar = (avatar: string | null) => {
+    queryClient.setQueryData<MerchantProfileResponse>(PROFILE_KEY, (old) =>
+      old?.profile
+        ? { ...old, profile: { ...old.profile, avatar: avatar ?? undefined } }
+        : old,
+    );
+  };
 
   // 处理头像上传：立即预览（blob:），server 返回后替换为真实 url；失败回滚
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,18 +172,22 @@ const ProfilePage: React.FC = () => {
     if (!handle.tempUrl) return; // 校验未通过
 
     const previousAvatar = profile?.avatar ?? null;
-    setProfile((prev) => (prev ? { ...prev, avatar: handle.tempUrl } : prev));
+    patchAvatar(handle.tempUrl);
     setAvatarUploading(true);
 
     handle.finalUrlPromise
       .then((real) => {
-        setProfile((prev) => (prev ? { ...prev, avatar: real } : prev));
-        queryClient.invalidateQueries({ queryKey: ["merchant", "profile"] });
+        patchAvatar(real);
+        // 让其他 query（如关注数等）感知到刷新，但避免立刻 refetch profile 抖一下
+        queryClient.invalidateQueries({
+          queryKey: PROFILE_KEY,
+          refetchType: "none",
+        });
         Toast.show({ icon: "success", content: "头像更新成功" });
       })
       .catch(() => {
         // hook 已 toast；这里只回滚
-        setProfile((prev) => (prev ? { ...prev, avatar: previousAvatar } : prev));
+        patchAvatar(previousAvatar);
       })
       .finally(() => {
         setAvatarUploading(false);
@@ -180,6 +212,30 @@ const ProfilePage: React.FC = () => {
   // 获取当前主题图标
   const ThemeIcon = mode === "light" ? Sun : mode === "dark" ? Moon : Monitor;
 
+  // 行业 value -> 中文 label（与 ProfileEditPage 保持一致）
+  const INDUSTRY_LABELS: Record<string, string> = {
+    internet: "互联网/IT",
+    finance: "金融/投资",
+    education: "教育/培训",
+    healthcare: "医疗/健康",
+    realestate: "房地产/建筑",
+    manufacturing: "制造业",
+    retail: "零售/电商",
+    media: "文化/传媒",
+    consulting: "咨询/服务",
+    other: "其他",
+  };
+
+  // 隐私读取（与后端 default 保持一致；未设置时按合理默认值）
+  const privacy = (profile?.privacy_settings ?? {}) as MerchantPrivacySettings;
+  const isFieldPublic = (
+    key: keyof MerchantPrivacySettings,
+    defaultPublic: boolean,
+  ): boolean => {
+    const v = privacy[key];
+    return typeof v === "boolean" ? v : defaultPublic;
+  };
+
   // 格式化日期
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -202,11 +258,11 @@ const ProfilePage: React.FC = () => {
 
   return (
     <MerchantLayout title="个人中心">
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="text-gray-400">加载中...</div>
         </div>
-      ) : !profile ? (
+      ) : !profile || isError ? (
         <div className="flex items-center justify-center h-64">
           <div className="text-gray-400">加载失败</div>
         </div>
@@ -246,9 +302,40 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 {/* 基本信息 */}
-                <div>
-                  <h2 className="text-lg font-semibold mb-1">{profile.name}</h2>
-                  <p className="text-sm text-white/70">{profile.location || "未填写地址"}</p>
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold mb-1 truncate">
+                    {profile.name}
+                  </h2>
+                  {(() => {
+                    // 顶部副标题用最能代表身份的字段：职业 (· 公司) > 行业 > 城市
+                    // 全空时给"去完善"入口，避免硬塞"未填写地址"这种占位
+                    const parts: string[] = [];
+                    if (profile.occupation) parts.push(profile.occupation);
+                    if (profile.company) parts.push(profile.company);
+                    let tagline = parts.join(" · ");
+                    if (!tagline && profile.industry) {
+                      tagline =
+                        INDUSTRY_LABELS[profile.industry] || profile.industry;
+                    }
+                    if (!tagline && profile.city) tagline = profile.city;
+                    if (tagline) {
+                      return (
+                        <p className="text-sm text-white/80 truncate">
+                          {tagline}
+                        </p>
+                      );
+                    }
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => navigate("/dashboard/profile/edit")}
+                        className="text-xs text-white/70 hover:text-white inline-flex items-center gap-0.5 transition-colors"
+                      >
+                        完善资料让参与者更了解你
+                        <ChevronRight size={12} />
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -291,6 +378,81 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
+          {/* 个人介绍 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  个人介绍
+                </h3>
+                <PublicBadge isPublic={isFieldPublic("bio", true)} />
+              </div>
+              <button
+                className="text-xs text-primary-500 hover:text-primary-600 transition-colors"
+                onClick={() => navigate("/dashboard/profile/edit?focus=bio")}
+              >
+                {profile.bio ? "编辑" : "去填写"}
+              </button>
+            </div>
+            <div className="px-4 py-4">
+              {profile.bio ? (
+                <div className="relative pl-5">
+                  <Quote
+                    size={14}
+                    className="absolute left-0 top-0.5 text-gray-300 dark:text-gray-600"
+                  />
+                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-line">
+                    {profile.bio}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 dark:text-gray-500">
+                  还没有自我介绍。一段简介能让参与者更快建立信任，建议补充。
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* 职业信息 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                职业信息
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              <MenuItem
+                icon={<Briefcase size={18} />}
+                label="职业"
+                value={profile.occupation || "未填写"}
+                isPublic={isFieldPublic("occupation", true)}
+                onClick={() =>
+                  navigate("/dashboard/profile/edit?focus=occupation")
+                }
+              />
+              <MenuItem
+                icon={<Layers size={18} />}
+                label="行业"
+                value={
+                  profile.industry
+                    ? INDUSTRY_LABELS[profile.industry] || profile.industry
+                    : "未填写"
+                }
+                isPublic={isFieldPublic("industry", true)}
+                onClick={() => navigate("/dashboard/profile/edit")}
+              />
+              <MenuItem
+                icon={<Building size={18} />}
+                label="公司 / 组织"
+                value={profile.company || "未填写"}
+                isPublic={isFieldPublic("company", false)}
+                onClick={() =>
+                  navigate("/dashboard/profile/edit?focus=company")
+                }
+              />
+            </div>
+          </div>
+
           {/* 联系方式 */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
@@ -303,18 +465,28 @@ const ProfilePage: React.FC = () => {
                 icon={<Phone size={18} />}
                 label="手机号"
                 value={profile.phone || "未绑定"}
+                isPublic={isFieldPublic("phone", false)}
                 onClick={() => navigate("/dashboard/profile/edit?focus=phone")}
               />
               <MenuItem
                 icon={<Mail size={18} />}
                 label="邮箱"
                 value={profile.email || "未绑定"}
+                isPublic={isFieldPublic("email", false)}
                 onClick={() => navigate("/dashboard/profile/edit?focus=email")}
               />
               <MenuItem
-                icon={<Building size={18} />}
-                label="地址"
-                value={profile.city || profile.location || "未填写"}
+                icon={<MessageCircle size={18} />}
+                label="微信号"
+                value={profile.wechat || "未绑定"}
+                isPublic={isFieldPublic("wechat", false)}
+                onClick={() => navigate("/dashboard/profile/edit?focus=wechat")}
+              />
+              <MenuItem
+                icon={<MapPin size={18} />}
+                label="所在城市"
+                value={profile.city || "未填写"}
+                isPublic={isFieldPublic("city", false)}
                 onClick={() => navigate("/dashboard/profile/edit?focus=city")}
               />
             </div>

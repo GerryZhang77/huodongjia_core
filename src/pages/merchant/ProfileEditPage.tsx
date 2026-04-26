@@ -166,22 +166,28 @@ const ProfileEditPage: React.FC = () => {
     }
   };
 
-  // 隐私开关行
-  const PrivacyRow: React.FC<{
+  // 字段标签 + 行内"公开"开关
+  // 私密默认的字段开启后，参与者才能在你的公开主页 / 活动详情看到该字段
+  const PrivacyToggle: React.FC<{
     fieldKey: keyof MerchantPrivacySettings;
     label: string;
-    desc: string;
-  }> = ({ fieldKey, label, desc }) => (
-    <div className="flex items-center justify-between py-2">
-      <div>
-        <p className="text-sm text-gray-900 dark:text-gray-100">{label}</p>
-        <p className="text-xs text-gray-400 dark:text-gray-500">{desc}</p>
-      </div>
-      <Switch
-        checked={!!privacy[fieldKey]}
-        onChange={(v) => setPrivacy((prev) => ({ ...prev, [fieldKey]: v }))}
-        style={{ "--checked-color": "var(--primary-500, #6366f1)" } as React.CSSProperties}
-      />
+  }> = ({ fieldKey, label }) => (
+    <div className="flex items-center justify-between w-full">
+      <span>{label}</span>
+      <span className="flex items-center gap-1.5 text-xs font-normal text-gray-500 dark:text-gray-400">
+        公开
+        <Switch
+          checked={!!privacy[fieldKey]}
+          onChange={(v) => setPrivacy((prev) => ({ ...prev, [fieldKey]: v }))}
+          style={
+            {
+              "--height": "20px",
+              "--width": "36px",
+              "--checked-color": "var(--primary-500, #6366f1)",
+            } as React.CSSProperties
+          }
+        />
+      </span>
     </div>
   );
 
@@ -253,7 +259,7 @@ const ProfileEditPage: React.FC = () => {
 
               <Form.Item
                 name="phone"
-                label="手机号"
+                label={<PrivacyToggle fieldKey="phone" label="手机号" />}
                 rules={[
                   { required: true, message: "请输入手机号" },
                   { pattern: /^1[3-9]\d{9}$/, message: "请输入正确的手机号" },
@@ -269,7 +275,7 @@ const ProfileEditPage: React.FC = () => {
 
               <Form.Item
                 name="email"
-                label="邮箱"
+                label={<PrivacyToggle fieldKey="email" label="邮箱" />}
                 rules={[{ type: "email", message: "请输入正确的邮箱格式" }]}
               >
                 <Input
@@ -279,14 +285,20 @@ const ProfileEditPage: React.FC = () => {
                 />
               </Form.Item>
 
-              <Form.Item name="wechat" label="微信号">
+              <Form.Item
+                name="wechat"
+                label={<PrivacyToggle fieldKey="wechat" label="微信号" />}
+              >
                 <Input
                   placeholder="请输入微信号 (选填)"
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg"
                 />
               </Form.Item>
 
-              <Form.Item name="city" label="所在城市">
+              <Form.Item
+                name="city"
+                label={<PrivacyToggle fieldKey="city" label="所在城市" />}
+              >
                 <Input
                   placeholder="如：上海"
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg"
@@ -303,21 +315,29 @@ const ProfileEditPage: React.FC = () => {
               </h3>
             </div>
             <div className="p-4 space-y-4">
-              <Form.Item name="company" label="公司/组织">
+              <Form.Item
+                name="company"
+                label={<PrivacyToggle fieldKey="company" label="公司 / 组织" />}
+              >
                 <Input
                   placeholder="请输入公司或组织名称"
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg"
                 />
               </Form.Item>
 
-              <Form.Item name="occupation" label="职业 / 职位">
+              <Form.Item
+                name="occupation"
+                label={<PrivacyToggle fieldKey="occupation" label="职业 / 职位" />}
+              >
                 <Input
                   placeholder="如：产品经理"
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg"
                 />
               </Form.Item>
 
-              <Form.Item label="所属行业">
+              <Form.Item
+                label={<PrivacyToggle fieldKey="industry" label="所属行业" />}
+              >
                 <div
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2.5 flex items-center justify-between cursor-pointer"
                   onClick={() => setIndustryVisible(true)}
@@ -340,9 +360,7 @@ const ProfileEditPage: React.FC = () => {
           {/* 个人介绍 */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                个人介绍
-              </h3>
+              <PrivacyToggle fieldKey="bio" label="个人介绍" />
             </div>
             <div className="p-4">
               <Form.Item name="bio">
@@ -357,24 +375,10 @@ const ProfileEditPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 公开展示设置 */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                公开展示设置
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                关闭的字段不会出现在你的公开主页中
-              </p>
-            </div>
-            <div className="px-4 divide-y divide-gray-100 dark:divide-gray-700">
-              <PrivacyRow fieldKey="phone" label="手机号" desc="开启后用户可看到你的手机号" />
-              <PrivacyRow fieldKey="email" label="邮箱" desc="开启后用户可看到你的邮箱" />
-              <PrivacyRow fieldKey="wechat" label="微信号" desc="开启后用户可看到你的微信号" />
-              <PrivacyRow fieldKey="company" label="公司" desc="是否在公开主页展示公司信息" />
-              <PrivacyRow fieldKey="city" label="城市" desc="是否在公开主页展示所在城市" />
-            </div>
-          </div>
+          {/* 公开展示提示 */}
+          <p className="px-4 text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-primary-500">公开</span>开关已内联在每个字段旁，关闭后该项不会出现在公开主页和活动详情中。
+          </p>
         </Form>
 
         {/* 提交按钮 - 固定在底部 */}
