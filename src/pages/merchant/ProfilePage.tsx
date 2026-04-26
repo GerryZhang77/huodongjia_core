@@ -535,6 +535,23 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
+          {/* 我的资源 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                我的资源
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              <MenuItem
+                icon={<FileText size={18} />}
+                label="我的模板"
+                value="报名表 / 参与要求"
+                onClick={() => navigate("/dashboard/profile/templates")}
+              />
+            </div>
+          </div>
+
           {/* 设置与帮助 */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">

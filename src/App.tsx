@@ -46,6 +46,9 @@ const MerchantProfile = lazy(() => import("./pages/merchant/ProfilePage"));
 const MerchantProfileEdit = lazy(
   () => import("./pages/merchant/ProfileEditPage"),
 );
+const MerchantTemplates = lazy(
+  () => import("./pages/merchant/TemplateListPage"),
+);
 const MerchantHelpCenter = lazy(
   () => import("./pages/merchant/HelpCenterPage"),
 );
@@ -209,6 +212,16 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole={["organizer", "admin"]}>
                       <MerchantProfileEdit />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* B端商家 - 我的模板 */}
+                <Route
+                  path="/dashboard/profile/templates"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <MerchantTemplates />
                     </ProtectedRoute>
                   }
                 />
