@@ -13,8 +13,6 @@ import {
   Phone,
   Mail,
   Calendar,
-  Users,
-  Activity,
   Settings,
   HelpCircle,
   FileText,
@@ -39,6 +37,7 @@ import { merchantApi, uploadMerchantAvatar, type MerchantProfile } from "@/servi
 import { useStore } from "@/store";
 import { useThemeStore } from "@/store/themeStore";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
+import { useSocialStats } from "@/features/social";
 
 /**
  * 菜单项组件
@@ -110,6 +109,7 @@ const ProfilePage: React.FC = () => {
   const [idCopied, setIdCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { data: socialStats } = useSocialStats(profile?.id);
 
   // 加载商家资料
   useEffect(() => {
@@ -254,19 +254,32 @@ const ProfilePage: React.FC = () => {
             </div>
 
             {/* 统计数据 */}
-            <div className="flex items-center gap-6 mt-6 pt-4 border-t border-white/20">
+            <div className="grid grid-cols-4 gap-2 mt-6 pt-4 border-t border-white/20">
               <div className="text-center">
-                <p className="text-2xl font-bold">-</p>
-                <p className="text-xs text-white/70">创建活动</p>
+                <p className="text-2xl font-bold">{profile.stats?.totalEvents ?? 0}</p>
+                <p className="text-xs text-white/70">活动数</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold">-</p>
+                <p className="text-2xl font-bold">{profile.stats?.totalServed ?? 0}</p>
                 <p className="text-xs text-white/70">服务人数</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold">-</p>
-                <p className="text-xs text-white/70">好评率</p>
+                <p className="text-2xl font-bold">{socialStats?.followingCount ?? 0}</p>
+                <p className="text-xs text-white/70">关注</p>
               </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold">{socialStats?.followersCount ?? 0}</p>
+                <p className="text-xs text-white/70">粉丝</p>
+              </div>
+            </div>
+            {/* 好评率（评分系统暂未上线） */}
+            <div className="mt-3 text-xs text-white/70 flex items-center justify-center gap-1">
+              <span>好评率</span>
+              <span className="font-medium">
+                {profile.stats?.ratingAvg != null
+                  ? `${Math.round(profile.stats.ratingAvg * 100)}%`
+                  : "暂无评分"}
+              </span>
             </div>
           </div>
 
@@ -282,19 +295,19 @@ const ProfilePage: React.FC = () => {
                 icon={<Phone size={18} />}
                 label="手机号"
                 value={profile.phone || "未绑定"}
-                onClick={() => Toast.show({ content: "修改手机号功能开发中" })}
+                onClick={() => navigate("/dashboard/profile/edit?focus=phone")}
               />
               <MenuItem
                 icon={<Mail size={18} />}
                 label="邮箱"
                 value={profile.email || "未绑定"}
-                onClick={() => Toast.show({ content: "绑定邮箱功能开发中" })}
+                onClick={() => navigate("/dashboard/profile/edit?focus=email")}
               />
               <MenuItem
                 icon={<Building size={18} />}
                 label="地址"
-                value={profile.location || "未填写"}
-                onClick={() => Toast.show({ content: "编辑功能开发中" })}
+                value={profile.city || profile.location || "未填写"}
+                onClick={() => navigate("/dashboard/profile/edit?focus=city")}
               />
             </div>
           </div>
@@ -337,18 +350,6 @@ const ProfilePage: React.FC = () => {
                 icon={<Calendar size={18} />}
                 label="注册时间"
                 value={formatDate(profile.created_at)}
-                showArrow={false}
-              />
-              <MenuItem
-                icon={<Activity size={18} />}
-                label="累计活动"
-                value="-"
-                showArrow={false}
-              />
-              <MenuItem
-                icon={<Users size={18} />}
-                label="服务人数"
-                value="-"
                 showArrow={false}
               />
             </div>

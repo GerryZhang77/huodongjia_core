@@ -10,6 +10,30 @@ import { api } from "@/services/api";
 // ========================================
 
 /**
+ * 商家隐私开关：哪些联系/资料字段对外公开
+ */
+export interface MerchantPrivacySettings {
+  phone?: boolean;
+  email?: boolean;
+  wechat?: boolean;
+  company?: boolean;
+  city?: boolean;
+  industry?: boolean;
+  occupation?: boolean;
+  bio?: boolean;
+}
+
+/**
+ * 商家个人中心头部统计
+ */
+export interface MerchantStats {
+  totalEvents: number;
+  totalServed: number;
+  ratingAvg: number | null;
+  ratingCount: number | null;
+}
+
+/**
  * 商家资料
  */
 export interface MerchantProfile {
@@ -18,12 +42,23 @@ export interface MerchantProfile {
   name: string;
   phone: string | null;
   email: string | null;
+  wechat: string | null;
   avatar: string | null;
   birth_year: number | null;
+  age: number | null;
   location: string | null;
+  occupation: string | null;
+  company: string | null;
+  industry: string | null;
+  city: string | null;
+  bio: string | null;
+  tags: string[];
+  photos: string[];
   person_info: any[];
+  privacy_settings: MerchantPrivacySettings;
   created_at: string;
   updated_at: string;
+  stats: MerchantStats;
 }
 
 /**
@@ -41,9 +76,20 @@ export interface UpdateMerchantProfileRequest {
   avatar?: string;
   name?: string;
   birth_year?: number;
+  age?: number;
   phone?: string;
   email?: string;
+  wechat?: string;
+  location?: string;
+  occupation?: string;
+  company?: string;
+  industry?: string;
+  city?: string;
+  bio?: string;
+  tags?: string[];
+  photos?: string[];
   person_info?: any[];
+  privacy_settings?: MerchantPrivacySettings;
 }
 
 // ========================================

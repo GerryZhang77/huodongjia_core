@@ -80,6 +80,8 @@ export type {
   MerchantProfile,
   MerchantProfileResponse,
   UpdateMerchantProfileRequest,
+  MerchantPrivacySettings,
+  MerchantStats,
 } from "./merchantApi";
 export { uploadMerchantAvatar } from "./merchantApi";
 

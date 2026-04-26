@@ -3,8 +3,8 @@
  */
 
 import React, { useState, useEffect } from "react";
-import {
-  useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Form,
   Input,
@@ -12,21 +12,16 @@ import {
   Button,
   ImageUploader,
   Picker,
+  Switch,
 } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { PictureOutline } from "antd-mobile-icons";
 import { MerchantLayout } from "@/components/layout";
-import { mockMerchantProfile } from "@/mocks/data/merchant";
-
-interface ProfileFormData {
-  name: string;
-  phone: string;
-  email: string;
-  company: string;
-  position: string;
-  bio: string;
-  avatar?: string;
-}
+import {
+  merchantApi,
+  uploadMerchantAvatar,
+  type MerchantPrivacySettings,
+} from "@/services";
 
 // 行业选项
 const industryOptions = [
@@ -44,8 +39,22 @@ const industryOptions = [
   ],
 ];
 
+// 默认隐私值（与后端迁移保持一致）
+const DEFAULT_PRIVACY: Required<MerchantPrivacySettings> = {
+  phone: false,
+  email: false,
+  wechat: false,
+  company: false,
+  city: false,
+  industry: true,
+  occupation: true,
+  bio: true,
+};
+
 const ProfileEditPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -53,43 +62,66 @@ const ProfileEditPage: React.FC = () => {
   const [avatarList, setAvatarList] = useState<any[]>([]);
   const [industryVisible, setIndustryVisible] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState<string[]>([]);
+  const [privacy, setPrivacy] = useState<Required<MerchantPrivacySettings>>(DEFAULT_PRIVACY);
 
-  const profile = mockMerchantProfile;
+  // 拉真实商家资料
+  const { data: profileResp, isLoading } = useQuery({
+    queryKey: ["merchant", "profile"],
+    queryFn: () => merchantApi.getMerchantProfile(),
+  });
+  const profile = profileResp?.profile;
 
   // 初始化表单数据
   useEffect(() => {
-    if (profile) {
-      form.setFieldsValue({
-        name: profile.name,
-        phone: profile.phone,
-        email: profile.email || "",
-        company: profile.company || "",
-        position: "",
-        bio: profile.description || "",
-      });
+    if (!profile) return;
+    form.setFieldsValue({
+      name: profile.name || "",
+      phone: profile.phone || "",
+      email: profile.email || "",
+      wechat: profile.wechat || "",
+      company: profile.company || "",
+      occupation: profile.occupation || "",
+      city: profile.city || "",
+      bio: profile.bio || "",
+    });
 
-      if (profile.avatar) {
-        setAvatarList([
-          {
-            url: profile.avatar,
-            key: "avatar",
-          },
-        ]);
-      }
+    if (profile.avatar) {
+      setAvatarList([{ url: profile.avatar, key: "avatar" }]);
     }
+
+    if (profile.industry) {
+      setSelectedIndustry([profile.industry]);
+    }
+
+    setPrivacy({ ...DEFAULT_PRIVACY, ...(profile.privacy_settings || {}) });
   }, [profile, form]);
 
-  // 处理头像上传
+  // 自动聚焦：从 ProfilePage 通过 ?focus=phone 跳过来
+  useEffect(() => {
+    if (!profile) return;
+    const focus = searchParams.get("focus");
+    if (!focus) return;
+    requestAnimationFrame(() => {
+      const input = document.querySelector<HTMLInputElement>(
+        `input[name="${focus}"], textarea[name="${focus}"]`,
+      );
+      input?.focus();
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [profile, searchParams]);
+
+  // 处理头像上传：直传后端，得到真实 url
   const handleAvatarUpload = async (file: File) => {
     setUploading(true);
     try {
-      // 模拟上传
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const url = URL.createObjectURL(file);
-      Toast.show({ content: "头像上传成功" });
-      return { url };
+      const res = await uploadMerchantAvatar(file);
+      if (res.success && res.data?.url) {
+        Toast.show({ icon: "success", content: "头像上传成功" });
+        return { url: res.data.url };
+      }
+      throw new Error(res.message || "上传失败");
     } catch (error) {
-      Toast.show({ content: "上传失败，请重试" });
+      Toast.show({ icon: "fail", content: "上传失败，请重试" });
       throw error;
     } finally {
       setUploading(false);
@@ -111,21 +143,21 @@ const ProfileEditPage: React.FC = () => {
       const values = await form.validateFields();
       setLoading(true);
 
-      // 模拟 API 调用
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const formData: ProfileFormData = {
+      const payload = {
         ...values,
         avatar: avatarList[0]?.url,
+        industry: selectedIndustry[0],
+        privacy_settings: privacy,
       };
 
-      console.log("提交资料:", formData);
+      const res = await merchantApi.updateMerchantProfile(payload);
+      if (!res.success) {
+        Toast.show({ icon: "fail", content: res.message || "保存失败" });
+        return;
+      }
 
-      Toast.show({
-        content: "资料已更新",
-        icon: "success",
-      });
-
+      Toast.show({ icon: "success", content: "资料已更新" });
+      queryClient.invalidateQueries({ queryKey: ["merchant", "profile"] });
       navigate("/dashboard/profile");
     } catch (error) {
       console.error("提交失败:", error);
@@ -133,6 +165,33 @@ const ProfileEditPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // 隐私开关行
+  const PrivacyRow: React.FC<{
+    fieldKey: keyof MerchantPrivacySettings;
+    label: string;
+    desc: string;
+  }> = ({ fieldKey, label, desc }) => (
+    <div className="flex items-center justify-between py-2">
+      <div>
+        <p className="text-sm text-gray-900 dark:text-gray-100">{label}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">{desc}</p>
+      </div>
+      <Switch
+        checked={!!privacy[fieldKey]}
+        onChange={(v) => setPrivacy((prev) => ({ ...prev, [fieldKey]: v }))}
+        style={{ "--checked-color": "var(--primary-500, #6366f1)" } as React.CSSProperties}
+      />
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <MerchantLayout title="编辑资料" showBack onBack={() => navigate("/dashboard/profile")}>
+        <div className="flex items-center justify-center h-64 text-gray-400">加载中...</div>
+      </MerchantLayout>
+    );
+  }
 
   return (
     <MerchantLayout
@@ -153,7 +212,7 @@ const ProfileEditPage: React.FC = () => {
                 onChange={setAvatarList}
                 upload={handleAvatarUpload}
                 maxCount={1}
-                style={{ "--cell-size": "80px" }}
+                style={{ "--cell-size": "80px" } as React.CSSProperties}
               >
                 <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden">
                   {avatarList.length > 0 ? (
@@ -219,6 +278,20 @@ const ProfileEditPage: React.FC = () => {
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg"
                 />
               </Form.Item>
+
+              <Form.Item name="wechat" label="微信号">
+                <Input
+                  placeholder="请输入微信号 (选填)"
+                  className="bg-gray-50 dark:bg-gray-700 rounded-lg"
+                />
+              </Form.Item>
+
+              <Form.Item name="city" label="所在城市">
+                <Input
+                  placeholder="如：上海"
+                  className="bg-gray-50 dark:bg-gray-700 rounded-lg"
+                />
+              </Form.Item>
             </div>
           </div>
 
@@ -237,9 +310,9 @@ const ProfileEditPage: React.FC = () => {
                 />
               </Form.Item>
 
-              <Form.Item name="position" label="职位">
+              <Form.Item name="occupation" label="职业 / 职位">
                 <Input
-                  placeholder="请输入职位"
+                  placeholder="如：产品经理"
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg"
                 />
               </Form.Item>
@@ -281,6 +354,25 @@ const ProfileEditPage: React.FC = () => {
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg"
                 />
               </Form.Item>
+            </div>
+          </div>
+
+          {/* 公开展示设置 */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                公开展示设置
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                关闭的字段不会出现在你的公开主页中
+              </p>
+            </div>
+            <div className="px-4 divide-y divide-gray-100 dark:divide-gray-700">
+              <PrivacyRow fieldKey="phone" label="手机号" desc="开启后用户可看到你的手机号" />
+              <PrivacyRow fieldKey="email" label="邮箱" desc="开启后用户可看到你的邮箱" />
+              <PrivacyRow fieldKey="wechat" label="微信号" desc="开启后用户可看到你的微信号" />
+              <PrivacyRow fieldKey="company" label="公司" desc="是否在公开主页展示公司信息" />
+              <PrivacyRow fieldKey="city" label="城市" desc="是否在公开主页展示所在城市" />
             </div>
           </div>
         </Form>
