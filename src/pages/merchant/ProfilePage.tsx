@@ -33,11 +33,12 @@ import { Dialog,
 } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
-import { merchantApi, uploadMerchantAvatar, type MerchantProfile } from "@/services";
+import { merchantApi, type MerchantProfile } from "@/services";
 import { useStore } from "@/store";
 import { useThemeStore } from "@/store/themeStore";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
 import { useSocialStats } from "@/features/social";
+import { useImageUpload } from "@/features/uploads";
 
 /**
  * 菜单项组件
@@ -110,6 +111,7 @@ const ProfilePage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { data: socialStats } = useSocialStats(profile?.id);
+  const merchantAvatarUpload = useImageUpload({ kind: "merchant-avatar" });
 
   // 加载商家资料
   useEffect(() => {
@@ -133,26 +135,32 @@ const ProfilePage: React.FC = () => {
     loadProfile();
   }, []);
 
-  // 处理头像上传
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 处理头像上传：立即预览（blob:），server 返回后替换为真实 url；失败回滚
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const handle = merchantAvatarUpload.uploadWithPreview(file);
+    if (!handle.tempUrl) return; // 校验未通过
+
+    const previousAvatar = profile?.avatar ?? null;
+    setProfile((prev) => (prev ? { ...prev, avatar: handle.tempUrl } : prev));
     setAvatarUploading(true);
-    try {
-      const res = await uploadMerchantAvatar(file);
-      if (res.success && res.data?.url) {
-        setProfile((prev) => prev ? { ...prev, avatar: res.data!.url } : prev);
+
+    handle.finalUrlPromise
+      .then((real) => {
+        setProfile((prev) => (prev ? { ...prev, avatar: real } : prev));
         queryClient.invalidateQueries({ queryKey: ["merchant", "profile"] });
         Toast.show({ icon: "success", content: "头像更新成功" });
-      } else {
-        Toast.show({ icon: "fail", content: res.message || "上传失败" });
-      }
-    } catch {
-      Toast.show({ icon: "fail", content: "上传失败，请稍后重试" });
-    } finally {
-      setAvatarUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+      })
+      .catch(() => {
+        // hook 已 toast；这里只回滚
+        setProfile((prev) => (prev ? { ...prev, avatar: previousAvatar } : prev));
+      })
+      .finally(() => {
+        setAvatarUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      });
   };
 
   // 获取当前主题模式显示文本

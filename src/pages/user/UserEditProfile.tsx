@@ -22,7 +22,7 @@ import { Toast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Textarea } from "@/components/ui";
 import { useUserProfile, useUpdateProfile } from "@/features/user";
-import { userApi } from "@/services";
+import { useImageUpload } from "@/features/uploads";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { eventBus, EVENTS } from "@/utils/eventBus";
 
@@ -73,14 +73,16 @@ const UserEditProfile: FC = () => {
   const isComposingRef = useRef(false);
   const MAX_INTEREST_LEN = 8;
 
-  // 头像上传状态
+  // 头像 / 照片墙：用统一的 useImageUpload（pending+tempId 模式）
+  const avatarUpload = useImageUpload({ kind: "avatar" });
+  const photoUpload = useImageUpload({ kind: "photo" });
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [currentAvatar, setCurrentAvatar] = useState<string>("");
 
-  // 照片墙状态
   const [photos, setPhotos] = useState<string[]>([]);
-  const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  // 是否有照片正在上传中（仅用于禁用「+」按钮防止重复触发 file 选择）
+  const photoUploading = photos.some((u) => u.startsWith("blob:"));
 
   const MAX_PHOTOS = 9;
 
@@ -126,60 +128,58 @@ const UserEditProfile: FC = () => {
     );
   };
 
-  // 处理照片墙上传
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 处理照片墙上传：每张图先以 blob: 预览插入列表，server 返回后替换为真实 url
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     const remaining = MAX_PHOTOS - photos.length;
     const toUpload = files.slice(0, remaining);
-    setPhotoUploading(true);
-    try {
-      const results = await Promise.all(toUpload.map((f) => userApi.uploadPhoto(f)));
-      const urls = results.filter((r) => r.success && r.url).map((r) => r.url!);
-      if (urls.length) setPhotos((prev) => [...prev, ...urls]);
-      else Toast.show({ icon: "fail", content: "上传失败，请重试" });
-    } finally {
-      setPhotoUploading(false);
-      if (photoInputRef.current) photoInputRef.current.value = "";
+
+    for (const file of toUpload) {
+      const handle = photoUpload.uploadWithPreview(file);
+      if (!handle.tempUrl) continue; // 校验未通过
+      setPhotos((prev) => [...prev, handle.tempUrl]);
+      handle.finalUrlPromise
+        .then((real) => {
+          setPhotos((prev) => prev.map((u) => (u === handle.tempUrl ? real : u)));
+        })
+        .catch(() => {
+          // hook 内部已 toast；这里只清理预览
+          setPhotos((prev) => prev.filter((u) => u !== handle.tempUrl));
+        });
     }
+
+    if (photoInputRef.current) photoInputRef.current.value = "";
   };
 
   const removePhoto = (idx: number) => setPhotos((prev) => prev.filter((_, i) => i !== idx));
 
-  // 处理头像上传
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 头像上传：先把 blob: 预览写到 currentAvatar，server 返回后替换
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 验证文件类型
-    if (!file.type.startsWith("image/")) {
-      Toast.show({ icon: "fail", content: "请选择图片文件" });
-      return;
-    }
+    const handle = avatarUpload.uploadWithPreview(file);
+    if (!handle.tempUrl) return;
 
-    // 验证文件大小（限制 5MB）
-    if (file.size > 5 * 1024 * 1024) {
-      Toast.show({ icon: "fail", content: "图片大小不能超过 5MB" });
-      return;
-    }
-
+    const previousAvatar = currentAvatar;
+    setCurrentAvatar(handle.tempUrl);
     setAvatarUploading(true);
-    try {
-      const res = await userApi.uploadAvatar(file);
-      if (res.success && res.avatarUrl) {
-        setCurrentAvatar(res.avatarUrl);
+
+    handle.finalUrlPromise
+      .then((real) => {
+        setCurrentAvatar(real);
         queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
         Toast.show({ icon: "success", content: "头像更新成功" });
-      } else {
-        Toast.show({ icon: "fail", content: "上传失败，请重试" });
-      }
-    } catch (error) {
-      console.error("头像上传失败:", error);
-      Toast.show({ icon: "fail", content: "上传失败，请稍后重试" });
-    } finally {
-      setAvatarUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+      })
+      .catch(() => {
+        // hook 已 toast；这里只回滚到旧头像
+        setCurrentAvatar(previousAvatar);
+      })
+      .finally(() => {
+        setAvatarUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      });
   };
 
   // 提交表单
