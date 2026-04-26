@@ -28,6 +28,10 @@ const Dashboard = lazy(() => import("./pages/merchant/DashboardNew"));
 const ActivityCreate = lazy(() => import("./pages/merchant/ActivityCreateNew"));
 const ActivityEdit = lazy(() => import("./pages/merchant/ActivityEditNew"));
 const ActivityManage = lazy(() => import("./pages/merchant/ActivityManageNew"));
+const ActivityRecapEdit = lazy(
+  () => import("./pages/merchant/ActivityRecapEditPage"),
+);
+const ActivityRecap = lazy(() => import("./pages/user/ActivityRecapPage"));
 const EnrollmentManagement = lazy(
   () => import("./pages/merchant/EnrollmentManagementNew"),
 );
@@ -135,6 +139,16 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole={["organizer", "admin"]}>
                       <ActivityManage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 活动回顾编辑（商家） */}
+                <Route
+                  path="/dashboard/activity/:id/recap/edit"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <ActivityRecapEdit />
                     </ProtectedRoute>
                   }
                 />
@@ -276,6 +290,16 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserActivityDetail />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 活动回顾查看 */}
+                <Route
+                  path="/u/activities/:id/recap"
+                  element={
+                    <ProtectedRoute>
+                      <ActivityRecap />
                     </ProtectedRoute>
                   }
                 />
