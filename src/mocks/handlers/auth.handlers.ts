@@ -258,16 +258,4 @@ export const authHandlers = [
     );
   }),
 
-  /**
-   * 登出
-   * POST /api/auth/logout
-   */
-  http.post("/api/auth/logout", async () => {
-    await delay(200);
-
-    return HttpResponse.json({
-      success: true,
-      message: "登出成功",
-    });
-  }),
 ];

@@ -103,16 +103,10 @@ export async function loginBySms(
 
 /**
  * 用户登出
- * POST /api/auth/logout
+ * 本地清理登录态；当前后端使用无状态 JWT，不需要请求服务端登出。
  */
 export async function logout(): Promise<void> {
-  try {
-    await api.post("/api/auth/logout", {});
-  } catch (error) {
-    console.error("Logout error:", error);
-  } finally {
-    localStorage.removeItem("auth-storage");
-  }
+  localStorage.removeItem("auth-storage");
 }
 
 /**

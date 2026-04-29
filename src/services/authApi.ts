@@ -48,10 +48,11 @@ export async function login(
 
 /**
  * 用户登出
- * POST /api/auth/logout
+ * 本地清理登录态；当前后端使用无状态 JWT，不需要请求服务端登出。
  */
 export async function logout(): Promise<{ success: boolean }> {
-  return api.post("/api/auth/logout");
+  localStorage.removeItem("auth-storage");
+  return { success: true };
 }
 
 /**
