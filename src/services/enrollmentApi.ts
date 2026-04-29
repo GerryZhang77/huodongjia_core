@@ -184,52 +184,52 @@ export async function sendNotification(
 
 /**
  * 提交报名 (用户)
- * POST /api/user/activities/{activityId}/enroll
+ * POST /api/enrollments/{activityId}/enroll
  */
 export async function submitEnrollment(
   activityId: string,
   data: EnrollmentFormData
 ): Promise<EnrollmentDetailResponse> {
   // 后端期望 { enrollment: {...} } 格式
-  return api.post(`/api/user/activities/${activityId}/enroll`, { enrollment: data });
+  return api.post(`/api/enrollments/${activityId}/enroll`, { enrollment: data });
 }
 
 /**
  * 获取我的报名列表 (用户)
- * GET /api/user/enrollments
+ * GET /api/enrollments/enrollment-history
  */
 export async function getMyEnrollments(): Promise<EnrollmentListResponse> {
-  return api.get("/api/user/enrollments");
+  return api.get("/api/enrollments/enrollment-history");
 }
 
 /**
  * 获取我的报名详情 (用户)
- * GET /api/user/enrollments/{id}
+ * GET /api/enrollments/enrollment-history/{participationId}
  */
 export async function getMyEnrollmentDetail(
-  id: string
+  participationId: string
 ): Promise<EnrollmentDetailResponse> {
-  return api.get(`/api/user/enrollments/${id}`);
+  return api.get(`/api/enrollments/enrollment-history/${participationId}`);
 }
 
 /**
  * 取消报名 (用户)
- * POST /api/user/enrollments/{id}/cancel
+ * POST /api/enrollments/{participationId}/cancel
  */
 export async function cancelEnrollment(
-  id: string
+  participationId: string
 ): Promise<{ success: boolean }> {
-  return api.post(`/api/user/enrollments/${id}/cancel`);
+  return api.post(`/api/enrollments/${participationId}/cancel`);
 }
 
 /**
  * 检查报名状态 (用户)
- * GET /api/user/activities/{activityId}/enrollment-status
+ * GET /api/enrollments/{activityId}/enrollment-status
  */
 export async function checkEnrollmentStatus(activityId: string): Promise<{
   success: boolean;
   isEnrolled?: boolean;
   enrollment?: Enrollment;
 }> {
-  return api.get(`/api/user/activities/${activityId}/enrollment-status`);
+  return api.get(`/api/enrollments/${activityId}/enrollment-status`);
 }
