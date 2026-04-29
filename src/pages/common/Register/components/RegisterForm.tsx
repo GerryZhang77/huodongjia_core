@@ -7,17 +7,20 @@ import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input, Button } from "@/components/ui";
 import { useRegister } from "@/features/auth/hooks";
-import { checkAccount } from "@/features/auth/services/authApi";
+import { checkAccount, checkPhone } from "@/features/auth/services/authApi";
 import { Lock, Eye, EyeOff, AlertCircle, Phone, Shield, User, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
+
+type AvailabilityStatus = "idle" | "checking" | "available" | "taken";
 
 export const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
   const { register, sendCode, loading, sendingCode, countdown, error, clearError } = useRegister();
 
   const [phone, setPhone] = useState("");
+  const [phoneStatus, setPhoneStatus] = useState<AvailabilityStatus>("idle");
   const [smsCode, setSmsCode] = useState("");
   const [username, setUsername] = useState("");
-  const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [usernameStatus, setUsernameStatus] = useState<AvailabilityStatus>("idle");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -35,6 +38,18 @@ export const RegisterForm: React.FC = () => {
     setUsernameStatus(res.available ? "available" : "taken");
   };
 
+  const handlePhoneChange = (val: string) => {
+    setPhone(val);
+    setPhoneStatus("idle");
+  };
+
+  const handlePhoneBlur = async () => {
+    if (!/^1[3-9]\d{9}$/.test(phone)) return;
+    setPhoneStatus("checking");
+    const res = await checkPhone(phone);
+    setPhoneStatus(res.available ? "available" : "taken");
+  };
+
   const handleSendCode = async () => {
     setFormError("");
     clearError();
@@ -44,6 +59,10 @@ export const RegisterForm: React.FC = () => {
     }
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       setFormError("请输入正确的手机号");
+      return;
+    }
+    if (phoneStatus === "taken") {
+      setFormError("该手机号已注册");
       return;
     }
     await sendCode(phone);
@@ -64,6 +83,10 @@ export const RegisterForm: React.FC = () => {
     }
     if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
       setFormError("请输入正确的手机号");
+      return;
+    }
+    if (phoneStatus === "taken") {
+      setFormError("该手机号已注册");
       return;
     }
     if (!smsCode || !/^\d{4,6}$/.test(smsCode)) {
@@ -135,13 +158,21 @@ export const RegisterForm: React.FC = () => {
             label="手机号"
             type="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+            onChange={(e) => handlePhoneChange(e.target.value.replace(/\D/g, "").slice(0, 11))}
+            onBlur={handlePhoneBlur}
             placeholder="请输入手机号"
             size="large"
             prefix={<Phone className="w-5 h-5 text-gray-400" />}
+            suffix={
+              phoneStatus === "available" ? <CheckCircle className="w-5 h-5 text-green-500" /> :
+              phoneStatus === "taken" ? <XCircle className="w-5 h-5 text-red-500" /> :
+              phoneStatus === "checking" ? <span className="text-xs text-gray-400">检查中...</span> : null
+            }
             maxLength={11}
             required
           />
+          {phoneStatus === "available" && <p className="text-xs text-green-500 mt-1">手机号可用</p>}
+          {phoneStatus === "taken" && <p className="text-xs text-red-500 mt-1">该手机号已注册</p>}
 
           {/* 验证码 */}
           <div>
@@ -164,7 +195,13 @@ export const RegisterForm: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSendCode}
-                disabled={countdown > 0 || sendingCode || !phone}
+                disabled={
+                  countdown > 0 ||
+                  sendingCode ||
+                  !phone ||
+                  phoneStatus === "checking" ||
+                  phoneStatus === "taken"
+                }
                 className="flex-shrink-0 px-4 h-12 bg-primary-400 text-white text-sm font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-500 transition-colors whitespace-nowrap"
               >
                 {sendingCode

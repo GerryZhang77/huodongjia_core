@@ -64,6 +64,31 @@ export const authHandlers = [
   }),
 
   /**
+   * GET /api/auth/check-phone
+   */
+  http.get("/api/auth/check-phone", async ({ request }) => {
+    await delay(200);
+
+    const url = new URL(request.url);
+    const phone = url.searchParams.get("phone") || "";
+
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      return HttpResponse.json({
+        success: true,
+        available: false,
+        message: "手机号格式不正确",
+      });
+    }
+
+    const existingUser = mockPhoneUserMap[phone];
+    return HttpResponse.json({
+      success: true,
+      available: !existingUser,
+      message: existingUser ? "该手机号已注册" : undefined,
+    });
+  }),
+
+  /**
    * 商家登录（用户名密码）
    * POST /api/auth/login
    */

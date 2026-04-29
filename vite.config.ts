@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   // 加载环境变量（从 env/ 目录）
   const env = loadEnv(mode, "env", "");
   const useMock = env.VITE_USE_MOCK;
+  const enableDevLocator = env.VITE_ENABLE_DEV_LOCATOR === "true";
 
   // 调试：打印所有环境变量
   console.log("🐛 调试信息:");
@@ -35,11 +36,15 @@ export default defineConfig(({ mode }) => {
   return {
     envDir: "env",
     plugins: [
-      react({
-        babel: {
-          plugins: ["react-dev-locator"],
-        },
-      }),
+      react(
+        enableDevLocator
+          ? {
+              babel: {
+                plugins: ["react-dev-locator"],
+              },
+            }
+          : undefined
+      ),
       // traeBadgePlugin({
       //   variant: "dark",
       //   position: "bottom-right",
