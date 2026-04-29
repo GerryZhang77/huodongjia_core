@@ -10,11 +10,6 @@
 import React from "react";
 import {
   X,
-  MapPin,
-  Briefcase,
-  Building2,
-  Mail,
-  Phone,
   UserCircle,
   Tag as TagIcon,
   CheckCircle,
@@ -60,18 +55,31 @@ const statusStyles: Record<string, string> = {
 // 辅助组件
 // ========================================
 
-const InfoRow: React.FC<{
-  icon: React.ElementType;
+const formatFieldValue = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return value.join("、");
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+};
+
+const FormDataRow: React.FC<{
   label: string;
-  value: string | number | undefined;
-}> = ({ icon: Icon, label, value }) => {
-  if (!value) return null;
+  value: unknown;
+}> = ({ label, value }) => {
+  if (value === null || value === undefined || value === "") return null;
+
   return (
     <div className="flex items-center gap-3 py-2">
-      <Icon size={16} className="text-gray-400 flex-shrink-0" />
-      <span className="text-sm text-gray-500 w-16 flex-shrink-0">{label}</span>
-      <span className="text-sm text-gray-900 flex-1 truncate">
-        {String(value)}
+      <span className="text-sm text-gray-500 w-20 flex-shrink-0 truncate">
+        {label}
+      </span>
+      <span className="text-sm text-gray-900 flex-1 break-words">
+        {formatFieldValue(value)}
       </span>
     </div>
   );
@@ -90,6 +98,10 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
   onNotify,
 }) => {
   if (!visible || !enrollment) return null;
+
+  const formDataEntries = Object.entries(enrollment.formData || {}).filter(
+    ([, value]) => value !== null && value !== undefined && value !== "",
+  );
 
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
@@ -178,19 +190,13 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
               基本信息
             </h4>
             <div className="bg-gray-50 rounded-xl px-4 py-1 divide-y divide-gray-100">
-              <InfoRow
-                icon={Briefcase}
-                label="行业"
-                value={enrollment.industry}
-              />
-              <InfoRow
-                icon={Building2}
-                label="公司"
-                value={enrollment.company}
-              />
-              <InfoRow icon={MapPin} label="城市" value={enrollment.city} />
-              <InfoRow icon={Phone} label="手机" value={enrollment.phone} />
-              <InfoRow icon={Mail} label="邮箱" value={enrollment.email} />
+              {formDataEntries.length > 0 ? (
+                formDataEntries.map(([key, value]) => (
+                  <FormDataRow key={key} label={key} value={value} />
+                ))
+              ) : (
+                <div className="py-3 text-sm text-gray-400">暂无基本信息</div>
+              )}
             </div>
           </div>
 
