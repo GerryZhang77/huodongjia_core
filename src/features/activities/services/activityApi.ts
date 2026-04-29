@@ -34,7 +34,7 @@ export interface GetActivitiesResponse {
  * 获取活动列表(商家创建的所有活动)
  */
 export const getActivities = async (): Promise<GetActivitiesResponse> => {
-  const response = (await api.get("/api/events")) as ApiResponse<Activity>;
+  const response = (await api.get("/api/events/my")) as ApiResponse<Activity>;
 
   if (!response.success) {
     throw new Error(response.message || "获取活动列表失败");

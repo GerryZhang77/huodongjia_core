@@ -87,12 +87,12 @@ export interface ActivityQueryParams {
 
 /**
  * 获取活动列表
- * GET /api/events
+ * GET /api/events/my
  */
 export async function getActivities(
   params?: ActivityQueryParams
 ): Promise<ActivityListResponse> {
-  return api.get("/api/events", { params });
+  return api.get("/api/events/my", { params });
 }
 
 /**
