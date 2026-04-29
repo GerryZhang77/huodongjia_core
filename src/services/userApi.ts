@@ -221,8 +221,9 @@ export async function uploadPhoto(file: File): Promise<{
 }> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("destination", "user-photos");
   const res = await api.post<{ success: boolean; url?: string }>(
-    "/api/file/upload-image",
+    "/api/file/upload",
     formData,
     {
       headers: { "Content-Type": "multipart/form-data" },

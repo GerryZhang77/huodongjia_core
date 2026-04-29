@@ -417,10 +417,10 @@ export const activityHandlers = [
   }),
 
   /**
-   * 上传活动图片
-   * POST /api/events/upload-image
+   * 上传图片
+   * POST /api/file/upload
    */
-  http.post("/api/events/upload-image", async ({ request }) => {
+  http.post("/api/file/upload", async ({ request }) => {
     await delay(500);
 
     const authHeader = request.headers.get("Authorization");
@@ -438,12 +438,26 @@ export const activityHandlers = [
       // 解析 FormData
       const formData = await request.formData();
       const file = formData.get("file") as File | null;
+      const destination = formData.get("destination");
 
       if (!file) {
         return HttpResponse.json(
           {
             success: false,
             message: "请选择要上传的图片",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (
+        typeof destination !== "string" ||
+        !["user-photos", "avatars", "activity-image"].includes(destination)
+      ) {
+        return HttpResponse.json(
+          {
+            success: false,
+            message: "不支持的上传位置",
           },
           { status: 400 },
         );
@@ -487,8 +501,10 @@ export const activityHandlers = [
       return HttpResponse.json({
         success: true,
         message: "上传成功",
+        url: mockImageUrl,
         data: {
           url: mockImageUrl,
+          destination,
           filename: file.name,
           size: file.size,
           type: file.type,

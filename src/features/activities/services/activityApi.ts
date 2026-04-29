@@ -140,8 +140,9 @@ export const deleteActivity = async (id: string): Promise<void> => {
 export const uploadCoverImage = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("destination", "activity-image");
 
-  const response = (await api.post("/api/events/upload-image", formData, {
+  const response = (await api.post("/api/file/upload", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

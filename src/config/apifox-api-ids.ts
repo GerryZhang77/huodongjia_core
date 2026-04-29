@@ -98,9 +98,9 @@ export const EVENT_API_IDS: ApiEndpoint[] = [
   },
   {
     method: "POST",
-    path: "/api/events/upload-image",
+    path: "/api/file/upload",
     apiId: "367000012", // 请替换为实际的 API ID
-    description: "上传活动封面图片",
+    description: "上传活动封面图片（destination=activity-image）",
   },
   {
     method: "POST",
@@ -155,7 +155,7 @@ export const FILE_API_IDS: ApiEndpoint[] = [
     method: "POST",
     path: "/api/file/upload",
     apiId: "366621854",
-    description: "上传文件（Excel等）",
+    description: "上传图片（destination=user-photos|avatars|activity-image）",
   },
 ];
 
