@@ -210,8 +210,9 @@ export const authHandlers = [
     const user = mockPhoneUserMap["13800138001"];
     return HttpResponse.json({
       success: true,
-      user: {
+      profile: {
         id: user.id,
+        account: user.username,
         phone: user.phone,
         name: user.name,
         user_type: user.user_type,

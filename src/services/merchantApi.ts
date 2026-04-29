@@ -54,7 +54,7 @@ export interface UpdateMerchantProfileRequest {
  * 获取商家资料
  */
 export async function getMerchantProfile(): Promise<MerchantProfileResponse> {
-  return api.get<MerchantProfileResponse>("/api/merchant/profile");
+  return api.get<MerchantProfileResponse>("/api/auth/me");
 }
 
 /**

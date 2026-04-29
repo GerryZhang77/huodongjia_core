@@ -163,13 +163,13 @@ export interface ActivityCategory {
 
 /**
  * 获取用户资料
- * GET /api/user/profile
+ * GET /api/auth/me
  */
 export async function getUserProfile(): Promise<{
   success: boolean;
   profile?: UserProfile;
 }> {
-  return api.get("/api/user/profile");
+  return api.get("/api/auth/me");
 }
 
 /**
