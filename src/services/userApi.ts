@@ -387,18 +387,6 @@ export async function markAllNotificationsRead(): Promise<{
   return api.post("/api/user/notifications/read-all");
 }
 
-// ============================================
-// API 函数 - 账号
-// ============================================
-
-/**
- * 删除账号
- * DELETE /api/user/account
- */
-export async function deleteAccount(): Promise<{ success: boolean }> {
-  return api.delete("/api/user/account");
-}
-
 /**
  * 修改密码
  * PUT /api/auth/password

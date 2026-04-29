@@ -649,27 +649,4 @@ export const userHandlers = [
     });
   }),
 
-  /**
-   * 删除账号
-   * DELETE /api/user/account
-   */
-  http.delete("/api/user/account", async ({ request }) => {
-    await delay(500);
-
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return HttpResponse.json(
-        {
-          success: false,
-          message: "未授权访问",
-        },
-        { status: 401 },
-      );
-    }
-
-    return HttpResponse.json({
-      success: true,
-      message: "账号已删除",
-    });
-  }),
 ];
