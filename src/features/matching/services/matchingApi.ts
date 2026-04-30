@@ -3,9 +3,11 @@
  * 匹配模块 - API 服务
  */
 
+import { api } from "@/services/api";
 import type {
   MatchingRule,
   ParticipantMatchResult,
+  Participant,
   GenerateRulesRequest,
   GenerateRulesResponse,
   ExecuteMatchRequest,
@@ -14,6 +16,55 @@ import type {
 
 // 兼容别名
 type MatchRule = MatchingRule;
+
+interface EnrollmentParticipant {
+  id?: string;
+  userId?: string;
+  name?: string;
+  status?: string;
+  industry?: string;
+  interests?: string | string[];
+  department?: string;
+  skills?: string;
+  expertise?: string;
+  formData?: Record<string, unknown>;
+}
+
+type MatchingParticipant = Participant & {
+  enrollmentId?: string;
+  company?: string;
+  department?: string;
+  skills?: string;
+  expertise?: string;
+  status?: string;
+  formData?: Record<string, unknown>;
+};
+
+const mapEnrollmentToParticipant = (
+  e: EnrollmentParticipant,
+): MatchingParticipant => {
+  const f = e.formData || {};
+  return {
+    id: e.userId,
+    enrollmentId: e.id,
+    name: e.name || f["姓名"] || f.name || "未知用户",
+    phone: f["手机号"] || f.phone,
+    gender: f["性别"] || f.gender,
+    age: f["年龄"] ?? f.age,
+    occupation: f["职业"] || f.occupation,
+    company: f["公司"] || f.company,
+    industry: e.industry || f["行业"] || f["关注/从事的行业方向"],
+    city: f["城市"] || f.city,
+    bio: f["个人简介"] || f.bio,
+    interests: e.interests || f["兴趣爱好"],
+    department: e.department || f["所在职能部门"],
+    skills: e.skills || f["软件技能"],
+    expertise: e.expertise || f["擅长领域"],
+    tags: Array.isArray(f["标签"]) ? f["标签"] : [],
+    status: e.status,
+    formData: f,
+  };
+};
 
 /**
  * 获取 token
@@ -287,29 +338,7 @@ export const getMatchGroups = async (
   if (enrollResp.ok) {
     const enrollData = await enrollResp.json();
     const enrollments: any[] = enrollData?.data?.enrollments || [];
-    participants = enrollments.map((e: any) => {
-      const f = e.formData || {};
-      return {
-        id: e.userId,
-        enrollmentId: e.id,
-        name: e.name || f["姓名"] || f.name || "未知用户",
-        phone: f["手机号"] || f.phone,
-        gender: f["性别"] || f.gender,
-        age: f["年龄"] ?? f.age,
-        occupation: f["职业"] || f.occupation,
-        company: f["公司"] || f.company,
-        industry: e.industry || f["行业"] || f["关注/从事的行业方向"],
-        city: f["城市"] || f.city,
-        bio: f["个人简介"] || f.bio,
-        interests: e.interests || f["兴趣爱好"],
-        department: e.department || f["所在职能部门"],
-        skills: e.skills || f["软件技能"],
-        expertise: e.expertise || f["擅长领域"],
-        tags: Array.isArray(f["标签"]) ? f["标签"] : [],
-        status: e.status,
-        formData: f,
-      };
-    });
+    participants = enrollments.map(mapEnrollmentToParticipant);
   }
 
   // 解析后端返回的 stats（可选字段，老版本后端不返回时为 null）
@@ -366,23 +395,19 @@ export const toggleGroupLock = async (
 /**
  * 获取活动参与者列表 (从报名数据)
  */
-export const getParticipants = async (activityId: string): Promise<any[]> => {
-  const token = getToken();
-
-  const response = await fetch(`/api/match/${activityId}/participants`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+export const getParticipants = async (
+  activityId: string,
+): Promise<MatchingParticipant[]> => {
+  const data = await api.get(`/api/enrollments/${activityId}`, {
+    params: { page: 1, pageSize: 1000 },
   });
-
-  const data = await response.json();
 
   if (!data.success) {
     throw new Error(data.message || "获取参与者列表失败");
   }
 
-  return data.data?.participants || [];
+  const enrollments = (data.data?.enrollments || []) as EnrollmentParticipant[];
+  return enrollments.map(mapEnrollmentToParticipant);
 };
 
 /**
