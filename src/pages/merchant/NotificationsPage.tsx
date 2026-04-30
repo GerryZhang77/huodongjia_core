@@ -26,6 +26,7 @@ interface MerchantNotification {
   content: string;
   activityId?: string;
   activityTitle?: string;
+  activityName?: string;
   isRead: boolean;
   createdAt: string;
 }
@@ -121,26 +122,29 @@ const NotificationsPage: React.FC = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ["merchant", "notifications"],
-    queryFn: () => api.get<{ success: boolean; data: { notifications: MerchantNotification[]; unreadCount: number } }>("/api/merchant/received-notifications"),
+    queryFn: () => api.get<{ success: boolean; data: { notifications: MerchantNotification[]; unreadCount: number } }>("/api/notification"),
   });
 
-  const notifications: MerchantNotification[] = data?.data?.notifications ?? [];
+  const notifications: MerchantNotification[] = (data?.data?.notifications ?? []).map((notification) => ({
+    ...notification,
+    activityTitle: notification.activityTitle ?? notification.activityName,
+  }));
   const unreadCount = data?.data?.unreadCount ?? 0;
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["merchant", "notifications"] });
 
   const readMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/api/merchant/notifications/${id}/read`),
+    mutationFn: (id: string) => api.post(`/api/notification/${id}/read`),
     onSuccess: invalidate,
   });
 
   const readAllMutation = useMutation({
-    mutationFn: () => api.post("/api/merchant/notifications/read-all"),
+    mutationFn: () => api.post("/api/notification/read-all"),
     onSuccess: invalidate,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/merchant/notifications/${id}`),
+    mutationFn: (id: string) => api.delete(`/api/notification/${id}`),
     onSuccess: invalidate,
   });
 

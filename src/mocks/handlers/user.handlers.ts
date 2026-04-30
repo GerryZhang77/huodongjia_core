@@ -537,9 +537,9 @@ export const userHandlers = [
 
   /**
    * 获取通知列表
-   * GET /api/user/notifications
+   * GET /api/notification
    */
-  http.get("/api/user/notifications", async ({ request }) => {
+  http.get("/api/notification", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -590,9 +590,9 @@ export const userHandlers = [
 
   /**
    * 标记通知为已读
-   * POST /api/user/notifications/:id/read
+   * POST /api/notification/:id/read
    */
-  http.post("/api/user/notifications/:id/read", async ({ params, request }) => {
+  http.post("/api/notification/:id/read", async ({ params, request }) => {
     await delay(200);
 
     const authHeader = request.headers.get("Authorization");
@@ -617,9 +617,9 @@ export const userHandlers = [
 
   /**
    * 标记所有通知为已读
-   * POST /api/user/notifications/read-all
+   * POST /api/notification/read-all
    */
-  http.post("/api/user/notifications/read-all", async ({ request }) => {
+  http.post("/api/notification/read-all", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");

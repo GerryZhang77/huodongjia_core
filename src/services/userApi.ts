@@ -357,7 +357,7 @@ export async function toggleFavorite(activityId: string): Promise<{
 
 /**
  * 获取通知列表
- * GET /api/user/notifications
+ * GET /api/notification
  */
 export async function getNotifications(params?: {
   page?: number;
@@ -365,27 +365,27 @@ export async function getNotifications(params?: {
   type?: string;
   isRead?: boolean;
 }): Promise<NotificationListResponse> {
-  return api.get("/api/user/notifications", { params });
+  return api.get("/api/notification", { params });
 }
 
 /**
  * 标记通知为已读
- * POST /api/user/notifications/{id}/read
+ * POST /api/notification/{id}/read
  */
 export async function markNotificationRead(
   id: string,
 ): Promise<{ success: boolean }> {
-  return api.post(`/api/user/notifications/${id}/read`);
+  return api.post(`/api/notification/${id}/read`);
 }
 
 /**
  * 标记所有通知为已读
- * POST /api/user/notifications/read-all
+ * POST /api/notification/read-all
  */
 export async function markAllNotificationsRead(): Promise<{
   success: boolean;
 }> {
-  return api.post("/api/user/notifications/read-all");
+  return api.post("/api/notification/read-all");
 }
 
 /**
