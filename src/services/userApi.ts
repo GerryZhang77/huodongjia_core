@@ -250,27 +250,27 @@ export async function getUserStats(): Promise<{
 
 /**
  * 获取用户活动列表（我的活动）
- * GET /api/user/activities
+ * GET /api/events/participant
  */
 export async function getUserActivities(params?: {
   status?: string;
   page?: number;
   pageSize?: number;
 }): Promise<UserActivityListResponse> {
-  return api.get("/api/user/activities", { params });
+  return api.get("/api/events/participant", { params });
 }
 
 /**
  * 获取推荐活动
- * GET /api/user/activities/recommended
+ * GET /api/events/participant/recommended
  */
 export async function getRecommendedActivities(): Promise<UserActivityListResponse> {
-  return api.get("/api/user/activities/recommended");
+  return api.get("/api/events/participant/recommended");
 }
 
 /**
  * 搜索活动
- * GET /api/user/activities/search
+ * GET /api/events/participant/search
  */
 export async function searchActivities(params?: {
   keyword?: string;
@@ -279,7 +279,7 @@ export async function searchActivities(params?: {
   page?: number;
   pageSize?: number;
 }): Promise<UserActivityListResponse> {
-  return api.get("/api/user/activities/search", { params });
+  return api.get("/api/events/participant/search", { params });
 }
 
 /**
@@ -297,13 +297,13 @@ export async function getActivityCategories(): Promise<{
 
 /**
  * 获取活动详情
- * GET /api/user/activities/:id
+ * GET /api/events/participant/:id
  */
 export async function getUserActivityDetail(id: string): Promise<{
   success: boolean;
   data?: UserActivity;
 }> {
-  return api.get(`/api/user/activities/${id}`);
+  return api.get(`/api/events/participant/${id}`);
 }
 
 // ============================================

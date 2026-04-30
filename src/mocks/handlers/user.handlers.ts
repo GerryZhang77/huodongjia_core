@@ -204,9 +204,9 @@ export const userHandlers = [
 
   /**
    * 获取用户活动列表（我的活动）
-   * GET /api/user/activities
+   * GET /api/events/participant
    */
-  http.get("/api/user/activities", async ({ request }) => {
+  http.get("/api/events/participant", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -251,9 +251,9 @@ export const userHandlers = [
 
   /**
    * 获取推荐活动
-   * GET /api/user/activities/recommended
+   * GET /api/events/participant/recommended
    */
-  http.get("/api/user/activities/recommended", async () => {
+  http.get("/api/events/participant/recommended", async () => {
     await delay(300);
 
     // 推荐活动：取报名中的活动，按参与率排序
@@ -277,9 +277,9 @@ export const userHandlers = [
 
   /**
    * 搜索活动
-   * GET /api/user/activities/search
+   * GET /api/events/participant/search
    */
-  http.get("/api/user/activities/search", async ({ request }) => {
+  http.get("/api/events/participant/search", async ({ request }) => {
     await delay(300);
 
     const url = new URL(request.url);
@@ -358,9 +358,9 @@ export const userHandlers = [
 
   /**
    * 获取活动详情
-   * GET /api/user/activities/:id
+   * GET /api/events/participant/:id
    */
-  http.get("/api/user/activities/:id", async ({ params }) => {
+  http.get("/api/events/participant/:id", async ({ params }) => {
     await delay(200);
 
     const { id } = params;

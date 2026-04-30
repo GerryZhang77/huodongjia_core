@@ -87,12 +87,12 @@ export interface ActivityQueryParams {
 
 /**
  * 获取活动列表
- * GET /api/events/my
+ * GET /api/events/organizer/my
  */
 export async function getActivities(
   params?: ActivityQueryParams
 ): Promise<ActivityListResponse> {
-  return api.get("/api/events/my", { params });
+  return api.get("/api/events/organizer/my", { params });
 }
 
 /**
@@ -102,12 +102,12 @@ export const getPublicActivities = getActivities;
 
 /**
  * 获取活动详情
- * GET /api/events/{id}
+ * GET /api/events/organizer/{id}
  */
 export async function getActivityDetail(
   id: string
 ): Promise<ActivityDetailResponse> {
-  return api.get(`/api/events/${id}`);
+  return api.get(`/api/events/organizer/${id}`);
 }
 
 // ============================================
@@ -116,65 +116,65 @@ export async function getActivityDetail(
 
 /**
  * 获取我的活动列表 (商家)
- * GET /api/events/my
+ * GET /api/events/organizer/my
  */
 export async function getMyActivities(
   params?: ActivityQueryParams
 ): Promise<ActivityListResponse> {
-  return api.get("/api/events/my", { params });
+  return api.get("/api/events/organizer/my", { params });
 }
 
 /**
  * 创建活动
- * POST /api/events/create
+ * POST /api/events/organizer/create
  */
 export async function createActivity(
   data: CreateActivityRequest
 ): Promise<{ success: boolean; event?: Activity; message?: string }> {
-  return api.post("/api/events/create", data);
+  return api.post("/api/events/organizer/create", data);
 }
 
 /**
  * 更新活动
- * PUT /api/events/{id}
+ * PUT /api/events/organizer/{id}
  */
 export async function updateActivity(
   id: string,
   data: Partial<CreateActivityRequest>
 ): Promise<{ success: boolean; event?: Activity; message?: string }> {
-  return api.put(`/api/events/${id}`, data);
+  return api.put(`/api/events/organizer/${id}`, data);
 }
 
 /**
  * 删除活动 (软删除)
- * DELETE /api/events/{id}
+ * DELETE /api/events/organizer/{id}
  */
 export async function deleteActivity(
   id: string
 ): Promise<{ success: boolean; message?: string }> {
-  return api.delete(`/api/events/${id}`);
+  return api.delete(`/api/events/organizer/${id}`);
 }
 
 /**
  * 发布活动
- * POST /api/events/{id}/publish
+ * POST /api/events/organizer/{id}/publish
  *
  * 注意：后端暂未实现此接口
  */
 export async function publishActivity(
   id: string
 ): Promise<{ success: boolean; message?: string }> {
-  return api.post(`/api/events/${id}/publish`);
+  return api.post(`/api/events/organizer/${id}/publish`);
 }
 
 /**
  * 取消活动
- * POST /api/events/{id}/cancel
+ * POST /api/events/organizer/{id}/cancel
  *
  * 注意：后端暂未实现此接口，可通过 DELETE 实现软删除
  */
 export async function cancelActivity(
   id: string
 ): Promise<{ success: boolean; message?: string }> {
-  return api.post(`/api/events/${id}/cancel`);
+  return api.post(`/api/events/organizer/${id}/cancel`);
 }

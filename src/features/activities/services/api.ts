@@ -40,8 +40,8 @@ export interface GetActivitiesResponse {
  * 获取活动列表(商家创建的所有活动)
  */
 export const getActivities = async (): Promise<GetActivitiesResponse> => {
-  // 根据 OpenAPI 文档: GET /api/events/my
-  const data = (await api.get("/api/events/my")) as ApiResponse;
+  // 根据后端路由: GET /api/events/organizer/my
+  const data = (await api.get("/api/events/organizer/my")) as ApiResponse;
 
   if (!data.success) {
     throw new Error(data.message || "获取活动列表失败");
@@ -60,7 +60,7 @@ export const getActivities = async (): Promise<GetActivitiesResponse> => {
  * 获取活动详情
  */
 export const getActivityById = async (id: string): Promise<Activity> => {
-  const data = (await api.get(`/api/events/${id}`)) as ApiResponse;
+  const data = (await api.get(`/api/events/organizer/${id}`)) as ApiResponse;
 
   if (!data.success) {
     throw new Error(data.message || "获取活动详情失败");
@@ -83,8 +83,11 @@ export const createActivity = async (
   try {
     console.log("createActivity - 发送请求:", request);
 
-    // 根据 OpenAPI 文档: POST /api/events/create
-    const data = (await api.post("/api/events/create", request)) as ApiResponse;
+    // 根据后端路由: POST /api/events/organizer/create
+    const data = (await api.post(
+      "/api/events/organizer/create",
+      request,
+    )) as ApiResponse;
 
     console.log(
       "createActivity - API 原始响应:",
@@ -149,7 +152,10 @@ export const updateActivity = async (
   id: string,
   request: UpdateActivityRequest,
 ): Promise<Activity> => {
-  const data = (await api.put(`/api/events/${id}`, request)) as ApiResponse;
+  const data = (await api.put(
+    `/api/events/organizer/${id}`,
+    request,
+  )) as ApiResponse;
 
   if (!data.success) {
     throw new Error(data.message || "更新活动失败");
@@ -167,7 +173,9 @@ export const updateActivity = async (
  * 删除活动
  */
 export const deleteActivity = async (id: string): Promise<void> => {
-  const data = (await api.delete(`/api/events/${id}`)) as ApiResponse<never>;
+  const data = (await api.delete(
+    `/api/events/organizer/${id}`,
+  )) as ApiResponse<never>;
 
   if (!data.success) {
     throw new Error(data.message || "删除活动失败");

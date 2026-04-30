@@ -34,7 +34,9 @@ export interface GetActivitiesResponse {
  * 获取活动列表(商家创建的所有活动)
  */
 export const getActivities = async (): Promise<GetActivitiesResponse> => {
-  const response = (await api.get("/api/events/my")) as ApiResponse<Activity>;
+  const response = (await api.get(
+    "/api/events/organizer/my",
+  )) as ApiResponse<Activity>;
 
   if (!response.success) {
     throw new Error(response.message || "获取活动列表失败");
@@ -51,7 +53,7 @@ export const getActivities = async (): Promise<GetActivitiesResponse> => {
  */
 export const getActivityById = async (id: string): Promise<Activity> => {
   const response = (await api.get(
-    `/api/events/${id}`,
+    `/api/events/organizer/${id}`,
   )) as ApiResponse<Activity>;
 
   if (!response.success) {
@@ -74,7 +76,7 @@ export const createActivity = async (
   console.log("[createActivity] 发送请求:", request);
 
   const response = (await api.post(
-    "/api/events/create",
+    "/api/events/organizer/create",
     request,
   )) as ApiResponse<Activity>;
 
@@ -106,7 +108,7 @@ export const updateActivity = async (
   request: UpdateActivityRequest,
 ): Promise<Activity> => {
   const response = (await api.put(
-    `/api/events/${id}`,
+    `/api/events/organizer/${id}`,
     request,
   )) as ApiResponse<Activity>;
 
@@ -126,7 +128,7 @@ export const updateActivity = async (
  */
 export const deleteActivity = async (id: string): Promise<void> => {
   const response = (await api.delete(
-    `/api/events/${id}`,
+    `/api/events/organizer/${id}`,
   )) as ApiResponse<never>;
 
   if (!response.success) {
