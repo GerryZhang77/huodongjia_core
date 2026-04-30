@@ -21,7 +21,7 @@ export interface MerchantProfile {
   avatar: string | null;
   birth_year: number | null;
   location: string | null;
-  person_info: any[];
+  person_info: unknown[];
   created_at: string;
   updated_at: string;
 }
@@ -43,7 +43,7 @@ export interface UpdateMerchantProfileRequest {
   birth_year?: number;
   phone?: string;
   email?: string;
-  person_info?: any[];
+  person_info?: unknown[];
 }
 
 // ========================================
@@ -64,21 +64,21 @@ export async function updateMerchantProfile(
   data: UpdateMerchantProfileRequest
 ): Promise<{ success: boolean; message: string }> {
   return api.put<{ success: boolean; message: string }>(
-    "/api/merchant/profile",
+    "/api/dashboard/organizer",
     data
   );
 }
 
 /**
  * 上传商家头像
- * POST /api/merchant/profile/avatar
+ * POST /api/dashboard/organizer/update-avatar
  */
 export async function uploadMerchantAvatar(
   file: File
 ): Promise<{ success: boolean; data?: { url: string }; message?: string }> {
   const formData = new FormData();
   formData.append("file", file);
-  return api.post("/api/merchant/profile/avatar", formData, {
+  return api.post("/api/dashboard/organizer/update-avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 60_000,
   });

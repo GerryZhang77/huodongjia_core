@@ -174,29 +174,29 @@ export async function getUserProfile(): Promise<{
 
 /**
  * 获取他人公开资料
- * GET /api/user/profile/:userId
+ * GET /api/dashboard/participant/:userId
  */
 export async function getPublicProfile(userId: string): Promise<{
   success: boolean;
   profile?: UserProfile;
 }> {
-  return api.get(`/api/user/profile/${userId}`);
+  return api.get(`/api/dashboard/participant/${userId}`);
 }
 
 /**
  * 更新用户资料
- * PUT /api/user/profile
+ * PUT /api/dashboard/participant
  */
 export async function updateUserProfile(data: UpdateProfileRequest): Promise<{
   success: boolean;
   profile?: UserProfile;
 }> {
-  return api.put("/api/user/profile", data);
+  return api.put("/api/dashboard/participant", data);
 }
 
 /**
  * 上传头像
- * POST /api/user/profile/avatar
+ * POST /api/dashboard/participant/update-avatar
  */
 export async function uploadAvatar(file: File): Promise<{
   success: boolean;
@@ -205,7 +205,7 @@ export async function uploadAvatar(file: File): Promise<{
   const formData = new FormData();
   formData.append("avatar", file);
 
-  return api.post("/api/user/profile/avatar", formData, {
+  return api.post("/api/dashboard/participant/update-avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 60_000,
   });

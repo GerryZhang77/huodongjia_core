@@ -36,9 +36,9 @@ export const userHandlers = [
 
   /**
    * 获取用户资料
-   * GET /api/user/profile
+   * GET /api/dashboard/participant
    */
-  http.get("/api/user/profile", async ({ request }) => {
+  http.get("/api/dashboard/participant", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -73,10 +73,46 @@ export const userHandlers = [
   }),
 
   /**
-   * 更新用户资料
-   * PUT /api/user/profile
+   * 获取他人公开资料
+   * GET /api/dashboard/participant/:userId
    */
-  http.put("/api/user/profile", async ({ request }) => {
+  http.get("/api/dashboard/participant/:userId", async ({ params, request }) => {
+    await delay(300);
+
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return HttpResponse.json(
+        {
+          success: false,
+          message: "未授权访问",
+        },
+        { status: 401 },
+      );
+    }
+
+    const userId = String(params.userId);
+    const profile = getUserProfile();
+
+    return HttpResponse.json({
+      success: true,
+      profile: {
+        id: userId,
+        name: userId === profile.id ? profile.name : "活动参与者",
+        avatar: profile.avatar || generateDefaultAvatar(userId),
+        occupation: profile.occupation,
+        company: profile.company,
+        bio: profile.bio,
+        tags: profile.tags,
+        photos: profile.photos,
+      },
+    });
+  }),
+
+  /**
+   * 更新用户资料
+   * PUT /api/dashboard/participant
+   */
+  http.put("/api/dashboard/participant", async ({ request }) => {
     await delay(400);
 
     const authHeader = request.headers.get("Authorization");
@@ -102,9 +138,9 @@ export const userHandlers = [
 
   /**
    * 上传头像
-   * POST /api/user/profile/avatar
+   * POST /api/dashboard/participant/update-avatar
    */
-  http.post("/api/user/profile/avatar", async ({ request }) => {
+  http.post("/api/dashboard/participant/update-avatar", async ({ request }) => {
     await delay(800);
 
     const authHeader = request.headers.get("Authorization");
