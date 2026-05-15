@@ -135,7 +135,7 @@ export async function fetchBestMatchesWithParticipants(
   });
 
   return bestMatchUsers
-    .map((match): EnrichedBestMatchUser | null => {
+    .map((match) => {
       const enrollment = enrollmentMap.get(match.user_id);
       if (!enrollment) {
         return null;
