@@ -203,6 +203,7 @@ const MatchingConfigPage: React.FC = () => {
             onStartMatching={handleStartMatching}
             isMatching={isMatching}
             matchingProgress={matchingProgress}
+            matchingMessage={matchingMessage}
             participantCount={participants.length}
             schemaFields={registrationSchema}
           />

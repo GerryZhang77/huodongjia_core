@@ -127,6 +127,9 @@ const normalizeRuleForUi = (rule: MatchRule, index = 0): MatchRule => {
 };
 
 export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
+  const FOREGROUND_POLL_INTERVAL_MS = 3000;
+  const BACKGROUND_POLL_INTERVAL_MS = 5000;
+
   // === 状态定义 ===
   const [stage, setStage] = useState<MatchingStage>("idle");
   const [activeTab, setActiveTab] = useState<TabKey>("rules");
@@ -187,14 +190,15 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     null,
   );
 
-  // === 清理轮询 ===
-  useEffect(() => {
-    return () => {
-      if (taskPollingRef.current) {
-        clearInterval(taskPollingRef.current);
-      }
-    };
+  const clearTaskPolling = useCallback(() => {
+    if (taskPollingRef.current) {
+      clearTimeout(taskPollingRef.current);
+      taskPollingRef.current = null;
+    }
   }, []);
+
+  // === 清理轮询 ===
+  useEffect(() => clearTaskPolling, [clearTaskPolling]);
 
   // === 初始化加载（stale-while-revalidate） ===
   useEffect(() => {
@@ -403,10 +407,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
         if (status.status === "completed") {
           // 任务完成，停止轮询
-          if (taskPollingRef.current) {
-            clearInterval(taskPollingRef.current);
-            taskPollingRef.current = null;
-          }
+          clearTaskPolling();
           currentTaskIdRef.current = null;
 
           // 重新加载数据（per-user top5 + 历史）
@@ -451,22 +452,42 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
           Toast.show({ content: "匹配完成", icon: "success" });
         } else if (status.status === "failed") {
           // 任务失败
-          if (taskPollingRef.current) {
-            clearInterval(taskPollingRef.current);
-            taskPollingRef.current = null;
-          }
+          clearTaskPolling();
           currentTaskIdRef.current = null;
           setIsMatching(false);
           setIsRulesLocked(false);
           setStage("configuring");
           Toast.show({ content: status.message || "匹配失败", icon: "fail" });
+        } else {
+          clearTaskPolling();
+          taskPollingRef.current = setTimeout(() => {
+            void pollTaskStatus(eventId);
+          }, isBackgroundMatching ? BACKGROUND_POLL_INTERVAL_MS : FOREGROUND_POLL_INTERVAL_MS);
         }
       } catch (error) {
         console.error("Failed to poll task status:", error);
       }
     },
-    [activityId, participants.length],
+    [
+      activityId,
+      clearTaskPolling,
+      isBackgroundMatching,
+      participants.length,
+    ],
   );
+
+  useEffect(() => {
+    if (!isMatching || !currentTaskIdRef.current) {
+      return;
+    }
+
+    clearTaskPolling();
+    taskPollingRef.current = setTimeout(() => {
+      void pollTaskStatus(currentTaskIdRef.current!);
+    }, isBackgroundMatching ? BACKGROUND_POLL_INTERVAL_MS : FOREGROUND_POLL_INTERVAL_MS);
+
+    return clearTaskPolling;
+  }, [clearTaskPolling, isBackgroundMatching, isMatching, pollTaskStatus]);
 
   // === 开始匹配 (异步任务) ===
   const handleStartMatching = useCallback(async () => {
@@ -500,20 +521,17 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       setRules(normalizedRules);
       const { taskId } = await submitMatchingTask(activityId, enabledRules);
       currentTaskIdRef.current = taskId;
-
-      taskPollingRef.current = setInterval(() => {
-        pollTaskStatus(activityId);
-      }, 2000);
-
-      pollTaskStatus(activityId);
+      clearTaskPolling();
+      void pollTaskStatus(activityId);
     } catch (error) {
       console.error("Failed to start matching:", error);
       Toast.show({ content: "提交匹配任务失败", icon: "fail" });
       setIsMatching(false);
       setIsRulesLocked(false);
       setStage("configuring");
+      clearTaskPolling();
     }
-  }, [activityId, rules, participants, pollTaskStatus]);
+  }, [activityId, clearTaskPolling, rules, participants, pollTaskStatus]);
 
   // === 最小化匹配进度到后台 ===
   const handleMinimizeMatching = useCallback(() => {
