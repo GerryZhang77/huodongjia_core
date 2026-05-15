@@ -8,6 +8,7 @@ import {
   Participant,
   MatchingStage,
   TabKey,
+  RegistrationSchemaField,
 } from "./types";
 
 interface UseMatchingLogicProps {
@@ -19,10 +20,44 @@ interface UseMatchingLogicProps {
  * 集中管理所有状态和 API 调用
  */
 export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
+  const createEmptyRule = useCallback((): MatchingRule => ({
+    id: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: "未配置规则",
+    source_field: "",
+    target_field: "",
+    operator: "similarity",
+    weight: 1,
+    enabled: true,
+  }), []);
+
+  const formatRuleName = useCallback(
+    (rule: Pick<MatchingRule, "source_field" | "target_field" | "operator">) => {
+      const operatorLabelMap: Record<
+        NonNullable<MatchingRule["operator"]>,
+        string
+      > = {
+        similarity: "相似",
+        complement: "互补",
+        exact: "一致",
+        distance_decay: "距离衰减",
+      };
+
+      const source = rule.source_field || "待选字段";
+      const target = rule.target_field || "待选字段";
+      const operator = rule.operator || "similarity";
+      return `${source} / ${target} · ${operatorLabelMap[operator]}`;
+    },
+    [],
+  );
+
   // ==================== 状态管理 ====================
   const [activeTab, setActiveTab] = useState<TabKey>("rules");
   const [naturalLanguageInput, setNaturalLanguageInput] = useState("");
   const [rules, setRules] = useState<MatchingRule[]>([]);
+  const [registrationSchema, setRegistrationSchema] = useState<
+    RegistrationSchemaField[]
+  >([]);
+  const [schemaLoading, setSchemaLoading] = useState(false);
   const [constraints, setConstraints] = useState<MatchConstraints>({
     minGroupSize: 3,
     maxGroupSize: 8,
@@ -182,22 +217,49 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
    * 获取已保存的规则配置
    */
   const fetchRules = useCallback(async () => {
+    setSchemaLoading(true);
     try {
-      const { data } = await api.get(`/api/match-rules/${eventId}`);
+      const [eventResponse, rulesResponse] = await Promise.all([
+        api.get(`/api/events/organizer/${eventId}`) as Promise<any>,
+        api.get(`/api/match/${eventId}/rules`) as Promise<any>,
+      ]);
 
-      if (data.success && data.data) {
-        setRules(data.data.rules || []);
+      const schema =
+        eventResponse?.event?.registrationFormSchema ||
+        eventResponse?.event?.registration_form_schema ||
+        [];
+
+      setRegistrationSchema(Array.isArray(schema) ? schema : []);
+
+      if (rulesResponse?.success && Array.isArray(rulesResponse.rules)) {
+        const normalizedRules = rulesResponse.rules.map((rule: any, index: number) => ({
+          id: String(rule.id || `rule-${index}`),
+          name: formatRuleName(rule),
+          source_field: rule.source_field || "",
+          target_field: rule.target_field || "",
+          operator: rule.operator || "similarity",
+          weight: Number(rule.weight) || 1,
+          enabled: true,
+        }));
+
+        setRules(normalizedRules.length > 0 ? normalizedRules : [createEmptyRule()]);
         return true;
-      } else if (data.code === "RULES_NOT_FOUND") {
-        // 规则未配置，这是正常情况
-        return false;
       }
+
+      setRules([createEmptyRule()]);
+      return false;
     } catch (error) {
       console.error("Fetch rules error:", error);
-      // 不显示错误提示，因为首次访问可能没有规则
+      setRules([createEmptyRule()]);
+      return false;
+    } finally {
+      setSchemaLoading(false);
     }
-    return false;
-  }, [eventId]);
+  }, [createEmptyRule, eventId, formatRuleName]);
+
+  const getDefaultSchemaLabel = useCallback(() => {
+    return registrationSchema[0]?.label || "";
+  }, [registrationSchema]);
 
   /**
    * 生成匹配规则 (AI)
@@ -254,16 +316,31 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
           (rule: string | MatchingRule, index: number) => {
             if (typeof rule === "string") {
               // 真实后端返回字符串，转换为 MatchingRule 对象
+              const defaultLabel = getDefaultSchemaLabel();
               return {
                 id: `rule-${Date.now()}-${index}`,
                 name: rule,
+                source_field: defaultLabel,
+                target_field: defaultLabel,
+                operator: "similarity" as const,
                 weight: 1, // 默认权重
-                type: "similarity" as const,
-                field: "tags",
+                enabled: true,
               };
             }
             // Mock 返回的已经是对象格式
-            return rule;
+            return {
+              ...rule,
+              source_field: rule.source_field || getDefaultSchemaLabel(),
+              target_field: rule.target_field || getDefaultSchemaLabel(),
+              operator: rule.operator || "similarity",
+              weight: Number(rule.weight) || 1,
+              enabled: rule.enabled ?? true,
+              name: rule.name || formatRuleName({
+                source_field: rule.source_field || getDefaultSchemaLabel(),
+                target_field: rule.target_field || getDefaultSchemaLabel(),
+                operator: rule.operator || "similarity",
+              }),
+            };
           }
         );
 
@@ -312,64 +389,71 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
     } finally {
       setIsGeneratingRules(false);
     }
-  }, [eventId, naturalLanguageInput]); // 🔥 移除 participants 依赖
+  }, [eventId, formatRuleName, getDefaultSchemaLabel, naturalLanguageInput]); // 🔥 移除 participants 依赖
 
   /**
    * 保存规则配置
    */
   const handleSaveRules = useCallback(async () => {
     if (rules.length === 0) {
-      Toast.show({ content: "请先生成或添加规则", icon: "fail" });
+      Toast.show({ content: "请先配置规则", icon: "fail" });
       return;
     }
 
-    // 验证启用规则的权重总和
-    const enabledRules = rules.filter((r) => r.enabled);
-    const totalWeight = enabledRules.reduce((sum, r) => sum + r.weight, 0);
-
-    if (enabledRules.length > 0 && totalWeight !== 100) {
-      Toast.show({
-        content: `启用规则权重总和为 ${totalWeight}%，将自动归一化为 100%`,
-        icon: "info",
-      });
-    }
-
     try {
-      const { data } = await api.post(`/api/match-rules/${eventId}`, {
-        rules: rules.map((rule) => ({
-          ...rule,
-          // 移除前端临时字段
-          id: rule.id?.startsWith("temp-") ? undefined : rule.id,
-        })),
+      const invalidRule = rules.find(
+        (rule) => !rule.source_field || !rule.target_field,
+      );
+
+      if (invalidRule) {
+        Toast.show({ content: "请先为每条规则选择左右字段", icon: "fail" });
+        return;
+      }
+
+      const payloadRules = rules.map((rule) => ({
+        source_field: rule.source_field,
+        target_field: rule.target_field,
+        operator: rule.operator,
+        weight: Number(rule.weight) || 1,
+      }));
+
+      const response = await api.post(`/api/match/${eventId}/rules`, {
+        rules: payloadRules,
       });
 
-      if (data.success) {
+      if (response?.success) {
+        const savedRules = Array.isArray(response.rules)
+          ? response.rules.map((rule: any, index: number) => ({
+              id: String(rule.id || `rule-${index}`),
+              name: formatRuleName(rule),
+              source_field: rule.source_field || "",
+              target_field: rule.target_field || "",
+              operator: rule.operator || "similarity",
+              weight: Number(rule.weight) || 1,
+              enabled: true,
+            }))
+          : rules.map((rule) => ({
+              ...rule,
+              name: formatRuleName(rule),
+            }));
+
+        setRules(savedRules);
         Toast.show({
-          content: `保存成功：新增 ${data.data?.created || 0} 条，更新 ${
-            data.data?.updated || 0
-          } 条`,
+          content: "匹配规则保存成功",
           icon: "success",
         });
       } else {
-        Toast.show({ content: data.message || "保存失败", icon: "fail" });
+        Toast.show({ content: response?.message || "保存失败", icon: "fail" });
       }
     } catch (error) {
       console.error("Save rules error:", error);
-
-      // 🔥 临时修改：Mock 生产环境专用 - 保存规则失败跳转到人群画像页面
       Toast.show({
-        content: "保存规则失败，即将为您展示活动人群画像",
+        content:
+          error instanceof Error ? error.message : "保存规则失败，请稍后重试",
         icon: "fail",
-        duration: 2000,
       });
-
-      // 延迟跳转到人群画像页面
-      setTimeout(() => {
-        console.log("🔄 [保存规则失败] 跳转到人群画像页面");
-        window.location.href = "/portrait.html";
-      }, 2000);
     }
-  }, [eventId, rules]);
+  }, [eventId, formatRuleName, rules]);
 
   /**
    * 执行匹配
@@ -407,17 +491,21 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
       setMatchingStage("extracting-keywords");
       setMatchingProgress(5);
 
-      const rulesStr = enabledRules.map((r) => r.name).join(",");
-      const totalWeight = enabledRules.reduce((s, r) => s + r.weight, 0);
-      const weights = enabledRules.map((r) =>
-        totalWeight > 0
-          ? Math.round((r.weight / totalWeight) * 100)
-          : Math.round(100 / enabledRules.length)
+      const invalidRule = enabledRules.find(
+        (rule) => !rule.source_field || !rule.target_field,
       );
 
+      if (invalidRule) {
+        throw new Error("请先为所有启用规则选择左右字段");
+      }
+
       await api.post(`/api/match/${eventId}/execute`, {
-        rules: rulesStr,
-        weights,
+        rules: enabledRules.map((rule) => ({
+          source_field: rule.source_field,
+          target_field: rule.target_field,
+          operator: rule.operator,
+          weight: Number(rule.weight) || 1,
+        })),
       });
 
       console.log("[开始匹配] 匹配任务已提交，开始轮询进度");
@@ -812,6 +900,8 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
     setNaturalLanguageInput,
     rules,
     setRules,
+    registrationSchema,
+    schemaLoading,
     constraints,
     setConstraints,
     isGeneratingRules,

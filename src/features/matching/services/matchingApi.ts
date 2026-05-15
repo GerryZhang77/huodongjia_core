@@ -15,6 +15,155 @@ import type {
 // 兼容别名
 type MatchRule = MatchingRule;
 
+const DEFAULT_OPERATOR = "similarity" as const;
+
+const buildRuleName = (rule: Partial<MatchRule>, fallbackIndex?: number) => {
+  if (rule.name) return rule.name;
+  if (rule.source_field && rule.target_field && rule.operator) {
+    return `${rule.source_field} ${rule.operator} ${rule.target_field}`;
+  }
+  return `规则 ${typeof fallbackIndex === "number" ? fallbackIndex + 1 : ""}`.trim();
+};
+
+const normalizeRule = (
+  rule: Partial<MatchRule>,
+  fallbackIndex?: number,
+): MatchRule => ({
+  id: rule.id || `rule-${fallbackIndex ?? Date.now()}`,
+  name: buildRuleName(rule, fallbackIndex),
+  source_field: rule.source_field || rule.field || "",
+  target_field: rule.target_field || rule.field || "",
+  operator: rule.operator || (rule.type as MatchRule["operator"]) || DEFAULT_OPERATOR,
+  type: rule.type || rule.operator || DEFAULT_OPERATOR,
+  field: rule.field,
+  weight: typeof rule.weight === "number" ? rule.weight : 1,
+  enabled: rule.enabled ?? true,
+  description: rule.description,
+  config: rule.config,
+});
+
+const serializeRulesForBackend = (rules: MatchRule[]) =>
+  rules
+    .filter(
+      (rule) =>
+        rule.enabled &&
+        rule.source_field &&
+        rule.target_field &&
+        rule.operator &&
+        typeof rule.weight === "number",
+    )
+    .map((rule) => ({
+      source_field: rule.source_field,
+      target_field: rule.target_field,
+      operator: rule.operator,
+      weight: rule.weight,
+    }));
+
+const mapSchemaFieldsToRules = (
+  fields: Array<{ key?: string; label?: string }>,
+): MatchRule[] =>
+  fields.map((field, index) =>
+    normalizeRule(
+      {
+        id: `rule-${index}`,
+        name: field.label || field.key || `规则 ${index + 1}`,
+        source_field: field.key || "",
+        target_field: field.key || "",
+        operator: DEFAULT_OPERATOR,
+        weight: 1,
+        enabled: true,
+      },
+      index,
+    ),
+  );
+
+interface EnrollmentParticipant {
+  id?: string;
+  userId?: string;
+  name?: string;
+  status?: string;
+  industry?: string;
+  interests?: string | string[];
+  department?: string;
+  skills?: string;
+  expertise?: string;
+  formData?: Record<string, unknown>;
+}
+
+type MatchingParticipant = Participant & {
+  enrollmentId?: string;
+  company?: string;
+  department?: string;
+  skills?: string;
+  expertise?: string;
+  status?: string;
+  formData?: Record<string, unknown>;
+};
+
+const asString = (value: unknown): string | undefined => {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number") return String(value);
+  return undefined;
+};
+
+const asNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const asGender = (
+  value: unknown,
+): MatchingParticipant["gender"] | undefined => {
+  return value === "male" || value === "female" || value === "other"
+    ? value
+    : undefined;
+};
+
+const asStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => asString(item))
+      .filter((item): item is string => Boolean(item));
+  }
+  const single = asString(value);
+  return single ? [single] : [];
+};
+
+const mapEnrollmentToParticipant = (
+  e: EnrollmentParticipant,
+): MatchingParticipant => {
+  const f = e.formData || {};
+  return {
+    id: e.userId,
+    enrollmentId: e.id,
+    name: asString(e.name) || asString(f["姓名"]) || asString(f.name) || "未知用户",
+    phone: asString(f["手机号"]) || asString(f.phone),
+    gender: asGender(f["性别"]) || asGender(f.gender),
+    age: asNumber(f["年龄"]) ?? asNumber(f.age),
+    occupation: asString(f["职业"]) || asString(f.occupation),
+    company: asString(f["公司"]) || asString(f.company),
+    industry:
+      asString(e.industry) ||
+      asString(f["行业"]) ||
+      asString(f["关注/从事的行业方向"]),
+    city: asString(f["城市"]) || asString(f.city),
+    bio: asString(f["个人简介"]) || asString(f.bio),
+    interests: asStringArray(e.interests).length
+      ? asStringArray(e.interests)
+      : asStringArray(f["兴趣爱好"]),
+    department: asString(e.department) || asString(f["所在职能部门"]),
+    skills: asString(e.skills) || asString(f["软件技能"]),
+    expertise: asString(e.expertise) || asString(f["擅长领域"]),
+    tags: asStringArray(f["标签"]),
+    status: e.status,
+    formData: f,
+  };
+};
+
 /**
  * 获取 token
  */
@@ -51,24 +200,30 @@ export const getMatchRules = async (
     throw new Error(data.message || "获取匹配规则失败");
   }
 
-  // 后端返回 { success: true, rules: { rules: string[] | MatchingRule[], weights?: number[] } }
+  // 后端返回 { success: true, rules: { rules: MatchingRule[] } }
   const rawRules = data.rules?.rules ?? data.rules ?? [];
 
   if (!Array.isArray(rawRules) || rawRules.length === 0) return [];
 
-  // 如果是字符串数组（AI 生成后保存的格式），转换为 MatchingRule[]
   if (typeof rawRules[0] === "string") {
-    const weights: number[] = data.rules?.weights ?? [];
-    return (rawRules as string[]).map((name, i) => ({
-      id: `rule-${i}`,
-      name,
-      type: "similarity" as const,
-      weight: weights[i] ?? Math.round(100 / rawRules.length),
-      enabled: true,
-    }));
+    return (rawRules as string[]).map((name, i) =>
+      normalizeRule(
+        {
+          name,
+          source_field: name,
+          target_field: name,
+          operator: DEFAULT_OPERATOR,
+          weight: 1,
+          enabled: true,
+        },
+        i,
+      ),
+    );
   }
 
-  return rawRules as MatchRule[];
+  return (rawRules as Partial<MatchRule>[]).map((rule, index) =>
+    normalizeRule(rule, index),
+  );
 };
 
 /**
@@ -80,12 +235,7 @@ export const saveMatchRules = async (
   rules: MatchRule[],
 ): Promise<void> => {
   const token = getToken();
-
-  const enabledRules = rules.filter((r) => r.enabled);
-  const totalWeight = enabledRules.reduce((s, r) => s + r.weight, 0);
-  const weights = rules.map((r) =>
-    r.enabled && totalWeight > 0 ? Math.round((r.weight / totalWeight) * 100) : 0
-  );
+  const payloadRules = serializeRulesForBackend(rules);
 
   const response = await fetch(`/api/match/${activityId}/rules`, {
     method: "POST",
@@ -93,7 +243,7 @@ export const saveMatchRules = async (
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ rules, weights }),
+    body: JSON.stringify({ rules: payloadRules }),
   });
 
   const data = await response.json();
@@ -152,16 +302,15 @@ export const deleteMatchRule = async (ruleId: string): Promise<void> => {
 };
 
 /**
- * 从活动的报名表 schema 派生匹配规则
- * 不再需要自然语言描述 —— 规则直接来源于商家配置的信息收集字段
+ * 从活动 schema 派生默认规则
+ * 保留兼容导出，但不再调用旧的 /generate 接口
  */
 export const generateMatchRules = async (
   request: GenerateRulesRequest,
 ): Promise<GenerateRulesResponse> => {
   const token = getToken();
 
-  const response = await fetch(`/api/match/${request.activityId}/generate`, {
-    method: "POST",
+  const response = await fetch(`/api/events/organizer/${request.activityId}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -169,31 +318,29 @@ export const generateMatchRules = async (
   });
 
   const data = await response.json();
-
   if (!data.success) {
-    throw new Error(data.message || "生成匹配规则失败");
+    throw new Error(data.message || "获取报名表字段失败");
   }
 
+  const schema =
+    data.event?.registrationFormSchema ||
+    data.event?.registration_form_schema ||
+    [];
+
   return {
-    rules: data.rules || [],
+    rules: mapSchemaFieldsToRules(schema),
   };
 };
 
 /**
  * 执行智能匹配
- * 后端期望: { rules: "规则1,规则2,...", weights: [30, 40, 30] }
+ * 后端期望: { rules: [{ source_field, target_field, operator, weight }] }
  */
 export const executeMatching = async (
   request: ExecuteMatchRequest,
 ): Promise<ExecuteMatchResponse> => {
   const token = getToken();
-
-  const enabledRules = request.rules.filter((r) => r.enabled);
-  const rulesStr = enabledRules.map((r) => r.name).join(",");
-  const totalWeight = enabledRules.reduce((s, r) => s + r.weight, 0);
-  const weights = enabledRules.map((r) =>
-    totalWeight > 0 ? Math.round((r.weight / totalWeight) * 100) : Math.round(100 / enabledRules.length)
-  );
+  const payloadRules = serializeRulesForBackend(request.rules);
 
   const response = await fetch(`/api/match/${request.activityId}/execute`, {
     method: "POST",
@@ -201,7 +348,7 @@ export const executeMatching = async (
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ rules: rulesStr, weights }),
+    body: JSON.stringify({ rules: payloadRules }),
   });
 
   if (!response.ok) {

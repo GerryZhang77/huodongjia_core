@@ -2,15 +2,35 @@
  * 匹配功能相关类型定义
  */
 
+export type MatchOperator =
+  | "similarity"
+  | "complement"
+  | "exact"
+  | "distance_decay";
+
+export interface RegistrationSchemaField {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "select" | "multi-select" | "radio";
+  required: boolean;
+  preset: boolean;
+  deletable?: boolean;
+  placeholder?: string;
+  options?: string[];
+}
+
 export interface MatchingRule {
   id?: string; // 新增规则时可选
   name: string;
-  description: string;
-  type: "similarity" | "diversity" | "constraint"; // 规则类型
-  field: string; // 匹配字段：tags, age, occupation, gender, city 等
+  description?: string;
+  type?: "similarity" | "diversity" | "constraint" | "preference" | "custom";
+  field?: string;
+  source_field?: string;
+  target_field?: string;
+  operator?: MatchOperator;
   weight: number;
   enabled: boolean;
-  config?: Record<string, unknown>; // 规则配置：method, threshold 等
+  config?: Record<string, unknown>;
 }
 
 export interface MatchConstraints {
