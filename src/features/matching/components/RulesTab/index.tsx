@@ -31,6 +31,7 @@ interface RulesTabProps {
   onStartMatching: () => Promise<void>;
   isMatching: boolean;
   matchingProgress: number;
+  matchingMessage?: string;
   participantCount: number;
   isRulesLocked?: boolean;
   schemaFields?: MatchingSchemaField[];
@@ -75,6 +76,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
   onStartMatching,
   isMatching,
   matchingProgress,
+  matchingMessage,
   participantCount,
   isRulesLocked = false,
   schemaFields = [],
@@ -516,7 +518,9 @@ const RulesTab: React.FC<RulesTabProps> = ({
             />
           </div>
           <div className="flex justify-between mt-2 text-sm">
-            <span className="text-gray-500">正在生成匹配结果...</span>
+            <span className="text-gray-500">
+              {matchingMessage || "正在生成匹配结果..."}
+            </span>
             <span className="font-medium text-primary-500">{matchingProgress}%</span>
           </div>
         </div>

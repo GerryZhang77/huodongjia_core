@@ -5,6 +5,7 @@
 
 import type {
   MatchingRule,
+  Participant,
   ParticipantMatchResult,
   GenerateRulesRequest,
   GenerateRulesResponse,
@@ -602,6 +603,7 @@ export const getMatchingTaskStatus = async (
 ): Promise<{
   status: "pending" | "processing" | "completed" | "failed";
   progress: number;
+  stage: string;
   message?: string;
 }> => {
   const token = getToken();
@@ -633,19 +635,39 @@ export const getMatchingTaskStatus = async (
 
   const progressMap: Record<string, number> = {
     pending: 5,
-    matching_extract: 20,
+    matching_extract: 15,
     matching_embed: 40,
-    matching_cal_similarity: 60,
-    matching_totalScore: 75,
-    matching_calBestMatch: 90,
+    matching_cal_similarity: 70,
+    matching_totalScore: 85,
+    matching_calBestMatch: 95,
     completed: 100,
     failed: 0,
   };
 
+  const stageMessageMap: Record<string, string> = {
+    pending: "匹配任务排队中",
+    matching_extract: "正在整理报名信息",
+    matching_embed: "正在生成 Embedding",
+    matching_cal_similarity: "正在计算匹配相似度",
+    matching_totalScore: "正在汇总规则分数",
+    matching_calBestMatch: "正在生成最佳匹配结果",
+    completed: "匹配完成",
+    failed: "匹配失败",
+  };
+
   const backendStatus = data.status || "pending";
+  const stageMessage = stageMessageMap[backendStatus] || "正在处理匹配任务";
+  const message =
+    typeof data.message === "string" &&
+    data.message.trim() &&
+    data.message !== "查询匹配状态成功"
+      ? data.message
+      : stageMessage;
+
   return {
     status: statusMap[backendStatus] ?? "processing",
     progress: progressMap[backendStatus] ?? 50,
-    message: data.message,
+    stage: backendStatus,
+    message,
   };
 };
