@@ -36,7 +36,6 @@ import {
   FilterDrawer,
   EnrollmentDetailDrawer,
 } from "@/components/enrollment";
-import { useStore } from "@/store";
 import { useAuthStore } from "@/features/auth/stores";
 import { useUpdateEnrollmentStatus } from "@/features/enrollment/hooks";
 import type {
@@ -999,6 +998,7 @@ const EnrollmentManagementNew: React.FC = () => {
       {/* 详情抽屉 */}
       <EnrollmentDetailDrawer
         visible={showDetailDrawer}
+        activityId={id || ""}
         enrollment={detailEnrollment}
         onClose={() => {
           setShowDetailDrawer(false);

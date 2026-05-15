@@ -7,7 +7,7 @@
  * 与用户池的 UserDetailDrawer 保持视觉风格一致
  */
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   X,
   UserCircle,
@@ -17,6 +17,8 @@ import {
   Clock,
   Send,
 } from "lucide-react";
+import { useActivityDetail } from "@/features/shared/activity/hooks";
+import type { RegistrationFormField } from "@/features/activities/types";
 import type { Enrollment } from "@/types/enrollment";
 import { STATUS_LABELS } from "@/types/enrollment";
 
@@ -27,6 +29,8 @@ import { STATUS_LABELS } from "@/types/enrollment";
 export interface EnrollmentDetailDrawerProps {
   /** 是否显示 */
   visible: boolean;
+  /** 当前活动 ID */
+  activityId?: string;
   /** 当前查看的报名信息 */
   enrollment: Enrollment | null;
   /** 关闭回调 */
@@ -91,12 +95,32 @@ const FormDataRow: React.FC<{
 
 const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
   visible,
+  activityId,
   enrollment,
   onClose,
   onApprove,
   onReject,
   onNotify,
 }) => {
+  const { data: activityDetail } = useActivityDetail(activityId);
+
+  const fieldLabelMap = useMemo(() => {
+    const event = activityDetail?.event as
+      | {
+          registrationFormSchema?: RegistrationFormField[] | null;
+          registration_form_schema?: RegistrationFormField[] | null;
+        }
+      | undefined;
+    const schema =
+      event?.registrationFormSchema ?? event?.registration_form_schema ?? [];
+
+    return new Map(
+      (Array.isArray(schema) ? schema : [])
+        .filter((field) => field?.key)
+        .map((field) => [field.key, field.label || field.key]),
+    );
+  }, [activityDetail]);
+
   if (!visible || !enrollment) return null;
 
   const formDataEntries = Object.entries(enrollment.formData || {}).filter(
@@ -192,7 +216,11 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
             <div className="bg-gray-50 rounded-xl px-4 py-1 divide-y divide-gray-100">
               {formDataEntries.length > 0 ? (
                 formDataEntries.map(([key, value]) => (
-                  <FormDataRow key={key} label={key} value={value} />
+                  <FormDataRow
+                    key={key}
+                    label={fieldLabelMap.get(key) || key}
+                    value={value}
+                  />
                 ))
               ) : (
                 <div className="py-3 text-sm text-gray-400">暂无基本信息</div>
