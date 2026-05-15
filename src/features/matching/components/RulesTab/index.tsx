@@ -1,175 +1,71 @@
-/**
- * 规则设置 Tab 组件 (重构版)
- * 设计风格统一：使用新设计系统（天空蓝、活力橙、梦幻紫）
- * 功能：展示后端下发规则 → 调整权重 → 边界条件 → 保存/开始匹配
- *
- * 注意：自然语言输入功能已移除，改为直接使用后端下发的匹配规则
- */
-
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Toast } from "antd-mobile";
 import {
-  FileText,
-  Plus,
-  Trash2,
+  ArrowRight,
   ChevronDown,
   ChevronUp,
-  Settings,
+  GripVertical,
+  Plus,
   Play,
   Save,
-  Loader2,
+  Settings,
+  Trash2,
   Users,
   Scale,
   Building2,
 } from "lucide-react";
 import { Button, Switch } from "@/components/ui";
-import { WeightSlider } from "../WeightSlider";
-import { SaveConfigDialog, type SavedConfig } from "../SaveConfigDialog";
-import type { MatchingRule as MatchRule, MatchConstraints } from "../../types";
-import AddRuleModal from "./AddRuleModal";
-
-// 使用从 types.ts 导入的 MatchConstraints 类型
+import type {
+  MatchConstraints,
+  MatchingRule,
+  MatchingSchemaField,
+  MatchOperator,
+} from "../../types";
 
 interface RulesTabProps {
-  /** 匹配规则列表（从后端获取） */
-  rules: MatchRule[];
-  /** 规则变更回调 */
-  onRulesChange: (rules: MatchRule[]) => void;
-  /** 边界约束条件 */
+  rules: MatchingRule[];
+  onRulesChange: (rules: MatchingRule[]) => void;
   constraints: MatchConstraints;
-  /** 约束条件变更回调 */
   onConstraintsChange: (constraints: MatchConstraints) => void;
-  /** 保存规则配置（带名称） */
   onSaveRules: (configName: string) => Promise<void>;
-  /** 开始匹配 */
   onStartMatching: () => Promise<void>;
-  /** 是否正在匹配 */
   isMatching: boolean;
-  /** 匹配进度 (0-100) */
   matchingProgress: number;
-  /** 参与人数 */
   participantCount: number;
-  /** 规则是否锁定（匹配过程中不可编辑） */
   isRulesLocked?: boolean;
-  /** 已保存的配置列表 */
-  savedConfigs?: SavedConfig[];
-  /** 加载已保存的配置 */
-  onLoadConfig?: (config: SavedConfig) => void;
-  /** 删除已保存的配置 */
-  onDeleteConfig?: (configId: string) => void;
-  /** 从报名表字段派生匹配规则 */
-  onGenerateRules?: () => Promise<void>;
-  /** 是否正在生成规则 */
-  isGeneratingRules?: boolean;
+  schemaFields?: MatchingSchemaField[];
+  schemaLoading?: boolean;
 }
 
-/**
- * 规则卡片组件
- */
-interface RuleCardProps {
-  rule: MatchRule;
-  onToggle: () => void;
-  onWeightChange: (weight: number) => void;
-  onDelete: () => void;
-  isExpanded: boolean;
-  onExpandToggle: () => void;
-  isLocked?: boolean;
-}
+const OPERATORS: Array<{ value: MatchOperator; label: string }> = [
+  { value: "similarity", label: "相似度匹配" },
+  { value: "complement", label: "互补匹配" },
+  { value: "exact", label: "精确匹配" },
+  { value: "distance_decay", label: "数值距离匹配" },
+];
 
-const RuleCard: React.FC<RuleCardProps> = ({
-  rule,
-  onToggle,
-  onWeightChange,
-  onDelete,
-  isExpanded,
-  onExpandToggle,
-  isLocked = false,
-}) => {
-  return (
-    <div
-      className={`border rounded-xl transition-all duration-200 ${
-        isLocked ? "opacity-70" : ""
-      } ${
-        rule.enabled
-          ? "bg-primary-50/50 border-primary-200"
-          : "bg-gray-50 border-gray-200"
-      }`}
-    >
-      {/* 头部 */}
-      <div
-        className={`flex items-center gap-3 p-4 ${!isLocked ? "cursor-pointer" : "cursor-not-allowed"}`}
-        onClick={!isLocked ? onExpandToggle : undefined}
-      >
-        {/* 开关 */}
-        <Switch
-          checked={rule.enabled}
-          onChange={() => !isLocked && onToggle()}
-          disabled={isLocked}
-          aria-label={`${rule.enabled ? "禁用" : "启用"}规则: ${rule.name}`}
-        />
+const DEFAULT_OPERATOR: MatchOperator = "similarity";
 
-        {/* 规则信息 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="font-medium text-gray-900 truncate">{rule.name}</h4>
-            {/* 权重标签 - 始终占位，禁用时透明 */}
-            <span
-              className={`px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-600 rounded-full transition-opacity duration-200 ${
-                rule.enabled ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              {rule.weight}%
-            </span>
-          </div>
-          {rule.description && (
-            <p className="text-sm text-gray-500 mt-0.5 truncate">
-              {rule.description}
-            </p>
-          )}
-        </div>
+const createRule = (): MatchingRule => ({
+  id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  name: "未配置规则",
+  source_field: "",
+  target_field: "",
+  operator: DEFAULT_OPERATOR,
+  type: DEFAULT_OPERATOR,
+  weight: 1,
+  enabled: true,
+});
 
-        {/* 展开/收起图标 - 始终占位，禁用时透明 */}
-        <div
-          className={`text-gray-400 transition-opacity duration-200 ${
-            rule.enabled ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </div>
-      </div>
-
-      {/* 展开内容 */}
-      {rule.enabled && isExpanded && !isLocked && (
-        <div className="px-4 pb-4 border-t border-primary-100 pt-4">
-          {/* 权重滑块 */}
-          <div className="mb-4">
-            <WeightSlider
-              value={rule.weight}
-              onChange={onWeightChange}
-              disabled={isLocked}
-              label="权重调整"
-              ticks={[0, 25, 50, 75, 100]}
-            />
-          </div>
-
-          {/* 删除按钮 */}
-          <button
-            onClick={onDelete}
-            disabled={isLocked}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 size={14} />
-            <span>删除规则</span>
-          </button>
-        </div>
-      )}
-    </div>
-  );
+const formatRuleName = (rule: MatchingRule, index: number) => {
+  return `${index + 1}-${rule.operator || DEFAULT_OPERATOR}`;
 };
 
-/**
- * 规则设置 Tab 主组件
- */
+const normalizeWeight = (value: number) => {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(1, Math.max(0.1, value));
+};
+
 const RulesTab: React.FC<RulesTabProps> = ({
   rules,
   onRulesChange,
@@ -181,222 +77,325 @@ const RulesTab: React.FC<RulesTabProps> = ({
   matchingProgress,
   participantCount,
   isRulesLocked = false,
-  savedConfigs = [],
-  onLoadConfig,
-  onDeleteConfig,
-  onGenerateRules,
-  isGeneratingRules = false,
+  schemaFields = [],
+  schemaLoading = false,
 }) => {
-  const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showConstraints, setShowConstraints] = useState(false);
+  const [draggingFieldKey, setDraggingFieldKey] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [expandedWeightRuleIds, setExpandedWeightRuleIds] = useState<string[]>(
+    [],
+  );
 
-  // 保存配置弹窗状态
-  const [showSaveConfigDialog, setShowSaveConfigDialog] = useState(false);
-  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const schemaLabelMap = useMemo(() => {
+    return new Map(schemaFields.map((field) => [field.key, field.label]));
+  }, [schemaFields]);
 
-  // 计算启用规则和权重总和
-  const { enabledRules, totalWeight } = useMemo(() => {
-    const enabled = rules.filter((r) => r.enabled);
-    const total = enabled.reduce((sum, r) => sum + r.weight, 0);
-    return { enabledRules: enabled, totalWeight: total };
-  }, [rules]);
+  const visibleRules = rules.length > 0 ? rules : [createRule()];
+  const enabledRules = visibleRules.filter((rule) => rule.enabled);
 
-  // 更新规则权重
-  const handleWeightChange = (ruleId: string, weight: number) => {
-    onRulesChange(rules.map((r) => (r.id === ruleId ? { ...r, weight } : r)));
+  const getFieldLabel = (fieldKey?: string) => {
+    if (!fieldKey) return "";
+    return schemaLabelMap.get(fieldKey) || fieldKey;
   };
 
-  // 切换规则启用
-  const handleToggleRule = (ruleId: string) => {
+  const updateRules = (nextRules: MatchingRule[]) => {
     onRulesChange(
-      rules.map((r) => (r.id === ruleId ? { ...r, enabled: !r.enabled } : r)),
+      nextRules.map((rule, index) => ({
+        ...rule,
+        name: formatRuleName(rule, index),
+        type: rule.operator || DEFAULT_OPERATOR,
+        operator: rule.operator || DEFAULT_OPERATOR,
+        weight: normalizeWeight(rule.weight),
+      })),
     );
   };
 
-  // 删除规则
-  const handleDeleteRule = (ruleId: string) => {
-    onRulesChange(rules.filter((r) => r.id !== ruleId));
+  const handleRuleChange = (
+    ruleId: string,
+    patch: Partial<MatchingRule>,
+  ) => {
+    updateRules(
+      visibleRules.map((rule) =>
+        rule.id === ruleId ? { ...rule, ...patch } : rule,
+      ),
+    );
   };
 
-  // 添加自定义规则
-  const handleAddRule = (rule: MatchRule) => {
-    onRulesChange([...rules, rule]);
-    setShowAddModal(false);
-    Toast.show({ content: "规则已添加", icon: "success" });
+  const handleAddRule = () => {
+    updateRules([...visibleRules, createRule()]);
   };
 
-  // 打开保存配置弹窗
-  const handleOpenSaveDialog = () => {
-    if (rules.length === 0) {
-      Toast.show({ content: "暂无规则可保存", icon: "fail" });
+  const handleDeleteRule = (ruleId?: string) => {
+    const nextRules = visibleRules.filter((rule) => rule.id !== ruleId);
+    updateRules(nextRules.length > 0 ? nextRules : [createRule()]);
+  };
+
+  const handleSave = async () => {
+    const hasIncompleteRule = visibleRules.some(
+      (rule) => !rule.source_field || !rule.target_field,
+    );
+
+    if (hasIncompleteRule) {
+      Toast.show({ content: "字段设置不完整，无法保存", icon: "fail" });
       return;
     }
-    setShowSaveConfigDialog(true);
-  };
 
-  // 保存配置确认
-  const handleSaveConfigConfirm = async (configName: string) => {
-    setIsSavingConfig(true);
+    const validRules = visibleRules.filter(
+      (rule) =>
+        rule.enabled &&
+        rule.source_field &&
+        rule.target_field &&
+        rule.operator,
+    );
+
+    if (validRules.length === 0) {
+      Toast.show({ content: "请先至少配置一条完整规则", icon: "fail" });
+      return;
+    }
+
+    setIsSaving(true);
     try {
-      await onSaveRules(configName);
-      setShowSaveConfigDialog(false);
-      Toast.show({ content: `配置"${configName}"已保存`, icon: "success" });
-    } catch {
-      Toast.show({ content: "保存失败，请重试", icon: "fail" });
+      await onSaveRules("默认配置");
     } finally {
-      setIsSavingConfig(false);
+      setIsSaving(false);
     }
   };
 
-  // 加载已保存的配置
-  const handleLoadConfig = (config: SavedConfig) => {
-    if (onLoadConfig) {
-      onLoadConfig(config);
-      setShowSaveConfigDialog(false);
-      Toast.show({ content: `已加载配置"${config.name}"`, icon: "success" });
-    }
-  };
+  const handleStart = async () => {
+    const validRules = visibleRules.filter(
+      (rule) =>
+        rule.enabled &&
+        rule.source_field &&
+        rule.target_field &&
+        rule.operator,
+    );
 
-  // 开始匹配前验证
-  const handleStartMatching = async () => {
-    if (enabledRules.length === 0) {
-      Toast.show({ content: "请至少启用一条匹配规则", icon: "fail" });
+    if (validRules.length === 0) {
+      Toast.show({ content: "请先至少配置一条完整规则", icon: "fail" });
       return;
     }
+
     if (participantCount === 0) {
       Toast.show({ content: "暂无参与者数据", icon: "fail" });
       return;
     }
+
     await onStartMatching();
+  };
+
+  const toggleWeightPanel = (ruleId?: string) => {
+    if (!ruleId) return;
+    setExpandedWeightRuleIds((current) =>
+      current.includes(ruleId)
+        ? current.filter((id) => id !== ruleId)
+        : [...current, ruleId],
+    );
   };
 
   return (
     <div className="pb-32">
-      {/* 报名表派生规则说明 */}
-      {onGenerateRules && !isRulesLocked && rules.length === 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-4 text-center">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-primary-50 flex items-center justify-center">
-            <FileText size={22} className="text-primary-500" />
-          </div>
-          <h3 className="text-base font-semibold text-gray-900 mb-1">
-            暂无匹配规则
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            规则来源于活动报名表中配置的信息收集字段，点击下方按钮自动生成
-          </p>
-          <button
-            onClick={() => onGenerateRules()}
-            disabled={isGeneratingRules}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGeneratingRules ? (
-              <><Loader2 size={16} className="animate-spin" />生成中...</>
-            ) : (
-              <><FileText size={16} />从报名表生成规则</>
-            )}
-          </button>
-        </div>
-      )}
-      {/* 匹配进行中提示 */}
-      {isRulesLocked && (
-        <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <Loader2 size={20} className="text-amber-600 animate-spin" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-amber-800">正在匹配中...</p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              匹配过程中规则配置已锁定，完成后可继续编辑
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 规则列表 */}
-      {rules.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-gray-900">
-                匹配规则
-              </h3>
-              <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
-                {rules.length} 条
-              </span>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="lg:sticky lg:top-24 lg:self-start bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+              <GripVertical size={16} className="text-primary-500" />
             </div>
-            <div className="flex items-center gap-3">
-              {enabledRules.length > 0 && (
-                <div className="text-sm">
-                  <span className="text-gray-500">权重总和: </span>
-                  <span className="font-semibold text-primary-500">
-                    {totalWeight}%
-                  </span>
-                </div>
-              )}
-              {onGenerateRules && !isRulesLocked && (
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">报名字段</h3>
+              <p className="text-xs text-gray-500">拖到右侧规则槽位中</p>
+            </div>
+          </div>
+
+          {schemaLoading ? (
+            <div className="text-sm text-gray-500 py-8 text-center">字段加载中...</div>
+          ) : schemaFields.length === 0 ? (
+            <div className="text-sm text-gray-500 py-8 text-center">
+              当前活动还没有报名表字段
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {schemaFields.map((field) => (
                 <button
-                  onClick={() => onGenerateRules()}
-                  disabled={isGeneratingRules}
-                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-50"
-                  title="用报名表的最新字段覆盖当前规则（不含自定义条目）"
+                  key={field.key}
+                  type="button"
+                  draggable={!isRulesLocked}
+                  onDragStart={() => setDraggingFieldKey(field.key)}
+                  onDragEnd={() => setDraggingFieldKey(null)}
+                  className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:opacity-60"
                 >
-                  {isGeneratingRules ? (
-                    <Loader2 size={12} className="animate-spin" />
-                  ) : (
-                    <FileText size={12} />
-                  )}
-                  重新从报名表生成
+                  <div className="font-medium text-gray-900 truncate">
+                    {field.label}
+                  </div>
                 </button>
-              )}
-            </div>
-          </div>
-
-          {/* 权重说明 */}
-          {enabledRules.length > 0 && totalWeight !== 100 && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl">
-              <p className="text-xs text-blue-600">
-                💡 系统会自动按比例归一化权重，无需手动调整到 100%
-              </p>
+              ))}
             </div>
           )}
 
-          {/* 规则卡片列表 */}
-          <div className="space-y-3">
-            {rules.map((rule) => (
-              <RuleCard
-                key={rule.id}
-                rule={rule}
-                onToggle={() => handleToggleRule(rule.id!)}
-                onWeightChange={(weight) =>
-                  handleWeightChange(rule.id!, weight)
-                }
-                onDelete={() => handleDeleteRule(rule.id!)}
-                isExpanded={expandedRuleId === rule.id}
-                onExpandToggle={() =>
-                  setExpandedRuleId(
-                    expandedRuleId === rule.id ? null : rule.id!,
-                  )
-                }
-                isLocked={isRulesLocked}
-              />
-            ))}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="text-xs font-medium text-gray-500 mb-2">操作</div>
+            <button
+              type="button"
+              onClick={handleAddRule}
+              disabled={isRulesLocked}
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium rounded-xl border border-gray-200 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50/40 disabled:opacity-50"
+            >
+              <Plus size={16} />
+              新增规则
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6">
+          <div className="mb-4">
+            <h3 className="text-base font-semibold text-gray-900">规则设置器</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              每行一条规则，左右字段可分别拖入，后端将按对应 operator 和 weight 执行匹配。
+            </p>
           </div>
 
-          {/* 添加自定义规则按钮 */}
-          <button
-            onClick={() => setShowAddModal(true)}
-            disabled={isRulesLocked}
-            className="w-full mt-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-primary-300 hover:text-primary-500 hover:bg-primary-50/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:text-gray-500 disabled:hover:bg-transparent"
-          >
-            <Plus size={18} />
-            添加自定义规则
-          </button>
-        </div>
-      )}
+          <div className="space-y-3">
+            {visibleRules.map((rule, index) => (
+              <div
+                key={rule.id || index}
+                className="rounded-2xl border border-gray-200 p-4 bg-gray-50/70"
+              >
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-full bg-primary-100 text-primary-600 text-sm font-semibold flex items-center justify-center">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {formatRuleName(rule, index)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={rule.enabled}
+                      onChange={() =>
+                        handleRuleChange(rule.id || "", { enabled: !rule.enabled })
+                      }
+                      disabled={isRulesLocked}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRule(rule.id)}
+                      disabled={isRulesLocked}
+                      className="p-2 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
 
-      {/* 边界条件设置 */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-4">
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.2fr_1.2fr_0.9fr]">
+                  {(["source_field", "target_field"] as const).map((slot) => {
+                    const fieldKey = rule[slot];
+                    const fieldLabel = getFieldLabel(fieldKey);
+                    return (
+                      <div
+                        key={slot}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          if (!draggingFieldKey || isRulesLocked) return;
+                          handleRuleChange(rule.id || "", { [slot]: draggingFieldKey });
+                          setDraggingFieldKey(null);
+                        }}
+                        className={`min-h-[72px] rounded-2xl border-2 border-dashed px-4 py-3 transition-colors ${
+                          fieldKey
+                            ? "border-primary-300 bg-primary-50/60"
+                            : "border-gray-200 bg-white"
+                        }`}
+                      >
+                        <div className="text-xs text-gray-500 mb-2">
+                          {slot === "source_field" ? "左字段" : "右字段"}
+                        </div>
+                        {fieldKey ? (
+                          <div>
+                            <div className="font-medium text-gray-900 truncate">
+                              {fieldLabel}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-400">
+                            拖拽字段到这里
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <label className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
+                    <div className="text-xs text-gray-500 mb-2">匹配方式</div>
+                    <select
+                      value={rule.operator || DEFAULT_OPERATOR}
+                      onChange={(event) =>
+                        handleRuleChange(rule.id || "", {
+                          operator: event.target.value as MatchOperator,
+                          type: event.target.value as MatchOperator,
+                        })
+                      }
+                      disabled={isRulesLocked}
+                      className="w-full bg-transparent outline-none text-sm font-medium text-gray-900"
+                    >
+                      {OPERATORS.map((operator) => (
+                        <option key={operator.value} value={operator.value}>
+                          {operator.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-gray-200 bg-white">
+                  <button
+                    type="button"
+                    onClick={() => toggleWeightPanel(rule.id)}
+                    disabled={isRulesLocked}
+                    className="w-full flex items-center justify-between px-4 py-3 text-sm disabled:opacity-50"
+                  >
+                      <span className="font-medium text-gray-700">权重</span>
+                    <span className="flex items-center gap-2 text-gray-500">
+                      <span>{rule.weight}</span>
+                      {rule.id && expandedWeightRuleIds.includes(rule.id) ? (
+                        <ChevronUp size={16} />
+                      ) : (
+                        <ChevronDown size={16} />
+                      )}
+                    </span>
+                  </button>
+                  {rule.id && expandedWeightRuleIds.includes(rule.id) && (
+                    <div className="px-4 pb-4">
+                      <input
+                        type="range"
+                        min={0.1}
+                        max={1}
+                        step={0.1}
+                        value={rule.weight}
+                        onChange={(event) =>
+                          handleRuleChange(rule.id || "", {
+                            weight: normalizeWeight(Number(event.target.value)),
+                          })
+                        }
+                        disabled={isRulesLocked}
+                        className="w-full accent-[var(--adm-color-primary)]"
+                      />
+                      <div className="flex justify-between mt-2 text-xs text-gray-400">
+                        <span>0.1</span>
+                        <span>0.5</span>
+                        <span>1</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-4 mb-4">
         <button
           onClick={() => setShowConstraints(!showConstraints)}
           className="w-full px-4 md:px-6 py-4 flex items-center justify-between"
@@ -405,170 +404,111 @@ const RulesTab: React.FC<RulesTabProps> = ({
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
               <Settings size={16} className="text-gray-500" />
             </div>
-            <h3 className="text-base font-semibold text-gray-900">
-              边界条件（可选）
-            </h3>
+            <h3 className="text-base font-semibold text-gray-900">边界条件（可选）</h3>
           </div>
-          <div className="text-gray-400">
-            {showConstraints ? (
-              <ChevronUp size={20} />
-            ) : (
-              <ChevronDown size={20} />
-            )}
-          </div>
+          <ArrowRight
+            size={18}
+            className={`text-gray-400 transition-transform ${showConstraints ? "rotate-90" : ""}`}
+          />
         </button>
 
         {showConstraints && (
           <div className="px-4 md:px-6 pb-6 space-y-4 border-t border-gray-100 pt-4">
-            {/* 每组人数 */}
             <div className="p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-2 mb-3">
                 <Users size={16} className="text-primary-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  每组人数
-                </span>
-                <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-600 rounded-full">
-                  {constraints.minGroupSize || 3} -{" "}
-                  {constraints.maxGroupSize || 8} 人
-                </span>
+                <span className="text-sm font-medium text-gray-700">每组人数</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">
-                    最小人数
-                  </label>
-                  <input
-                    type="number"
-                    min={2}
-                    max={constraints.maxGroupSize || 20}
-                    value={constraints.minGroupSize || 3}
-                    onChange={(e) =>
-                      onConstraintsChange({
-                        ...constraints,
-                        minGroupSize: Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">
-                    最大人数
-                  </label>
-                  <input
-                    type="number"
-                    min={constraints.minGroupSize || 2}
-                    max={20}
-                    value={constraints.maxGroupSize || 8}
-                    onChange={(e) =>
-                      onConstraintsChange({
-                        ...constraints,
-                        maxGroupSize: Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
-                  />
-                </div>
+                <input
+                  type="number"
+                  min={2}
+                  value={constraints.minGroupSize || 3}
+                  onChange={(event) =>
+                    onConstraintsChange({
+                      ...constraints,
+                      minGroupSize: Number(event.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                />
+                <input
+                  type="number"
+                  min={constraints.minGroupSize || 2}
+                  value={constraints.maxGroupSize || 8}
+                  onChange={(event) =>
+                    onConstraintsChange({
+                      ...constraints,
+                      maxGroupSize: Number(event.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                />
               </div>
             </div>
 
-            {/* 性别比例 */}
             <div className="p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-2 mb-3">
                 <Scale size={16} className="text-secondary-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  性别比例
-                </span>
-                <span className="px-2 py-0.5 text-xs font-medium bg-orange-100 text-secondary-600 rounded-full">
-                  {constraints.genderRatioMin || 40}% -{" "}
-                  {constraints.genderRatioMax || 60}%
-                </span>
+                <span className="text-sm font-medium text-gray-700">性别比例</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">
-                    最小比例
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={constraints.genderRatioMin || 40}
-                    onChange={(e) =>
-                      onConstraintsChange({
-                        ...constraints,
-                        genderRatioMin: Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">
-                    最大比例
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={constraints.genderRatioMax || 60}
-                    onChange={(e) =>
-                      onConstraintsChange({
-                        ...constraints,
-                        genderRatioMax: Number(e.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
-                  />
-                </div>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={constraints.genderRatioMin || 40}
+                  onChange={(event) =>
+                    onConstraintsChange({
+                      ...constraints,
+                      genderRatioMin: Number(event.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={constraints.genderRatioMax || 60}
+                  onChange={(event) =>
+                    onConstraintsChange({
+                      ...constraints,
+                      genderRatioMax: Number(event.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                />
               </div>
             </div>
 
-            {/* 同行业限制 */}
             <div className="p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-2 mb-3">
                 <Building2 size={16} className="text-accent-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  同行业限制
-                </span>
-                <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-accent-600 rounded-full">
-                  最多 {constraints.sameIndustryMax || 2} 人
-                </span>
+                <span className="text-sm font-medium text-gray-700">同行业限制</span>
               </div>
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">
-                  同行业最多人数
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={constraints.sameIndustryMax || 2}
-                  onChange={(e) =>
-                    onConstraintsChange({
-                      ...constraints,
-                      sameIndustryMax: Number(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
-                />
-              </div>
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={constraints.sameIndustryMax || 2}
+                onChange={(event) =>
+                  onConstraintsChange({
+                    ...constraints,
+                    sameIndustryMax: Number(event.target.value),
+                  })
+                }
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+              />
             </div>
           </div>
         )}
       </div>
 
-      {/* 匹配进度（匹配中显示）*/}
       {isMatching && (
         <div className="bg-white rounded-2xl border border-primary-200 shadow-sm p-4 md:p-6 mb-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Loader2 size={20} className="text-primary-500 animate-spin" />
-            <h3 className="text-base font-semibold text-gray-900">
-              匹配进行中...
-            </h3>
-          </div>
           <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary-400 to-primary-500 rounded-full transition-all duration-300"
@@ -577,92 +517,56 @@ const RulesTab: React.FC<RulesTabProps> = ({
           </div>
           <div className="flex justify-between mt-2 text-sm">
             <span className="text-gray-500">正在生成匹配结果...</span>
-            <span className="font-medium text-primary-500">
-              {matchingProgress}%
-            </span>
+            <span className="font-medium text-primary-500">{matchingProgress}%</span>
           </div>
         </div>
       )}
 
-      {/* 底部操作栏 */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-20">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-3">
-          {/* 参与人数提示 */}
           <div className="flex items-center justify-center gap-4 mb-2 text-sm">
             <span className="text-gray-500">
-              参与人数:{" "}
-              <span className="font-semibold text-primary-500">
-                {participantCount} 人
-              </span>
+              参与人数: <span className="font-semibold text-primary-500">{participantCount} 人</span>
             </span>
             <span className="text-gray-300">|</span>
             <span className="text-gray-500">
-              启用规则:{" "}
-              <span className="font-semibold text-primary-500">
-                {enabledRules.length} 条
-              </span>
+              启用规则: <span className="font-semibold text-primary-500">{enabledRules.length} 条</span>
             </span>
           </div>
 
-          {/* 按钮组 */}
           <div className="flex gap-3">
             <Button
               variant="outline"
               size="large"
-              onClick={handleOpenSaveDialog}
-              disabled={rules.length === 0}
+              onClick={handleSave}
+              disabled={
+                isSaving ||
+                isMatching ||
+                visibleRules.some(
+                  (rule) => !rule.source_field || !rule.target_field,
+                )
+              }
               className="flex-1"
             >
               <span className="flex items-center gap-2">
                 <Save size={18} />
-                保存配置
+                保存规则
               </span>
             </Button>
             <Button
               size="large"
-              onClick={handleStartMatching}
-              disabled={
-                enabledRules.length === 0 ||
-                participantCount === 0 ||
-                isMatching
-              }
+              onClick={handleStart}
+              disabled={isMatching || participantCount === 0}
               className="flex-1"
             >
-              {isMatching ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 size={18} className="animate-spin" />
-                  匹配中...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Play size={18} />
-                  开始匹配
-                </span>
-              )}
+              <span className="flex items-center gap-2">
+                <Play size={18} />
+                {isMatching ? "匹配中..." : "开始匹配"}
+              </span>
             </Button>
           </div>
         </div>
       </div>
-
-      {/* 添加规则弹窗 */}
-      <AddRuleModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={handleAddRule}
-        existingRules={rules}
-      />
-
-      {/* 保存配置命名弹窗 */}
-      <SaveConfigDialog
-        visible={showSaveConfigDialog}
-        rules={rules}
-        savedConfigs={savedConfigs}
-        onConfirm={handleSaveConfigConfirm}
-        onCancel={() => setShowSaveConfigDialog(false)}
-        onLoadConfig={onLoadConfig ? handleLoadConfig : undefined}
-        onDeleteConfig={onDeleteConfig}
-        isLoading={isSavingConfig}
-      />
     </div>
   );
 };

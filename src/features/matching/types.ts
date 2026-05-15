@@ -3,22 +3,34 @@
  * 与后端 API 保持一致
  */
 
-// 匹配规则类型
+import type { RegistrationFormField } from "@/features/activities/types";
+
+// 后端支持的匹配算子
+export type MatchOperator =
+  | "similarity"
+  | "complement"
+  | "exact"
+  | "distance_decay";
+
+// 兼容旧页面保留的规则类型别名
 export type RuleType =
-  | "similarity" // 相似度匹配
-  | "diversity" // 多样性匹配
-  | "constraint" // 约束条件
-  | "preference" // 偏好设置
-  | "custom"; // 自定义规则
+  | MatchOperator
+  | "diversity"
+  | "constraint"
+  | "preference"
+  | "custom";
 
 // 匹配规则
 export interface MatchingRule {
   id?: string;
   name: string;
   description?: string;
-  type: RuleType;
-  field?: string; // 匹配字段 (interests, school, industry 等)
-  weight: number; // 权重 0-100
+  type?: RuleType;
+  field?: string;
+  source_field?: string;
+  target_field?: string;
+  operator?: MatchOperator;
+  weight: number;
   enabled: boolean;
   config?: {
     method?: "jaccard" | "cosine" | "custom";
@@ -26,6 +38,8 @@ export interface MatchingRule {
     penalty?: number;
   };
 }
+
+export type MatchingSchemaField = RegistrationFormField;
 
 // 边界条件/约束
 export interface MatchConstraints {

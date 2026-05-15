@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Toast } from "antd-mobile";
+import { getActivityById } from "@/features/activities/services/api";
 
 // API 服务函数
 import {
@@ -30,6 +31,7 @@ import type {
   MatchConstraints,
   MatchingHistory,
   ParticipantMatchResult,
+  MatchingSchemaField,
 } from "../types";
 
 // === 模块级缓存（stale-while-revalidate） ===
@@ -99,6 +101,31 @@ interface UseMatchingLogicOptions {
   activityId: string;
 }
 
+const DEFAULT_OPERATOR = "similarity" as const;
+
+const createEmptyRule = (): MatchRule => ({
+  id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  name: "未配置规则",
+  source_field: "",
+  target_field: "",
+  operator: DEFAULT_OPERATOR,
+  type: DEFAULT_OPERATOR,
+  weight: 1,
+  enabled: true,
+});
+
+const normalizeRuleForUi = (rule: MatchRule, index = 0): MatchRule => {
+  const operator = rule.operator || DEFAULT_OPERATOR;
+  return {
+    ...rule,
+    name: `${index + 1}-${operator}`,
+    type: rule.type || operator,
+    operator,
+    weight: typeof rule.weight === "number" ? rule.weight : 1,
+    enabled: rule.enabled ?? true,
+  };
+};
+
 export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   // === 状态定义 ===
   const [stage, setStage] = useState<MatchingStage>("idle");
@@ -116,6 +143,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
   // 数据
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [registrationSchema, setRegistrationSchema] = useState<
+    MatchingSchemaField[]
+  >([]);
   // per-user top5 匹配结果（新模型）
   const [matchResults, setMatchResults] = useState<ParticipantMatchResult[]>([]);
   // 旧分组结果（历史记录回放用，当前匹配流程不再使用）
@@ -125,7 +155,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   // 加载状态
   const [isLoading, setIsLoading] = useState(true);
   const [isMatching, setIsMatching] = useState(false);
-  const [isGeneratingRules, setIsGeneratingRules] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [matchingProgress, setMatchingProgress] = useState(0);
   const [matchingMessage, setMatchingMessage] = useState<string>("");
@@ -178,20 +207,26 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     const fetchAll = async (silent: boolean) => {
       if (!silent) setIsLoading(true);
       try {
-        const [rulesData, participantsData, historyData] = await Promise.all([
-          getMatchRules(activityId).catch(() => [] as MatchRule[]),
-          getParticipants(activityId).catch(() => [] as Participant[]),
-          getMatchingHistory(activityId).catch(() => [] as MatchingHistory[]),
-        ]);
+        const [rulesData, participantsData, historyData, activityData] =
+          await Promise.all([
+            getMatchRules(activityId).catch(() => [] as MatchRule[]),
+            getParticipants(activityId).catch(() => [] as Participant[]),
+            getMatchingHistory(activityId).catch(() => [] as MatchingHistory[]),
+            getActivityById(activityId).catch(() => null),
+          ]);
         if (aborted) return;
 
         if (rulesData && rulesData.length > 0) {
-          setRules(rulesData);
+          setRules(rulesData.map((rule, index) => normalizeRuleForUi(rule, index)));
+          setStage((prev) => (prev === "idle" ? "configuring" : prev));
+        } else {
+          setRules([createEmptyRule()]);
           setStage((prev) => (prev === "idle" ? "configuring" : prev));
         }
         if (participantsData && participantsData.length > 0) {
           setParticipants(participantsData);
         }
+        setRegistrationSchema(activityData?.registrationFormSchema || []);
 
         let publishedResolved = false;
         if (historyData && historyData.length > 0) {
@@ -307,86 +342,23 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     matchingStats,
   ]);
 
-  // === 从报名表派生匹配规则 ===
-  // 规则直接来源于商家在发布活动时配置的报名表字段（表头）
-  const handleGenerateRules = useCallback(
-    async () => {
-      setIsGeneratingRules(true);
-      try {
-        const token = (() => {
-          try {
-            const raw = localStorage.getItem("auth-storage");
-            return raw ? JSON.parse(raw)?.state?.token ?? null : null;
-          } catch { return null; }
-        })();
-
-        const response = await fetch(`/api/match/${activityId}/generate`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message || "生成失败");
-
-        // 后端返回 MatchingRule[]（优先），兼容旧 string[]
-        const rawRules: unknown[] = data.rules || [];
-        if (rawRules.length === 0) {
-          Toast.show({
-            content: data.message || "报名表暂无可用字段",
-            icon: "fail",
-          });
-          return;
-        }
-
-        const generatedRules: MatchRule[] = rawRules.map((r, i) => {
-          if (typeof r === "string") {
-            return {
-              id: `rule-${Date.now()}-${i}`,
-              name: r,
-              type: "similarity" as const,
-              weight: (data.weights as number[])?.[i] ?? Math.round(100 / rawRules.length),
-              enabled: true,
-            };
-          }
-          const obj = r as MatchRule;
-          return {
-            id: obj.id || `rule-${Date.now()}-${i}`,
-            name: obj.name,
-            field: obj.field,
-            type: obj.type || "similarity",
-            weight: obj.weight ?? Math.round(100 / rawRules.length),
-            enabled: obj.enabled ?? true,
-          };
-        });
-
-        setRules(generatedRules);
-        setStage("configuring");
-        Toast.show({ content: `已从报名表生成 ${generatedRules.length} 条规则`, icon: "success" });
-      } catch (error) {
-        Toast.show({ content: error instanceof Error ? error.message : "生成规则失败", icon: "fail" });
-      } finally {
-        setIsGeneratingRules(false);
-      }
-    },
-    [activityId],
-  );
-
   // === 保存所有规则配置到后端 ===
   const handleSaveRules = useCallback(
     async (configName: string) => {
       try {
-        await saveMatchRules(activityId, rules);
+        const normalizedRules = rules.map((rule, index) =>
+          normalizeRuleForUi(rule, index),
+        );
+        await saveMatchRules(activityId, normalizedRules);
 
         const newConfig = {
           id: `config_${Date.now()}`,
           name: configName,
-          rules: [...rules],
+          rules: normalizedRules,
           savedAt: new Date().toISOString(),
         };
         setSavedConfigs((prev) => [newConfig, ...prev]);
+        setRules(normalizedRules);
         Toast.show({ content: `配置"${configName}"已保存`, icon: "success" });
       } catch (error) {
         console.error("Failed to save rules:", error);
@@ -406,7 +378,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       savedAt: string;
     }) => {
       // 应用配置中的规则
-      setRules([...config.rules]);
+      setRules(
+        config.rules.map((rule, index) => normalizeRuleForUi(rule, index)),
+      );
       Toast.show({ content: `已加载配置"${config.name}"`, icon: "success" });
     },
     [],
@@ -496,7 +470,16 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
   // === 开始匹配 (异步任务) ===
   const handleStartMatching = useCallback(async () => {
-    const enabledRules = rules.filter((r) => r.enabled);
+    const normalizedRules = rules.map((rule, index) =>
+      normalizeRuleForUi(rule, index),
+    );
+    const enabledRules = normalizedRules.filter(
+      (rule) =>
+        rule.enabled &&
+        rule.source_field &&
+        rule.target_field &&
+        rule.operator,
+    );
     if (enabledRules.length === 0) {
       Toast.show({ content: "请至少启用一条匹配规则", icon: "fail" });
       return;
@@ -514,6 +497,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     setIsRulesLocked(true);
 
     try {
+      setRules(normalizedRules);
       const { taskId } = await submitMatchingTask(activityId, enabledRules);
       currentTaskIdRef.current = taskId;
 
@@ -696,6 +680,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     history,
     matchingStats,
     savedConfigs,
+    registrationSchema,
 
     // 设置方法
     setActiveTab,
@@ -704,8 +689,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     setGroups,
 
     // 规则操作
-    handleGenerateRules,
-    isGeneratingRules,
     handleSaveRules,
     handleLoadConfig,
     handleDeleteConfig,
