@@ -1,13 +1,5 @@
-/**
- * 规则设置 Tab 组件 (重构版)
- * 设计风格统一：使用新设计系统（天空蓝、活力橙、梦幻紫）
- * 功能：展示后端下发规则 → 调整权重 → 边界条件 → 保存/开始匹配
- *
- * 注意：自然语言输入功能已移除，改为直接使用后端下发的匹配规则
- */
-
-import React, { useState, useMemo } from "react";
-import { Toast } from "@/components/ui/Toast";
+import React, { useMemo, useState } from "react";
+import { Toast } from "antd-mobile";
 import {
   ArrowRight,
   ChevronDown,

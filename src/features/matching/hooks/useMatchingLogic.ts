@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Toast } from "@/components/ui/Toast";
+import { Toast } from "antd-mobile";
 import { getActivityById } from "@/features/activities/services/api";
 
 // API 服务函数
