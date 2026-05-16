@@ -51,6 +51,14 @@ const DEFAULT_PRIVACY: Required<MerchantPrivacySettings> = {
   bio: true,
 };
 
+const getErrorMessage = (error: unknown) => {
+  const apiError = error as {
+    response?: { data?: { message?: string } };
+    message?: string;
+  };
+  return apiError.response?.data?.message || apiError.message || "保存失败，请重试";
+};
+
 const ProfileEditPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -137,6 +145,12 @@ const ProfileEditPage: React.FC = () => {
     return option?.label || "请选择";
   };
 
+  const normalizeText = (value: unknown) => {
+    if (value == null) return null;
+    const trimmed = String(value).trim();
+    return trimmed ? trimmed : null;
+  };
+
   // 处理表单提交
   const handleSubmit = async () => {
     try {
@@ -145,8 +159,15 @@ const ProfileEditPage: React.FC = () => {
 
       const payload = {
         ...values,
-        avatar: avatarList[0]?.url,
-        industry: selectedIndustry[0],
+        avatar: avatarList[0]?.url ?? null,
+        email: normalizeText(values.email),
+        phone: normalizeText(values.phone),
+        wechat: normalizeText(values.wechat),
+        city: normalizeText(values.city),
+        company: normalizeText(values.company),
+        occupation: normalizeText(values.occupation),
+        bio: normalizeText(values.bio),
+        industry: selectedIndustry[0] ?? null,
         privacy_settings: privacy,
       };
 
@@ -161,6 +182,7 @@ const ProfileEditPage: React.FC = () => {
       navigate("/dashboard/profile");
     } catch (error) {
       console.error("提交失败:", error);
+      Toast.show({ icon: "fail", content: getErrorMessage(error) });
     } finally {
       setLoading(false);
     }
