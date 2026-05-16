@@ -26,6 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCcw,
+  QrCode,
 } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
@@ -33,10 +34,10 @@ import {
   ImportEnrollmentModal,
   SendNotificationModal,
   ExportEnrollmentModal,
+  RegistrationQrModal,
   FilterDrawer,
   EnrollmentDetailDrawer,
 } from "@/components/enrollment";
-import { useStore } from "@/store";
 import { useAuthStore } from "@/features/auth/stores";
 import { useUpdateEnrollmentStatus } from "@/features/enrollment/hooks";
 import type {
@@ -162,6 +163,11 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
             </span>
             {(enrollment.isExternal || !enrollment.userId) && (
               <span className="px-1.5 py-0.5 text-xs rounded bg-orange-100 text-orange-600">外部</span>
+            )}
+            {enrollment.registrationTypeName && (
+              <span className="px-1.5 py-0.5 text-xs rounded bg-blue-50 text-blue-600">
+                {enrollment.registrationTypeName}
+              </span>
             )}
             <span
               className={`px-2 py-0.5 text-xs rounded-full ${statusColors[enrollment.status] || "bg-gray-100 text-gray-500"}`}
@@ -485,6 +491,7 @@ const EnrollmentManagementNew: React.FC = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showNotifyModal, setShowNotifyModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
   // 计算筛选选项
@@ -506,7 +513,8 @@ const EnrollmentManagementNew: React.FC = () => {
       filtered = filtered.filter(
         (e) =>
           e.name.toLowerCase().includes(keyword) ||
-          e.tags?.some((t) => t.toLowerCase().includes(keyword)),
+          e.tags?.some((t) => t.toLowerCase().includes(keyword)) ||
+          e.registrationTypeName?.toLowerCase().includes(keyword),
       );
     }
 
@@ -542,13 +550,31 @@ const EnrollmentManagementNew: React.FC = () => {
       const data = await response.json();
       console.log("[EnrollmentManagement] API 返回数据:", data);
       const raw = data.data?.enrollments || data.data || [];
-      setEnrollments(raw.map((e: Record<string, unknown>) => ({
-        ...e,
-        isExternal: e.is_external,
-        userId: e.user_id,
-        activityId: e.event_id,
-        enrolledAt: e.created_at,
-      })));
+      setEnrollments(raw.map((e: Record<string, unknown>) => {
+        const registrationTypeName =
+          (e.registrationTypeName as string | undefined) ||
+          (e.registration_type_name_snapshot as string | undefined) ||
+          "公开报名";
+        const formData =
+          e.formData && typeof e.formData === "object"
+            ? (e.formData as Record<string, unknown>)
+            : {};
+        return {
+          ...e,
+          isExternal: e.is_external,
+          userId: e.user_id,
+          activityId: e.event_id,
+          enrolledAt: e.created_at,
+          registrationTypeId: e.registrationTypeId || e.registration_type_id,
+          registrationTypeName,
+          registrationTypeMatchEnabled:
+            e.registrationTypeMatchEnabled ?? e.registration_type_match_enabled,
+          customFields: {
+            ...formData,
+            报名类型: registrationTypeName,
+          },
+        };
+      }));
     } catch (error) {
       console.error("获取报名列表失败:", error);
       Toast.show({ content: "获取报名列表失败" });
@@ -758,6 +784,13 @@ const EnrollmentManagementNew: React.FC = () => {
               >
                 <Download size={14} />
                 导出
+              </button>
+              <button
+                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-blue-50 text-blue-600 text-sm font-medium hover:bg-blue-100 flex items-center gap-1 transition-colors"
+                onClick={() => setShowQrModal(true)}
+              >
+                <QrCode size={14} />
+                报名二维码
               </button>
               <button
                 className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 flex items-center gap-1 transition-colors"
@@ -994,6 +1027,12 @@ const EnrollmentManagementNew: React.FC = () => {
         activityId={id || ""}
         activityTitle="活动"
         enrollments={filteredEnrollments}
+      />
+
+      <RegistrationQrModal
+        visible={showQrModal}
+        activityId={id || ""}
+        onClose={() => setShowQrModal(false)}
       />
 
       {/* 详情抽屉 */}

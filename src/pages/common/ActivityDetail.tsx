@@ -18,6 +18,7 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  QrCode,
 } from "lucide-react";
 import {
   Dialog,
@@ -25,6 +26,7 @@ import {
 } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
+import { RegistrationQrModal } from "@/components/enrollment";
 import { Button } from "@/components/ui";
 import {
   ParticipantAvatar,
@@ -135,6 +137,7 @@ const ActivityDetail: FC = () => {
   const [participantStatus, setParticipantStatus] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"info" | "participants">("info");
+  const [showQrModal, setShowQrModal] = useState(false);
   const PAGE_SIZE = 10;
   const participantListRef = useRef<HTMLDivElement>(null);
 
@@ -340,6 +343,13 @@ const ActivityDetail: FC = () => {
                     <ArrowLeft size={20} className="text-white" />
                   </button>
                   <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowQrModal(true)}
+                      className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                      title="报名二维码"
+                    >
+                      <QrCode size={20} className="text-white" />
+                    </button>
                     <button
                       onClick={() => navigate(`/dashboard/activity/${id}/edit`)}
                       className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
@@ -656,7 +666,7 @@ const ActivityDetail: FC = () => {
           <div className="absolute bottom-0 left-0 right-0 z-50 md:rounded-b-2xl overflow-hidden">
             <div className="bg-white border-t border-gray-100 px-4 pt-3 pb-4 lg:pb-6">
               {/* 快捷操作按钮 */}
-              <div className="grid grid-cols-3 gap-3 mb-3">
+              <div className="grid grid-cols-4 gap-3 mb-3">
                 <button
                   onClick={() => navigate(`/dashboard/activity/${id}/edit`)}
                   className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
@@ -672,6 +682,13 @@ const ActivityDetail: FC = () => {
                 >
                   <Users size={20} className="text-success-500" />
                   <span className="text-xs text-gray-600">报名管理</span>
+                </button>
+                <button
+                  onClick={() => setShowQrModal(true)}
+                  className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <QrCode size={20} className="text-primary-500" />
+                  <span className="text-xs text-gray-600">报名二维码</span>
                 </button>
                 <button
                   onClick={() => navigate(`/dashboard/activity/${id}/matching`)}
@@ -705,6 +722,13 @@ const ActivityDetail: FC = () => {
               <div className="h-4 lg:hidden" />
             </div>
           </div>
+
+          <RegistrationQrModal
+            visible={showQrModal}
+            activityId={id || ""}
+            activityTitle={activity.title}
+            onClose={() => setShowQrModal(false)}
+          />
         </div>
       </div>
     </div>

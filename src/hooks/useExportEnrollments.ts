@@ -73,6 +73,7 @@ export function useExportEnrollments(
           公司: e.company || "",
           城市: e.city || "",
           兴趣标签: e.tags?.join("、") || "",
+          报名类型: e.registrationTypeName || "",
           个人简介: e.bio || "",
           匹配需求: e.matchingNeeds || "",
           状态: STATUS_MAP[e.status] || e.status,

@@ -73,7 +73,7 @@ export const UserAgreement: FC<UserAgreementProps> = ({ className = "" }) => {
         </p>
         <p className="text-gray-600 leading-relaxed mb-3">
           3.3
-          普通用户（活动参与者）可以通过本平台浏览活动、报名参与、查看匹配结果、与其他参与者互动等。
+          参与者可以通过本平台浏览活动、报名参与、查看匹配结果、与其他参与者互动等。
         </p>
         <p className="text-gray-600 leading-relaxed mb-3">
           3.4

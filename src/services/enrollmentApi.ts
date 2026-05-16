@@ -32,6 +32,9 @@ export interface Enrollment {
   matchingNeeds?: string;
   tags?: string[];
   customFields?: Record<string, unknown>;
+  registrationTypeId?: string;
+  registrationTypeName?: string;
+  registrationTypeMatchEnabled?: boolean;
   status: EnrollmentStatus;
   isInfoComplete?: boolean;
   enrolledAt?: string;

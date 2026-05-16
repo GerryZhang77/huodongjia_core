@@ -38,6 +38,7 @@ const transformFormDataToRequest = (
     allow_waitlist: data.allow_waitlist === true,
     enable_nfc: data.enable_nfc === true,
     registration_form_schema: data.registration_form_schema || undefined,
+    registration_types: data.registration_types || undefined,
     registration_start: data.registration_start.toISOString(),
     registration_deadline: (
       data.registration_end < data.start_time

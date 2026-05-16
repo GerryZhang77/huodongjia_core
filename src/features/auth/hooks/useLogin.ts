@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores";
 import { login as loginApi, loginBySms as loginBySmsApi } from "../services";
@@ -38,6 +38,7 @@ function computeDisplayName(user: User, rawIdentifier?: string): string {
 
 export function useLogin() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setAuth } = useAuthStore();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
@@ -67,8 +68,11 @@ export function useLogin() {
       displayName ? `欢迎回来，${displayName}！` : "欢迎回来！",
     );
 
+    const redirect = searchParams.get("redirect");
+    const safeRedirect = redirect?.startsWith("/") ? redirect : "";
     const targetPath =
-      response.user.user_type === "user" ? "/u/home" : "/dashboard";
+      safeRedirect ||
+      (response.user.user_type === "user" ? "/u/home" : "/dashboard");
     setTimeout(() => {
       navigate(targetPath, { replace: true });
     }, 1000);

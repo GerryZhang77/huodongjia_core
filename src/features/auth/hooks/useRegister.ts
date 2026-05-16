@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/authStore";
 import * as authApi from "../services/authApi";
@@ -28,6 +28,7 @@ export interface UseRegisterReturn {
 
 export function useRegister(): UseRegisterReturn {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setAuth } = useAuthStore();
   const queryClient = useQueryClient();
 
@@ -105,7 +106,8 @@ export function useRegister(): UseRegisterReturn {
       if (response.token && response.user) {
         setAuth(response.user, response.token);
         queryClient.clear();
-        navigate("/u/home", { replace: true });
+        const redirect = searchParams.get("redirect");
+        navigate(redirect?.startsWith("/") ? redirect : "/u/home", { replace: true });
       }
 
       return true;

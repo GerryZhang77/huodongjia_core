@@ -3,8 +3,8 @@
  * 手机号 + 验证码 + 密码注册
  */
 
-import React, { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input, Button } from "@/components/ui";
 import { useRegister } from "@/features/auth/hooks";
 import { checkAccount } from "@/features/auth/services/authApi";
@@ -12,6 +12,7 @@ import { Lock, Eye, EyeOff, AlertCircle, Phone, Shield, User, CheckCircle, XCirc
 
 export const RegisterForm: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register, sendCode, loading, sendingCode, countdown, error, clearError } = useRegister();
 
   const [phone, setPhone] = useState("");
@@ -88,7 +89,10 @@ export const RegisterForm: React.FC = () => {
         {/* 返回按钮 */}
         <button
           type="button"
-          onClick={() => navigate("/login")}
+          onClick={() => {
+            const redirect = searchParams.get("redirect");
+            navigate(redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login");
+          }}
           className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -246,7 +250,10 @@ export const RegisterForm: React.FC = () => {
           已有账号？
           <button
             type="button"
-            onClick={() => navigate("/login")}
+            onClick={() => {
+              const redirect = searchParams.get("redirect");
+              navigate(redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : "/login");
+            }}
             className="ml-1 font-semibold text-primary-400 hover:text-primary-500 transition-colors"
           >
             立即登录

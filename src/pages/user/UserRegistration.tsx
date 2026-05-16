@@ -382,7 +382,7 @@ const UserRegistration: FC = () => {
               </p>
             </div>
             <span className="px-2 py-1 h-fit bg-success-50 dark:bg-success-900/30 text-success-600 dark:text-success-400 text-[10px] font-medium rounded-full">
-              报名中
+              {activity.registrationType?.name || "报名中"}
             </span>
           </div>
         </div>

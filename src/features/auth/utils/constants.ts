@@ -21,7 +21,7 @@ export const TEST_ACCOUNTS: AccountOption[] = [
     description: "密码: 123456",
   },
   {
-    label: "普通用户",
+    label: "参与者账号",
     value: "user1",
     description: "密码: 123456",
   },

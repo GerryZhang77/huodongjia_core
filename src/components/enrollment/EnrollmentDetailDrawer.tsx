@@ -141,6 +141,11 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
                 >
                   {STATUS_LABELS[enrollment.status] || enrollment.status}
                 </span>
+                {enrollment.registrationTypeName && (
+                  <span className="px-2 py-0.5 text-xs rounded-full font-medium bg-blue-50 text-blue-600">
+                    {enrollment.registrationTypeName}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 {enrollment.gender && (

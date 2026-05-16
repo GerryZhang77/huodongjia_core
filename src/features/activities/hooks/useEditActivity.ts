@@ -40,6 +40,7 @@ export const useEditActivity = (activityId: string) => {
         enableNfc: data.enable_nfc === true,
         status: "published",
         registrationFormSchema: data.registration_form_schema || undefined,
+        registrationTypes: data.registration_types || undefined,
       };
 
       // 只有当有封面图片时才添加 coverImage 和 images 字段

@@ -51,7 +51,7 @@ export const mockAdmin: MockUser = {
   created_at: "2025-01-05T10:00:00Z",
 };
 
-// 普通用户账号
+// 参与者账号
 export const mockParticipant: MockUser = {
   id: "user_001",
   phone: "13800138003",

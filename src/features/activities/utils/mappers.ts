@@ -5,6 +5,7 @@
  */
 
 import type { Activity } from "../types";
+import type { ActivityRegistrationType, RegistrationFormField } from "../types";
 
 /**
  * API 返回的活动数据结构（与后端/Mock 一致）
@@ -50,6 +51,9 @@ export interface ApiActivityData {
   allowWaitlist?: boolean;
   enable_nfc?: boolean;
   enableNfc?: boolean;
+  registration_form_schema?: RegistrationFormField[];
+  registrationFormSchema?: RegistrationFormField[];
+  registrationTypes?: ActivityRegistrationType[];
 }
 
 /**
@@ -95,6 +99,11 @@ export const mapApiActivityToActivity = (
       isPublic: apiActivity.isPublic ?? apiActivity.is_public,
       allowWaitlist: apiActivity.allowWaitlist ?? apiActivity.allow_waitlist,
       enableNfc: apiActivity.enableNfc ?? apiActivity.enable_nfc,
+      registrationFormSchema:
+        apiActivity.registrationFormSchema ||
+        apiActivity.registration_form_schema ||
+        null,
+      registrationTypes: apiActivity.registrationTypes || [],
     };
 
     console.log("mapApiActivityToActivity - ✅ 转换成功:", result);

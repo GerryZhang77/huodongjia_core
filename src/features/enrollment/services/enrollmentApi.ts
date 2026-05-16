@@ -40,6 +40,9 @@ interface BackendEnrollment {
   occupation?: string | null;
   other_info?: string | null;
   formData?: Record<string, unknown> | null;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string | null;
+  registrationTypeMatchEnabled?: boolean | null;
   status: string;
   created_at?: string;
   createdAt?: string;
@@ -82,6 +85,8 @@ const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
     | string
     | undefined;
 
+  const registrationTypeName = backend.registrationTypeName || undefined;
+
   return {
     id: backend.id,
     activityId: backend.event_id ?? backend.eventId ?? "",
@@ -98,7 +103,13 @@ const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
     company,
     industry,
     city,
-    customFields: otherInfo,
+    customFields: {
+      ...otherInfo,
+      ...(registrationTypeName ? { 报名类型: registrationTypeName } : {}),
+    },
+    registrationTypeId: backend.registrationTypeId || undefined,
+    registrationTypeName,
+    registrationTypeMatchEnabled: backend.registrationTypeMatchEnabled ?? undefined,
     status: backend.status as EnrollmentStatus,
     enrolledAt: backend.created_at ?? backend.createdAt ?? "",
     updatedAt: backend.updated_at ?? backend.updatedAt ?? "",

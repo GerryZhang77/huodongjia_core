@@ -42,6 +42,28 @@ export interface RegistrationFormField {
   options?: string[]; // select/multi-select/radio 时的选项
 }
 
+export type RegistrationTypeEligibilityMode = "public" | "allowlist";
+
+export interface RegistrationTypeMember {
+  userId: string;
+  name?: string | null;
+  account?: string | null;
+  phone?: string | null;
+  avatar?: string | null;
+}
+
+export interface ActivityRegistrationType {
+  id?: string;
+  name: string;
+  description?: string | null;
+  formSchema: RegistrationFormField[];
+  eligibilityMode: RegistrationTypeEligibilityMode;
+  isDefault: boolean;
+  matchEnabled: boolean;
+  sortOrder: number;
+  members: RegistrationTypeMember[];
+}
+
 /**
  * 活动实体
  */
@@ -70,6 +92,7 @@ export interface Activity {
   allowWaitlist?: boolean;
   enableNfc?: boolean;
   registrationFormSchema?: RegistrationFormField[] | null;
+  registrationTypes?: ActivityRegistrationType[];
 }
 
 /**
@@ -102,6 +125,7 @@ export interface ActivityFormData {
    */
   enable_nfc?: boolean;
   registration_form_schema?: RegistrationFormField[];
+  registration_types?: ActivityRegistrationType[];
 }
 
 /**
@@ -127,6 +151,7 @@ export interface CreateActivityRequest {
   registration_start?: string;
   registration_deadline: string;
   registration_form_schema?: RegistrationFormField[];
+  registration_types?: ActivityRegistrationType[];
 }
 
 /**
@@ -152,6 +177,7 @@ export interface UpdateActivityRequest {
   allowWaitlist?: boolean;
   enableNfc?: boolean;
   registrationFormSchema?: RegistrationFormField[];
+  registrationTypes?: ActivityRegistrationType[];
 }
 
 /**

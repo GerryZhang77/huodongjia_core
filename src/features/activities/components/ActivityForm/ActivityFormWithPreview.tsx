@@ -14,7 +14,6 @@ import {
   TextArea,
   Button,
   ImageUploader,
-  Selector,
   Stepper,
   Switch,
   Card,
@@ -47,11 +46,17 @@ import {
   validateParticipants,
   createTimeValidationRules,
 } from "../../utils";
-import type { ActivityFormData, ActivityCategory } from "../../types";
+import type {
+  ActivityFormData,
+  ActivityCategory,
+  ActivityRegistrationType,
+  RegistrationFormField,
+} from "../../types";
 import { DatePickerField } from "./DatePickerField";
 import { CustomSelector } from "./CustomSelector";
 import { RequirementListEditor } from "./RequirementListEditor";
-import { RegistrationFormBuilder } from "../RegistrationFormBuilder";
+import { RegistrationTypesBuilder } from "./RegistrationTypesBuilder";
+import { createDefaultRegistrationTypes } from "./registrationTypeDefaults";
 import { ActivityPreview } from "@/components/business";
 import { useAuthStore } from "@/features/auth/stores";
 
@@ -96,28 +101,95 @@ export const ActivityFormWithPreview: React.FC<
   const [tplSaveType, setTplSaveType] = useState<
     "registration_form" | "requirements" | null
   >(null);
+  const [registrationTemplateTargetIndex, setRegistrationTemplateTargetIndex] =
+    useState<number | null>(null);
+
+  const syncRegistrationTypeSchema = useCallback(
+    (typeIndex: number, schema: RegistrationFormField[]) => {
+      const currentTypesRaw = form.getFieldValue("registration_types") as
+        | ActivityRegistrationType[]
+        | undefined;
+      const currentTypes = currentTypesRaw?.length
+        ? currentTypesRaw
+        : createDefaultRegistrationTypes();
+      const safeIndex = Math.min(Math.max(typeIndex, 0), currentTypes.length - 1);
+      const nextTypes = currentTypes.map((type, index) =>
+        index === safeIndex ? { ...type, formSchema: schema } : type,
+      );
+      const defaultType = nextTypes.find((type) => type.isDefault) || nextTypes[0];
+
+      form.setFieldsValue({
+        registration_types: nextTypes,
+        registration_form_schema: defaultType?.formSchema || schema,
+      });
+      setFormValues((prev) => ({
+        ...prev,
+        registration_types: nextTypes,
+        registration_form_schema: defaultType?.formSchema || schema,
+      }));
+    },
+    [form],
+  );
 
   // 从模板写回 Form 字段
   const applyTemplate = useCallback(
     (template: FormTemplate) => {
       if (template.type === "registration_form") {
-        form.setFieldsValue({ registration_form_schema: template.schema });
+        const schema = Array.isArray(template.schema)
+          ? (template.schema as RegistrationFormField[])
+          : [];
+        syncRegistrationTypeSchema(
+          registrationTemplateTargetIndex ?? 0,
+          schema,
+        );
       } else if (template.type === "requirements") {
         form.setFieldsValue({ requirements: template.schema });
+        setFormValues((prev) => ({
+          ...prev,
+          requirements: template.schema as any,
+        }));
       }
-      setFormValues((prev) => ({
-        ...prev,
-        ...(template.type === "registration_form"
-          ? { registration_form_schema: template.schema as any }
-          : { requirements: template.schema as any }),
-      }));
       Toast.show({
         icon: "success",
         content: `已应用模板「${template.name}」`,
       });
     },
-    [form],
+    [form, registrationTemplateTargetIndex, syncRegistrationTypeSchema],
   );
+
+  const closeTemplatePicker = useCallback(() => {
+    setTplPickerType(null);
+    setRegistrationTemplateTargetIndex(null);
+  }, []);
+
+  const closeTemplateSaveModal = useCallback(() => {
+    setTplSaveType(null);
+    setRegistrationTemplateTargetIndex(null);
+  }, []);
+
+  const getRegistrationTemplateSchema = useCallback(() => {
+    const currentTypesRaw = form.getFieldValue("registration_types") as
+      | ActivityRegistrationType[]
+      | undefined;
+    const currentTypes = currentTypesRaw?.length
+      ? currentTypesRaw
+      : createDefaultRegistrationTypes();
+    const safeIndex = Math.min(
+      Math.max(registrationTemplateTargetIndex ?? 0, 0),
+      currentTypes.length - 1,
+    );
+    return currentTypes[safeIndex]?.formSchema || form.getFieldValue("registration_form_schema");
+  }, [form, registrationTemplateTargetIndex]);
+
+  const openRegistrationTemplatePicker = useCallback((typeIndex: number) => {
+    setRegistrationTemplateTargetIndex(typeIndex);
+    setTplPickerType("registration_form");
+  }, []);
+
+  const openRegistrationTemplateSave = useCallback((typeIndex: number) => {
+    setRegistrationTemplateTargetIndex(typeIndex);
+    setTplSaveType("registration_form");
+  }, []);
 
   // 获取用户信息作为主办方
   const user = useAuthStore((state) => state.user);
@@ -148,6 +220,13 @@ export const ActivityFormWithPreview: React.FC<
         allow_waitlist: activity.allowWaitlist === true,
         enable_nfc: activity.enableNfc === true,
         registration_form_schema: activity.registrationFormSchema || undefined,
+        registration_types:
+          activity.registrationTypes?.length
+            ? activity.registrationTypes
+            : createDefaultRegistrationTypes().map((type) => ({
+                ...type,
+                formSchema: activity.registrationFormSchema || type.formSchema,
+              })),
       };
       form.setFieldsValue(initialValues);
       setFormValues(initialValues as any);
@@ -169,6 +248,7 @@ export const ActivityFormWithPreview: React.FC<
         allow_waitlist: false,
         category: ["business"] as unknown as ActivityCategory,
         tags: [],
+        registration_types: createDefaultRegistrationTypes(),
       };
       form.setFieldsValue(defaultValues);
       setFormValues(defaultValues);
@@ -243,6 +323,26 @@ export const ActivityFormWithPreview: React.FC<
       const submitData: any = {
         ...values,
       };
+      const registrationTypes =
+        submitData.registration_types?.length
+          ? submitData.registration_types
+          : createDefaultRegistrationTypes();
+      const registrationTypeNames = registrationTypes.map((type: any) =>
+        String(type.name || "").trim(),
+      );
+      if (registrationTypeNames.some((name: string) => !name)) {
+        Toast.show({ icon: "fail", content: "请填写报名类型名称" });
+        return;
+      }
+      if (new Set(registrationTypeNames).size !== registrationTypeNames.length) {
+        Toast.show({ icon: "fail", content: "报名类型名称不能重复" });
+        return;
+      }
+      const defaultRegistrationType =
+        registrationTypes.find((type: any) => type.isDefault) || registrationTypes[0];
+      submitData.registration_types = registrationTypes;
+      submitData.registration_form_schema =
+        defaultRegistrationType?.formSchema || submitData.registration_form_schema;
 
       // 只有当图片列表不为空时才添加图片字段
       if (fileList.length > 0) {
@@ -502,38 +602,17 @@ export const ActivityFormWithPreview: React.FC<
         </Form.Item> */}
       </Card>
 
-      {/* 报名信息收集 */}
+      {/* 报名类型与问卷 */}
       <Card
-        title={
-          <div className="flex items-center justify-between">
-            <span>报名信息收集</span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setTplPickerType("registration_form")}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg text-primary-600 hover:bg-primary-50 transition-colors"
-                title="从已保存的模板中导入"
-              >
-                <FileText size={12} />
-                从模板导入
-              </button>
-              <button
-                type="button"
-                onClick={() => setTplSaveType("registration_form")}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-                title="把当前内容保存为可复用的模板"
-              >
-                <Save size={12} />
-                保存为模板
-              </button>
-            </div>
-          </div>
-        }
+        title="报名类型与问卷"
         className="mb-4"
         style={{ "--border-radius": "12px" } as any}
       >
-        <Form.Item name="registration_form_schema">
-          <RegistrationFormBuilder />
+        <Form.Item name="registration_types">
+          <RegistrationTypesBuilder
+            onImportTemplate={openRegistrationTemplatePicker}
+            onSaveTemplate={openRegistrationTemplateSave}
+          />
         </Form.Item>
       </Card>
 
@@ -835,7 +914,7 @@ export const ActivityFormWithPreview: React.FC<
         <TemplatePicker
           visible
           type={tplPickerType}
-          onClose={() => setTplPickerType(null)}
+          onClose={closeTemplatePicker}
           onPick={applyTemplate}
         />
       )}
@@ -847,10 +926,10 @@ export const ActivityFormWithPreview: React.FC<
           type={tplSaveType}
           schema={
             tplSaveType === "registration_form"
-              ? form.getFieldValue("registration_form_schema")
+              ? getRegistrationTemplateSchema()
               : form.getFieldValue("requirements")
           }
-          onClose={() => setTplSaveType(null)}
+          onClose={closeTemplateSaveModal}
         />
       )}
     </div>

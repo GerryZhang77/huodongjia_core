@@ -13,7 +13,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input, Modal, Checkbox } from "@/components/ui";
 import { useLogin } from "@/features/auth/hooks";
 import { sendSmsCode } from "@/features/auth/services";
@@ -36,6 +36,7 @@ const SMS_COUNTDOWN_SECONDS = 60;
 
 export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loginBySms, loading } = useLogin();
 
   const [mode, setMode] = useState<LoginMode>("password");
@@ -77,8 +78,9 @@ export const LoginForm: React.FC = () => {
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     setError("");
+    const normalizedIdentifier = identifier.trim();
 
-    if (!identifier) {
+    if (!normalizedIdentifier) {
       setError("请输入用户名或手机号");
       return;
     }
@@ -87,7 +89,7 @@ export const LoginForm: React.FC = () => {
       return;
     }
 
-    login({ identifier, password });
+    login({ identifier: normalizedIdentifier, password });
   };
 
   const handleSendSmsCode = async () => {
@@ -421,7 +423,10 @@ export const LoginForm: React.FC = () => {
           还没有账号？
           <button
             type="button"
-            onClick={() => navigate("/register")}
+            onClick={() => {
+              const redirect = searchParams.get("redirect");
+              navigate(redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : "/register");
+            }}
             className="ml-1 font-semibold text-primary-400 hover:text-primary-500 transition-colors"
           >
             立即注册

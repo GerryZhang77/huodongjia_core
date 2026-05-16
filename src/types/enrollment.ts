@@ -64,6 +64,11 @@ export interface Enrollment {
   // 存储从 Excel 导入的任意列，如 "VIP等级", "推荐人", "特殊需求" 等
   customFields?: Record<string, unknown>;
 
+  // 报名类型（活动粒度，如公开报名、嘉宾、媒体等）
+  registrationTypeId?: string;
+  registrationTypeName?: string;
+  registrationTypeMatchEnabled?: boolean;
+
   // 表单数据（原始提交数据）
   formData?: Record<string, unknown>;
 

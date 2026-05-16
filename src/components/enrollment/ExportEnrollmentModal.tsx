@@ -47,6 +47,7 @@ const DEFAULT_EXPORT_FIELDS: ExportField[] = [
   { key: "company", label: "公司", enabled: true },
   { key: "city", label: "城市", enabled: true },
   { key: "tags", label: "兴趣标签", enabled: true },
+  { key: "registrationTypeName", label: "报名类型", enabled: true },
   { key: "bio", label: "个人简介", enabled: false },
   { key: "matchingNeeds", label: "匹配需求", enabled: false },
   { key: "status", label: "状态", enabled: true },
@@ -135,6 +136,9 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
           case "tags":
             row[field.label] = e.tags?.join("、") || "";
             break;
+          case "registrationTypeName":
+            row[field.label] = e.registrationTypeName || "";
+            break;
           case "bio":
             row[field.label] = e.bio || "";
             break;
@@ -212,6 +216,8 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
             return { wch: 10 };
           case "tags":
             return { wch: 20 };
+          case "registrationTypeName":
+            return { wch: 14 };
           case "bio":
           case "matchingNeeds":
             return { wch: 30 };

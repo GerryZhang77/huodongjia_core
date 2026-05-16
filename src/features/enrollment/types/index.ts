@@ -41,6 +41,9 @@ export interface Enrollment {
   city?: string;
   tags?: string[];
   customFields?: Record<string, unknown>; // 自定义字段，存储未识别的 Excel 列
+  registrationTypeId?: string;
+  registrationTypeName?: string;
+  registrationTypeMatchEnabled?: boolean;
   status: EnrollmentStatus;
   enrolledAt: string;
   updatedAt: string;

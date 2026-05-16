@@ -156,6 +156,12 @@ export interface UserActivity {
     avatar: string;
   };
   registrationFormSchema?: RegistrationFormField[] | null;
+  registrationType?: {
+    id?: string;
+    name: string;
+    matchEnabled: boolean;
+    isDefault: boolean;
+  } | null;
 }
 
 export interface UserActivityListResponse {

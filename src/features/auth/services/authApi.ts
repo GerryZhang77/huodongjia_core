@@ -35,7 +35,7 @@ export async function login(
 ): Promise<LoginResponse> {
   try {
     const response = await api.post<LoginResponse>("/api/auth/login", {
-      identifier: credentials.identifier,
+      identifier: credentials.identifier.trim(),
       password: credentials.password,
     });
 

@@ -4,7 +4,7 @@
  * 支持角色权限控制
  */
 
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/stores";
 import { debugLogger } from "@/utils/debugLogger";
 import type { UserType } from "@/features/auth/types";
@@ -52,6 +52,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRole,
 }) => {
   const { isAuthenticated, user, token } = useAuthStore();
+  const location = useLocation();
 
   debugLogger.log("[ProtectedRoute] 检查认证状态", {
     isAuthenticated,
@@ -65,7 +66,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // 未登录，重定向到登录页
   if (!isAuthenticated || !user) {
     debugLogger.warn("[ProtectedRoute] 未认证，重定向到登录页");
-    return <Navigate to="/login" replace />;
+    const redirect = `${location.pathname}${location.search}`;
+    return (
+      <Navigate
+        to={`/login?redirect=${encodeURIComponent(redirect)}`}
+        replace
+      />
+    );
   }
 
   // 检查角色权限

@@ -7,7 +7,7 @@
 
 /**
  * 用户类型
- * - user: C端普通用户
+ * - user: C端参与者
  * - organizer: B端商家/主办方
  * - admin: 管理员
  */
@@ -68,7 +68,7 @@ export function isMerchant(user: User | null): boolean {
 }
 
 /**
- * 判断用户是否为普通用户
+ * 判断用户是否为参与者
  */
 export function isNormalUser(user: User | null): boolean {
   return user?.user_type === "user";
