@@ -74,7 +74,7 @@ export default function TestLoginPage() {
       console.log("🚀 开始测试验证码登录...");
       console.log("📤 请求参数:", { phone, code: "123456" });
 
-      const data = (await api.post("/api/auth/login", {
+      const data = (await api.post("/api/auth/login-sms", {
         phone,
         code: "123456",
       })) as ApiResponse;
