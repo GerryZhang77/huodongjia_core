@@ -110,7 +110,7 @@ export const ActivityManageNew: FC = () => {
 
   return (
     <MerchantLayout title="活动管理" showBack onBack={handleBack}>
-      <div className="space-y-4">
+      <div className="space-y-4 px-3 pt-3 pb-4 sm:px-4 lg:p-0">
         {/* 活动信息卡片 */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-start gap-4">

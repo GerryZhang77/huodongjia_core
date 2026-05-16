@@ -75,6 +75,7 @@ const UserDiscoverPeople = lazy(
 const UserConversations = lazy(() => import("./pages/user/UserConversations"));
 const UserChatRoom = lazy(() => import("./pages/user/UserChatRoom"));
 const UserEditProfile = lazy(() => import("./pages/user/UserEditProfile"));
+const UserFieldLibrary = lazy(() => import("./pages/user/UserFieldLibrary"));
 const UserActivityHistory = lazy(
   () => import("./pages/user/UserActivityHistory"),
 );
@@ -453,6 +454,16 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserEditProfile />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 我的信息库（仅自己可见，可对外公开个别字段） */}
+                <Route
+                  path="/u/field-library"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserFieldLibrary />
                     </ProtectedRoute>
                   }
                 />

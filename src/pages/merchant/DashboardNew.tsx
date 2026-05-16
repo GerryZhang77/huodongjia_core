@@ -258,12 +258,14 @@ const ActivityCard: FC<ActivityCardProps> = ({
         {/* 信息 */}
         <div className="space-y-2 mb-3">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Calendar size={14} className="text-gray-400" />
-            <span>{formatDate(activity.eventStartTime)} - {formatDate(activity.eventEndTime)}</span>
+            <Calendar size={14} className="text-gray-400 flex-shrink-0" />
+            <span className="truncate min-w-0 flex-1">
+              {formatDate(activity.eventStartTime)} - {formatDate(activity.eventEndTime)}
+            </span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <MapPin size={14} className="text-gray-400" />
-            <span className="truncate">{activity.location}</span>
+            <MapPin size={14} className="text-gray-400 flex-shrink-0" />
+            <span className="truncate min-w-0 flex-1">{activity.location}</span>
           </div>
         </div>
 
@@ -292,23 +294,23 @@ const ActivityCard: FC<ActivityCardProps> = ({
         {/* 快捷操作 */}
         <div className="flex gap-2">
           <button
-            className="flex-1 h-9 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors flex items-center justify-center gap-1"
+            className="flex-1 min-w-0 h-9 px-2 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors flex items-center justify-center gap-1"
             onClick={(e) => {
               e.stopPropagation();
               onManage();
             }}
           >
-            <Users size={14} />
-            管理报名
+            <Users size={14} className="flex-shrink-0" />
+            <span className="truncate">管理报名</span>
             {activity.pendingCount > 0 && (
-              <span className="ml-1 w-5 h-5 bg-error-500 text-white text-xs rounded-full flex items-center justify-center">
-                {activity.pendingCount}
+              <span className="flex-shrink-0 ml-0.5 min-w-[20px] h-5 px-1 bg-error-500 text-white text-xs rounded-full flex items-center justify-center">
+                {activity.pendingCount > 99 ? "99+" : activity.pendingCount}
               </span>
             )}
           </button>
           {activity.hasMatchResult ? (
             <button
-              className="h-9 px-3 bg-accent-50 text-accent-600 rounded-lg text-sm font-medium hover:bg-accent-100 transition-colors flex items-center gap-1"
+              className="flex-shrink-0 h-9 px-3 bg-accent-50 text-accent-600 rounded-lg text-sm font-medium hover:bg-accent-100 transition-colors flex items-center gap-1"
               onClick={(e) => e.stopPropagation()}
             >
               <CheckCircle size={14} />
@@ -316,7 +318,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
             </button>
           ) : activity.status === "recruiting" || activity.status === "full" ? (
             <button
-              className="h-9 px-3 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
+              className="flex-shrink-0 h-9 px-3 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
               onClick={(e) => {
                 e.stopPropagation();
                 onMatch();
@@ -472,7 +474,7 @@ export const DashboardNew: FC = () => {
 
   return (
     <MerchantLayout title="活动管理">
-      <div className="space-y-6 pb-6">
+      <div className="space-y-6 px-3 pt-3 pb-6 sm:px-4 lg:p-0">
         {/* 欢迎卡片 + 创建按钮 */}
         <div className="relative mb-4">
           <div className="bg-gradient-to-br from-primary-400 to-primary-500 rounded-2xl p-5 pb-12 text-white">
@@ -533,13 +535,13 @@ export const DashboardNew: FC = () => {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-semibold text-gray-900">快捷入口</h3>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-2 sm:gap-3">
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
                 <button
                   key={action.label}
-                  className="flex flex-col items-center py-3 bg-white rounded-xl border border-gray-100 hover:border-primary-200 hover:bg-primary-50/50 transition-all duration-200 hover:-translate-y-0.5"
+                  className="min-w-0 flex flex-col items-center py-3 px-1 bg-white rounded-xl border border-gray-100 hover:border-primary-200 hover:bg-primary-50/50 transition-all duration-200 hover:-translate-y-0.5"
                   onClick={() => navigate(action.path)}
                 >
                   <div
@@ -547,7 +549,9 @@ export const DashboardNew: FC = () => {
                   >
                     <Icon size={20} />
                   </div>
-                  <span className="text-xs text-gray-600">{action.label}</span>
+                  <span className="text-xs text-gray-600 truncate max-w-full">
+                    {action.label}
+                  </span>
                 </button>
               );
             })}

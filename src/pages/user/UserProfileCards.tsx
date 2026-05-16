@@ -27,6 +27,7 @@ import {
   Copy,
   Check,
   MessageCircle,
+  Database,
 } from "lucide-react";
 import dayjs from "dayjs";
 import { Toast } from "@/components/ui/Toast";
@@ -568,6 +569,12 @@ const UserProfileCards: FC = () => {
             label="我的收藏"
             color="text-pink-500"
             onClick={() => navigate("/u/favorites")}
+          />
+          <MenuItem
+            icon={Database}
+            label="我的信息库"
+            color="text-purple-500"
+            onClick={() => navigate("/u/field-library")}
           />
           <MenuItem
             icon={Settings}

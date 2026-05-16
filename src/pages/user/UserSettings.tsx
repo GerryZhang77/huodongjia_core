@@ -3,7 +3,7 @@
  * 用户账户设置和偏好配置
  */
 
-import { FC, useState } from "react";
+import { FC, useState, type ElementType } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
@@ -29,7 +29,7 @@ import { NotificationPreferencesPanel } from "@/features/social";
 // 设置项类型
 interface SettingItem {
   id: string;
-  icon: FC<{ size?: number; className?: string }>;
+  icon: ElementType;
   label: string;
   description?: string;
   type: "link" | "toggle" | "action";

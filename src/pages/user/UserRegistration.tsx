@@ -4,14 +4,23 @@
  * 若活动无自定义 schema，则使用默认表单
  */
 
-import { FC, useState, useMemo, useCallback } from "react";
+import { FC, useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Calendar, MapPin, AlertCircle } from "lucide-react";
+import { Calendar, MapPin, AlertCircle, Sparkles } from "lucide-react";
+import { Dialog } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useActivityDetail } from "@/features/user";
 import { useSubmitEnrollment } from "@/features/user/enrollment/hooks/useSubmitEnrollment";
+import {
+  useProfilePrefill,
+  useUpsertFieldLibrary,
+  matchPrefillField,
+  toFormValue,
+  mapFieldTypeToStorage,
+  type UpsertFieldLibraryItem,
+} from "@/features/user/field-library";
 import type { RegistrationFormField } from "@/features/activities/types";
 import dayjs from "dayjs";
 
@@ -186,6 +195,8 @@ const UserRegistration: FC = () => {
   const { data: activityData } = useActivityDetail(id);
   const { mutateAsync: submitEnrollment, isPending: isSubmitting } =
     useSubmitEnrollment(id || "");
+  const { data: prefillData } = useProfilePrefill();
+  const { mutateAsync: upsertFieldsAsync } = useUpsertFieldLibrary();
 
   const activity = useMemo(() => activityData?.data, [activityData]);
 
@@ -199,6 +210,34 @@ const UserRegistration: FC = () => {
 
   // 表单数据状态：key -> value
   const [formData, setFormData] = useState<Record<string, string | string[]>>({});
+  // 哪些字段被自动预填了（用于视觉提示）
+  const [prefilledKeys, setPrefilledKeys] = useState<Set<string>>(new Set());
+  // 防止 prefill 多次覆盖用户已修改值
+  const hasAppliedPrefill = useRef(false);
+
+  // 自动预填：当 prefill 数据和 schema 都准备好后，把命中的字段填入 formData
+  useEffect(() => {
+    if (hasAppliedPrefill.current) return;
+    if (!prefillData || !formSchema.length) return;
+
+    const next: Record<string, string | string[]> = {};
+    const matched = new Set<string>();
+    for (const field of formSchema) {
+      const hit = matchPrefillField(
+        field,
+        prefillData.fields,
+        prefillData.aliases,
+      );
+      if (!hit) continue;
+      next[field.key] = toFormValue(field, hit);
+      matched.add(field.key);
+    }
+    if (matched.size > 0) {
+      setFormData((prev) => ({ ...next, ...prev }));
+      setPrefilledKeys(matched);
+    }
+    hasAppliedPrefill.current = true;
+  }, [prefillData, formSchema]);
 
   const setField = useCallback((key: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -241,11 +280,45 @@ const UserRegistration: FC = () => {
 
     try {
       await submitEnrollment(submitData as any);
-      Toast.show({ icon: "success", content: "报名成功！", duration: 2000 });
-      setTimeout(
-        () => navigate(`/u/activities/${id}`, { replace: true }),
-        2000
-      );
+      Toast.show({ icon: "success", content: "报名成功！", duration: 1500 });
+
+      // 收集这次填写中可保存到信息库的字段（非空）
+      const toSave: UpsertFieldLibraryItem[] = [];
+      for (const field of formSchema) {
+        const val = formData[field.key];
+        if (val === undefined) continue;
+        if (Array.isArray(val) ? val.length === 0 : !String(val).trim()) continue;
+        toSave.push({
+          field_key: field.key,
+          field_label: field.label,
+          field_value: Array.isArray(val) ? val.join(",") : String(val),
+          field_type: mapFieldTypeToStorage(field.type),
+        });
+      }
+
+      // 提交成功后询问是否保存到信息库（保存按用户选择决定，不阻塞跳转）
+      const navigateToDetail = () =>
+        navigate(`/u/activities/${id}`, { replace: true });
+
+      if (toSave.length > 0) {
+        const ok = await Dialog.confirm({
+          title: "保存到我的信息库？",
+          content:
+            "把这次填写的内容保存到「我的信息库」，下次报名其他活动时自动预填，免重复输入。仅自己可见，可在个人中心随时管理。",
+          confirmText: "保存",
+          cancelText: "不用了",
+        });
+        if (ok) {
+          try {
+            await upsertFieldsAsync(toSave);
+            Toast.show({ icon: "success", content: "已保存到信息库" });
+          } catch {
+            // 保存失败不阻塞流程
+            Toast.show({ content: "保存失败，可稍后在个人中心重试" });
+          }
+        }
+      }
+      navigateToDetail();
     } catch (error: any) {
       Toast.show({
         icon: "fail",
@@ -316,21 +389,38 @@ const UserRegistration: FC = () => {
 
         {/* 动态表单 */}
         <div className="px-4 py-5 md:px-6 space-y-5">
-          {formSchema.map((field) => (
-            <div key={field.key}>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                {field.label}
-                {field.required && (
-                  <span className="text-error-500 ml-0.5">*</span>
-                )}
-              </label>
-              <DynamicField
-                field={field}
-                value={formData[field.key] ?? (field.type === "multi-select" ? [] : "")}
-                onChange={(val) => setField(field.key, val)}
-              />
+          {prefilledKeys.size > 0 && (
+            <div className="flex items-start gap-2 px-3 py-2.5 bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-lg text-xs text-primary-700 dark:text-primary-300">
+              <Sparkles size={14} className="flex-shrink-0 mt-0.5" />
+              <span>
+                部分字段已根据你的「我的信息库」自动预填，可直接修改。
+              </span>
             </div>
-          ))}
+          )}
+          {formSchema.map((field) => {
+            const isPrefilled = prefilledKeys.has(field.key);
+            return (
+              <div key={field.key}>
+                <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <span>{field.label}</span>
+                  {field.required && (
+                    <span className="text-error-500">*</span>
+                  )}
+                  {isPrefilled && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
+                      <Sparkles size={10} />
+                      已预填
+                    </span>
+                  )}
+                </label>
+                <DynamicField
+                  field={field}
+                  value={formData[field.key] ?? (field.type === "multi-select" ? [] : "")}
+                  onChange={(val) => setField(field.key, val)}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* 底部操作栏 - 报名页隐藏 TabBar，专注表单 */}

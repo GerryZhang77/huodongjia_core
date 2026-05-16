@@ -2,11 +2,55 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+const TRAE_INSPECTOR_ATTR_PREFIX = "trae-inspector-";
+
+type BabelJsxAttribute = {
+  type?: string;
+  name?: {
+    type?: string;
+    name?: string;
+  };
+};
+
+type BabelJsxOpeningElementPath = {
+  node: {
+    attributes: BabelJsxAttribute[];
+  };
+};
+
+const dedupeTraeInspectorAttributes = () => ({
+  name: "dedupe-trae-inspector-attributes",
+  visitor: {
+    JSXOpeningElement(path: BabelJsxOpeningElementPath) {
+      const seen = new Set<string>();
+
+      path.node.attributes = path.node.attributes.filter((attr) => {
+        if (
+          attr?.type !== "JSXAttribute" ||
+          attr.name?.type !== "JSXIdentifier" ||
+          !attr.name.name.startsWith(TRAE_INSPECTOR_ATTR_PREFIX)
+        ) {
+          return true;
+        }
+
+        if (seen.has(attr.name.name)) {
+          return false;
+        }
+
+        seen.add(attr.name.name);
+        return true;
+      });
+    },
+  },
+});
+
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   // 加载环境变量（从 env/ 目录）
   const env = loadEnv(mode, "env", "");
   const useMock = env.VITE_USE_MOCK;
+  const enableReactDevLocator =
+    command === "serve" && env.VITE_ENABLE_REACT_DEV_LOCATOR !== "false";
 
   // 调试：打印所有环境变量
   console.log("🐛 调试信息:");
@@ -35,11 +79,15 @@ export default defineConfig(({ mode }) => {
   return {
     envDir: "env",
     plugins: [
-      react({
-        babel: {
-          plugins: ["react-dev-locator"],
-        },
-      }),
+      react(
+        enableReactDevLocator
+          ? {
+              babel: {
+                plugins: ["react-dev-locator", dedupeTraeInspectorAttributes],
+              },
+            }
+          : undefined
+      ),
       // traeBadgePlugin({
       //   variant: "dark",
       //   position: "bottom-right",
@@ -83,18 +131,19 @@ export default defineConfig(({ mode }) => {
               target: proxyTarget,
               changeOrigin: true,
               secure: false,
-              configure: (proxy, _options) => {
-                proxy.on("error", (err, _req, _res) => {
+              configure: (proxy) => {
+                proxy.on("error", (err) => {
                   console.log("proxy error", err);
                 });
-                proxy.on("proxyReq", (proxyReq, req, _res) => {
+                proxy.on("proxyReq", (proxyReq, req) => {
+                  void proxyReq;
                   console.log(
                     "Sending Request to the Target:",
                     req.method,
                     req.url
                   );
                 });
-                proxy.on("proxyRes", (proxyRes, req, _res) => {
+                proxy.on("proxyRes", (proxyRes, req) => {
                   console.log(
                     "Received Response from the Target:",
                     proxyRes.statusCode,

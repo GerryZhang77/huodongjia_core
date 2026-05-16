@@ -23,17 +23,23 @@ const TemplateListPage: React.FC = () => {
   const [activeType, setActiveType] = useState<FormTemplateType>(
     "registration_form",
   );
-  const { data: templates = [], isLoading } = useFormTemplates(activeType);
+  // 拉取全量，本地按 activeType 过滤；这样 tab 计数才能始终反映两类模板的真实数量
+  const { data: allTemplates = [], isLoading } = useFormTemplates();
   const updateMutation = useUpdateFormTemplate();
   const deleteMutation = useDeleteFormTemplate();
+
+  const templates = useMemo(
+    () => allTemplates.filter((t) => t.type === activeType),
+    [allTemplates, activeType],
+  );
 
   const counts = useMemo(() => {
     const map = new Map<FormTemplateType, number>();
     map.set("registration_form", 0);
     map.set("requirements", 0);
-    templates.forEach((t) => map.set(t.type, (map.get(t.type) ?? 0) + 1));
+    allTemplates.forEach((t) => map.set(t.type, (map.get(t.type) ?? 0) + 1));
     return map;
-  }, [templates]);
+  }, [allTemplates]);
 
   const handleRename = (t: FormTemplate) => {
     Dialog.confirm({
