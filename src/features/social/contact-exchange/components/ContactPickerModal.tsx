@@ -14,6 +14,7 @@ import { FC, ElementType, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Phone, Mail, MessageCircle, AlertCircle } from "lucide-react";
 import { Modal, Button } from "@/components/ui";
+import { useAuthStore } from "@/features/auth/stores/authStore";
 import { useMyContacts } from "../hooks/useMyContacts";
 import type { Contacts } from "../services/contactExchangeApi";
 
@@ -51,6 +52,7 @@ export const ContactPickerModal: FC<ContactPickerModalProps> = ({
   submitting = false,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { data: my, isLoading } = useMyContacts();
   const [selected, setSelected] = useState<Record<keyof Contacts, boolean>>({
     phone: false,
@@ -89,6 +91,11 @@ export const ContactPickerModal: FC<ContactPickerModalProps> = ({
     await onSubmit(payload);
   };
 
+  const profileEditPath =
+    user?.user_type === "organizer" || user?.user_type === "admin"
+      ? "/dashboard/profile/edit"
+      : "/u/profile/edit";
+
   return (
     <Modal
       open={open}
@@ -121,7 +128,7 @@ export const ContactPickerModal: FC<ContactPickerModalProps> = ({
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate("/u/profile/edit");
+                  navigate(profileEditPath);
                 }}
                 className="mt-2 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
               >
