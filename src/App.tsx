@@ -106,7 +106,10 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                {/* NFC 碰一碰结果页（公开，无需登录） */}
+                {/* NFC 手环 token 页（公开；绑定时需要登录） */}
+                <Route path="/nfc/t/:token" element={<NFCResultPage />} />
+
+                {/* NFC 碰一碰结果页（旧路径兼容，公开，无需登录） */}
                 <Route path="/nfc/:eventId/:userId" element={<NFCResultPage />} />
 
                 {/* ========== B端商家路由 ========== */}

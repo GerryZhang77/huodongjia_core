@@ -73,6 +73,11 @@ export type {
   ActivityCategory,
 } from "./userApi";
 
+// NFC 手环 API
+import * as nfcApi from "./nfcApi";
+export { nfcApi };
+export type { NfcResolveData, NfcTagInfo, NfcTagStatus } from "./nfcApi";
+
 // 商家 API (B端)
 import * as merchantApi from "./merchantApi";
 export { merchantApi };
