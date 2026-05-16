@@ -14,33 +14,9 @@ export type UserEnrollmentStatus =
 
 /**
  * 报名表单数据（与后端 form_data 字段对应）
+ * key 与活动的 registrationFormSchema.key 保持一致。
  */
-export interface EnrollmentFormData {
-  // 基本信息
-  姓名: string;
-  性别: string;
-  student_id: string;
-  联系方式?: string;
-  学院专业?: string;
-  年级?: string;
-  一句话自我介绍?: string;
-  // 匹配信息（必填，用于智能分组计算）
-  兴趣爱好: string;
-  所在职能部门: string;
-  "关注/从事的行业方向": string;
-  软件技能: string;
-  擅长领域: string;
-  // 补充信息（选填）
-  过往相关经历?: string;
-  所在创投俱乐部?: string;
-  过往成果?: string;
-  核心人脉资源?: string;
-  工作风格?: string;
-  擅长工作场景?: string;
-  加入初衷?: string;
-  可投入时间?: string;
-  对社团的理解?: string;
-}
+export type EnrollmentFormData = Record<string, string | string[]>;
 
 /**
  * 用户报名记录

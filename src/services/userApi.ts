@@ -186,40 +186,40 @@ export interface ActivityCategory {
 
 /**
  * 获取用户资料
- * GET /api/user/profile
+ * GET /api/auth/me
  */
 export async function getUserProfile(): Promise<{
   success: boolean;
   profile?: UserProfile;
 }> {
-  return api.get("/api/user/profile");
+  return api.get("/api/auth/me");
 }
 
 /**
  * 获取他人公开资料
- * GET /api/user/profile/:userId
+ * GET /api/dashboard/participant/:userId
  */
 export async function getPublicProfile(userId: string): Promise<{
   success: boolean;
   profile?: UserProfile;
 }> {
-  return api.get(`/api/user/profile/${userId}`);
+  return api.get(`/api/dashboard/participant/${userId}`);
 }
 
 /**
  * 更新用户资料
- * PUT /api/user/profile
+ * PUT /api/dashboard/participant
  */
 export async function updateUserProfile(data: UpdateProfileRequest): Promise<{
   success: boolean;
   profile?: UserProfile;
 }> {
-  return api.put("/api/user/profile", data);
+  return api.put("/api/dashboard/participant", data);
 }
 
 /**
  * 上传头像
- * POST /api/user/profile/avatar
+ * POST /api/dashboard/participant/update-avatar
  */
 export async function uploadAvatar(file: File): Promise<{
   success: boolean;
@@ -228,7 +228,7 @@ export async function uploadAvatar(file: File): Promise<{
   const formData = new FormData();
   formData.append("avatar", file);
 
-  return api.post("/api/user/profile/avatar", formData, {
+  return api.post("/api/dashboard/participant/update-avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 60_000,
   });
@@ -244,8 +244,9 @@ export async function uploadPhoto(file: File): Promise<{
 }> {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("destination", "user-photos");
   const res = await api.post<{ success: boolean; url?: string }>(
-    "/api/file/upload-image",
+    "/api/file/upload",
     formData,
     {
       headers: { "Content-Type": "multipart/form-data" },
@@ -272,27 +273,27 @@ export async function getUserStats(): Promise<{
 
 /**
  * 获取用户活动列表（我的活动）
- * GET /api/user/activities
+ * GET /api/events/participant
  */
 export async function getUserActivities(params?: {
   status?: string;
   page?: number;
   pageSize?: number;
 }): Promise<UserActivityListResponse> {
-  return api.get("/api/user/activities", { params });
+  return api.get("/api/events/participant", { params });
 }
 
 /**
  * 获取推荐活动
- * GET /api/user/activities/recommended
+ * GET /api/events/participant/recommended
  */
 export async function getRecommendedActivities(): Promise<UserActivityListResponse> {
-  return api.get("/api/user/activities/recommended");
+  return api.get("/api/events/participant/recommended");
 }
 
 /**
  * 搜索活动
- * GET /api/user/activities/search
+ * GET /api/events/participant/search
  */
 export async function searchActivities(params?: {
   keyword?: string;
@@ -301,7 +302,7 @@ export async function searchActivities(params?: {
   page?: number;
   pageSize?: number;
 }): Promise<UserActivityListResponse> {
-  return api.get("/api/user/activities/search", { params });
+  return api.get("/api/events/participant/search", { params });
 }
 
 /**
@@ -319,13 +320,13 @@ export async function getActivityCategories(): Promise<{
 
 /**
  * 获取活动详情
- * GET /api/user/activities/:id
+ * GET /api/events/participant/:id
  */
 export async function getUserActivityDetail(id: string): Promise<{
   success: boolean;
   data?: UserActivity;
 }> {
-  return api.get(`/api/user/activities/${id}`);
+  return api.get(`/api/events/participant/${id}`);
 }
 
 // ============================================
@@ -379,7 +380,7 @@ export async function toggleFavorite(activityId: string): Promise<{
 
 /**
  * 获取通知列表
- * GET /api/user/notifications
+ * GET /api/notification
  */
 export async function getNotifications(params?: {
   page?: number;
@@ -387,39 +388,27 @@ export async function getNotifications(params?: {
   type?: string;
   isRead?: boolean;
 }): Promise<NotificationListResponse> {
-  return api.get("/api/user/notifications", { params });
+  return api.get("/api/notification", { params });
 }
 
 /**
  * 标记通知为已读
- * POST /api/user/notifications/{id}/read
+ * POST /api/notification/{id}/read
  */
 export async function markNotificationRead(
   id: string,
 ): Promise<{ success: boolean }> {
-  return api.post(`/api/user/notifications/${id}/read`);
+  return api.post(`/api/notification/${id}/read`);
 }
 
 /**
  * 标记所有通知为已读
- * POST /api/user/notifications/read-all
+ * POST /api/notification/read-all
  */
 export async function markAllNotificationsRead(): Promise<{
   success: boolean;
 }> {
-  return api.post("/api/user/notifications/read-all");
-}
-
-// ============================================
-// API 函数 - 账号
-// ============================================
-
-/**
- * 删除账号
- * DELETE /api/user/account
- */
-export async function deleteAccount(): Promise<{ success: boolean }> {
-  return api.delete("/api/user/account");
+  return api.post("/api/notification/read-all");
 }
 
 /**

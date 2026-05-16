@@ -1038,6 +1038,7 @@ const EnrollmentManagementNew: React.FC = () => {
       {/* 详情抽屉 */}
       <EnrollmentDetailDrawer
         visible={showDetailDrawer}
+        activityId={id || ""}
         enrollment={detailEnrollment}
         onClose={() => {
           setShowDetailDrawer(false);

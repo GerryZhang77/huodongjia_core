@@ -6,7 +6,8 @@
  * 说明：后端不再区分"分组"与"最佳匹配"—— 每个用户的"小组"就是其 top5 匹配。
  */
 
-import { FC, useMemo, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
@@ -20,6 +21,7 @@ import { UserHoverCard } from "@/components/business/UserHoverCard";
 import { NFCTouchModal } from "@/components/business/NFCTouchModal";
 import { useActivityDetail } from "@/features/user";
 import { useBestMatches } from "@/features/user/hooks/useBestMatches";
+import { getBestMatchDetail } from "@/features/user/services/matchApi";
 import { generateDefaultAvatar } from "@/utils/avatar";
 import dayjs from "dayjs";
 
@@ -55,6 +57,7 @@ const normalizeGender = (g?: string): "male" | "female" | "other" | undefined =>
 const UserMatchResult: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [showNFCModal, setShowNFCModal] = useState(false);
 
@@ -92,21 +95,27 @@ const UserMatchResult: FC = () => {
     });
   }, [bestMatchesData]);
 
+  useEffect(() => {
+    if (!id || topMatches.length === 0) {
+      return;
+    }
+
+    topMatches.slice(0, 5).forEach((user) => {
+      queryClient.prefetchQuery({
+        queryKey: ["user", "match-detail", id, user.id],
+        queryFn: () => getBestMatchDetail(id, user.id),
+        staleTime: 10 * 60 * 1000,
+      });
+    });
+  }, [id, queryClient, topMatches]);
+
   const supportsNFC = Boolean(
     (activity as { enableNfc?: boolean } | undefined)?.enableNfc,
   );
 
-  const handleNavigateToProfile = (userId: string) => {
+  const handleNavigateToDetail = (userId: string) => {
     if (!userId) return;
-    // 把已知的姓名作为 fallback 透传到详情页，避免详情页回退到"用户 xxxxxxxx"
-    const match = topMatches.find((u) => u.id === userId);
-    const qs = new URLSearchParams();
-    if (id) qs.set("activityId", id);
-    if (activity?.title) qs.set("activityName", activity.title);
-    if (match?.name && match.name !== "未知用户") {
-      qs.set("fallbackName", match.name);
-    }
-    navigate(`/u/profile/${userId}?${qs.toString()}`);
+    navigate(`/u/activities/${id}/match-result/${userId}`);
   };
 
   // 加载中
@@ -233,7 +242,7 @@ const UserMatchResult: FC = () => {
                         tags: user.tags,
                       }}
                       matchScore={user.matchScore}
-                      onViewProfile={handleNavigateToProfile}
+                      onViewProfile={handleNavigateToDetail}
                     >
                       <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary-400 transition-all">
                         <img
@@ -285,10 +294,10 @@ const UserMatchResult: FC = () => {
 
                   {/* 查看详情 */}
                   <button
-                    onClick={() => handleNavigateToProfile(user.id)}
+                    onClick={() => handleNavigateToDetail(user.id)}
                     className="w-full mt-3 py-2 text-xs text-accent-500 bg-accent-50 dark:bg-accent-900/20 rounded-lg flex items-center justify-center gap-1 hover:bg-accent-100 dark:hover:bg-accent-900/30 transition-colors"
                   >
-                    查看个人主页
+                    查看匹配详情
                     <ChevronRight size={14} />
                   </button>
                 </div>

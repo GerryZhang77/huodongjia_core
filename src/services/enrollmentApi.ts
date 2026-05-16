@@ -71,32 +71,7 @@ export interface ImportEnrollmentResult {
   message?: string;
 }
 
-export interface EnrollmentFormData {
-  // 基本信息
-  姓名: string;
-  性别: string;
-  student_id: string;
-  联系方式?: string;
-  学院专业?: string;
-  年级?: string;
-  一句话自我介绍?: string;
-  // 匹配信息（必填，用于智能分组计算）
-  兴趣爱好: string;
-  所在职能部门: string;
-  "关注/从事的行业方向": string;
-  软件技能: string;
-  擅长领域: string;
-  // 补充信息（选填）
-  过往相关经历?: string;
-  所在创投俱乐部?: string;
-  过往成果?: string;
-  核心人脉资源?: string;
-  工作风格?: string;
-  擅长工作场景?: string;
-  加入初衷?: string;
-  可投入时间?: string;
-  对社团的理解?: string;
-}
+export type EnrollmentFormData = Record<string, string | string[]>;
 
 export interface SendNotificationRequest {
   enrollmentIds: string[];
@@ -187,52 +162,52 @@ export async function sendNotification(
 
 /**
  * 提交报名 (用户)
- * POST /api/user/activities/{activityId}/enroll
+ * POST /api/enrollments/{activityId}/enroll
  */
 export async function submitEnrollment(
   activityId: string,
   data: EnrollmentFormData
 ): Promise<EnrollmentDetailResponse> {
   // 后端期望 { enrollment: {...} } 格式
-  return api.post(`/api/user/activities/${activityId}/enroll`, { enrollment: data });
+  return api.post(`/api/enrollments/${activityId}/enroll`, { enrollment: data });
 }
 
 /**
  * 获取我的报名列表 (用户)
- * GET /api/user/enrollments
+ * GET /api/enrollments/enrollment-history
  */
 export async function getMyEnrollments(): Promise<EnrollmentListResponse> {
-  return api.get("/api/user/enrollments");
+  return api.get("/api/enrollments/enrollment-history");
 }
 
 /**
  * 获取我的报名详情 (用户)
- * GET /api/user/enrollments/{id}
+ * GET /api/enrollments/enrollment-history/{participationId}
  */
 export async function getMyEnrollmentDetail(
-  id: string
+  participationId: string
 ): Promise<EnrollmentDetailResponse> {
-  return api.get(`/api/user/enrollments/${id}`);
+  return api.get(`/api/enrollments/enrollment-history/${participationId}`);
 }
 
 /**
  * 取消报名 (用户)
- * POST /api/user/enrollments/{id}/cancel
+ * POST /api/enrollments/{participationId}/cancel
  */
 export async function cancelEnrollment(
-  id: string
+  participationId: string
 ): Promise<{ success: boolean }> {
-  return api.post(`/api/user/enrollments/${id}/cancel`);
+  return api.post(`/api/enrollments/${participationId}/cancel`);
 }
 
 /**
  * 检查报名状态 (用户)
- * GET /api/user/activities/{activityId}/enrollment-status
+ * GET /api/enrollments/{activityId}/enrollment-status
  */
 export async function checkEnrollmentStatus(activityId: string): Promise<{
   success: boolean;
   isEnrolled?: boolean;
   enrollment?: Enrollment;
 }> {
-  return api.get(`/api/user/activities/${activityId}/enrollment-status`);
+  return api.get(`/api/enrollments/${activityId}/enrollment-status`);
 }

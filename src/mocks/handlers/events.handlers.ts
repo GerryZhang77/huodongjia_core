@@ -56,9 +56,9 @@ export const activityHandlers = [
 
   /**
    * 获取我的活动列表（商家）
-   * GET /api/events/my
+   * GET /api/events/organizer/my
    */
-  http.get("/api/events/my", async ({ request }) => {
+  http.get("/api/events/organizer/my", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -84,9 +84,9 @@ export const activityHandlers = [
 
   /**
    * 获取活动详情
-   * GET /api/events/:id
+   * GET /api/events/organizer/:id
    */
-  http.get("/api/events/:id", async ({ params }) => {
+  http.get("/api/events/organizer/:id", async ({ params }) => {
     await delay(200);
 
     const { id } = params;
@@ -176,7 +176,8 @@ export const activityHandlers = [
         ...activity,
         // 补充一些详情页可能需要的额外字段
         images:
-          (activity as any).images || [activity.cover_image].filter(Boolean),
+          ("images" in activity ? activity.images : undefined) ||
+          [activity.cover_image].filter(Boolean),
         organizer: activity.organizer || {
           id: "user-001",
           name: "活动家官方",
@@ -188,81 +189,9 @@ export const activityHandlers = [
 
   /**
    * 创建活动
-   * POST /api/events
-   * POST /api/events/create
+   * POST /api/events/organizer/create
    */
-  http.post("/api/events", async ({ request }) => {
-    await delay(500);
-
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return HttpResponse.json(
-        {
-          success: false,
-          message: "未授权访问",
-        },
-        { status: 401 },
-      );
-    }
-
-    const body = (await request.json()) as Partial<MockActivity>;
-
-    // 验证必填字段
-    if (!body.title) {
-      return HttpResponse.json(
-        {
-          success: false,
-          message: "活动标题不能为空",
-        },
-        { status: 400 },
-      );
-    }
-
-    // 创建新活动
-    const newActivity: MockActivity = {
-      id: `event_${Date.now()}`,
-      title: body.title || "未命名活动",
-      description: body.description || "",
-      cover_image: body.cover_image || null,
-      category: body.category || "其他",
-      tags: body.tags || [],
-      registration_start_time:
-        body.registration_start_time || new Date().toISOString(),
-      registration_end_time:
-        body.registration_end_time || new Date().toISOString(),
-      event_start_time: body.event_start_time || new Date().toISOString(),
-      event_end_time: body.event_end_time || new Date().toISOString(),
-      location: body.location || "",
-      max_participants: body.max_participants || 100,
-      current_participants: 0,
-      status: "draft",
-      is_public: body.is_public ?? true,
-      allow_waitlist: body.allow_waitlist ?? false,
-      fee: body.fee || 0,
-      organizer: {
-        id: "merchant_456",
-        name: "测试商家",
-        avatar: generateDefaultAvatar("merchant_456"),
-      },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-
-    // 添加到 Mock 数据
-    mockActivities.unshift(newActivity);
-
-    return HttpResponse.json(
-      {
-        success: true,
-        message: "创建成功",
-        data: newActivity,
-      },
-      { status: 201 },
-    );
-  }),
-
-  // 兼容 /api/events/create 路径
-  http.post("/api/events/create", async ({ request }) => {
+  http.post("/api/events/organizer/create", async ({ request }) => {
     await delay(500);
 
     const authHeader = request.headers.get("Authorization");
@@ -321,9 +250,9 @@ export const activityHandlers = [
 
   /**
    * 更新活动
-   * PUT /api/events/:id
+   * PUT /api/events/organizer/:id
    */
-  http.put("/api/events/:id", async ({ params, request }) => {
+  http.put("/api/events/organizer/:id", async ({ params, request }) => {
     await delay(400);
 
     const authHeader = request.headers.get("Authorization");
@@ -367,9 +296,9 @@ export const activityHandlers = [
 
   /**
    * 删除活动
-   * DELETE /api/events/:id
+   * DELETE /api/events/organizer/:id
    */
-  http.delete("/api/events/:id", async ({ params, request }) => {
+  http.delete("/api/events/organizer/:id", async ({ params, request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -417,10 +346,10 @@ export const activityHandlers = [
   }),
 
   /**
-   * 上传活动图片
-   * POST /api/events/upload-image
+   * 上传图片
+   * POST /api/file/upload
    */
-  http.post("/api/events/upload-image", async ({ request }) => {
+  http.post("/api/file/upload", async ({ request }) => {
     await delay(500);
 
     const authHeader = request.headers.get("Authorization");
@@ -438,12 +367,26 @@ export const activityHandlers = [
       // 解析 FormData
       const formData = await request.formData();
       const file = formData.get("file") as File | null;
+      const destination = formData.get("destination");
 
       if (!file) {
         return HttpResponse.json(
           {
             success: false,
             message: "请选择要上传的图片",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (
+        typeof destination !== "string" ||
+        !["user-photos", "avatars", "activity-image"].includes(destination)
+      ) {
+        return HttpResponse.json(
+          {
+            success: false,
+            message: "不支持的上传位置",
           },
           { status: 400 },
         );
@@ -487,8 +430,10 @@ export const activityHandlers = [
       return HttpResponse.json({
         success: true,
         message: "上传成功",
+        url: mockImageUrl,
         data: {
           url: mockImageUrl,
+          destination,
           filename: file.name,
           size: file.size,
           type: file.type,

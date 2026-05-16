@@ -269,17 +269,17 @@ const UserRegistration: FC = () => {
       return;
     }
 
-    // 构建提交数据：将 key-value 映射为 label-value（后端按 label 存储）
+    // 直接按问卷 schema 的 key 提交，保证 formData 与 schema 一致。
     const submitData: Record<string, string> = {};
     for (const field of formSchema) {
       const val = formData[field.key];
       if (val !== undefined && val !== "") {
-        submitData[field.label] = Array.isArray(val) ? val.join(",") : val;
+        submitData[field.key] = Array.isArray(val) ? val.join(",") : val;
       }
     }
 
     try {
-      await submitEnrollment(submitData as any);
+      await submitEnrollment(submitData);
       Toast.show({ icon: "success", content: "报名成功！", duration: 1500 });
 
       // 收集这次填写中可保存到信息库的字段（非空）
@@ -319,10 +319,12 @@ const UserRegistration: FC = () => {
         }
       }
       navigateToDetail();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "报名失败，请稍后重试";
       Toast.show({
         icon: "fail",
-        content: error.message || "报名失败，请稍后重试",
+        content: errorMessage,
         duration: 3000,
       });
     }

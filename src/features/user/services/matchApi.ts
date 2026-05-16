@@ -5,6 +5,67 @@
 import { api } from "@/services/api";
 import { AxiosError } from "axios";
 
+export interface MatchScoreFieldDetail {
+  rule_index: number;
+  source_field: string;
+  target_field: string;
+  source_label?: string;
+  target_label?: string;
+  operator: string;
+  operator_label?: string;
+  weight: number;
+  score: number;
+  weighted_score: number;
+  score_percent?: number;
+  current_user_value?: string;
+  target_user_value?: string;
+}
+
+export interface MatchScorePayload {
+  total_score: number;
+  total_score_percent?: number;
+  fields: MatchScoreFieldDetail[];
+}
+
+export interface MatchRuleDetail {
+  source_field: string;
+  target_field: string;
+  source_label?: string;
+  target_label?: string;
+  operator: string;
+  operator_label?: string;
+  weight: number;
+}
+
+export interface MatchEnrollmentDetail {
+  id: string;
+  user_id: string;
+  name: string;
+  status: string;
+  created_at: string;
+  form_data: Record<string, unknown>;
+}
+
+export interface MatchDetailResponse {
+  success: boolean;
+  data?: {
+    event: {
+      id: string;
+      title: string;
+    };
+    schema: Array<{
+      key: string;
+      label: string;
+      type?: string;
+    }>;
+    currentUserEnrollment: MatchEnrollmentDetail;
+    targetUserEnrollment: MatchEnrollmentDetail;
+    rules: MatchRuleDetail[];
+    score: MatchScorePayload;
+  };
+  message?: string;
+}
+
 /**
  * 获取用户的最佳匹配列表（TopK）
  *
@@ -59,3 +120,26 @@ export async function getMatchMessage(eventId: string, userId: string) {
   return response;
 }
 
+/**
+ * 仅查询已存在的匹配寄语，不触发生成
+ */
+export async function getExistingMatchMessage(eventId: string, userId: string) {
+  try {
+    return await api.get(`/api/match/${eventId}/${userId}/match_message/existing`);
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { success: false, data: "", message: "暂无匹配寄语" };
+    }
+    throw err;
+  }
+}
+
+/**
+ * 获取当前用户与某个匹配对象的匹配详情
+ */
+export async function getBestMatchDetail(
+  eventId: string,
+  userId: string,
+): Promise<MatchDetailResponse> {
+  return api.get(`/api/match/${eventId}/${userId}/detail`);
+}

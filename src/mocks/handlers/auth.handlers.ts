@@ -64,6 +64,31 @@ export const authHandlers = [
   }),
 
   /**
+   * GET /api/auth/check-phone
+   */
+  http.get("/api/auth/check-phone", async ({ request }) => {
+    await delay(200);
+
+    const url = new URL(request.url);
+    const phone = url.searchParams.get("phone") || "";
+
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      return HttpResponse.json({
+        success: true,
+        available: false,
+        message: "手机号格式不正确",
+      });
+    }
+
+    const existingUser = mockPhoneUserMap[phone];
+    return HttpResponse.json({
+      success: true,
+      available: !existingUser,
+      message: existingUser ? "该手机号已注册" : undefined,
+    });
+  }),
+
+  /**
    * 商家登录（用户名密码）
    * POST /api/auth/login
    */
@@ -185,8 +210,9 @@ export const authHandlers = [
     const user = mockPhoneUserMap["13800138001"];
     return HttpResponse.json({
       success: true,
-      user: {
+      profile: {
         id: user.id,
+        account: user.username,
         phone: user.phone,
         name: user.name,
         user_type: user.user_type,
@@ -233,16 +259,4 @@ export const authHandlers = [
     );
   }),
 
-  /**
-   * 登出
-   * POST /api/auth/logout
-   */
-  http.post("/api/auth/logout", async () => {
-    await delay(200);
-
-    return HttpResponse.json({
-      success: true,
-      message: "登出成功",
-    });
-  }),
 ];

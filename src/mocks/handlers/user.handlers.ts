@@ -36,9 +36,9 @@ export const userHandlers = [
 
   /**
    * 获取用户资料
-   * GET /api/user/profile
+   * GET /api/dashboard/participant
    */
-  http.get("/api/user/profile", async ({ request }) => {
+  http.get("/api/dashboard/participant", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -73,10 +73,46 @@ export const userHandlers = [
   }),
 
   /**
-   * 更新用户资料
-   * PUT /api/user/profile
+   * 获取他人公开资料
+   * GET /api/dashboard/participant/:userId
    */
-  http.put("/api/user/profile", async ({ request }) => {
+  http.get("/api/dashboard/participant/:userId", async ({ params, request }) => {
+    await delay(300);
+
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return HttpResponse.json(
+        {
+          success: false,
+          message: "未授权访问",
+        },
+        { status: 401 },
+      );
+    }
+
+    const userId = String(params.userId);
+    const profile = getUserProfile();
+
+    return HttpResponse.json({
+      success: true,
+      profile: {
+        id: userId,
+        name: userId === profile.id ? profile.name : "活动参与者",
+        avatar: profile.avatar || generateDefaultAvatar(userId),
+        occupation: profile.occupation,
+        company: profile.company,
+        bio: profile.bio,
+        tags: profile.tags,
+        photos: profile.photos,
+      },
+    });
+  }),
+
+  /**
+   * 更新用户资料
+   * PUT /api/dashboard/participant
+   */
+  http.put("/api/dashboard/participant", async ({ request }) => {
     await delay(400);
 
     const authHeader = request.headers.get("Authorization");
@@ -102,9 +138,9 @@ export const userHandlers = [
 
   /**
    * 上传头像
-   * POST /api/user/profile/avatar
+   * POST /api/dashboard/participant/update-avatar
    */
-  http.post("/api/user/profile/avatar", async ({ request }) => {
+  http.post("/api/dashboard/participant/update-avatar", async ({ request }) => {
     await delay(800);
 
     const authHeader = request.headers.get("Authorization");
@@ -168,9 +204,9 @@ export const userHandlers = [
 
   /**
    * 获取用户活动列表（我的活动）
-   * GET /api/user/activities
+   * GET /api/events/participant
    */
-  http.get("/api/user/activities", async ({ request }) => {
+  http.get("/api/events/participant", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -215,9 +251,9 @@ export const userHandlers = [
 
   /**
    * 获取推荐活动
-   * GET /api/user/activities/recommended
+   * GET /api/events/participant/recommended
    */
-  http.get("/api/user/activities/recommended", async () => {
+  http.get("/api/events/participant/recommended", async () => {
     await delay(300);
 
     // 推荐活动：取报名中的活动，按参与率排序
@@ -241,9 +277,9 @@ export const userHandlers = [
 
   /**
    * 搜索活动
-   * GET /api/user/activities/search
+   * GET /api/events/participant/search
    */
-  http.get("/api/user/activities/search", async ({ request }) => {
+  http.get("/api/events/participant/search", async ({ request }) => {
     await delay(300);
 
     const url = new URL(request.url);
@@ -322,9 +358,9 @@ export const userHandlers = [
 
   /**
    * 获取活动详情
-   * GET /api/user/activities/:id
+   * GET /api/events/participant/:id
    */
-  http.get("/api/user/activities/:id", async ({ params }) => {
+  http.get("/api/events/participant/:id", async ({ params }) => {
     await delay(200);
 
     const { id } = params;
@@ -501,9 +537,9 @@ export const userHandlers = [
 
   /**
    * 获取通知列表
-   * GET /api/user/notifications
+   * GET /api/notification
    */
-  http.get("/api/user/notifications", async ({ request }) => {
+  http.get("/api/notification", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -554,9 +590,9 @@ export const userHandlers = [
 
   /**
    * 标记通知为已读
-   * POST /api/user/notifications/:id/read
+   * POST /api/notification/:id/read
    */
-  http.post("/api/user/notifications/:id/read", async ({ params, request }) => {
+  http.post("/api/notification/:id/read", async ({ params, request }) => {
     await delay(200);
 
     const authHeader = request.headers.get("Authorization");
@@ -581,9 +617,9 @@ export const userHandlers = [
 
   /**
    * 标记所有通知为已读
-   * POST /api/user/notifications/read-all
+   * POST /api/notification/read-all
    */
-  http.post("/api/user/notifications/read-all", async ({ request }) => {
+  http.post("/api/notification/read-all", async ({ request }) => {
     await delay(300);
 
     const authHeader = request.headers.get("Authorization");
@@ -649,27 +685,4 @@ export const userHandlers = [
     });
   }),
 
-  /**
-   * 删除账号
-   * DELETE /api/user/account
-   */
-  http.delete("/api/user/account", async ({ request }) => {
-    await delay(500);
-
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return HttpResponse.json(
-        {
-          success: false,
-          message: "未授权访问",
-        },
-        { status: 401 },
-      );
-    }
-
-    return HttpResponse.json({
-      success: true,
-      message: "账号已删除",
-    });
-  }),
 ];

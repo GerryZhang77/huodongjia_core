@@ -57,6 +57,7 @@ const MatchingConfigPage: React.FC = () => {
     matchResults,
     history,
     matchingStats,
+    registrationSchema,
 
     // 设置方法
     setActiveTab,
@@ -71,12 +72,6 @@ const MatchingConfigPage: React.FC = () => {
     handleRestoreHistory,
 
     // 规则配置操作
-    savedConfigs,
-    handleLoadConfig,
-    handleDeleteConfig,
-    handleGenerateRules,
-    isGeneratingRules,
-
     // 重新匹配入口
     handleEnterRematchMode,
 
@@ -208,12 +203,9 @@ const MatchingConfigPage: React.FC = () => {
             onStartMatching={handleStartMatching}
             isMatching={isMatching}
             matchingProgress={matchingProgress}
+            matchingMessage={matchingMessage}
             participantCount={participants.length}
-            savedConfigs={savedConfigs}
-            onLoadConfig={handleLoadConfig}
-            onDeleteConfig={handleDeleteConfig}
-            onGenerateRules={handleGenerateRules}
-            isGeneratingRules={isGeneratingRules}
+            schemaFields={registrationSchema}
           />
         ) : (
           <ResultsTab

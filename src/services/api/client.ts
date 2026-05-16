@@ -48,7 +48,14 @@ function getApiBaseURL(): string {
     return ""; // 使用相对路径，通过 Vercel Serverless Function 代理
   }
 
-  // 开发环境连接真实后端
+  // 开发环境连接真实后端时使用相对路径，交给 Vite dev server 代理。
+  // 避免通过局域网 IP / 远程 IDE 预览访问前端时，浏览器把 127.0.0.1
+  // 解析成客户端自己的机器，导致登录请求显示网络错误。
+  if (import.meta.env.DEV && useMock === "false") {
+    return "";
+  }
+
+  // 其他非生产环境保留显式配置
   return import.meta.env.VITE_API_BASE_URL || "";
 }
 

@@ -28,14 +28,12 @@ const MatchingConfigurationNew: React.FC = () => {
     setActiveTab,
 
     // 规则设置
-    naturalLanguageInput,
-    setNaturalLanguageInput,
     rules,
     setRules,
+    registrationSchema,
+    schemaLoading,
     constraints,
     setConstraints,
-    isGeneratingRules,
-    handleGenerateRules,
     handleSaveRules,
     fetchRules,
 
@@ -99,14 +97,12 @@ const MatchingConfigurationNew: React.FC = () => {
             key="rules"
           >
             <RulesSettingTab
-              naturalLanguageInput={naturalLanguageInput}
-              onNaturalLanguageInputChange={setNaturalLanguageInput}
               rules={rules}
               onRulesChange={setRules}
+              schemaFields={registrationSchema}
+              schemaLoading={schemaLoading}
               constraints={constraints}
               onConstraintsChange={setConstraints}
-              loading={isGeneratingRules}
-              onGenerateRules={handleGenerateRules}
               onSaveRules={handleSaveRules}
               onNext={handleStartMatching}
             />

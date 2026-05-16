@@ -50,7 +50,7 @@ export const MerchantDesktopSidebar: FC = () => {
 
   const { data: notifData } = useQuery({
     queryKey: ["merchant", "notifications"],
-    queryFn: () => api.get<{ success: boolean; data: { unreadCount: number } }>("/api/merchant/received-notifications"),
+    queryFn: () => api.get<{ success: boolean; data: { unreadCount: number } }>("/api/notification"),
   });
   const unreadCount = notifData?.data?.unreadCount ?? 0;
 

@@ -24,6 +24,21 @@ export async function checkAccount(account: string): Promise<{ available: boolea
 }
 
 /**
+ * 检查手机号是否可用
+ * GET /api/auth/check-phone?phone=xxx
+ */
+export async function checkPhone(phone: string): Promise<{ available: boolean; message?: string }> {
+  try {
+    const response = await api.get<{ success: boolean; available: boolean; message?: string }>(
+      `/api/auth/check-phone?phone=${encodeURIComponent(phone)}`
+    );
+    return { available: response.available, message: response.message };
+  } catch {
+    return { available: false, message: "检查失败" };
+  }
+}
+
+/**
  * 用户登录
  * POST /api/auth/login
  *
@@ -88,16 +103,10 @@ export async function loginBySms(
 
 /**
  * 用户登出
- * POST /api/auth/logout
+ * 本地清理登录态；当前后端使用无状态 JWT，不需要请求服务端登出。
  */
 export async function logout(): Promise<void> {
-  try {
-    await api.post("/api/auth/logout", {});
-  } catch (error) {
-    console.error("Logout error:", error);
-  } finally {
-    localStorage.removeItem("auth-storage");
-  }
+  localStorage.removeItem("auth-storage");
 }
 
 /**

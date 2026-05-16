@@ -65,6 +65,7 @@ const UserNotifications = lazy(() => import("./pages/user/UserNotifications"));
 const UserProfileCards = lazy(() => import("./pages/user/UserProfileCards"));
 const UserRegistration = lazy(() => import("./pages/user/UserRegistration"));
 const UserMatchResult = lazy(() => import("./pages/user/UserMatchResult"));
+const UserMatchDetail = lazy(() => import("./pages/user/UserMatchDetail"));
 const UserDiscover = lazy(() => import("./pages/user/UserDiscover"));
 const UserSettings = lazy(() => import("./pages/user/UserSettings"));
 const UserFavorites = lazy(() => import("./pages/user/UserFavorites"));
@@ -366,6 +367,15 @@ function App() {
                   element={
                     <ProtectedRoute requiredRole="user">
                       <UserMatchResult />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/u/activities/:id/match-result/:userId"
+                  element={
+                    <ProtectedRoute requiredRole="user">
+                      <UserMatchDetail />
                     </ProtectedRoute>
                   }
                 />
