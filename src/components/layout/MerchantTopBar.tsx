@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Bell } from "lucide-react";
 import { BreadcrumbItem } from "./types";
 import { useAuthStore } from "@/features/auth/stores";
+import { useMerchantNotifications } from "@/features/merchant/notifications";
 
 interface MerchantTopBarProps {
   /** 页面标题 */
@@ -37,9 +38,8 @@ export const MerchantTopBar: FC<MerchantTopBarProps> = ({
 }) => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-
-  // TODO: 从通知数据获取未读数量
-  const unreadCount = 3;
+  const { data: notificationsData } = useMerchantNotifications();
+  const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
   const handleBreadcrumbClick = (item: BreadcrumbItem) => {
     if (item.path) {

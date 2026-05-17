@@ -3,7 +3,7 @@
  * 显示导出预览，让用户确认后下载 Excel 文件
  */
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   X,
   Download,
@@ -70,6 +70,81 @@ const GENDER_MAP: Record<string, string> = {
   other: "其他",
 };
 
+const CUSTOM_FIELD_PREFIX = "custom:";
+const RESERVED_CUSTOM_FIELD_LABELS = new Set([
+  ...DEFAULT_EXPORT_FIELDS.map((field) => field.label),
+  "姓名",
+  "性别",
+  "年龄",
+  "手机号",
+  "手机",
+  "电话",
+  "邮箱",
+  "职业",
+  "公司",
+  "城市",
+  "兴趣标签",
+  "个人简介",
+  "匹配需求",
+  "状态",
+  "报名时间",
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toExportValue(value: unknown): string | number {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "number") return value;
+  if (typeof value === "boolean") return value ? "是" : "否";
+  if (Array.isArray(value)) return value.map(String).join("、");
+  if (isRecord(value)) return JSON.stringify(value);
+  return String(value);
+}
+
+function getCustomFieldValue(
+  enrollment: Enrollment,
+  label: string,
+): string | number {
+  const customValue = enrollment.customFields?.[label];
+  if (customValue !== undefined) return toExportValue(customValue);
+  return toExportValue(enrollment.formData?.[label]);
+}
+
+function collectDynamicFields(enrollments: Enrollment[]): ExportField[] {
+  const seen = new Set(RESERVED_CUSTOM_FIELD_LABELS);
+  const fields: ExportField[] = [];
+
+  enrollments.forEach((enrollment) => {
+    [enrollment.customFields, enrollment.formData].forEach((source) => {
+      if (!isRecord(source)) return;
+      Object.keys(source).forEach((label) => {
+        const normalized = label.trim();
+        if (!normalized || seen.has(normalized)) return;
+        seen.add(normalized);
+        fields.push({
+          key: `${CUSTOM_FIELD_PREFIX}${normalized}`,
+          label: normalized,
+          enabled: true,
+        });
+      });
+    });
+  });
+
+  return fields;
+}
+
+function areFieldsSame(a: ExportField[], b: ExportField[]) {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (field, index) =>
+      field.key === b[index].key &&
+      field.label === b[index].label &&
+      field.enabled === b[index].enabled,
+  );
+}
+
 // ========================================
 // 组件实现
 // ========================================
@@ -92,6 +167,22 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
   // 预览分页
   const [previewPage, setPreviewPage] = useState(0);
   const previewPageSize = 5;
+
+  const dynamicFields = useMemo(
+    () => collectDynamicFields(enrollments),
+    [enrollments],
+  );
+
+  useEffect(() => {
+    setExportFields((prev) => {
+      const previousEnabled = new Map(prev.map((field) => [field.key, field.enabled]));
+      const next = [...DEFAULT_EXPORT_FIELDS, ...dynamicFields].map((field) => ({
+        ...field,
+        enabled: previousEnabled.get(field.key) ?? field.enabled,
+      }));
+      return areFieldsSame(prev, next) ? prev : next;
+    });
+  }, [dynamicFields]);
 
   // 启用的字段
   const enabledFields = useMemo(
@@ -152,6 +243,11 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
             row[field.label] = e.enrolledAt
               ? new Date(e.enrolledAt).toLocaleString("zh-CN")
               : "";
+            break;
+          default:
+            if (field.key.startsWith(CUSTOM_FIELD_PREFIX)) {
+              row[field.label] = getCustomFieldValue(e, field.label);
+            }
             break;
         }
       });

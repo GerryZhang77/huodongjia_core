@@ -298,7 +298,7 @@ const UserMatchResult: FC = () => {
         </div>
 
         {/* 底部操作栏 */}
-        <div className="fixed bottom-14 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 py-3 z-30 safe-area-bottom">
+        <div className="fixed bottom-mobile-tabbar left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 py-3 z-30">
           <div className="flex gap-3 max-w-lg mx-auto">
             <button
               onClick={() => navigate(`/u/activities/${id}`)}

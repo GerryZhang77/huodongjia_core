@@ -10,10 +10,17 @@
 
 import { FC, ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, Bell, User, UserSearch } from "lucide-react";
+import {
+  LayoutDashboard,
+  PlusCircle,
+  Bell,
+  User,
+  UserSearch,
+} from "lucide-react";
 import { MerchantDesktopSidebar } from "./MerchantDesktopSidebar";
 import { MerchantTopBar } from "./MerchantTopBar";
 import { BreadcrumbItem } from "./types";
+import { useMerchantNotifications } from "@/features/merchant/notifications";
 import {
   usePrefetchMerchantProfile,
   usePrefetchMerchantUserPool,
@@ -77,9 +84,8 @@ export const MerchantLayout: FC<MerchantLayoutProps> = ({
   const location = useLocation();
   const prefetchProfile = usePrefetchMerchantProfile();
   const prefetchUserPool = usePrefetchMerchantUserPool();
-
-  // TODO: 获取未读消息数
-  const unreadCount = 3;
+  const { data: notificationsData } = useMerchantNotifications();
+  const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
   // 根据 tab key 决定预拉哪些 query
   const prefetchForTab = (key: string) => {
@@ -191,7 +197,9 @@ export const MerchantLayout: FC<MerchantLayoutProps> = ({
 
           {/* 主内容区域 */}
           <main
-            className={`flex-1 ${showTabBar ? "pb-16" : ""} ${contentClassName || ""}`}
+            className={`flex-1 ${
+              showTabBar ? "mobile-tabbar-content-padding" : ""
+            } ${contentClassName || ""}`}
           >
             {children}
           </main>

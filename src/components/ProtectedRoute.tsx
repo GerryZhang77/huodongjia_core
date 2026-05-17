@@ -7,6 +7,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/stores";
 import { debugLogger } from "@/utils/debugLogger";
+import { buildLoginPathWithRedirect } from "@/utils/redirect";
 import type { UserType } from "@/features/auth/types";
 
 interface ProtectedRouteProps {
@@ -66,13 +67,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // 未登录，重定向到登录页
   if (!isAuthenticated || !user) {
     debugLogger.warn("[ProtectedRoute] 未认证，重定向到登录页");
-    const redirect = `${location.pathname}${location.search}`;
-    return (
-      <Navigate
-        to={`/login?redirect=${encodeURIComponent(redirect)}`}
-        replace
-      />
-    );
+    const redirect = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={buildLoginPathWithRedirect(redirect)} replace />;
   }
 
   // 检查角色权限

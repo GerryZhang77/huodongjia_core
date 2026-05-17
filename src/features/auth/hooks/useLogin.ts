@@ -10,6 +10,7 @@ import { login as loginApi, loginBySms as loginBySmsApi } from "../services";
 import type { LoginCredentials, LoginResponse, User } from "../types";
 import { authNotification } from "@/components/ui/AuthNotification/manager";
 import { debugLogger } from "@/utils/debugLogger";
+import { sanitizeRedirectPath } from "@/utils/redirect";
 
 const phoneRe = /^1[3-9]\d{9}$/;
 const maskPhone = (v: string) =>
@@ -68,8 +69,7 @@ export function useLogin() {
       displayName ? `欢迎回来，${displayName}！` : "欢迎回来！",
     );
 
-    const redirect = searchParams.get("redirect");
-    const safeRedirect = redirect?.startsWith("/") ? redirect : "";
+    const safeRedirect = sanitizeRedirectPath(searchParams.get("redirect"));
     const targetPath =
       safeRedirect ||
       (response.user.user_type === "user" ? "/u/home" : "/dashboard");

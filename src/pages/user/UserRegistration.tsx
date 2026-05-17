@@ -424,10 +424,7 @@ const UserRegistration: FC = () => {
         </div>
 
         {/* 底部操作栏 - 报名页隐藏 TabBar，专注表单 */}
-        <div
-          className="fixed bottom-0 left-0 right-0 z-40"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
+        <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-bottom">
           <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_12px_rgba(0,0,0,0.3)]">
             <Button
               onClick={handleSubmit}

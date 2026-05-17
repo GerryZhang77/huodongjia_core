@@ -124,7 +124,11 @@ export const UserLayout: FC<UserLayoutProps> = ({
           )}
 
           {/* 主内容区域 */}
-          <main className={`flex-1 ${showTabBar ? "pb-16" : ""}`}>
+          <main
+            className={`flex-1 ${
+              showTabBar ? "mobile-tabbar-content-padding" : ""
+            }`}
+          >
             {children}
           </main>
 

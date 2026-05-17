@@ -89,7 +89,12 @@ const ActivityRecapEditPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <MerchantLayout title="编辑活动回顾" showBack onBack={() => navigate(-1)}>
+      <MerchantLayout
+        title="编辑活动回顾"
+        showBack
+        showTabBar={false}
+        onBack={() => navigate(-1)}
+      >
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 text-primary-400 animate-spin" />
         </div>
@@ -98,7 +103,12 @@ const ActivityRecapEditPage: React.FC = () => {
   }
 
   return (
-    <MerchantLayout title="编辑活动回顾" showBack onBack={() => navigate(-1)}>
+    <MerchantLayout
+      title="编辑活动回顾"
+      showBack
+      showTabBar={false}
+      onBack={() => navigate(-1)}
+    >
       <div className="pb-24">
         {/* 隐私提示 banner */}
         <div className="mx-4 mt-2 mb-4 flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40">
@@ -179,7 +189,7 @@ const ActivityRecapEditPage: React.FC = () => {
       </div>
 
       {/* 底部固定操作栏 */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 z-10">
+      <div className="fixed bottom-0 left-0 right-0 px-4 pt-4 safe-area-pb bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 z-10">
         <div className="max-w-2xl mx-auto flex gap-3">
           <Button
             block
