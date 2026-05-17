@@ -18,7 +18,11 @@ import {
 } from "lucide-react";
 import dayjs from "dayjs";
 import type { ActivityFormData } from "@/features/activities/types";
-import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
+import {
+  getCategoryLabel,
+  getTagLabel,
+  isOnlineOnlyActivity,
+} from "@/features/activities/utils/constants";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import { ImageCarousel } from "../ImageCarousel";
 
@@ -80,6 +84,9 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
     }),
     [formData],
   );
+  const isOnlineOnly = isOnlineOnlyActivity(previewData.tags);
+  const locationText = isOnlineOnly ? "线上活动" : previewData.location;
+  const locationPlaceholder = isOnlineOnly ? "线上活动" : "请输入活动地点";
 
   // 封面占位符组件
   const CoverPlaceholder = ({ isDesktop = false }: { isDesktop?: boolean }) => (
@@ -144,7 +151,7 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
               ))}
               {previewData.tags.length === 0 && previewData.category && (
                 <span className="px-1.5 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-medium rounded-full">
-                  {getCategoryLabel(previewData.category as string)}
+                  {getCategoryLabel(previewData.category)}
                 </span>
               )}
             </div>
@@ -189,8 +196,8 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
                 活动地点
               </p>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                {previewData.location || (
-                  <span className="text-gray-400">请输入活动地点</span>
+                {locationText || (
+                  <span className="text-gray-400">{locationPlaceholder}</span>
                 )}
               </p>
             </div>
@@ -361,7 +368,7 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
                 ))}
                 {previewData.tags.length === 0 && previewData.category && (
                   <span className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full">
-                    {getCategoryLabel(previewData.category as string)}
+                    {getCategoryLabel(previewData.category)}
                   </span>
                 )}
               </div>
@@ -406,8 +413,8 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
                   活动地点
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {previewData.location || (
-                    <span className="text-gray-400">请输入活动地点</span>
+                  {locationText || (
+                    <span className="text-gray-400">{locationPlaceholder}</span>
                   )}
                 </p>
               </div>

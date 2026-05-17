@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Toast } from "@/components/ui/Toast";
 import { createActivity, getActivities } from "../services";
 import { activitiesKeys } from "./useActivities";
+import { isOnlineOnlyActivity } from "../utils";
 import type { ActivityFormData, CreateActivityRequest } from "../types";
 
 /**
@@ -19,6 +20,9 @@ const transformFormDataToRequest = (
 ): CreateActivityRequest => {
   // 确保 tags 是字符串数组
   const tags = (data.tags || []).map((tag) => String(tag));
+  const location = isOnlineOnlyActivity(tags)
+    ? ""
+    : String(data.location || "").trim();
 
   const request: CreateActivityRequest = {
     title: data.title,
@@ -27,7 +31,7 @@ const transformFormDataToRequest = (
     images: data.images || [],
     start_time: data.start_time.toISOString(),
     end_time: data.end_time.toISOString(),
-    location: data.location,
+    location,
     max_participants: data.max_participants,
     fee: 0,
     category: Array.isArray(data.category) ? data.category[0] || "other" : data.category || "other",

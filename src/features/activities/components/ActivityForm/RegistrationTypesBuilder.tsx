@@ -72,7 +72,7 @@ export const RegistrationTypesBuilder: React.FC<RegistrationTypesBuilderProps> =
     emit([
       ...registrationTypes,
       {
-        name: `报名类型${registrationTypes.length + 1}`,
+        name: "",
         formSchema: createDefaultFormSchema(),
         eligibilityMode: "allowlist",
         isDefault: false,
@@ -139,7 +139,7 @@ export const RegistrationTypesBuilder: React.FC<RegistrationTypesBuilderProps> =
                 : "border-gray-200 text-gray-600 hover:border-gray-300"
             }`}
           >
-            {type.name}
+            {type.name || `未命名类型${index + 1}`}
           </button>
         ))}
         <button
@@ -158,9 +158,9 @@ export const RegistrationTypesBuilder: React.FC<RegistrationTypesBuilderProps> =
             <label className="text-xs text-gray-500 block mb-1">报名类型名称</label>
             <input
               value={activeType.name}
-              disabled={activeType.isDefault}
               onChange={(e) => updateActive({ name: e.target.value })}
-              className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm disabled:bg-gray-100 disabled:text-gray-500 focus:outline-none focus:border-primary-400"
+              placeholder="例如：嘉宾、媒体、志愿者"
+              className="w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:border-primary-400"
             />
           </div>
           {!activeType.isDefault && (
@@ -273,7 +273,7 @@ export const RegistrationTypesBuilder: React.FC<RegistrationTypesBuilderProps> =
 
         <div>
           <div className="text-sm font-medium text-gray-800 mb-2">
-            {activeType.name}问卷
+            {activeType.name || "未命名类型"}问卷
           </div>
           {(onImportTemplate || onSaveTemplate) && (
             <div className="flex flex-wrap items-center gap-2 mb-3">

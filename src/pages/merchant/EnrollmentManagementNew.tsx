@@ -554,7 +554,7 @@ const EnrollmentManagementNew: React.FC = () => {
         const registrationTypeName =
           (e.registrationTypeName as string | undefined) ||
           (e.registration_type_name_snapshot as string | undefined) ||
-          "公开报名";
+          "未命名报名类型";
         const formData =
           e.formData && typeof e.formData === "object"
             ? (e.formData as Record<string, unknown>)

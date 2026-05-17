@@ -15,6 +15,7 @@ import { clsx } from "clsx";
 import { Calendar, MapPin, TrendingUp } from "lucide-react";
 import { Tag } from "@/components/ui";
 import dayjs from "dayjs";
+import { isOnlineOnlyActivity } from "@/features/activities/utils/constants";
 import type { ActivityListItemProps } from "./types";
 
 // 用户状态配置
@@ -67,6 +68,9 @@ const ActivityListItemInner: FC<ActivityListItemProps> = ({
 
   const statusConfig = userStatusConfig[userStatus];
   const isHot = currentParticipants / maxParticipants >= 0.8;
+  const displayLocation = isOnlineOnlyActivity(tags)
+    ? "线上活动"
+    : location || "地点待定";
   const isUpcoming =
     dayjs(eventStartTime).diff(dayjs(), "day") <= 3 &&
     dayjs(eventStartTime).isAfter(dayjs());
@@ -209,7 +213,7 @@ const ActivityListItemInner: FC<ActivityListItemProps> = ({
               size={size === "compact" ? 12 : 14}
               className="flex-shrink-0 text-accent-400"
             />
-            <span className="truncate">{location}</span>
+            <span className="truncate">{displayLocation}</span>
           </div>
         </div>
 

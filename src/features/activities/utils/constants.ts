@@ -79,12 +79,20 @@ const CATEGORY_LABEL_MAP: Record<string, string> = Object.fromEntries(
   ACTIVITY_CATEGORY_OPTIONS.map((o) => [o.value, o.label]),
 );
 
-export const getCategoryLabel = (value?: string): string => {
-  if (!value) return "其他";
-  if (CATEGORY_LABEL_MAP[value]) return CATEGORY_LABEL_MAP[value];
+export const normalizeCategoryValue = (
+  value?: string | string[] | null,
+): string => {
+  if (Array.isArray(value)) return value[0] || "";
+  return value || "";
+};
+
+export const getCategoryLabel = (value?: string | string[] | null): string => {
+  const normalized = normalizeCategoryValue(value);
+  if (!normalized) return "其他";
+  if (CATEGORY_LABEL_MAP[normalized]) return CATEGORY_LABEL_MAP[normalized];
   // 自定义分类: custom_xxx → xxx
-  if (value.startsWith("custom_")) return value.slice(7);
-  return value;
+  if (normalized.startsWith("custom_")) return normalized.slice(7);
+  return normalized;
 };
 
 /**
@@ -98,4 +106,9 @@ export const getTagLabel = (value: string): string => {
   if (TAG_LABEL_MAP[value]) return TAG_LABEL_MAP[value];
   if (value.startsWith("custom_")) return value.slice(7);
   return value;
+};
+
+export const isOnlineOnlyActivity = (tags?: string[] | null): boolean => {
+  const safeTags = Array.isArray(tags) ? tags : [];
+  return safeTags.includes("online") && !safeTags.includes("offline");
 };

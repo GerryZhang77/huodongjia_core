@@ -34,7 +34,11 @@ import {
 } from "@/components/business/ParticipantAvatar";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
 import { useAuthStore } from "@/features/auth/stores/authStore";
-import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
+import {
+  getCategoryLabel,
+  getTagLabel,
+  isOnlineOnlyActivity,
+} from "@/features/activities/utils/constants";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import dayjs from "dayjs";
 
@@ -315,6 +319,10 @@ const ActivityDetail: FC = () => {
     );
   }
 
+  const displayLocation = isOnlineOnlyActivity(activity.tags)
+    ? "线上活动"
+    : activity.location || "地点待定";
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* 页面内容 */}
@@ -456,7 +464,7 @@ const ActivityDetail: FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">活动地点</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {activity.location}
+                    {displayLocation}
                   </p>
                 </div>
               </div>

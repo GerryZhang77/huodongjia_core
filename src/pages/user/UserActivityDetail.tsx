@@ -33,7 +33,11 @@ import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmen
 import type { UserActivityStatus } from "@/services/userApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { useIsDesktop } from "@/hooks/useMediaQuery";
-import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
+import {
+  getCategoryLabel,
+  getTagLabel,
+  isOnlineOnlyActivity,
+} from "@/features/activities/utils/constants";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import dayjs from "dayjs";
 
@@ -193,6 +197,9 @@ const UserActivityDetail: FC = () => {
 
   const config = statusConfig[activity.userStatus];
   const isFull = activity.currentParticipants >= activity.maxParticipants;
+  const displayLocation = isOnlineOnlyActivity(activity.tags)
+    ? "线上活动"
+    : activity.location || "地点待定";
 
   // 如果是活动创建者，覆盖按钮配置
   const buttonConfig = isOrganizer
@@ -396,7 +403,7 @@ const UserActivityDetail: FC = () => {
                     活动地点
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {activity.location}
+                    {displayLocation}
                   </p>
                 </div>
               </div>

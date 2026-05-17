@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useToggleFavorite } from "@/features/user/activity/hooks/useFavorites";
 import { api } from "@/services/api";
 import { Toast } from "@/components/ui/Toast";
+import { isOnlineOnlyActivity } from "@/features/activities/utils/constants";
 import type { ActivityCardProps } from "./types";
 
 // 用户状态配置
@@ -67,6 +68,9 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
   } = activity;
 
   const statusConfig = userStatusConfig[userStatus];
+  const displayLocation = isOnlineOnlyActivity(tags)
+    ? "线上活动"
+    : location || "地点待定";
 
   // 内置快捷收藏：仅当外部未提供 onToggleFavorite，且未关闭，且非编辑模式时启用
   const useInternalFav =
@@ -207,7 +211,7 @@ const ActivityCardInner: FC<ActivityCardProps> = ({
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <MapPin size={14} className="flex-shrink-0" />
-            <span className="truncate">{location}</span>
+            <span className="truncate">{displayLocation}</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
             <Users size={14} className="flex-shrink-0" />
