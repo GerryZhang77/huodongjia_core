@@ -14,3 +14,6 @@ export * from "./matching";
 
 // User Pool - 用户池管理 (分库/总库、标签、推送)
 export * from "./user-pool";
+
+// Notifications - 商家通知
+export * from "./notifications";

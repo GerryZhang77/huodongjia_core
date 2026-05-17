@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/stores";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/services/api/client";
+import { useMerchantNotifications } from "@/features/merchant/notifications";
 import { merchantApi } from "@/services";
 import {
   usePrefetchMerchantProfile,
@@ -48,10 +48,7 @@ export const MerchantDesktopSidebar: FC = () => {
     else if (key === "user-pool") prefetchUserPool();
   };
 
-  const { data: notifData } = useQuery({
-    queryKey: ["merchant", "notifications"],
-    queryFn: () => api.get<{ success: boolean; data: { unreadCount: number } }>("/api/notification"),
-  });
+  const { data: notifData } = useMerchantNotifications();
   const unreadCount = notifData?.data?.unreadCount ?? 0;
 
   const { data: profileData } = useQuery({

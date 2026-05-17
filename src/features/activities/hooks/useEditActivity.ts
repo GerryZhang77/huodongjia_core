@@ -8,6 +8,7 @@ import { Toast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { updateActivity } from "../services";
 import { useActivityStore } from "../stores";
+import { isOnlineOnlyActivity } from "../utils";
 import type { ActivityFormData } from "../types";
 
 export const useEditActivity = (activityId: string) => {
@@ -20,6 +21,11 @@ export const useEditActivity = (activityId: string) => {
     setLoading(true);
 
     try {
+      const tags = (data.tags || []).map((tag) => String(tag));
+      const location = isOnlineOnlyActivity(tags)
+        ? ""
+        : String(data.location || "").trim();
+
       // 转换表单数据为 API 请求格式
       const requestData: any = {
         id: activityId,
@@ -29,10 +35,10 @@ export const useEditActivity = (activityId: string) => {
         registrationEnd: data.registration_end.toISOString(),
         activityStart: data.start_time.toISOString(),
         activityEnd: data.end_time.toISOString(),
-        location: data.location,
+        location,
         capacity: data.max_participants,
         category: Array.isArray(data.category) ? data.category[0] || "other" : data.category || "other",
-        tags: data.tags,
+        tags,
         requirements: data.requirements,
         contactInfo: data.contact_info,
         isPublic: data.is_public,

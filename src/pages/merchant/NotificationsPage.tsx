@@ -4,7 +4,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   UserPlus,
@@ -20,29 +20,11 @@ import {
 } from "lucide-react";
 import { MerchantLayout } from "@/components/layout";
 import { api } from "@/services/api/client";
-
-interface MerchantNotification {
-  id: string;
-  type:
-    | "enrollment"
-    | "match"
-    | "system"
-    | "reminder"
-    | "approval"
-    | "message"
-    | "follow"
-    | "contact_request";
-  title: string;
-  content: string;
-  activityId?: string;
-  activityTitle?: string;
-  /** 发送者 id（用于社交类通知跳转） */
-  senderId?: string;
-  sender?: { id: string; name?: string | null; avatar?: string | null } | null;
-  activityName?: string;
-  isRead: boolean;
-  createdAt: string;
-}
+import {
+  merchantNotificationsQueryKey,
+  useMerchantNotifications,
+  type MerchantNotification,
+} from "@/features/merchant/notifications";
 
 const notificationIcons: Record<string, React.ReactNode> = {
   enrollment: <UserPlus size={18} />,
@@ -139,31 +121,26 @@ const NotificationsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<string>("all");
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["merchant", "notifications"],
-    queryFn: () => api.get<{ success: boolean; data: { notifications: MerchantNotification[]; unreadCount: number } }>("/api/notification"),
-  });
+  const { data, isLoading } = useMerchantNotifications();
 
-  const notifications: MerchantNotification[] = (data?.data?.notifications ?? []).map((notification) => ({
-    ...notification,
-    activityTitle: notification.activityTitle ?? notification.activityName,
-  }));
+  const notifications: MerchantNotification[] = data?.data?.notifications ?? [];
   const unreadCount = data?.data?.unreadCount ?? 0;
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["merchant", "notifications"] });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: merchantNotificationsQueryKey });
 
   const readMutation = useMutation({
-    mutationFn: (id: string) => api.post(`/api/notification/${id}/read`),
+    mutationFn: (id: string) => api.post(`/api/merchant/notifications/${id}/read`),
     onSuccess: invalidate,
   });
 
   const readAllMutation = useMutation({
-    mutationFn: () => api.post("/api/notification/read-all"),
+    mutationFn: () => api.post("/api/merchant/notifications/read-all"),
     onSuccess: invalidate,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/notification/${id}`),
+    mutationFn: (id: string) => api.delete(`/api/merchant/notifications/${id}`),
     onSuccess: invalidate,
   });
 

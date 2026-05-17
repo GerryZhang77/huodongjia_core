@@ -226,12 +226,33 @@
   }
 
   /* 安全区域适配 */
+  :root {
+    --mobile-tabbar-height: 56px;
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   .safe-area-top {
     padding-top: env(safe-area-inset-top);
   }
 
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: var(--safe-area-bottom);
+  }
+
+  .safe-area-pb {
+    padding-bottom: calc(1rem + var(--safe-area-bottom));
+  }
+
+  .h-safe-area-bottom {
+    height: var(--safe-area-bottom);
+  }
+
+  .mobile-tabbar-content-padding {
+    padding-bottom: calc(var(--mobile-tabbar-height) + var(--safe-area-bottom));
+  }
+
+  .bottom-mobile-tabbar {
+    bottom: calc(var(--mobile-tabbar-height) + var(--safe-area-bottom));
   }
 
   /* 隐藏滚动条 */

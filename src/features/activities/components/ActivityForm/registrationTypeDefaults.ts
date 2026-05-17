@@ -41,7 +41,7 @@ export const createDefaultFormSchema = (): RegistrationFormField[] =>
 
 export const createDefaultRegistrationTypes = (): ActivityRegistrationType[] => [
   {
-    name: "公开报名",
+    name: "",
     formSchema: createDefaultFormSchema(),
     eligibilityMode: "public",
     isDefault: true,

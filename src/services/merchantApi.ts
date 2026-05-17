@@ -73,19 +73,19 @@ export interface MerchantProfileResponse {
  * 更新商家资料请求
  */
 export interface UpdateMerchantProfileRequest {
-  avatar?: string;
+  avatar?: string | null;
   name?: string;
-  birth_year?: number;
-  age?: number;
-  phone?: string;
-  email?: string;
-  wechat?: string;
-  location?: string;
-  occupation?: string;
-  company?: string;
-  industry?: string;
-  city?: string;
-  bio?: string;
+  birth_year?: number | null;
+  age?: number | null;
+  phone?: string | null;
+  email?: string | null;
+  wechat?: string | null;
+  location?: string | null;
+  occupation?: string | null;
+  company?: string | null;
+  industry?: string | null;
+  city?: string | null;
+  bio?: string | null;
   tags?: string[];
   photos?: string[];
   person_info?: unknown[];

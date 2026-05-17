@@ -75,7 +75,7 @@ export const LoginForm: React.FC = () => {
 
       {/* 登录卡片 - 玻璃态效果 */}
       <Card className="backdrop-blur-xl bg-white/90 shadow-2xl border border-white/20 overflow-hidden p-6">
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-5">
           {/* 账号输入 */}
           <div className="w-full">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-1.5">
@@ -84,9 +84,9 @@ export const LoginForm: React.FC = () => {
             </label>
             <Input
               type="text"
-              name="identifier"
+              name="login-identifier"
               placeholder="请输入账号"
-              autoComplete="username"
+              autoComplete="off"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               onKeyDown={(e: React.KeyboardEvent) =>
@@ -103,9 +103,9 @@ export const LoginForm: React.FC = () => {
             </label>
             <Input
               type={showPassword ? "text" : "password"}
-              name="password"
+              name="login-password"
               placeholder="请输入密码"
-              autoComplete="current-password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               suffix={

@@ -39,6 +39,7 @@ import { useActivityDetail } from "../../hooks";
 import { uploadCoverImage } from "../../services";
 import {
   CATEGORY_OPTIONS,
+  isOnlineOnlyActivity,
   TAG_OPTIONS,
   validateTitle,
   validateDescription,
@@ -59,6 +60,7 @@ import { RegistrationTypesBuilder } from "./RegistrationTypesBuilder";
 import { createDefaultRegistrationTypes } from "./registrationTypeDefaults";
 import { ActivityPreview } from "@/components/business";
 import { useAuthStore } from "@/features/auth/stores";
+import { useIsDesktop } from "@/hooks/useMediaQuery";
 
 interface ActivityFormWithPreviewProps {
   /**
@@ -75,6 +77,11 @@ interface ActivityFormWithPreviewProps {
   loading?: boolean;
 }
 
+const getImageUrls = (items: any[]): string[] =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => item?.url)
+    .filter((url): url is string => typeof url === "string" && url.length > 0);
+
 /**
  * 带实时预览的活动表单组件
  */
@@ -85,6 +92,7 @@ export const ActivityFormWithPreview: React.FC<
   const [form] = Form.useForm();
   const [uploading, setUploading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
+  const isDesktopViewport = useIsDesktop();
 
   // 预览相关状态
   const [showPreview, setShowPreview] = useState(true); // PC端默认显示
@@ -199,6 +207,28 @@ export const ActivityFormWithPreview: React.FC<
     isEdit ? activityId : undefined,
   );
 
+  const selectedTags = Array.isArray(formValues.tags) ? formValues.tags : [];
+  const isOnlineOnly = isOnlineOnlyActivity(selectedTags);
+
+  const handleImageListChange = useCallback(
+    (items: any[]) => {
+      const nextList = Array.isArray(items) ? items : [];
+      const imageUrls = getImageUrls(nextList);
+
+      setFileList(nextList);
+      form.setFieldsValue({
+        cover_image: imageUrls[0] || "",
+        images: imageUrls,
+      });
+      setFormValues((prev) => ({
+        ...prev,
+        cover_image: imageUrls[0] || "",
+        images: imageUrls,
+      }));
+    },
+    [form],
+  );
+
   // 编辑模式：填充表单数据
   useEffect(() => {
     if (isEdit && activity) {
@@ -232,12 +262,14 @@ export const ActivityFormWithPreview: React.FC<
       setFormValues(initialValues as any);
 
       if (activity.images && activity.images.length > 0) {
-        setFileList(activity.images.map((url, i) => ({ url, key: `img-${i}` })));
+        handleImageListChange(
+          activity.images.map((url, i) => ({ url, key: `img-${i}` })),
+        );
       } else if (activity.coverImage) {
-        setFileList([{ url: activity.coverImage, key: "cover" }]);
+        handleImageListChange([{ url: activity.coverImage, key: "cover" }]);
       }
     }
-  }, [isEdit, activity, form]);
+  }, [isEdit, activity, form, handleImageListChange]);
 
   // 新建模式：设置默认值
   useEffect(() => {
@@ -254,6 +286,14 @@ export const ActivityFormWithPreview: React.FC<
       setFormValues(defaultValues);
     }
   }, [isEdit, form]);
+
+  useEffect(() => {
+    if (!isOnlineOnly) return;
+    if (!form.getFieldValue("location")) return;
+
+    form.setFieldsValue({ location: "" });
+    setFormValues((prev) => ({ ...prev, location: "" }));
+  }, [form, isOnlineOnly]);
 
   // 监听表单变化，更新预览
   const handleFormChange = useCallback(() => {
@@ -279,11 +319,6 @@ export const ActivityFormWithPreview: React.FC<
     }
   };
 
-  // 图片列表变化时更新预览
-  useEffect(() => {
-    handleFormChange();
-  }, [fileList, handleFormChange]);
-
   // 表单提交
   const handleSubmit = async (values: ActivityFormData) => {
     try {
@@ -296,8 +331,15 @@ export const ActivityFormWithPreview: React.FC<
         return;
       }
 
+      const uploadedImageUrls = getImageUrls(fileList);
+      const valueImageUrls = Array.isArray(values.images)
+        ? values.images.filter(Boolean)
+        : [];
+      const imageUrls =
+        uploadedImageUrls.length > 0 ? uploadedImageUrls : valueImageUrls;
+
       // 验证图片
-      if (fileList.length === 0) {
+      if (imageUrls.length === 0) {
         Toast.show({
           icon: "fail",
           content: "请至少上传一张活动图片",
@@ -323,6 +365,20 @@ export const ActivityFormWithPreview: React.FC<
       const submitData: any = {
         ...values,
       };
+      const submitTags = Array.isArray(submitData.tags)
+        ? submitData.tags.map((tag: any) => String(tag))
+        : [];
+      const submitIsOnlineOnly = isOnlineOnlyActivity(submitTags);
+      const submitLocation = submitIsOnlineOnly
+        ? ""
+        : String(submitData.location || "").trim();
+      if (!submitIsOnlineOnly && !submitLocation) {
+        Toast.show({ icon: "fail", content: "请输入活动地点" });
+        return;
+      }
+      submitData.tags = submitTags;
+      submitData.location = submitLocation;
+
       const registrationTypes =
         submitData.registration_types?.length
           ? submitData.registration_types
@@ -344,11 +400,8 @@ export const ActivityFormWithPreview: React.FC<
       submitData.registration_form_schema =
         defaultRegistrationType?.formSchema || submitData.registration_form_schema;
 
-      // 只有当图片列表不为空时才添加图片字段
-      if (fileList.length > 0) {
-        submitData.cover_image = fileList[0].url;
-        submitData.images = fileList.map((f) => f.url);
-      }
+      submitData.cover_image = imageUrls[0];
+      submitData.images = imageUrls;
 
       Toast.show({
         icon: "loading",
@@ -479,7 +532,7 @@ export const ActivityFormWithPreview: React.FC<
           <div className="space-y-2">
             <ImageUploader
               value={fileList}
-              onChange={setFileList}
+              onChange={handleImageListChange}
               upload={handleImageUpload}
               maxCount={9}
               columns={3}
@@ -509,12 +562,14 @@ export const ActivityFormWithPreview: React.FC<
         className="mb-4"
         style={{ "--border-radius": "12px" } as any}
       >
-        <Form.Item name="location" label="活动地点" rules={validateLocation}>
-          <Input
-            placeholder="请输入详细地址"
-            style={{ "--border-radius": "8px" } as any}
-          />
-        </Form.Item>
+        {!isOnlineOnly && (
+          <Form.Item name="location" label="活动地点" rules={validateLocation}>
+            <Input
+              placeholder="请输入详细地址"
+              style={{ "--border-radius": "8px" } as any}
+            />
+          </Form.Item>
+        )}
 
         <Form.Item
           name="start_time"
@@ -738,7 +793,8 @@ export const ActivityFormWithPreview: React.FC<
   return (
     <div className="relative">
       {/* PC端布局：左右分栏 */}
-      <div className="hidden lg:flex gap-6">
+      {isDesktopViewport && (
+        <div className="flex gap-6">
         {/* 左侧表单区域 */}
         <div
           className={`transition-all duration-300 ${showPreview ? "w-1/2" : "w-full"}`}
@@ -806,7 +862,7 @@ export const ActivityFormWithPreview: React.FC<
               <ActivityPreview
                 formData={formValues}
                 coverImage={fileList[0]?.url}
-                images={fileList.map((f) => f.url)}
+                images={getImageUrls(fileList)}
                 mode={previewMode}
                 organizer={{
                   name: user?.name || "活动主办方",
@@ -815,13 +871,14 @@ export const ActivityFormWithPreview: React.FC<
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {/* PC端：隐藏预览时的展开按钮 */}
-      {!showPreview && (
+      {isDesktopViewport && !showPreview && (
         <button
           onClick={() => setShowPreview(true)}
-          className="hidden lg:flex fixed right-6 top-1/2 -translate-y-1/2 z-40 items-center gap-2 px-4 py-3 bg-primary-500 text-white rounded-l-xl shadow-lg hover:bg-primary-600 transition-colors"
+          className="fixed right-6 top-1/2 -translate-y-1/2 z-40 flex items-center gap-2 px-4 py-3 bg-primary-500 text-white rounded-l-xl shadow-lg hover:bg-primary-600 transition-colors"
         >
           <Eye size={18} />
           <span className="text-sm font-medium">显示预览</span>
@@ -829,17 +886,19 @@ export const ActivityFormWithPreview: React.FC<
       )}
 
       {/* 移动端/平板布局：全宽表单 */}
-      <div className="lg:hidden px-4">{formContent}</div>
+      {!isDesktopViewport && <div className="px-4">{formContent}</div>}
 
       {/* 移动端：底部预览按钮 */}
-      <div className="lg:hidden fixed bottom-16 right-4 z-40">
-        <button
-          onClick={() => setShowMobilePreview(true)}
-          className="w-12 h-12 bg-primary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-600 transition-colors"
-        >
-          <Eye size={20} />
-        </button>
-      </div>
+      {!isDesktopViewport && (
+        <div className="fixed bottom-16 right-4 z-40">
+          <button
+            onClick={() => setShowMobilePreview(true)}
+            className="w-12 h-12 bg-primary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-primary-600 transition-colors"
+          >
+            <Eye size={20} />
+          </button>
+        </div>
+      )}
 
       {/* 移动端：预览弹窗 */}
       <Popup
@@ -899,7 +958,7 @@ export const ActivityFormWithPreview: React.FC<
             <ActivityPreview
               formData={formValues}
               coverImage={fileList[0]?.url}
-              images={fileList.map((f) => f.url)}
+              images={getImageUrls(fileList)}
               mode={previewMode}
               organizer={{
                 name: user?.name || "活动主办方",

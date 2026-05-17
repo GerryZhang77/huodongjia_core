@@ -11,6 +11,10 @@
  * - 请求路径保持一致，如 /api/auth/login
  */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import {
+  buildLoginPathWithRedirect,
+  getCurrentRedirectPath,
+} from "@/utils/redirect";
 
 // ========================================
 // 自定义 API 响应类型
@@ -128,7 +132,9 @@ api.interceptors.response.use(
 
       // 避免在登录页重复跳转
       if (!window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
+        window.location.href = buildLoginPathWithRedirect(
+          getCurrentRedirectPath(),
+        );
       }
     }
 

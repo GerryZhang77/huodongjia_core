@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dialog, Input } from "antd-mobile";
-import { ChevronLeft, FileText, Trash2, Pencil } from "lucide-react";
+import { Dialog, Input, Popup } from "antd-mobile";
+import { ChevronLeft, Eye, FileText, Trash2, Pencil, X } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
 import {
@@ -18,10 +18,43 @@ const TYPE_TABS: { key: FormTemplateType; label: string }[] = [
   { key: "requirements", label: "参与要求" },
 ];
 
+const FIELD_TYPE_LABELS: Record<string, string> = {
+  text: "文本",
+  textarea: "多行文本",
+  number: "数字",
+  phone: "手机号",
+  email: "邮箱",
+  select: "下拉选择",
+  radio: "单选",
+  "multi-select": "多选",
+  checkbox: "勾选",
+  date: "日期",
+};
+
+function parseRequirements(schema: FormTemplate["schema"]): string[] {
+  if (Array.isArray(schema)) {
+    return schema.map((field) => field.label).filter(Boolean);
+  }
+  if (!schema) return [];
+  try {
+    const parsed = JSON.parse(schema);
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+  } catch {
+    // 非 JSON 字符串按换行分隔展示
+  }
+  return schema
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 const TemplateListPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeType, setActiveType] = useState<FormTemplateType>(
     "registration_form",
+  );
+  const [previewTemplate, setPreviewTemplate] = useState<FormTemplate | null>(
+    null,
   );
   // 拉取全量，本地按 activeType 过滤；这样 tab 计数才能始终反映两类模板的真实数量
   const { data: allTemplates = [], isLoading } = useFormTemplates();
@@ -114,7 +147,7 @@ const TemplateListPage: React.FC = () => {
       onBack={() => navigate("/dashboard/profile")}
       showTabBar={false}
     >
-      <div className="p-4 lg:p-6 space-y-4">
+      <div className="p-4 pb-24 lg:p-6 space-y-4">
         {/* 类型切换 */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-1 inline-flex">
           {TYPE_TABS.map((tab) => (
@@ -162,7 +195,8 @@ const TemplateListPage: React.FC = () => {
             {templates.map((t) => (
               <li
                 key={t.id}
-                className="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                className="flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors cursor-pointer"
+                onClick={() => setPreviewTemplate(t)}
               >
                 <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
                   <FileText
@@ -180,14 +214,30 @@ const TemplateListPage: React.FC = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleRename(t)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setPreviewTemplate(t);
+                  }}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="预览"
+                >
+                  <Eye size={14} />
+                </button>
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleRename(t);
+                  }}
                   className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   title="重命名"
                 >
                   <Pencil size={14} />
                 </button>
                 <button
-                  onClick={() => handleDelete(t)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleDelete(t);
+                  }}
                   className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
                   title="删除"
                 >
@@ -204,7 +254,7 @@ const TemplateListPage: React.FC = () => {
       </div>
 
       {/* 移动端无底部 Tab，手动加返回入口（可选） */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 px-4 pb-4 pt-2 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-gray-800 dark:via-gray-800/95">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 px-4 pt-2 safe-area-pb bg-gradient-to-t from-white via-white/95 to-transparent dark:from-gray-800 dark:via-gray-800/95">
         <button
           onClick={() => navigate("/dashboard/profile")}
           className="w-full max-w-2xl mx-auto flex items-center justify-center gap-1 py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
@@ -213,6 +263,99 @@ const TemplateListPage: React.FC = () => {
           返回个人中心
         </button>
       </div>
+
+      <Popup
+        visible={!!previewTemplate}
+        onMaskClick={() => setPreviewTemplate(null)}
+        position="bottom"
+        bodyStyle={{
+          borderTopLeftRadius: "16px",
+          borderTopRightRadius: "16px",
+          maxHeight: "78vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {previewTemplate && (
+          <>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                  {previewTemplate.name}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {FORM_TEMPLATE_TYPE_LABELS[previewTemplate.type]} · 更新于{" "}
+                  {new Date(previewTemplate.updated_at).toLocaleString()}
+                </p>
+              </div>
+              <button
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+                onClick={() => setPreviewTemplate(null)}
+              >
+                <X size={18} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {previewTemplate.type === "registration_form" &&
+              Array.isArray(previewTemplate.schema) ? (
+                <div className="space-y-2">
+                  {previewTemplate.schema.map((field) => (
+                    <div
+                      key={field.key}
+                      className="rounded-xl border border-gray-100 bg-white p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {field.label}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {FIELD_TYPE_LABELS[field.type] || field.type}
+                          </div>
+                        </div>
+                        {field.required && (
+                          <span className="flex-shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-500">
+                            必填
+                          </span>
+                        )}
+                      </div>
+                      {field.options && field.options.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {field.options.map((option) => (
+                            <span
+                              key={option}
+                              className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500"
+                            >
+                              {option}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {parseRequirements(previewTemplate.schema).map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-xl border border-gray-100 bg-white p-3 text-sm text-gray-700"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                  {parseRequirements(previewTemplate.schema).length === 0 && (
+                    <div className="py-10 text-center text-sm text-gray-400">
+                      暂无内容
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </Popup>
     </MerchantLayout>
   );
 };

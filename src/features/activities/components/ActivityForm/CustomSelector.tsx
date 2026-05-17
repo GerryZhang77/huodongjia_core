@@ -3,13 +3,13 @@
  * 在预设选项基础上，允许用户添加自定义选项（限制字数）
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Selector } from "antd-mobile";
 import { Plus, X } from "lucide-react";
 
 interface CustomSelectorProps {
   options: { label: string; value: string }[];
-  value?: string[];
+  value?: string | string[];
   onChange?: (value: string[]) => void;
   multiple?: boolean;
   maxCustomLength?: number;
@@ -24,6 +24,11 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
   maxCustomLength = 7,
   placeholder = "输入自定义选项",
 }) => {
+  const selectedValues = useMemo(
+    () => (Array.isArray(value) ? value : value ? [value] : []),
+    [value],
+  );
+  const selectedValueKey = selectedValues.join("\u0000");
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [customOptions, setCustomOptions] = useState<
@@ -31,12 +36,26 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
   >(() => {
     // 从 value 中找出不在预设选项中的值，恢复为自定义选项
     const presetValues = new Set(options.map((o) => o.value));
-    return value
+    return selectedValues
       .filter((v) => !presetValues.has(v))
-      .map((v) => ({ label: v, value: v }));
+      .map((v) => ({ label: v.startsWith("custom_") ? v.slice(7) : v, value: v }));
   });
 
   const allOptions = [...options, ...customOptions];
+
+  useEffect(() => {
+    const presetValues = new Set(options.map((o) => o.value));
+    const customValues = selectedValues.filter((v) => !presetValues.has(v));
+    if (customValues.length === 0) return;
+
+    setCustomOptions((prev) => {
+      const existingValues = new Set(prev.map((o) => o.value));
+      const additions = customValues
+        .filter((v) => !existingValues.has(v))
+        .map((v) => ({ label: v.startsWith("custom_") ? v.slice(7) : v, value: v }));
+      return additions.length > 0 ? [...prev, ...additions] : prev;
+    });
+  }, [options, selectedValueKey, selectedValues]);
 
   const addCustomOption = () => {
     const trimmed = inputValue.trim();
@@ -50,7 +69,7 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
 
     // 自动选中新添加的选项
     if (multiple) {
-      onChange?.([...value, newOption.value]);
+      onChange?.([...selectedValues, newOption.value]);
     } else {
       onChange?.([newOption.value]);
     }
@@ -61,14 +80,14 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
 
   const removeCustomOption = (optValue: string) => {
     setCustomOptions((prev) => prev.filter((o) => o.value !== optValue));
-    onChange?.(value.filter((v) => v !== optValue));
+    onChange?.(selectedValues.filter((v) => v !== optValue));
   };
 
   return (
     <div>
       <Selector
         options={allOptions}
-        value={value}
+        value={selectedValues}
         onChange={(v) => onChange?.(v as string[])}
         {...(multiple ? { multiple: true } : {})}
         style={{ "--border-radius": "8px" } as any}

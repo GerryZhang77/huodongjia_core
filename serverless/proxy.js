@@ -6,7 +6,7 @@
  * 路由：/serverless/proxy → 代理到后端 API
  */
 
-const BACKEND_URL = "http://8.147.67.106:12321";
+const BACKEND_URL = "http://8.210.99.37";
 
 module.exports = async (req, res) => {
   // 设置 CORS 头（放在最前面）

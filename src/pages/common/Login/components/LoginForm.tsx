@@ -220,18 +220,20 @@ export const LoginForm: React.FC = () => {
             <form
               key="password-form"
               onSubmit={handleSubmit}
+              autoComplete="off"
               className="space-y-[30px] max-sm:space-y-5 animate-fade-in"
             >
               <Input
                 label="用户名 / 手机号"
                 type="text"
+                name="login-identifier"
                 value={identifier}
                 onChange={(e) => {
                   setIdentifier(e.target.value);
                   if (error) setError("");
                 }}
                 placeholder="请输入用户名或手机号"
-                autoComplete="username"
+                autoComplete="off"
                 size="large"
                 suffix={<Mail className="w-5 h-5 text-gray-400" />}
                 onKeyDown={(e) => {
@@ -247,13 +249,14 @@ export const LoginForm: React.FC = () => {
                 ref={passwordRef}
                 label="密码"
                 type={showPassword ? "text" : "password"}
+                name="login-password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   if (error) setError("");
                 }}
                 placeholder="••••••••"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 size="large"
                 suffix={
                   <button
