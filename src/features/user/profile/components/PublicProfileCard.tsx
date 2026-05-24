@@ -12,6 +12,7 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  RefreshCw,
   Sparkles,
 } from "lucide-react";
 import { Tag } from "@/components/ui";
@@ -31,6 +32,10 @@ export interface PublicProfileCardProps {
   onLogin?: () => void;
   onEdit?: () => void;
   onAddPhotos?: () => void;
+  photoActionLabel?: string;
+  photoActionLoading?: boolean;
+  photoActionDisabled?: boolean;
+  avatarOverlap?: boolean;
 }
 
 function getFieldLabel(field: PublicProfileField): string {
@@ -58,12 +63,18 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
   onLogin,
   onEdit,
   onAddPhotos,
+  photoActionLabel,
+  photoActionLoading = false,
+  photoActionDisabled = false,
+  avatarOverlap = true,
 }) => {
   const displayName = profile.name?.trim() || fallbackName || "匿名用户";
   const avatar = getUserAvatar(profile.avatar, profile.id || displayName, 160);
   const statsUserId = showStats && authenticated ? profile.id : undefined;
   const { data: stats } = useSocialStats(statsUserId);
-  const photos = (profile.photos || []).filter(Boolean).slice(0, 9);
+  const maxPhotos = 9;
+  const photos = (profile.photos || []).filter(Boolean).slice(0, maxPhotos);
+  const canAddPhotos = isSelf && onAddPhotos && photos.length < maxPhotos;
   const publicFields = (profile.publicFields || []).filter((field) =>
     String(field.field_value || "").trim(),
   );
@@ -84,9 +95,14 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
   return (
     <div className={clsx("space-y-4", className)}>
       <div className="overflow-visible rounded-2xl bg-white shadow-lg dark:bg-gray-800">
-        <div className="px-4 pb-4">
+        <div className={clsx("px-4 pb-4", !avatarOverlap && "pt-4")}>
           <div className="flex items-end justify-between gap-3">
-            <div className="-mt-10 h-20 w-20 flex-shrink-0 rounded-2xl bg-white p-1.5 shadow-xl dark:bg-gray-800">
+            <div
+              className={clsx(
+                "h-20 w-20 flex-shrink-0 rounded-2xl bg-white p-1.5 shadow-xl dark:bg-gray-800",
+                avatarOverlap && "-mt-10",
+              )}
+            >
               <img
                 src={avatar}
                 alt={displayName}
@@ -236,10 +252,27 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
 
       {photos.length > 0 ? (
         <div className="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
-          <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
-            <Images size={14} />
-            照片墙
-          </h3>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <Images size={14} />
+              照片墙
+            </h3>
+            {canAddPhotos && (
+              <button
+                type="button"
+                onClick={onAddPhotos}
+                disabled={photoActionDisabled || photoActionLoading}
+                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full bg-primary-50 px-3 text-xs font-medium text-primary-500 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-900/25 dark:text-primary-300"
+              >
+                {photoActionLoading ? (
+                  <RefreshCw size={13} className="animate-spin" />
+                ) : (
+                  <ImagePlus size={13} />
+                )}
+                <span>{photoActionLoading ? "上传中" : photoActionLabel || "添加"}</span>
+              </button>
+            )}
+          </div>
           <ImageGallery images={photos} gap={6} maxDisplay={9} size="large" />
         </div>
       ) : (
@@ -249,10 +282,15 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
             <button
               type="button"
               onClick={onAddPhotos}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-200 px-4 py-6 text-sm font-medium text-gray-500 transition-colors hover:border-primary-300 hover:text-primary-500 dark:border-gray-700 dark:text-gray-400"
+              disabled={photoActionDisabled || photoActionLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-200 px-4 py-6 text-sm font-medium text-gray-500 transition-colors hover:border-primary-300 hover:text-primary-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:text-gray-400"
             >
-              <ImagePlus size={18} />
-              <span>添加照片</span>
+              {photoActionLoading ? (
+                <RefreshCw size={18} className="animate-spin" />
+              ) : (
+                <ImagePlus size={18} />
+              )}
+              <span>{photoActionLoading ? "上传中" : photoActionLabel || "添加照片"}</span>
             </button>
           </div>
         )

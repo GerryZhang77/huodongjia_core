@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,17 +16,27 @@ import { useAuthStore } from "@/features/auth/stores/authStore";
 import { Toast } from "@/components/ui/Toast";
 import { api } from "@/services/api";
 import { bindNfcTag, resolveNfcTag, type NfcResolveData } from "@/services/nfcApi";
-import type { UserProfile } from "@/services/userApi";
+import { updateUserProfile, type UserProfile } from "@/services/userApi";
 import { PublicProfileCard } from "@/features/user/profile";
+import { useImageUpload, type UploadHandle } from "@/features/uploads";
 
 interface LegacyNfcData {
   otherUserInfo: UserProfile;
   otherEnrollmentInfo: Record<string, unknown>;
 }
 
+const MAX_NFC_PHOTOS = 9;
+
 function getErrorMessage(error: unknown, fallback: string): string {
   const maybeAxios = error as { response?: { data?: { message?: string } }; message?: string };
   return maybeAxios?.response?.data?.message || maybeAxios?.message || fallback;
+}
+
+function normalizePhotos(photos?: string[] | null): string[] {
+  return (photos || [])
+    .map((url) => String(url || "").trim())
+    .filter(Boolean)
+    .slice(0, MAX_NFC_PHOTOS);
 }
 
 function buildRedirect(location: ReturnType<typeof useLocation>) {
@@ -63,6 +73,38 @@ const Header: FC<{ title: string; subtitle?: string; onBack: () => void }> = ({
         <h1 className="text-lg font-bold">{title}</h1>
         {subtitle && <p className="mt-1 text-xs text-white/75">{subtitle}</p>}
       </div>
+    </div>
+  </div>
+);
+
+const CompactHeader: FC<{ title: string; onBack: () => void; label?: string }> = ({
+  title,
+  onBack,
+  label,
+}) => (
+  <div className="sticky top-0 z-10 border-b border-gray-100 bg-white/95 px-4 py-3 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95">
+    <div className="flex h-9 items-center gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+        aria-label="返回"
+      >
+        <ArrowLeft size={18} />
+      </button>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <Radio size={16} className="flex-shrink-0 text-primary-500" />
+          <h1 className="truncate text-base font-semibold text-gray-900 dark:text-gray-100">
+            {title}
+          </h1>
+        </div>
+      </div>
+      {label && (
+        <span className="flex-shrink-0 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-500 dark:bg-primary-900/25 dark:text-primary-300">
+          {label}
+        </span>
+      )}
     </div>
   </div>
 );
@@ -124,6 +166,171 @@ const StatusPanel: FC<{
     </div>
   </div>
 );
+
+const NfcProfileCard: FC<{
+  profile: UserProfile;
+  isSelf: boolean;
+  authenticated: boolean;
+  canEdit: boolean;
+  contextLabel?: string;
+  className?: string;
+  onLogin: () => void;
+  onEdit: () => void;
+  onProfilePatched?: (patch: Partial<UserProfile>) => void;
+}> = ({
+  profile,
+  isSelf,
+  authenticated,
+  canEdit,
+  contextLabel,
+  className,
+  onLogin,
+  onEdit,
+  onProfilePatched,
+}) => {
+  const queryClient = useQueryClient();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoUpload = useImageUpload({ kind: "photo" });
+  const [localPhotos, setLocalPhotos] = useState<string[] | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  const profilePhotoKey = normalizePhotos(profile.photos).join("\u0000");
+  const displayPhotos = localPhotos ?? normalizePhotos(profile.photos);
+  const effectiveProfile = localPhotos ? { ...profile, photos: localPhotos } : profile;
+
+  useEffect(() => {
+    setLocalPhotos(null);
+  }, [profile.id, profilePhotoKey]);
+
+  const openPhotoPicker = () => {
+    if (!canEdit) {
+      if (!authenticated) {
+        onLogin();
+        return;
+      }
+      Toast.show({ icon: "fail", content: "请使用绑定账号编辑卡片" });
+      return;
+    }
+
+    if (photoUploading) return;
+
+    if (displayPhotos.length >= MAX_NFC_PHOTOS) {
+      Toast.show({ icon: "fail", content: `照片墙最多 ${MAX_NFC_PHOTOS} 张` });
+      return;
+    }
+
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const existingPhotos = displayPhotos.filter((url) => !url.startsWith("blob:"));
+    const remainingSlots = MAX_NFC_PHOTOS - existingPhotos.length;
+    const selectedFiles = files.slice(0, remainingSlots);
+
+    if (files.length > remainingSlots) {
+      Toast.show({ icon: "fail", content: `照片墙最多 ${MAX_NFC_PHOTOS} 张` });
+    }
+
+    const handles = selectedFiles
+      .map((file) => {
+        const handle = photoUpload.uploadWithPreview(file);
+        if (!handle.tempUrl) {
+          handle.finalUrlPromise.catch(() => undefined);
+          return null;
+        }
+        return handle;
+      })
+      .filter((handle): handle is UploadHandle => Boolean(handle));
+
+    if (!handles.length) {
+      if (photoInputRef.current) photoInputRef.current.value = "";
+      return;
+    }
+
+    const tempUrls = handles.map((handle) => handle.tempUrl);
+    setLocalPhotos([...existingPhotos, ...tempUrls]);
+    setPhotoUploading(true);
+
+    const uploads = handles.map((handle) =>
+      handle.finalUrlPromise.then((realUrl) => {
+        setLocalPhotos((prev) =>
+          prev?.map((url) => (url === handle.tempUrl ? realUrl : url)) ?? null,
+        );
+        return realUrl;
+      }),
+    );
+
+    Promise.allSettled(uploads)
+      .then(async (results) => {
+        const uploadedPhotos = results
+          .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled")
+          .map((result) => result.value);
+        const nextPhotos = normalizePhotos([...existingPhotos, ...uploadedPhotos]);
+
+        if (!uploadedPhotos.length) {
+          setLocalPhotos(existingPhotos);
+          return;
+        }
+
+        setLocalPhotos(nextPhotos);
+        const response = await updateUserProfile({ photos: nextPhotos });
+        const savedPhotos = normalizePhotos(response.profile?.photos || nextPhotos);
+
+        setLocalPhotos(savedPhotos);
+        onProfilePatched?.({ photos: savedPhotos });
+        queryClient.setQueryData<{ success?: boolean; profile?: UserProfile }>(
+          ["user", "profile"],
+          (old) =>
+            old?.profile
+              ? { ...old, profile: { ...old.profile, photos: savedPhotos } }
+              : old,
+        );
+        queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+        queryClient.invalidateQueries({ queryKey: ["publicProfile", profile.id] });
+        Toast.show({ icon: "success", content: "照片已添加" });
+      })
+      .catch((error) => {
+        setLocalPhotos(existingPhotos);
+        Toast.show({
+          icon: "fail",
+          content: getErrorMessage(error, "照片保存失败，请重试"),
+        });
+      })
+      .finally(() => {
+        setPhotoUploading(false);
+        if (photoInputRef.current) photoInputRef.current.value = "";
+      });
+  };
+
+  return (
+    <>
+      <PublicProfileCard
+        profile={effectiveProfile}
+        isSelf={isSelf}
+        authenticated={authenticated}
+        contextLabel={contextLabel}
+        className={className}
+        onLogin={onLogin}
+        onEdit={canEdit ? onEdit : undefined}
+        onAddPhotos={canEdit ? openPhotoPicker : undefined}
+        photoActionLoading={photoUploading}
+        photoActionDisabled={photoUploading}
+        avatarOverlap={false}
+      />
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handlePhotoChange}
+      />
+    </>
+  );
+};
 
 const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const navigate = useNavigate();
@@ -199,6 +406,8 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const profile = data.profile;
   const isSelf = data.viewer.isSelf;
   const authenticated = data.viewer.isAuthenticated || !!currentUser;
+  const canEditCard =
+    isSelf && authenticated && data.actions.canEdit && currentUser?.user_type === "user";
 
   if (status === "unbound") {
     return (
@@ -254,24 +463,28 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
 
   return (
     <PageShell>
-      <Header
-        title={isSelf ? "我的 NFC 手环" : "NFC 名片"}
-        subtitle={isSelf ? "你可以编辑自己的卡片内容" : "查看对方卡片并发起互动"}
+      <CompactHeader
+        title={isSelf ? "我的手环名片" : "NFC 名片"}
+        label={canEditCard ? "可编辑" : undefined}
         onBack={goBack}
       />
-      <PublicProfileCard
+      <NfcProfileCard
         profile={profile}
         isSelf={isSelf}
         authenticated={authenticated}
+        canEdit={canEditCard}
         contextLabel={isSelf ? "我的手环" : undefined}
-        className="mx-4 -mt-10"
+        className="mx-4 py-4"
         onLogin={goLogin}
         onEdit={() =>
           navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
         }
-        onAddPhotos={() =>
-          navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
-        }
+        onProfilePatched={(patch) => {
+          queryClient.setQueryData<NfcResolveData>(["nfc", "tag", token], (old) =>
+            old?.profile ? { ...old, profile: { ...old.profile, ...patch } } : old,
+          );
+          queryClient.invalidateQueries({ queryKey: ["nfc", "tag", token] });
+        }}
       />
     </PageShell>
   );
@@ -279,6 +492,7 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
 
 const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userId }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user: currentUser } = useAuthStore();
 
   const { data, isLoading, isError, error } = useQuery({
@@ -292,6 +506,7 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/u/home"));
   const redirect = `/nfc/${eventId}/${userId}`;
   const isSelf = !!currentUser && currentUser.id === profile?.id;
+  const canEditCard = isSelf && currentUser?.user_type === "user";
 
   if (isLoading) {
     return (
@@ -319,20 +534,38 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
 
   return (
     <PageShell>
-      <Header title="NFC 碰一碰" subtitle="旧版活动名片链接" onBack={goBack} />
-      <PublicProfileCard
+      <CompactHeader
+        title={isSelf ? "我的手环名片" : "NFC 名片"}
+        label="旧版链接"
+        onBack={goBack}
+      />
+      <NfcProfileCard
         profile={profile}
         isSelf={isSelf}
         authenticated={!!currentUser}
+        canEdit={canEditCard}
         contextLabel={isSelf ? "我的手环" : undefined}
-        className="mx-4 -mt-10"
+        className="mx-4 py-4"
         onLogin={() => navigate(`/login?redirect=${encodeURIComponent(redirect)}`)}
         onEdit={() =>
           navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
         }
-        onAddPhotos={() =>
-          navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
-        }
+        onProfilePatched={(patch) => {
+          queryClient.setQueryData<{ success: boolean; data: LegacyNfcData }>(
+            ["nfc", "legacy", eventId, userId],
+            (old) =>
+              old?.data?.otherUserInfo
+                ? {
+                    ...old,
+                    data: {
+                      ...old.data,
+                      otherUserInfo: { ...old.data.otherUserInfo, ...patch },
+                    },
+                  }
+                : old,
+          );
+          queryClient.invalidateQueries({ queryKey: ["nfc", "legacy", eventId, userId] });
+        }}
       />
       <div className="px-4 pb-8 pt-4 text-center text-xs text-gray-400">
         活动 ID: {eventId}
