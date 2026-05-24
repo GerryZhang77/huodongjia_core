@@ -1,9 +1,11 @@
-import { FC } from "react";
+import { FC, useState } from "react";
 import { clsx } from "clsx";
 import {
   BadgeCheck,
   Briefcase,
   Building2,
+  ChevronLeft,
+  ChevronRight,
   Edit3,
   ImagePlus,
   Images,
@@ -15,9 +17,9 @@ import {
   RefreshCw,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import { Tag } from "@/components/ui";
-import { ImageGallery } from "@/components/business/ImageGallery";
 import { FollowButton, MessageButton, useSocialStats } from "@/features/social";
 import { getUserAvatar } from "@/utils/avatar";
 import type { PublicProfileField, UserProfile } from "@/services/userApi";
@@ -77,6 +79,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
   const avatar = getUserAvatar(profile.avatar, profile.id || displayName, 160);
   const statsUserId = showStats && authenticated ? profile.id : undefined;
   const { data: stats } = useSocialStats(statsUserId);
+  const [photoViewerIndex, setPhotoViewerIndex] = useState<number | null>(null);
   const maxPhotos = 9;
   const photos = (profile.photos || []).filter(Boolean).slice(0, maxPhotos);
   const canAddPhotos = isSelf && onAddPhotos && photos.length < maxPhotos;
@@ -104,6 +107,14 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
     profile.industry,
     profile.city,
   ].filter((item): item is string => Boolean(String(item || "").trim()));
+  const hasPhotoViewer = photoViewerIndex !== null && photos[photoViewerIndex];
+  const closePhotoViewer = () => setPhotoViewerIndex(null);
+  const showPrevPhoto = () =>
+    setPhotoViewerIndex((index) => (index === null ? index : Math.max(0, index - 1)));
+  const showNextPhoto = () =>
+    setPhotoViewerIndex((index) =>
+      index === null ? index : Math.min(photos.length - 1, index + 1),
+    );
 
   const renderDefaultHeader = () => (
     <div className="overflow-visible rounded-2xl bg-white shadow-lg dark:bg-gray-800">
@@ -383,31 +394,57 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
     </div>
   );
 
-  const renderEditablePhotos = () => (
-    <div className="grid grid-cols-3 gap-2">
+  const renderPhotos = () => (
+    <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
       {photos.map((url, index) => (
         <div
           key={`${url}-${index}`}
-          className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700"
+          className="relative aspect-[4/3] w-[78vw] max-w-sm flex-none snap-center overflow-hidden rounded-2xl bg-gray-100 shadow-sm dark:bg-gray-700 sm:w-80"
         >
-          <img
-            src={url}
-            alt={`照片 ${index + 1}`}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-          />
           <button
             type="button"
-            onClick={() => onRemovePhoto?.(index)}
-            disabled={photoActionDisabled || photoActionLoading}
-            className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white shadow-sm transition-colors hover:bg-black/70 disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label={`删除照片 ${index + 1}`}
+            onClick={() => setPhotoViewerIndex(index)}
+            className="block h-full w-full"
+            aria-label={`查看照片 ${index + 1}`}
           >
-            <Trash2 size={14} />
+            <img
+              src={url}
+              alt={`照片 ${index + 1}`}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
           </button>
+          {canRemovePhotos && (
+            <button
+              type="button"
+              onClick={() => onRemovePhoto?.(index)}
+              disabled={photoActionDisabled || photoActionLoading}
+              className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white shadow-sm transition-colors hover:bg-black/70 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={`删除照片 ${index + 1}`}
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
         </div>
       ))}
+      {canAddPhotos && (
+        <button
+          type="button"
+          onClick={onAddPhotos}
+          disabled={photoActionDisabled || photoActionLoading}
+          className="flex aspect-[4/3] w-[78vw] max-w-sm flex-none snap-center flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 transition-colors hover:border-primary-300 hover:text-primary-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:text-gray-500 sm:w-80"
+        >
+          {photoActionLoading ? (
+            <RefreshCw size={24} className="animate-spin" />
+          ) : (
+            <ImagePlus size={24} />
+          )}
+          <span className="text-sm font-medium">
+            {photoActionLoading ? "处理中" : photoActionLabel || "添加照片"}
+          </span>
+        </button>
+      )}
     </div>
   );
 
@@ -470,11 +507,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
               </button>
             )}
           </div>
-          {canRemovePhotos ? (
-            renderEditablePhotos()
-          ) : (
-            <ImageGallery images={photos} gap={6} maxDisplay={9} size="large" />
-          )}
+          {renderPhotos()}
         </div>
       ) : (
         isSelf &&
@@ -495,6 +528,57 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
             </button>
           </div>
         )
+      )}
+
+      {hasPhotoViewer && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          onClick={closePhotoViewer}
+        >
+          <button
+            type="button"
+            onClick={closePhotoViewer}
+            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+            aria-label="关闭照片预览"
+          >
+            <X size={20} />
+          </button>
+
+          {photoViewerIndex > 0 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                showPrevPhoto();
+              }}
+              className="absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              aria-label="上一张照片"
+            >
+              <ChevronLeft size={24} />
+            </button>
+          )}
+
+          <img
+            src={photos[photoViewerIndex]}
+            alt={`照片 ${photoViewerIndex + 1}`}
+            className="max-h-[90vh] max-w-[92vw] object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+
+          {photoViewerIndex < photos.length - 1 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                showNextPhoto();
+              }}
+              className="absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              aria-label="下一张照片"
+            >
+              <ChevronRight size={24} />
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
