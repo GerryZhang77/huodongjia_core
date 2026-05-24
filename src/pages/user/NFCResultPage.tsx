@@ -203,7 +203,7 @@ const NfcProfileCard: FC<{
   const photoInputRef = useRef<HTMLInputElement>(null);
   const photoUpload = useImageUpload({ kind: "photo" });
   const [localPhotos, setLocalPhotos] = useState<string[] | null>(null);
-  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoSaving, setPhotoSaving] = useState(false);
 
   const profilePhotoKey = normalizePhotos(profile.photos).join("\u0000");
   const displayPhotos = localPhotos ?? normalizePhotos(profile.photos);
@@ -223,14 +223,49 @@ const NfcProfileCard: FC<{
       return;
     }
 
-    if (photoUploading) return;
+    if (photoSaving) return;
 
     if (displayPhotos.length >= MAX_NFC_PHOTOS) {
       Toast.show({ icon: "fail", content: `照片墙最多 ${MAX_NFC_PHOTOS} 张` });
       return;
     }
 
+    if (photoInputRef.current) photoInputRef.current.value = "";
     photoInputRef.current?.click();
+  };
+
+  const persistPhotos = async (
+    nextPhotos: string[],
+    rollbackPhotos: string[],
+    successMessage: string,
+  ) => {
+    const normalizedNextPhotos = normalizePhotos(nextPhotos);
+    setLocalPhotos(normalizedNextPhotos);
+
+    try {
+      const response = await updateUserProfile({ photos: normalizedNextPhotos });
+      const savedPhotos = normalizePhotos(response.profile?.photos || normalizedNextPhotos);
+
+      setLocalPhotos(savedPhotos);
+      onProfilePatched?.({ photos: savedPhotos });
+      queryClient.setQueryData<{ success?: boolean; profile?: UserProfile }>(
+        ["user", "profile"],
+        (old) =>
+          old?.profile
+            ? { ...old, profile: { ...old.profile, photos: savedPhotos } }
+            : old,
+      );
+      queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+      queryClient.invalidateQueries({ queryKey: ["publicProfile", profile.id] });
+      queryClient.invalidateQueries({ queryKey: ["nfc"] });
+      Toast.show({ icon: "success", content: successMessage });
+    } catch (error) {
+      setLocalPhotos(rollbackPhotos);
+      Toast.show({
+        icon: "fail",
+        content: getErrorMessage(error, "照片保存失败，请重试"),
+      });
+    }
   };
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -263,7 +298,7 @@ const NfcProfileCard: FC<{
 
     const tempUrls = handles.map((handle) => handle.tempUrl);
     setLocalPhotos([...existingPhotos, ...tempUrls]);
-    setPhotoUploading(true);
+    setPhotoSaving(true);
 
     const uploads = handles.map((handle) =>
       handle.finalUrlPromise.then((realUrl) => {
@@ -286,22 +321,7 @@ const NfcProfileCard: FC<{
           return;
         }
 
-        setLocalPhotos(nextPhotos);
-        const response = await updateUserProfile({ photos: nextPhotos });
-        const savedPhotos = normalizePhotos(response.profile?.photos || nextPhotos);
-
-        setLocalPhotos(savedPhotos);
-        onProfilePatched?.({ photos: savedPhotos });
-        queryClient.setQueryData<{ success?: boolean; profile?: UserProfile }>(
-          ["user", "profile"],
-          (old) =>
-            old?.profile
-              ? { ...old, profile: { ...old.profile, photos: savedPhotos } }
-              : old,
-        );
-        queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
-        queryClient.invalidateQueries({ queryKey: ["publicProfile", profile.id] });
-        Toast.show({ icon: "success", content: "照片已添加" });
+        await persistPhotos(nextPhotos, existingPhotos, "照片已添加");
       })
       .catch((error) => {
         setLocalPhotos(existingPhotos);
@@ -311,9 +331,22 @@ const NfcProfileCard: FC<{
         });
       })
       .finally(() => {
-        setPhotoUploading(false);
+        setPhotoSaving(false);
         if (photoInputRef.current) photoInputRef.current.value = "";
       });
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    if (!canEdit || photoSaving) return;
+
+    const existingPhotos = normalizePhotos(displayPhotos.filter((url) => !url.startsWith("blob:")));
+    if (index < 0 || index >= existingPhotos.length) return;
+
+    const nextPhotos = existingPhotos.filter((_, photoIndex) => photoIndex !== index);
+    setPhotoSaving(true);
+    void persistPhotos(nextPhotos, existingPhotos, "照片已删除").finally(() => {
+      setPhotoSaving(false);
+    });
   };
 
   return (
@@ -328,8 +361,9 @@ const NfcProfileCard: FC<{
         onLogin={onLogin}
         onEdit={canEdit ? onEdit : undefined}
         onAddPhotos={canEdit ? openPhotoPicker : undefined}
-        photoActionLoading={photoUploading}
-        photoActionDisabled={photoUploading}
+        onRemovePhoto={canEdit ? handleRemovePhoto : undefined}
+        photoActionLoading={photoSaving}
+        photoActionDisabled={photoSaving}
         avatarOverlap={false}
       />
       <input

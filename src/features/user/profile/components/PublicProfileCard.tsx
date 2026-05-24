@@ -14,6 +14,7 @@ import {
   Phone,
   RefreshCw,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { Tag } from "@/components/ui";
 import { ImageGallery } from "@/components/business/ImageGallery";
@@ -33,6 +34,7 @@ export interface PublicProfileCardProps {
   onLogin?: () => void;
   onEdit?: () => void;
   onAddPhotos?: () => void;
+  onRemovePhoto?: (index: number) => void;
   photoActionLabel?: string;
   photoActionLoading?: boolean;
   photoActionDisabled?: boolean;
@@ -65,6 +67,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
   onLogin,
   onEdit,
   onAddPhotos,
+  onRemovePhoto,
   photoActionLabel,
   photoActionLoading = false,
   photoActionDisabled = false,
@@ -77,7 +80,8 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
   const maxPhotos = 9;
   const photos = (profile.photos || []).filter(Boolean).slice(0, maxPhotos);
   const canAddPhotos = isSelf && onAddPhotos && photos.length < maxPhotos;
-  const showPhotoActionInGallery = variant !== "nfc" && canAddPhotos;
+  const showPhotoActionInGallery = canAddPhotos;
+  const canRemovePhotos = isSelf && onRemovePhoto && photos.length > 0;
   const publicFields = (profile.publicFields || []).filter((field) =>
     String(field.field_value || "").trim(),
   );
@@ -261,7 +265,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
               ) : (
                 <ImagePlus size={16} />
               )}
-              <span>{photoActionLoading ? "上传中" : photoActionLabel || "添加照片"}</span>
+              <span>{photoActionLoading ? "处理中" : photoActionLabel || "添加照片"}</span>
             </button>
           )}
         </div>
@@ -379,6 +383,34 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
     </div>
   );
 
+  const renderEditablePhotos = () => (
+    <div className="grid grid-cols-3 gap-2">
+      {photos.map((url, index) => (
+        <div
+          key={`${url}-${index}`}
+          className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700"
+        >
+          <img
+            src={url}
+            alt={`照片 ${index + 1}`}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+          <button
+            type="button"
+            onClick={() => onRemovePhoto?.(index)}
+            disabled={photoActionDisabled || photoActionLoading}
+            className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white shadow-sm transition-colors hover:bg-black/70 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={`删除照片 ${index + 1}`}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className={clsx("space-y-4", className)}>
       {variant === "nfc" ? renderNfcHeader() : renderDefaultHeader()}
@@ -434,11 +466,15 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
                 ) : (
                   <ImagePlus size={13} />
                 )}
-                <span>{photoActionLoading ? "上传中" : photoActionLabel || "添加"}</span>
+                <span>{photoActionLoading ? "处理中" : photoActionLabel || "添加"}</span>
               </button>
             )}
           </div>
-          <ImageGallery images={photos} gap={6} maxDisplay={9} size="large" />
+          {canRemovePhotos ? (
+            renderEditablePhotos()
+          ) : (
+            <ImageGallery images={photos} gap={6} maxDisplay={9} size="large" />
+          )}
         </div>
       ) : (
         isSelf &&
@@ -455,7 +491,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
               ) : (
                 <ImagePlus size={18} />
               )}
-              <span>{photoActionLoading ? "上传中" : photoActionLabel || "添加照片"}</span>
+              <span>{photoActionLoading ? "处理中" : photoActionLabel || "添加照片"}</span>
             </button>
           </div>
         )
