@@ -20,6 +20,7 @@ import { bindNfcTag, resolveNfcTag, type NfcResolveData } from "@/services/nfcAp
 import { updateUserProfile, type UserProfile } from "@/services/userApi";
 import { PublicProfileCard } from "@/features/user/profile";
 import { useImageUpload, type UploadHandle } from "@/features/uploads";
+import type { User } from "@/features/auth/types";
 
 interface LegacyNfcData {
   otherUserInfo: UserProfile;
@@ -42,6 +43,15 @@ function normalizePhotos(photos?: string[] | null): string[] {
 
 function buildRedirect(location: ReturnType<typeof useLocation>) {
   return `${location.pathname}${location.search}`;
+}
+
+function buildNfcEditPath(userType: User["user_type"] | undefined, redirect: string) {
+  const encodedRedirect = encodeURIComponent(redirect);
+  if (userType === "user") return `/u/profile/edit?redirect=${encodedRedirect}`;
+  if (userType === "organizer" || userType === "admin") {
+    return `/dashboard/profile/edit?redirect=${encodedRedirect}`;
+  }
+  return "";
 }
 
 const PageShell: FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -370,8 +380,9 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const goRegister = () => navigate(`/register?redirect=${encodeURIComponent(redirect)}`);
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/u/home"));
   const goEdit = async () => {
-    if (currentUser?.user_type === "user") {
-      navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`);
+    const currentEditPath = buildNfcEditPath(currentUser?.user_type, redirect);
+    if (currentEditPath) {
+      navigate(currentEditPath);
       return;
     }
 
@@ -383,13 +394,14 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
     const response = await getCurrentUser();
     if (response.success && response.user) {
       setAuth(response.user, authToken);
-      if (response.user.user_type === "user") {
-        navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`);
+      const refreshedEditPath = buildNfcEditPath(response.user.user_type, redirect);
+      if (refreshedEditPath) {
+        navigate(refreshedEditPath);
         return;
       }
     }
 
-    Toast.show({ icon: "fail", content: "请使用普通用户账号编辑名片" });
+    Toast.show({ icon: "fail", content: "当前账号类型暂不支持编辑名片" });
   };
 
   const handleBind = () => {
@@ -537,8 +549,9 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
   const isSelf = !!currentUser && currentUser.id === profile?.id;
   const canEditCard = isSelf;
   const goEdit = async () => {
-    if (currentUser?.user_type === "user") {
-      navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`);
+    const currentEditPath = buildNfcEditPath(currentUser?.user_type, redirect);
+    if (currentEditPath) {
+      navigate(currentEditPath);
       return;
     }
 
@@ -550,13 +563,14 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
     const response = await getCurrentUser();
     if (response.success && response.user) {
       setAuth(response.user, authToken);
-      if (response.user.user_type === "user") {
-        navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`);
+      const refreshedEditPath = buildNfcEditPath(response.user.user_type, redirect);
+      if (refreshedEditPath) {
+        navigate(refreshedEditPath);
         return;
       }
     }
 
-    Toast.show({ icon: "fail", content: "请使用普通用户账号编辑名片" });
+    Toast.show({ icon: "fail", content: "当前账号类型暂不支持编辑名片" });
   };
 
   if (isLoading) {

@@ -22,6 +22,7 @@ import {
   uploadMerchantAvatar,
   type MerchantPrivacySettings,
 } from "@/services";
+import { sanitizeRedirectPath } from "@/utils/redirect";
 
 // 行业选项
 const industryOptions = [
@@ -71,6 +72,8 @@ const ProfileEditPage: React.FC = () => {
   const [industryVisible, setIndustryVisible] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState<string[]>([]);
   const [privacy, setPrivacy] = useState<Required<MerchantPrivacySettings>>(DEFAULT_PRIVACY);
+  const returnPath = sanitizeRedirectPath(searchParams.get("redirect")) || "/dashboard/profile";
+  const goBack = () => navigate(returnPath);
 
   // 拉真实商家资料
   const { data: profileResp, isLoading } = useQuery({
@@ -179,7 +182,7 @@ const ProfileEditPage: React.FC = () => {
 
       Toast.show({ icon: "success", content: "资料已更新" });
       queryClient.invalidateQueries({ queryKey: ["merchant", "profile"] });
-      navigate("/dashboard/profile");
+      navigate(returnPath);
     } catch (error) {
       console.error("提交失败:", error);
       Toast.show({ icon: "fail", content: getErrorMessage(error) });
@@ -219,7 +222,7 @@ const ProfileEditPage: React.FC = () => {
         title="编辑资料"
         showBack
         showTabBar={false}
-        onBack={() => navigate("/dashboard/profile")}
+        onBack={goBack}
       >
         <div className="flex items-center justify-center h-64 text-gray-400">加载中...</div>
       </MerchantLayout>
@@ -231,7 +234,7 @@ const ProfileEditPage: React.FC = () => {
       title="编辑资料"
       showBack
       showTabBar={false}
-      onBack={() => navigate("/dashboard/profile")}
+      onBack={goBack}
     >
       <div className="pb-24">
         <Form form={form} layout="vertical" className="space-y-4">
@@ -415,7 +418,7 @@ const ProfileEditPage: React.FC = () => {
             <Button
               block
               fill="outline"
-              onClick={() => navigate("/dashboard/profile")}
+              onClick={goBack}
               className="flex-1"
               style={
                 {
