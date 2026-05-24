@@ -540,7 +540,6 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
     <PageShell>
       <CompactHeader
         title={isSelf ? "我的手环名片" : "NFC 名片"}
-        label={canEditCard ? "可编辑" : undefined}
         onBack={goBack}
       />
       <NfcProfileCard
