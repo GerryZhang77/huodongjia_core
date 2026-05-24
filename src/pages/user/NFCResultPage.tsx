@@ -406,8 +406,7 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const profile = data.profile;
   const isSelf = data.viewer.isSelf;
   const authenticated = data.viewer.isAuthenticated || !!currentUser;
-  const canEditCard =
-    isSelf && authenticated && data.actions.canEdit && currentUser?.user_type === "user";
+  const canEditCard = isSelf && authenticated;
 
   if (status === "unbound") {
     return (
@@ -506,7 +505,7 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/u/home"));
   const redirect = `/nfc/${eventId}/${userId}`;
   const isSelf = !!currentUser && currentUser.id === profile?.id;
-  const canEditCard = isSelf && currentUser?.user_type === "user";
+  const canEditCard = isSelf;
 
   if (isLoading) {
     return (
