@@ -194,6 +194,11 @@ const UserEditProfile: FC = () => {
   const updatePrivacyField = (field: keyof ProfilePrivacySettings, value: boolean) => {
     setPrivacySettings((prev) => ({ ...prev, [field]: value }));
   };
+  const openPhotoPicker = () => {
+    if (photoUploading) return;
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    photoInputRef.current?.click();
+  };
 
   // 头像上传：先把 blob: 预览写到 currentAvatar，server 返回后替换
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -591,26 +596,32 @@ const UserEditProfile: FC = () => {
               <h3 className="text-sm font-semibold text-slate-900 dark:text-gray-100">照片墙</h3>
               <span className="text-xs text-slate-400 dark:text-gray-500">{photos.length}/{MAX_PHOTOS}</span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:-mx-6 md:px-6">
               {photos.map((url, idx) => (
-                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-gray-700">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
+                <div
+                  key={`${url}-${idx}`}
+                  className="relative aspect-[4/3] w-[78vw] max-w-sm flex-none snap-center overflow-hidden rounded-2xl bg-slate-100 shadow-sm dark:bg-gray-700 sm:w-80"
+                >
+                  <img src={url} alt={`照片 ${idx + 1}`} className="h-full w-full object-cover" />
                   <button
+                    type="button"
                     onClick={() => removePhoto(idx)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center"
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white shadow-sm transition-colors hover:bg-black/70"
+                    aria-label={`删除照片 ${idx + 1}`}
                   >
-                    <X size={12} />
+                    <X size={15} />
                   </button>
                 </div>
               ))}
               {photos.length < MAX_PHOTOS && (
                 <button
-                  onClick={() => photoInputRef.current?.click()}
+                  type="button"
+                  onClick={openPhotoPicker}
                   disabled={photoUploading}
-                  className="aspect-square rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-600 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-gray-500 hover:border-primary-400 hover:text-primary-400 transition-colors disabled:opacity-50"
+                  className="flex aspect-[4/3] w-[78vw] max-w-sm flex-none snap-center flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 transition-colors hover:border-primary-400 hover:text-primary-400 disabled:opacity-50 dark:border-gray-600 dark:text-gray-500 sm:w-80"
                 >
-                  <ImagePlus size={20} />
-                  <span className="text-xs">{photoUploading ? "上传中" : "添加"}</span>
+                  <ImagePlus size={24} />
+                  <span className="text-sm">{photoUploading ? "处理中" : "添加照片"}</span>
                 </button>
               )}
             </div>
