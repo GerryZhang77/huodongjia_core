@@ -4,26 +4,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
-  BadgeCheck,
-  Briefcase,
-  Building2,
-  Edit3,
-  Images,
   Lock,
   LogIn,
   Link as LinkIcon,
-  MapPin,
   Radio,
   RefreshCw,
   ShieldAlert,
   Zap,
 } from "lucide-react";
-import { FollowButton, MessageButton, useSocialStats } from "@/features/social";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { Toast } from "@/components/ui/Toast";
 import { api } from "@/services/api";
 import { bindNfcTag, resolveNfcTag, type NfcResolveData } from "@/services/nfcApi";
 import type { UserProfile } from "@/services/userApi";
+import { PublicProfileCard } from "@/features/user/profile";
 
 interface LegacyNfcData {
   otherUserInfo: UserProfile;
@@ -131,152 +125,6 @@ const StatusPanel: FC<{
   </div>
 );
 
-const ProfileCard: FC<{
-  profile: UserProfile;
-  isSelf: boolean;
-  authenticated: boolean;
-  onLogin: () => void;
-  onEdit: () => void;
-}> = ({ profile, isSelf, authenticated, onLogin, onEdit }) => {
-  const { data: stats } = useSocialStats(authenticated ? profile.id : undefined);
-  const displayName = profile.name?.trim() || "匿名用户";
-
-  return (
-    <div className="mx-4 -mt-10 space-y-4">
-      <div className="rounded-2xl bg-white shadow-lg dark:bg-gray-800">
-        <div className="px-4 pb-4">
-          <div className="flex items-end justify-between">
-            <div className="-mt-10 h-20 w-20 rounded-2xl bg-white p-1.5 shadow-xl dark:bg-gray-800">
-              <img
-                src={profile.avatar}
-                alt={displayName}
-                className="h-full w-full rounded-xl object-cover"
-              />
-            </div>
-            {isSelf ? (
-              <button
-                type="button"
-                onClick={onEdit}
-                className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-primary-500 px-4 py-1.5 text-sm font-medium text-white"
-              >
-                <Edit3 size={14} />
-                编辑资料
-              </button>
-            ) : authenticated ? (
-              <div className="mb-1 flex items-center gap-2">
-                <FollowButton userId={profile.id} />
-                <MessageButton userId={profile.id} />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={onLogin}
-                className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-primary-500 px-4 py-1.5 text-sm font-medium text-white"
-              >
-                <LogIn size={14} />
-                登录互动
-              </button>
-            )}
-          </div>
-
-          <div className="pt-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                {displayName}
-              </h2>
-              {isSelf && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-600">
-                  <BadgeCheck size={12} />
-                  我的手环
-                </span>
-              )}
-            </div>
-
-            {stats && (
-              <div className="mt-2 flex gap-4 text-xs text-gray-500 dark:text-gray-400">
-                <span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {stats.followingCount}
-                  </span>{" "}
-                  关注
-                </span>
-                <span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {stats.followersCount}
-                  </span>{" "}
-                  粉丝
-                </span>
-                <span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {stats.friendsCount}
-                  </span>{" "}
-                  好友
-                </span>
-              </div>
-            )}
-
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-              {profile.occupation && (
-                <span className="flex items-center gap-1">
-                  <Briefcase size={13} />
-                  {profile.occupation}
-                </span>
-              )}
-              {profile.company && (
-                <span className="flex items-center gap-1">
-                  <Building2 size={13} />
-                  {profile.company}
-                </span>
-              )}
-              {profile.city && (
-                <span className="flex items-center gap-1">
-                  <MapPin size={13} />
-                  {profile.city}
-                </span>
-              )}
-            </div>
-
-            {profile.bio && (
-              <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                {profile.bio}
-              </p>
-            )}
-
-            {(profile.tags?.length ?? 0) > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {profile.tags!.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-600"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {profile.photos && profile.photos.length > 0 && (
-        <div className="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800">
-          <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-400">
-            <Images size={14} />
-            照片墙
-          </h3>
-          <div className="grid grid-cols-3 gap-1.5">
-            {profile.photos.slice(0, 9).map((url, index) => (
-              <div key={`${url}-${index}`} className="aspect-square overflow-hidden rounded-xl bg-gray-100">
-                <img src={url} alt="" className="h-full w-full object-cover" />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -350,12 +198,12 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const status = data.status;
   const profile = data.profile;
   const isSelf = data.viewer.isSelf;
-  const authenticated = !!currentUser;
+  const authenticated = data.viewer.isAuthenticated || !!currentUser;
 
   if (status === "unbound") {
     return (
       <PageShell>
-          <Header title="NFC 手环" subtitle="首次绑定" onBack={goBack} />
+        <Header title="NFC 手环" subtitle="首次绑定" onBack={goBack} />
         <StatusPanel
           icon={LinkIcon}
           title="这是一只未绑定的手环"
@@ -411,24 +259,27 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
         subtitle={isSelf ? "你可以编辑自己的卡片内容" : "查看对方卡片并发起互动"}
         onBack={goBack}
       />
-      <ProfileCard
+      <PublicProfileCard
         profile={profile}
         isSelf={isSelf}
         authenticated={authenticated}
+        contextLabel={isSelf ? "我的手环" : undefined}
+        className="mx-4 -mt-10"
         onLogin={goLogin}
-        onEdit={() => navigate("/u/profile/edit")}
+        onEdit={() =>
+          navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
+        }
+        onAddPhotos={() =>
+          navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
+        }
       />
-      {!authenticated && !isSelf && (
-        <div className="mx-4 mt-4 rounded-2xl bg-primary-50 p-4 text-sm text-primary-700">
-          登录后可以关注对方或发起私信。
-        </div>
-      )}
     </PageShell>
   );
 };
 
 const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userId }) => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuthStore();
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["nfc", "legacy", eventId, userId],
@@ -439,6 +290,8 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
 
   const profile = data?.data?.otherUserInfo;
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/u/home"));
+  const redirect = `/nfc/${eventId}/${userId}`;
+  const isSelf = !!currentUser && currentUser.id === profile?.id;
 
   if (isLoading) {
     return (
@@ -467,12 +320,19 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
   return (
     <PageShell>
       <Header title="NFC 碰一碰" subtitle="旧版活动名片链接" onBack={goBack} />
-      <ProfileCard
+      <PublicProfileCard
         profile={profile}
-        isSelf={false}
-        authenticated={false}
-        onLogin={() => navigate(`/login?redirect=${encodeURIComponent(`/nfc/${eventId}/${userId}`)}`)}
-        onEdit={() => undefined}
+        isSelf={isSelf}
+        authenticated={!!currentUser}
+        contextLabel={isSelf ? "我的手环" : undefined}
+        className="mx-4 -mt-10"
+        onLogin={() => navigate(`/login?redirect=${encodeURIComponent(redirect)}`)}
+        onEdit={() =>
+          navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
+        }
+        onAddPhotos={() =>
+          navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
+        }
       />
       <div className="px-4 pb-8 pt-4 text-center text-xs text-gray-400">
         活动 ID: {eventId}

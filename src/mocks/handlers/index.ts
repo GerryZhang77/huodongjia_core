@@ -10,6 +10,7 @@ import { activityHandlers } from "./events.handlers";
 import { enrollmentHandlers } from "./enrollment.handlers";
 import { matchingHandlers } from "./matching.handlers";
 import { userHandlers } from "./user.handlers";
+import { nfcHandlers } from "./nfc.handlers";
 
 /**
  * 所有 handlers 的聚合
@@ -30,6 +31,9 @@ export const handlers = [
 
   // C端用户模块
   ...userHandlers,
+
+  // NFC 手环模块
+  ...nfcHandlers,
 ];
 
 // 导出各模块 handlers（用于单独测试）
@@ -38,3 +42,4 @@ export { activityHandlers } from "./events.handlers";
 export { enrollmentHandlers } from "./enrollment.handlers";
 export { matchingHandlers } from "./matching.handlers";
 export { userHandlers } from "./user.handlers";
+export { nfcHandlers } from "./nfc.handlers";

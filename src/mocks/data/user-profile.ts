@@ -20,6 +20,13 @@ export interface UserProfile {
   bio: string;
   /** 兴趣标签 */
   interestTags: InterestTag[];
+  /** 兼容真实接口返回的字符串标签 */
+  tags?: string[];
+  /** 照片墙 */
+  photos?: string[];
+  phone?: string;
+  email?: string;
+  wechat?: string;
   /** 统计数据 */
   stats: UserStats;
   /** 联系方式（可选显示） */
@@ -75,6 +82,17 @@ export const mockUserProfile: UserProfile = {
     { id: "tag_005", name: "读书会", colorType: "default" },
     { id: "tag_006", name: "高尔夫", colorType: "primary" },
   ],
+  tags: ["人工智能", "企业服务", "创业投资", "马拉松", "读书会", "高尔夫"],
+  photos: [
+    "https://picsum.photos/seed/profile-wall-1/600/600",
+    "https://picsum.photos/seed/profile-wall-2/600/600",
+    "https://picsum.photos/seed/profile-wall-3/600/600",
+    "https://picsum.photos/seed/profile-wall-4/600/600",
+    "https://picsum.photos/seed/profile-wall-5/600/600",
+  ],
+  phone: "13800138003",
+  email: "liming@example.com",
+  wechat: "liming_founder",
   stats: {
     activitiesJoined: 12,
     matchedFriends: 48,

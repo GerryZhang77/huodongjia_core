@@ -65,9 +65,14 @@ export const userHandlers = [
         company: profile.company,
         city: profile.city,
         bio: profile.bio,
+        tags: profile.tags,
         interestTags: profile.interestTags,
+        photos: profile.photos,
         stats: profile.stats,
         contact: profile.contact,
+        phone: profile.phone,
+        email: profile.email,
+        wechat: profile.wechat,
       },
     });
   }),
@@ -126,6 +131,86 @@ export const userHandlers = [
       success: true,
       message: "头像上传成功",
       avatarUrl: newAvatarUrl,
+    });
+  }),
+
+  /**
+   * 获取他人公开资料
+   * GET /api/user/profile/:userId
+   */
+  http.get("/api/user/profile/:userId", async ({ params, request }) => {
+    await delay(250);
+
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return HttpResponse.json(
+        {
+          success: false,
+          message: "未授权访问",
+        },
+        { status: 401 },
+      );
+    }
+
+    const userId = String(params.userId || "");
+    const self = getUserProfile();
+    const profile =
+      userId === self.id
+        ? self
+        : {
+            id: userId,
+            name: "赵敏",
+            avatar: "https://i.pravatar.cc/200?img=47",
+            occupation: "品牌负责人",
+            company: "新消费实验室",
+            industry: "品牌增长",
+            city: "上海",
+            bio: "关注品牌增长、线下社群和消费体验，正在寻找跨界合作伙伴。",
+            tags: ["品牌", "增长", "社群", "新消费"],
+            photos: [
+              "https://picsum.photos/seed/public-profile-1/600/600",
+              "https://picsum.photos/seed/public-profile-2/600/600",
+              "https://picsum.photos/seed/public-profile-3/600/600",
+              "https://picsum.photos/seed/public-profile-4/600/600",
+            ],
+            publicFields: [
+              {
+                field_key: "cooperation",
+                field_label: "合作方向",
+                field_value: "品牌联名、线下沙龙、渠道资源互换",
+                field_type: "text",
+              },
+            ],
+          };
+
+    return HttpResponse.json({
+      success: true,
+      profile,
+    });
+  }),
+
+  /**
+   * 上传照片墙图片
+   * POST /api/file/upload-image
+   */
+  http.post("/api/file/upload-image", async ({ request }) => {
+    await delay(700);
+
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return HttpResponse.json(
+        {
+          success: false,
+          message: "未授权访问",
+        },
+        { status: 401 },
+      );
+    }
+
+    const randomId = Math.random().toString(36).slice(2);
+    return HttpResponse.json({
+      success: true,
+      url: `https://picsum.photos/seed/user-photo-${randomId}/800/800`,
     });
   }),
 

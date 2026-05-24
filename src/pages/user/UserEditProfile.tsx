@@ -4,7 +4,7 @@
  */
 
 import { FC, useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Camera,
   User,
@@ -44,6 +44,7 @@ const interestOptions = [
 
 const UserEditProfile: FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,6 +86,7 @@ const UserEditProfile: FC = () => {
   const photoUploading = photos.some((u) => u.startsWith("blob:"));
 
   const MAX_PHOTOS = 9;
+  const redirect = searchParams.get("redirect");
 
   // 当 profile 加载后初始化表单
   useEffect(() => {
@@ -214,7 +216,11 @@ const UserEditProfile: FC = () => {
 
             // 5. 返回上一页
             setTimeout(() => {
-              navigate(-1);
+              if (redirect) {
+                navigate(redirect, { replace: true });
+              } else {
+                navigate(-1);
+              }
             }, 300);
           },
           onError: () => {

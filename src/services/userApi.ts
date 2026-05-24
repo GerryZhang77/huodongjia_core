@@ -35,10 +35,18 @@ export interface UserProfile {
     email?: string;
     wechat?: string;
   };
+  publicFields?: PublicProfileField[];
   /** 是否对外公开在"发现用户"列表（用户级开关，opt-in） */
   discoverable?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface PublicProfileField {
+  field_key: string;
+  field_label?: string | null;
+  field_value: string;
+  field_type?: string;
 }
 
 export interface InterestTag {
