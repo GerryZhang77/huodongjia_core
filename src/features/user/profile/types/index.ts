@@ -8,15 +8,20 @@
 export interface UserProfile {
   id: string;
   phone?: string;
+  email?: string;
+  wechat?: string;
   name: string;
   avatar?: string;
   gender?: "male" | "female" | "other";
   age?: number;
   occupation?: string;
   company?: string;
+  industry?: string;
   city?: string;
   bio?: string;
   tags: string[];
+  photos?: string[];
+  privacy_settings?: ProfilePrivacySettings;
   wechatQr?: string;
   createdAt: string;
   updatedAt: string;
@@ -29,6 +34,17 @@ export interface InterestTag {
   id: string;
   name: string;
   colorType: "primary" | "secondary" | "accent" | "warning" | "default";
+}
+
+export interface ProfilePrivacySettings {
+  phone?: boolean;
+  email?: boolean;
+  wechat?: boolean;
+  company?: boolean;
+  city?: boolean;
+  industry?: boolean;
+  occupation?: boolean;
+  bio?: boolean;
 }
 
 /**
@@ -51,6 +67,7 @@ export interface UpdateProfileRequest {
   phone?: string;
   wechat?: string;
   industry?: string;
+  privacy_settings?: ProfilePrivacySettings;
   /** opt-in 出现在"发现用户"列表 */
   discoverable?: boolean;
 }

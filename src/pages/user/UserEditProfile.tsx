@@ -17,14 +17,17 @@ import {
   Plus,
   X,
   ImagePlus,
+  Sparkles,
 } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Input, Textarea } from "@/components/ui";
+import { Button, Input, Switch, Textarea } from "@/components/ui";
 import { useUserProfile, useUpdateProfile } from "@/features/user";
 import { useImageUpload } from "@/features/uploads";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { eventBus, EVENTS } from "@/utils/eventBus";
+import { sanitizeRedirectPath } from "@/utils/redirect";
+import type { ProfilePrivacySettings } from "@/services/userApi";
 
 // 兴趣标签选项
 const interestOptions = [
@@ -41,6 +44,34 @@ const interestOptions = [
   "艺术",
   "社交",
 ];
+
+const DEFAULT_PRIVACY: Required<ProfilePrivacySettings> = {
+  phone: false,
+  email: false,
+  wechat: false,
+  company: false,
+  city: false,
+  industry: true,
+  occupation: true,
+  bio: true,
+};
+
+const privacyRows: Array<{ key: keyof ProfilePrivacySettings; label: string }> = [
+  { key: "occupation", label: "职业" },
+  { key: "company", label: "公司" },
+  { key: "industry", label: "行业" },
+  { key: "city", label: "城市" },
+  { key: "phone", label: "手机号码" },
+  { key: "email", label: "邮箱地址" },
+  { key: "wechat", label: "微信号" },
+  { key: "bio", label: "个人简介" },
+];
+
+function mergePrivacySettings(
+  settings?: ProfilePrivacySettings | null,
+): Required<ProfilePrivacySettings> {
+  return { ...DEFAULT_PRIVACY, ...(settings || {}) };
+}
 
 const UserEditProfile: FC = () => {
   const navigate = useNavigate();
@@ -61,6 +92,7 @@ const UserEditProfile: FC = () => {
     name: "",
     occupation: "",
     company: "",
+    industry: "",
     city: "",
     email: "",
     phone: "",
@@ -68,6 +100,8 @@ const UserEditProfile: FC = () => {
     bio: "",
     interests: [] as string[],
   });
+  const [privacySettings, setPrivacySettings] =
+    useState<Required<ProfilePrivacySettings>>(DEFAULT_PRIVACY);
 
   // 自定义兴趣输入
   const [customInterest, setCustomInterest] = useState("");
@@ -86,7 +120,7 @@ const UserEditProfile: FC = () => {
   const photoUploading = photos.some((u) => u.startsWith("blob:"));
 
   const MAX_PHOTOS = 9;
-  const redirect = searchParams.get("redirect");
+  const redirect = sanitizeRedirectPath(searchParams.get("redirect"));
 
   // 当 profile 加载后初始化表单
   useEffect(() => {
@@ -95,6 +129,7 @@ const UserEditProfile: FC = () => {
         name: profile.name || "",
         occupation: profile.occupation || "",
         company: profile.company || "",
+        industry: profile.industry || "",
         city: profile.city || "",
         email: profile.contact?.email || profile.email || "",
         phone: profile.contact?.phone || profile.phone || "",
@@ -104,6 +139,7 @@ const UserEditProfile: FC = () => {
       });
       setCurrentAvatar(profile.avatar || "");
       setPhotos(profile.photos || []);
+      setPrivacySettings(mergePrivacySettings(profile.privacy_settings));
     }
   }, [profile]);
 
@@ -155,6 +191,9 @@ const UserEditProfile: FC = () => {
   };
 
   const removePhoto = (idx: number) => setPhotos((prev) => prev.filter((_, i) => i !== idx));
+  const updatePrivacyField = (field: keyof ProfilePrivacySettings, value: boolean) => {
+    setPrivacySettings((prev) => ({ ...prev, [field]: value }));
+  };
 
   // 头像上传：先把 blob: 预览写到 currentAvatar，server 返回后替换
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,6 +211,10 @@ const UserEditProfile: FC = () => {
       .then((real) => {
         setCurrentAvatar(real);
         queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+        queryClient.removeQueries({ queryKey: ["nfc"] });
+        if (profile?.id) {
+          queryClient.invalidateQueries({ queryKey: ["publicProfile", profile.id] });
+        }
         Toast.show({ icon: "success", content: "头像更新成功" });
       })
       .catch(() => {
@@ -193,6 +236,7 @@ const UserEditProfile: FC = () => {
           name: formData.name,
           occupation: formData.occupation,
           company: formData.company,
+          industry: formData.industry,
           city: formData.city,
           bio: formData.bio,
           tags: formData.interests,
@@ -200,9 +244,15 @@ const UserEditProfile: FC = () => {
           email: formData.email || undefined,
           phone: formData.phone || undefined,
           wechat: formData.wechat || undefined,
+          privacy_settings: privacySettings,
         },
         {
           onSuccess: () => {
+            queryClient.removeQueries({ queryKey: ["nfc"] });
+            if (profile?.id) {
+              queryClient.invalidateQueries({ queryKey: ["publicProfile", profile.id] });
+            }
+
             // 3. 触发全局事件，通知其他组件刷新数据
             eventBus.emit(EVENTS.PROFILE_UPDATED, {
               timestamp: Date.now(),
@@ -338,6 +388,14 @@ const UserEditProfile: FC = () => {
               prefix={<Building2 size={18} />}
             />
 
+            {/* 行业 */}
+            <Input
+              placeholder="行业"
+              value={formData.industry}
+              onChange={(e) => updateField("industry", e.target.value)}
+              prefix={<Sparkles size={18} />}
+            />
+
             {/* 城市 */}
             <Input
               placeholder="城市"
@@ -379,6 +437,31 @@ const UserEditProfile: FC = () => {
               onChange={(e) => updateField("wechat", e.target.value)}
               prefix={<MessageCircle size={18} />}
             />
+          </div>
+
+          {/* NFC 公开信息 */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-gray-100">
+              NFC 公开信息
+            </h3>
+            <div className="overflow-hidden rounded-xl border border-slate-100 bg-white dark:border-gray-700 dark:bg-gray-800">
+              {privacyRows.map((item) => (
+                <div
+                  key={item.key}
+                  className="flex min-h-12 items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 last:border-b-0 dark:border-gray-700"
+                >
+                  <span className="text-sm text-slate-700 dark:text-gray-200">
+                    {item.label}
+                  </span>
+                  <Switch
+                    size="small"
+                    checked={privacySettings[item.key]}
+                    onChange={(checked) => updatePrivacyField(item.key, checked)}
+                    aria-label={`${item.label}公开开关`}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* 个人简介 */}

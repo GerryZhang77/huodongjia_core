@@ -182,6 +182,10 @@ const ProfileEditPage: React.FC = () => {
 
       Toast.show({ icon: "success", content: "资料已更新" });
       queryClient.invalidateQueries({ queryKey: ["merchant", "profile"] });
+      queryClient.removeQueries({ queryKey: ["nfc"] });
+      if (profile?.id) {
+        queryClient.invalidateQueries({ queryKey: ["publicProfile", profile.id] });
+      }
       navigate(returnPath);
     } catch (error) {
       console.error("提交失败:", error);

@@ -357,6 +357,8 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const query = useQuery({
     queryKey: ["nfc", "tag", token],
     queryFn: () => resolveNfcTag(token),
+    staleTime: 0,
+    refetchOnMount: "always",
     retry: 1,
   });
 
@@ -541,6 +543,8 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
     queryFn: () =>
       api.get<{ success: boolean; data: LegacyNfcData }>(`/api/nfc/${eventId}/${userId}`),
     enabled: !!eventId && !!userId,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const profile = data?.data?.otherUserInfo;

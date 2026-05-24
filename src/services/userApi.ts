@@ -36,10 +36,22 @@ export interface UserProfile {
     wechat?: string;
   };
   publicFields?: PublicProfileField[];
+  privacy_settings?: ProfilePrivacySettings;
   /** 是否对外公开在"发现用户"列表（用户级开关，opt-in） */
   discoverable?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface ProfilePrivacySettings {
+  phone?: boolean;
+  email?: boolean;
+  wechat?: boolean;
+  company?: boolean;
+  city?: boolean;
+  industry?: boolean;
+  occupation?: boolean;
+  bio?: boolean;
 }
 
 export interface PublicProfileField {
@@ -78,6 +90,7 @@ export interface UpdateProfileRequest {
   email?: string;
   phone?: string;
   wechat?: string;
+  privacy_settings?: ProfilePrivacySettings;
 }
 
 export interface Notification {
