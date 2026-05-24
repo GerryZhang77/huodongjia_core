@@ -13,6 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/stores/authStore";
+import { getCurrentUser } from "@/features/auth/services";
 import { Toast } from "@/components/ui/Toast";
 import { api } from "@/services/api";
 import { bindNfcTag, resolveNfcTag, type NfcResolveData } from "@/services/nfcApi";
@@ -309,6 +310,7 @@ const NfcProfileCard: FC<{
     <>
       <PublicProfileCard
         profile={effectiveProfile}
+        variant="nfc"
         isSelf={isSelf}
         authenticated={authenticated}
         contextLabel={contextLabel}
@@ -336,7 +338,11 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { user: currentUser } = useAuthStore();
+  const {
+    user: currentUser,
+    token: authToken,
+    setAuth,
+  } = useAuthStore();
 
   const query = useQuery({
     queryKey: ["nfc", "tag", token],
@@ -363,6 +369,28 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const goLogin = () => navigate(`/login?redirect=${encodeURIComponent(redirect)}`);
   const goRegister = () => navigate(`/register?redirect=${encodeURIComponent(redirect)}`);
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/u/home"));
+  const goEdit = async () => {
+    if (currentUser?.user_type === "user") {
+      navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
+
+    if (!authToken) {
+      goLogin();
+      return;
+    }
+
+    const response = await getCurrentUser();
+    if (response.success && response.user) {
+      setAuth(response.user, authToken);
+      if (response.user.user_type === "user") {
+        navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`);
+        return;
+      }
+    }
+
+    Toast.show({ icon: "fail", content: "请使用普通用户账号编辑名片" });
+  };
 
   const handleBind = () => {
     if (!currentUser) {
@@ -475,9 +503,7 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
         contextLabel={isSelf ? "我的手环" : undefined}
         className="mx-4 py-4"
         onLogin={goLogin}
-        onEdit={() =>
-          navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
-        }
+        onEdit={() => void goEdit()}
         onProfilePatched={(patch) => {
           queryClient.setQueryData<NfcResolveData>(["nfc", "tag", token], (old) =>
             old?.profile ? { ...old, profile: { ...old.profile, ...patch } } : old,
@@ -492,7 +518,11 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
 const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userId }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user: currentUser } = useAuthStore();
+  const {
+    user: currentUser,
+    token: authToken,
+    setAuth,
+  } = useAuthStore();
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["nfc", "legacy", eventId, userId],
@@ -506,6 +536,28 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
   const redirect = `/nfc/${eventId}/${userId}`;
   const isSelf = !!currentUser && currentUser.id === profile?.id;
   const canEditCard = isSelf;
+  const goEdit = async () => {
+    if (currentUser?.user_type === "user") {
+      navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
+
+    if (!authToken) {
+      navigate(`/login?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
+
+    const response = await getCurrentUser();
+    if (response.success && response.user) {
+      setAuth(response.user, authToken);
+      if (response.user.user_type === "user") {
+        navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`);
+        return;
+      }
+    }
+
+    Toast.show({ icon: "fail", content: "请使用普通用户账号编辑名片" });
+  };
 
   if (isLoading) {
     return (
@@ -546,9 +598,7 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
         contextLabel={isSelf ? "我的手环" : undefined}
         className="mx-4 py-4"
         onLogin={() => navigate(`/login?redirect=${encodeURIComponent(redirect)}`)}
-        onEdit={() =>
-          navigate(`/u/profile/edit?redirect=${encodeURIComponent(redirect)}`)
-        }
+        onEdit={() => void goEdit()}
         onProfilePatched={(patch) => {
           queryClient.setQueryData<{ success: boolean; data: LegacyNfcData }>(
             ["nfc", "legacy", eventId, userId],

@@ -6,7 +6,28 @@
  */
 
 import { api } from "@/services/api";
-import type { LoginCredentials, LoginResponse } from "../types";
+import type { LoginCredentials, LoginResponse, User } from "../types";
+
+type RawAuthUser = Partial<User> & {
+  userType?: User["user_type"];
+};
+
+function normalizeAuthUser(raw?: RawAuthUser | null): User | undefined {
+  if (!raw?.id) return undefined;
+
+  const userType = raw.user_type ?? raw.userType;
+  if (userType !== "user" && userType !== "organizer" && userType !== "admin") {
+    return undefined;
+  }
+
+  return {
+    ...raw,
+    id: raw.id,
+    name: raw.name || raw.account || "",
+    user_type: userType,
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
+  } as User;
+}
 
 /**
  * 检查账号是否可用
@@ -106,17 +127,26 @@ export async function logout(): Promise<void> {
  */
 export async function getCurrentUser(): Promise<LoginResponse> {
   try {
-    const response = await api.get<{ success: boolean; user: LoginResponse["user"] }>("/api/auth/me");
+    const response = await api.get<{
+      success: boolean;
+      message?: string;
+      user?: RawAuthUser;
+      profile?: RawAuthUser;
+    }>("/api/auth/me");
+    const user = normalizeAuthUser(response.user ?? response.profile);
+
     return {
-      success: true,
-      message: "获取成功",
-      user: response.user,
+      success: response.success && !!user,
+      message: user ? "获取成功" : response.message || "获取用户信息失败",
+      user,
     };
   } catch (error) {
     console.error("❌ [authApi] 获取用户信息失败:", error);
+    const axiosError = error as { response?: { status?: number; data?: { message?: string } } };
     return {
       success: false,
-      message: "获取用户信息失败",
+      message: axiosError?.response?.data?.message || "获取用户信息失败",
+      code: axiosError?.response?.status === 401 ? "UNAUTHORIZED" : undefined,
     };
   }
 }

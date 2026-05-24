@@ -1,6 +1,7 @@
 /**
  * 主题状态管理
- * 使用 Zustand 管理全局主题状态（亮色/暗色/跟随系统模式）
+ * 使用 Zustand 管理全局主题状态。
+ * 暗黑模式暂未完整适配，运行时强制使用日间模式。
  */
 
 import { create } from "zustand";
@@ -25,50 +26,30 @@ interface ThemeState {
 }
 
 /**
- * 获取系统主题偏好
- */
-const getSystemTheme = (): Theme => {
-  if (typeof window !== "undefined" && window.matchMedia) {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-  return "light";
-};
-
-/**
  * 根据模式计算实际主题
  */
 const resolveTheme = (mode: ThemeMode): Theme => {
-  if (mode === "system") {
-    return getSystemTheme();
-  }
-  return mode;
+  void mode;
+  return "light";
 };
 
 /**
  * 应用主题到 DOM
  */
 const applyTheme = (theme: Theme) => {
+  void theme;
   const root = document.documentElement;
   root.classList.remove("light", "dark");
-  root.classList.add(theme);
+  root.classList.add("light");
+  root.setAttribute("data-theme", "light");
+  root.style.colorScheme = "light";
 };
 
 /**
  * 同步读取 localStorage 中保存的 mode，避免 persist rehydration 异步导致的时序问题
  */
 const getInitialMode = (): ThemeMode => {
-  try {
-    const stored = localStorage.getItem("theme-storage");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed?.state?.mode ?? "system";
-    }
-  } catch {
-    // ignore
-  }
-  return "system";
+  return "light";
 };
 
 const initialMode = getInitialMode();
@@ -90,33 +71,33 @@ export const useThemeStore = create<ThemeState>()(
       setMode: (mode: ThemeMode) => {
         const theme = resolveTheme(mode);
         applyTheme(theme);
-        set({ mode, theme, isDark: theme === "dark" });
+        set({ mode: "light", theme, isDark: false });
       },
 
       setTheme: (theme: Theme) => {
         // 兼容旧 API，直接设置主题时切换到手动模式
         applyTheme(theme);
-        set({ mode: theme, theme, isDark: theme === "dark" });
+        set({ mode: "light", theme: "light", isDark: false });
       },
 
       toggleTheme: () => {
-        const currentTheme = get().theme;
-        const newTheme: Theme = currentTheme === "light" ? "dark" : "light";
-        applyTheme(newTheme);
-        set({ mode: newTheme, theme: newTheme, isDark: newTheme === "dark" });
+        void get;
+        applyTheme("light");
+        set({ mode: "light", theme: "light", isDark: false });
       },
     }),
     {
       name: "theme-storage",
       // 仅持久化 mode 字段
-      partialize: (state) => ({ mode: state.mode }),
+      partialize: () => ({ mode: "light" as ThemeMode }),
       // 恢复时重新应用主题
       onRehydrateStorage: () => (state) => {
         if (state) {
           const theme = resolveTheme(state.mode);
           applyTheme(theme);
+          state.mode = "light";
           state.theme = theme;
-          state.isDark = theme === "dark";
+          state.isDark = false;
         }
       },
     },
@@ -132,30 +113,5 @@ export const initTheme = () => {
   const state = useThemeStore.getState();
   const theme = resolveTheme(state.mode);
   applyTheme(theme);
-
-  // 监听系统主题变化
-  if (typeof window !== "undefined" && window.matchMedia) {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const handleChange = () => {
-      const currentState = useThemeStore.getState();
-      // 仅当模式为 system 时才响应系统主题变化
-      if (currentState.mode === "system") {
-        const newTheme = getSystemTheme();
-        applyTheme(newTheme);
-        useThemeStore.setState({
-          theme: newTheme,
-          isDark: newTheme === "dark",
-        });
-      }
-    };
-
-    // 添加监听器
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener("change", handleChange);
-    } else {
-      // 兼容旧版浏览器
-      mediaQuery.addListener(handleChange);
-    }
-  }
+  useThemeStore.setState({ mode: "light", theme: "light", isDark: false });
 };
