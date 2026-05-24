@@ -54,6 +54,11 @@ function buildNfcEditPath(userType: User["user_type"] | undefined, redirect: str
   return "";
 }
 
+function getNfcHomePath(userType: User["user_type"] | undefined) {
+  if (userType === "organizer" || userType === "admin") return "/dashboard";
+  return "/u/home";
+}
+
 const PageShell: FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
     <div className="mx-auto min-h-screen max-w-lg bg-white dark:bg-gray-800 shadow-sm">
@@ -414,7 +419,7 @@ const TokenNfcPage: FC<{ token: string }> = ({ token }) => {
   const redirect = buildRedirect(location);
   const goLogin = () => navigate(`/login?redirect=${encodeURIComponent(redirect)}`);
   const goRegister = () => navigate(`/register?redirect=${encodeURIComponent(redirect)}`);
-  const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/u/home"));
+  const goBack = () => navigate(getNfcHomePath(currentUser?.user_type), { replace: true });
   const goEdit = async () => {
     const currentEditPath = buildNfcEditPath(currentUser?.user_type, redirect);
     if (currentEditPath) {
@@ -581,7 +586,7 @@ const LegacyNfcPage: FC<{ eventId: string; userId: string }> = ({ eventId, userI
   });
 
   const profile = data?.data?.otherUserInfo;
-  const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/u/home"));
+  const goBack = () => navigate(getNfcHomePath(currentUser?.user_type), { replace: true });
   const redirect = `/nfc/${eventId}/${userId}`;
   const isSelf = !!currentUser && currentUser.id === profile?.id;
   const canEditCard = isSelf;
