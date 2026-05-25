@@ -234,6 +234,9 @@ const UserActivityDetail: FC = () => {
       ? "/dashboard"
       : "/";
   const homeLabel = isBusinessUser ? "商家后台" : "首页";
+  const handleBackToHome = () => {
+    navigate(homePath, { replace: true });
+  };
 
   // 加载中状态
   if (isLoading) {
@@ -469,8 +472,9 @@ const UserActivityDetail: FC = () => {
                 {/* 顶部导航 - 增加顶部安全区域 */}
                 <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-20">
                   <button
-                    onClick={() => navigate(-1)}
+                    onClick={handleBackToHome}
                     className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                    aria-label={`返回${homeLabel}`}
                   >
                     <ArrowLeft size={20} className="text-white" />
                   </button>
