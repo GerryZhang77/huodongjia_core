@@ -54,7 +54,9 @@ export const UserLayout: FC<UserLayoutProps> = ({
   const location = useLocation();
 
   // 获取未读消息数 - 使用 React Query 实现响应式更新
-  const { data: notificationsData } = useNotifications();
+  const { data: notificationsData } = useNotifications({
+    enabled: showTabBar,
+  });
   const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
   // Tab 配置 - 3Tab: 首页 | 消息 | 我的
@@ -74,7 +76,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
   const getActiveTab = () => {
     const path = location.pathname;
     const tab = tabs.find((t) => path.startsWith(t.path));
-    return tab?.key || "home";
+    return tab?.key || "";
   };
 
   const activeTab = getActiveTab();
@@ -99,7 +101,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
                 <TopBar
                   showBreadcrumb={showBreadcrumb}
                   breadcrumbItems={breadcrumbItems}
-                  showNotification={true}
+                  showNotification={showTabBar}
                   rightContent={topBarRightContent}
                 />
               )}
@@ -118,7 +120,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
             <TopBar
               showBreadcrumb={showBreadcrumb}
               breadcrumbItems={breadcrumbItems}
-              showNotification={true}
+              showNotification={showTabBar}
               rightContent={topBarRightContent}
             />
           )}

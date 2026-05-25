@@ -20,12 +20,16 @@ import {
   Tag,
   Phone,
 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, type ButtonVariant } from "@/components/ui";
 import { Toast } from "@/components/ui/Toast";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
 import { MerchantHoverCard } from "@/components/business/MerchantHoverCard";
 import { UserLayout } from "@/components/layout/UserLayout";
-import { useActivityDetail, useUserActivities } from "@/features/user";
+import {
+  useActivityDetail,
+  usePublicActivityDetail,
+  useUserActivities,
+} from "@/features/user";
 import { useToggleFavorite } from "@/features/user/activity/hooks/useFavorites";
 import { api } from "@/services/api/client";
 import { useQuery } from "@tanstack/react-query";
@@ -40,6 +44,10 @@ import {
 } from "@/features/activities/utils/constants";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import { getRegistrationAvailability } from "@/features/user/activity/utils/registrationAvailability";
+import {
+  buildLoginPathWithRedirect,
+  savePendingRedirectPath,
+} from "@/utils/redirect";
 import dayjs from "dayjs";
 
 // 状态配置
@@ -111,6 +119,20 @@ const UserActivityDetail: FC = () => {
   const [enrolledCount, setEnrolledCount] = useState<number | null>(null);
   const showBreadcrumb = useIsDesktop();
 
+  // 获取当前用户信息。扫码落地页允许未登录访问，登录能力按角色逐步启用。
+  const { user, isAuthenticated } = useAuthStore();
+  const userType = user?.user_type;
+  const isParticipantUser = isAuthenticated && userType === "user";
+  const isBusinessUser =
+    isAuthenticated && (userType === "organizer" || userType === "admin");
+  const showUserChrome = isParticipantUser;
+  const detailPath = id ? `/u/activities/${id}` : "/u/home";
+
+  const goLoginForActivity = () => {
+    savePendingRedirectPath(detailPath);
+    navigate(buildLoginPathWithRedirect(detailPath));
+  };
+
   // 收藏状态：从后端拉取，避免页面间状态不同步
   const { data: favStatus } = useQuery({
     queryKey: ["user", "favorite-status", id],
@@ -118,13 +140,21 @@ const UserActivityDetail: FC = () => {
       api.get<{ success: boolean; data: { favorited: boolean } }>(
         `/api/user/favorites/${id}/status`,
       ),
-    enabled: !!id,
+    enabled: isParticipantUser && !!id,
     staleTime: 30 * 1000,
   });
   const isFavorited = !!favStatus?.data?.favorited;
   const toggleFav = useToggleFavorite();
   const handleToggleFavorite = async () => {
     if (!id) return;
+    if (!isAuthenticated) {
+      goLoginForActivity();
+      return;
+    }
+    if (!isParticipantUser) {
+      Toast.show({ content: "请使用参与者账号收藏活动" });
+      return;
+    }
     try {
       await toggleFav.mutateAsync(id);
     } catch (err) {
@@ -135,21 +165,23 @@ const UserActivityDetail: FC = () => {
     }
   };
 
-  // 获取当前用户信息
-  const { user } = useAuthStore();
-
   // 使用 hooks 获取活动详情
-  const { data: activityData, isLoading } = useActivityDetail(id);
-  const { data: activitiesData } = useUserActivities();
+  const { data: publicActivityData, isLoading: publicActivityLoading } =
+    usePublicActivityDetail(id);
+  const { data: activityData, isLoading: userActivityLoading } =
+    useActivityDetail(isParticipantUser ? id : undefined);
+  const { data: activitiesData } = useUserActivities(undefined, {
+    enabled: isParticipantUser,
+  });
 
   const activity = useMemo(() => {
-    return activityData?.data;
-  }, [activityData]);
+    return activityData?.data || publicActivityData?.data;
+  }, [activityData, publicActivityData]);
 
   // 判断当前用户是否是活动创建者
   const isOrganizer = useMemo(() => {
-    return activity?.organizer?.id === user?.id;
-  }, [activity, user]);
+    return isBusinessUser && activity?.organizer?.id === user?.id;
+  }, [activity, isBusinessUser, user]);
 
   // 计算上一个/下一个活动
   const { prevActivity, nextActivity } = useMemo(() => {
@@ -169,11 +201,14 @@ const UserActivityDetail: FC = () => {
 
   // 获取真实报名人数
   useEffect(() => {
-    if (!id) return;
+    if (!id || !isOrganizer) {
+      setEnrolledCount(null);
+      return;
+    }
     getEnrollmentsDetailed(id, { page: 1, pageSize: 1 })
       .then((res) => setEnrolledCount(res.total))
       .catch(() => setEnrolledCount(null));
-  }, [id]);
+  }, [id, isOrganizer]);
 
   // 切换到上一个活动
   const goToPrevious = () => {
@@ -189,10 +224,21 @@ const UserActivityDetail: FC = () => {
     }
   };
 
+  const hasUserActivityData = !!activityData?.data;
+  const isLoading =
+    publicActivityLoading ||
+    (isParticipantUser && userActivityLoading && !hasUserActivityData);
+  const homePath = isParticipantUser
+    ? "/u/home"
+    : isBusinessUser
+      ? "/dashboard"
+      : "/";
+  const homeLabel = isBusinessUser ? "商家后台" : "首页";
+
   // 加载中状态
   if (isLoading) {
     return (
-      <UserLayout showTabBar={true} showTopBar={true}>
+      <UserLayout showTabBar={showUserChrome} showTopBar={true}>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-gray-500">加载中...</div>
         </div>
@@ -202,22 +248,22 @@ const UserActivityDetail: FC = () => {
 
   if (!activity) {
     return (
-      <UserLayout showTabBar={true} showTopBar={true}>
+      <UserLayout showTabBar={showUserChrome} showTopBar={true}>
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
           <AlertCircle size={40} className="text-gray-300 mb-3" />
           <p className="text-gray-500 text-sm mb-4">活动不存在</p>
           <button
-            onClick={() => navigate("/u/home")}
+            onClick={() => navigate(homePath)}
             className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
           >
-            返回首页
+            返回{homeLabel}
           </button>
         </div>
       </UserLayout>
     );
   }
 
-  const config = statusConfig[activity.userStatus];
+  const config = statusConfig[activity.userStatus] || statusConfig.recruiting;
   const registrationAvailability = getRegistrationAvailability(activity);
   const isFull =
     activity.maxParticipants > 0 &&
@@ -226,32 +272,122 @@ const UserActivityDetail: FC = () => {
     ? "线上活动"
     : activity.location || "地点待定";
 
-  // 如果是活动创建者，覆盖按钮配置
-  const buttonConfig = isOrganizer
-    ? {
-        label: "报名中",
-        color: "bg-success-500",
-        btnLabel: "报名中",
-        btnStyle: "bg-gray-200 text-gray-500",
-        disabled: true,
-      }
-    : activity.userStatus === "recruiting" &&
-        !registrationAvailability.canRegister
+  const statusDisplayConfig =
+    activity.userStatus === "recruiting" &&
+    !registrationAvailability.canRegister
       ? {
           ...config,
           label: registrationAvailability.reason || config.label,
-          btnLabel: registrationAvailability.reason || "暂不可报名",
-          disabled: true,
         }
       : config;
 
+  const participantVariant: ButtonVariant =
+    activity.userStatus === "approved"
+      ? "success"
+      : activity.userStatus === "pending"
+        ? "light"
+        : "primary";
+
+  const actionConfig: {
+    btnLabel: string;
+    disabled?: boolean;
+    variant: ButtonVariant;
+  } = !isAuthenticated
+    ? {
+        btnLabel: "登录/注册后报名",
+        disabled: false,
+        variant: "primary" as const,
+      }
+    : !isParticipantUser
+      ? isOrganizer
+        ? {
+            btnLabel: "管理报名",
+            disabled: false,
+            variant: "primary" as const,
+          }
+        : {
+            btnLabel: "主办方账号不可报名",
+            disabled: true,
+            variant: "light" as const,
+          }
+      : activity.userStatus === "recruiting" &&
+          !registrationAvailability.canRegister
+        ? {
+            btnLabel: registrationAvailability.reason || "暂不可报名",
+            disabled: true,
+            variant: "light" as const,
+          }
+        : {
+            btnLabel: config.btnLabel,
+            disabled: config.disabled,
+            variant: participantVariant,
+          };
+
+  const handlePrimaryAction = () => {
+    if (!id) return;
+    if (!isAuthenticated) {
+      goLoginForActivity();
+      return;
+    }
+    if (!isParticipantUser) {
+      if (isOrganizer) navigate(`/dashboard/activity/${id}/enrollment`);
+      return;
+    }
+    if (
+      activity.userStatus === "recruiting" &&
+      registrationAvailability.canRegister
+    ) {
+      navigate(`/u/activities/${id}/register`);
+    } else if (activity.userStatus === "approved") {
+      navigate(`/u/activities/${id}/match-result`);
+    } else if (activity.userStatus === "completed") {
+      navigate(`/u/activities/${id}/recap`);
+    }
+  };
+
+  const organizerContent = activity.organizer?.id ? (
+    <div
+      className={`flex items-center gap-3 rounded-lg -mx-2 px-2 py-1 transition-colors ${
+        isAuthenticated
+          ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
+          : ""
+      }`}
+      onClick={
+        isAuthenticated
+          ? () => navigate(`/u/profile/${activity.organizer.id}`)
+          : undefined
+      }
+      role={isAuthenticated ? "button" : undefined}
+    >
+      <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
+        {activity.organizer.avatar ? (
+          <img
+            src={activity.organizer.avatar}
+            alt={activity.organizer.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-primary-500 font-semibold text-sm">
+            {activity.organizer.name?.charAt(0) || "?"}
+          </div>
+        )}
+      </div>
+      <div>
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          {activity.organizer.name || "主办方"}
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">主办方</p>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <UserLayout
-      showTabBar={true}
+      showTabBar={showUserChrome}
       showTopBar={true}
       showBreadcrumb={showBreadcrumb}
       breadcrumbItems={[
-        { label: "首页", path: "/u/home" },
+        { label: homeLabel, path: homePath },
         { label: activity.title },
       ]}
       bgColor="bg-gray-100 dark:bg-gray-900"
@@ -339,19 +475,21 @@ const UserActivityDetail: FC = () => {
                     <ArrowLeft size={20} className="text-white" />
                   </button>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleToggleFavorite}
-                      className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
-                    >
-                      <Heart
-                        size={20}
-                        className={
-                          isFavorited
-                            ? "text-red-400 fill-red-400"
-                            : "text-white"
-                        }
-                      />
-                    </button>
+                    {!isBusinessUser && (
+                      <button
+                        onClick={handleToggleFavorite}
+                        className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+                      >
+                        <Heart
+                          size={20}
+                          className={
+                            isFavorited
+                              ? "text-red-400 fill-red-400"
+                              : "text-white"
+                          }
+                        />
+                      </button>
+                    )}
                     <button className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
                       <Share2 size={20} className="text-white" />
                     </button>
@@ -360,9 +498,9 @@ const UserActivityDetail: FC = () => {
 
                 {/* 状态标签 - 移动到右下角，避免与返回按钮重叠 */}
                 <div
-                  className={`absolute bottom-3 right-4 px-3 py-1 rounded-full text-xs font-medium text-white z-20 ${buttonConfig.color}`}
+                  className={`absolute bottom-3 right-4 px-3 py-1 rounded-full text-xs font-medium text-white z-20 ${statusDisplayConfig.color}`}
                 >
-                  {buttonConfig.label}
+                  {statusDisplayConfig.label}
                 </div>
 
                 {/* 底部标签 */}
@@ -456,7 +594,7 @@ const UserActivityDetail: FC = () => {
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {enrolledCount !== null
                       ? `${enrolledCount}/${activity.maxParticipants}人`
-                      : `${activity.maxParticipants}人`}
+                      : `${activity.currentParticipants}/${activity.maxParticipants}人`}
                     {isFull && (
                       <span className="ml-1 text-secondary-500 dark:text-secondary-400">
                         已满
@@ -487,39 +625,17 @@ const UserActivityDetail: FC = () => {
 
             {/* 主办方 */}
             {activity.organizer?.id ? (
-              <MerchantHoverCard
-                merchantId={activity.organizer.id}
-                fallbackName={activity.organizer.name}
-                fallbackAvatar={activity.organizer.avatar}
-              >
-                <div
-                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-lg -mx-2 px-2 py-1 transition-colors"
-                  onClick={() => navigate(`/u/profile/${activity.organizer.id}`)}
-                  role="button"
+              isAuthenticated ? (
+                <MerchantHoverCard
+                  merchantId={activity.organizer.id}
+                  fallbackName={activity.organizer.name}
+                  fallbackAvatar={activity.organizer.avatar}
                 >
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
-                    {activity.organizer.avatar ? (
-                      <img
-                        src={activity.organizer.avatar}
-                        alt={activity.organizer.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-primary-500 font-semibold text-sm">
-                        {activity.organizer.name?.charAt(0) || "?"}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {activity.organizer.name || "主办方"}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      主办方
-                    </p>
-                  </div>
-                </div>
-              </MerchantHoverCard>
+                  {organizerContent}
+                </MerchantHoverCard>
+              ) : (
+                organizerContent
+              )
             ) : (
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
@@ -631,44 +747,28 @@ const UserActivityDetail: FC = () => {
           <div className="absolute bottom-0 left-0 right-0 z-50 md:rounded-b-2xl overflow-hidden">
             <div className="bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-4 lg:pb-6">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={handleToggleFavorite}
-                  className="w-12 h-12 rounded-xl border border-gray-200 dark:border-gray-600 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <Heart
-                    size={22}
-                    className={
-                      isFavorited
-                        ? "text-red-500 fill-red-500"
-                        : "text-gray-400"
-                    }
-                  />
-                </button>
+                {!isBusinessUser && (
+                  <button
+                    onClick={handleToggleFavorite}
+                    className="w-12 h-12 rounded-xl border border-gray-200 dark:border-gray-600 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <Heart
+                      size={22}
+                      className={
+                        isFavorited
+                          ? "text-red-500 fill-red-500"
+                          : "text-gray-400"
+                      }
+                    />
+                  </button>
+                )}
                 <Button
-                  variant={
-                    activity.userStatus === "approved"
-                      ? "success"
-                      : activity.userStatus === "pending"
-                        ? "light"
-                        : "primary"
-                  }
-                  disabled={buttonConfig.disabled}
-                  onClick={() => {
-                    if (
-                      activity.userStatus === "recruiting" &&
-                      !isOrganizer &&
-                      registrationAvailability.canRegister
-                    ) {
-                      navigate(`/u/activities/${id}/register`);
-                    } else if (activity.userStatus === "approved") {
-                      navigate(`/u/activities/${id}/match-result`);
-                    } else if (activity.userStatus === "completed") {
-                      navigate(`/u/activities/${id}/recap`);
-                    }
-                  }}
+                  variant={actionConfig.variant}
+                  disabled={actionConfig.disabled}
+                  onClick={handlePrimaryAction}
                   className="flex-1 h-12"
                 >
-                  {buttonConfig.btnLabel}
+                  {actionConfig.btnLabel}
                 </Button>
               </div>
               {/* 移动端底部安全区域：TabBar (56px) + iOS 底部条 */}

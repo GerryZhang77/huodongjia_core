@@ -307,11 +307,7 @@ function App() {
                 {/* 用户活动详情 */}
                 <Route
                   path="/u/activities/:id"
-                  element={
-                    <ProtectedRoute requiredRole="user">
-                      <UserActivityDetail />
-                    </ProtectedRoute>
-                  }
+                  element={<UserActivityDetail />}
                 />
 
                 {/* 活动回顾查看 */}

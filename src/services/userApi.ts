@@ -353,6 +353,17 @@ export async function getUserActivityDetail(id: string): Promise<{
   return api.get(`/api/user/activities/${id}`);
 }
 
+/**
+ * 获取公开活动详情
+ * GET /api/public/activities/:id
+ */
+export async function getPublicActivityDetail(id: string): Promise<{
+  success: boolean;
+  data?: UserActivity;
+}> {
+  return api.get(`/api/public/activities/${id}`);
+}
+
 // ============================================
 // API 函数 - 收藏
 // ============================================

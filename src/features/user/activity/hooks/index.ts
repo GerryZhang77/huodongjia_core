@@ -7,6 +7,7 @@ export * from "./useUserActivities";
 export * from "./useRecommendedActivities";
 export * from "./useSearchActivities";
 export * from "./useActivityDetail";
+export * from "./usePublicActivityDetail";
 
 // 收藏功能
 export * from "./useFavorites";

@@ -12,13 +12,21 @@ interface UseUserActivitiesParams {
   pageSize?: number;
 }
 
+interface UseUserActivitiesOptions {
+  enabled?: boolean;
+}
+
 /**
  * 获取用户活动列表
  */
-export function useUserActivities(params?: UseUserActivitiesParams) {
+export function useUserActivities(
+  params?: UseUserActivitiesParams,
+  options?: UseUserActivitiesOptions,
+) {
   return useQuery<UserActivityListResponse, Error>({
     queryKey: ["user", "activities", params],
     queryFn: () => getUserActivities(params),
+    enabled: options?.enabled ?? true,
     staleTime: 2 * 60 * 1000, // 2分钟
   });
 }

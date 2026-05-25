@@ -31,7 +31,9 @@ export const TopBar: FC<TopBarProps> = ({
   const navigate = useNavigate();
 
   // 获取未读消息数 - 使用 React Query 实现响应式更新
-  const { data: notificationsData } = useNotifications();
+  const { data: notificationsData } = useNotifications({
+    enabled: showNotification,
+  });
   const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
   const handleLogoClick = () => {

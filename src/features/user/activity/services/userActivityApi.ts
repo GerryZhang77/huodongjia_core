@@ -10,6 +10,7 @@ export {
   searchActivities,
   getActivityCategories,
   getUserActivityDetail,
+  getPublicActivityDetail,
   getFavorites,
   addFavorite,
   removeFavorite,

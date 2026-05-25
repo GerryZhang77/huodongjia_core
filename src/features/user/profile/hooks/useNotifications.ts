@@ -16,10 +16,14 @@ import type { NotificationListResponse } from "@/services/userApi";
 export function useNotifications(params?: {
   page?: number;
   pageSize?: number;
+  enabled?: boolean;
 }) {
+  const { enabled = true, ...queryParams } = params || {};
+
   return useQuery<NotificationListResponse, Error>({
-    queryKey: ["user", "notifications", params],
-    queryFn: () => getNotifications(params),
+    queryKey: ["user", "notifications", queryParams],
+    queryFn: () => getNotifications(queryParams),
+    enabled,
     staleTime: 1 * 60 * 1000, // 1分钟
   });
 }
