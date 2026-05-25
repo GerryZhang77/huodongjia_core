@@ -3,10 +3,7 @@
  * 使用新的 MerchantLayout 和设计系统
  */
 
-import {
-  FC,
-  useState,
-  useEffect } from "react";
+import { FC, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
@@ -27,9 +24,9 @@ import {
   Settings,
   HelpCircle,
   UserSearch,
-  } from "lucide-react";
-import { Dialog,
-} from "antd-mobile";
+  Loader2,
+} from "lucide-react";
+import { Dialog } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
 import {
@@ -384,7 +381,7 @@ function toMerchantActivity(a: Activity): MerchantActivity {
  */
 export const DashboardNew: FC = () => {
   const navigate = useNavigate();
-  const { data } = useMerchantActivities();
+  const { data, isLoading, isError, refetch } = useMerchantActivities();
   const deleteMutation = useDeleteActivity();
 
   // 存储活动报名人数
@@ -474,6 +471,23 @@ export const DashboardNew: FC = () => {
 
   return (
     <MerchantLayout title="活动管理">
+      {isLoading && !data ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+          <Loader2 className="w-8 h-8 text-primary-400 animate-spin mb-3" />
+          <p className="text-sm">正在加载活动数据...</p>
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-500 bg-white rounded-xl border border-gray-100">
+          <AlertCircle size={36} className="text-red-300 mb-3" />
+          <p className="text-sm mb-3">活动数据加载失败</p>
+          <button
+            className="px-4 py-2 rounded-lg bg-primary-400 text-white text-sm font-medium"
+            onClick={() => refetch()}
+          >
+            重新加载
+          </button>
+        </div>
+      ) : (
       <div className="space-y-6 px-3 pt-3 pb-6 sm:px-4 lg:p-0">
         {/* 欢迎卡片 + 创建按钮 */}
         <div className="relative mb-4">
@@ -655,6 +669,7 @@ export const DashboardNew: FC = () => {
           )}
         </div>
       </div>
+      )}
     </MerchantLayout>
   );
 };

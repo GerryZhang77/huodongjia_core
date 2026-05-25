@@ -354,7 +354,7 @@ const ActivityDetail: FC = () => {
                     <button
                       onClick={() => setShowQrModal(true)}
                       className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
-                      title="报名二维码"
+                      title="活动二维码"
                     >
                       <QrCode size={20} className="text-white" />
                     </button>
@@ -696,7 +696,7 @@ const ActivityDetail: FC = () => {
                   className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <QrCode size={20} className="text-primary-500" />
-                  <span className="text-xs text-gray-600">报名二维码</span>
+                  <span className="text-xs text-gray-600">活动二维码</span>
                 </button>
                 <button
                   onClick={() => navigate(`/dashboard/activity/${id}/matching`)}

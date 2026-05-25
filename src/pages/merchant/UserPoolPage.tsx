@@ -24,6 +24,8 @@ import {
   X,
   Settings,
   ChevronRight,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
@@ -47,6 +49,7 @@ import type { PushActivityOption } from "@/features/merchant/user-pool/component
 import type { InviteActivityOption } from "@/features/merchant/user-pool/components";
 import type {
   MerchantUser,
+  ActivityLevel,
   UserPoolFilterCriteria,
   CustomTag,
   UserPoolTab,
@@ -115,6 +118,110 @@ const StatCard: React.FC<StatCardProps> = ({
   </div>
 );
 
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : String(item)))
+    .filter(Boolean);
+}
+
+function normalizeGender(value: unknown): MerchantUser["gender"] | undefined {
+  return value === "male" || value === "female" || value === "other"
+    ? value
+    : undefined;
+}
+
+function normalizeActivityLevel(value: unknown): ActivityLevel {
+  return value === "high" || value === "medium" || value === "low"
+    ? value
+    : "low";
+}
+
+function normalizeMerchantUser(raw: unknown): MerchantUser | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Record<string, unknown>;
+  const id = asString(item.id);
+  if (!id) return null;
+  const lastParticipatedAt =
+    asString(item.lastParticipatedAt) ||
+    asString(item.updatedAt) ||
+    asString(item.createdAt) ||
+    new Date().toISOString();
+
+  return {
+    id,
+    name: asString(item.name, "未知用户"),
+    gender: normalizeGender(item.gender),
+    age: item.age === undefined ? undefined : asNumber(item.age),
+    phone: asString(item.phone) || undefined,
+    email: asString(item.email) || undefined,
+    avatar: asString(item.avatar) || undefined,
+    city: asString(item.city) || undefined,
+    occupation: asString(item.occupation) || undefined,
+    industry: asString(item.industry) || undefined,
+    company: asString(item.company) || undefined,
+    bio: asString(item.bio) || undefined,
+    interests: asStringArray(item.interests),
+    participatedActivityIds: asStringArray(item.participatedActivityIds),
+    participatedActivityNames: asStringArray(item.participatedActivityNames),
+    participationCount: asNumber(item.participationCount),
+    firstParticipatedAt:
+      asString(item.firstParticipatedAt) || lastParticipatedAt,
+    lastParticipatedAt,
+    autoTags: asStringArray(item.autoTags),
+    customTags: asStringArray(item.customTags),
+    activityLevel: normalizeActivityLevel(item.activityLevel),
+  };
+}
+
+function normalizePlatformUser(raw: unknown): PlatformUser | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Record<string, unknown>;
+  const id = asString(item.id);
+  if (!id) return null;
+  const age = item.age === undefined ? undefined : asNumber(item.age);
+
+  return {
+    id,
+    nickname: asString(item.nickname) || asString(item.name, "用户"),
+    avatar: asString(item.avatar) || undefined,
+    city: asString(item.city) || undefined,
+    industry: asString(item.industry) || undefined,
+    occupation: asString(item.occupation) || undefined,
+    ageGroup:
+      asString(item.ageGroup) ||
+      (age ? `${Math.floor(age / 5) * 5}-${Math.floor(age / 5) * 5 + 4}` : undefined),
+    gender: normalizeGender(item.gender),
+    interests: asStringArray(item.interests || item.tags),
+    activityPreferences: asStringArray(item.activityPreferences),
+    participationCount: asNumber(item.participationCount),
+    lastActiveAt:
+      asString(item.lastActiveAt) ||
+      asString(item.updatedAt) ||
+      asString(item.createdAt) ||
+      new Date().toISOString(),
+    matchScore: Math.max(0, Math.min(100, asNumber(item.matchScore, 60))),
+    isUnlocked: item.isUnlocked === true,
+    isFavorited: item.isFavorited === true,
+    name: asString(item.name) || undefined,
+    phone: asString(item.phone) || undefined,
+    email: asString(item.email) || undefined,
+    company: asString(item.company) || undefined,
+    bio: asString(item.bio) || undefined,
+    age,
+    skills: asStringArray(item.skills),
+  };
+}
+
 // ========================================
 // 主页面组件
 // ========================================
@@ -170,17 +277,31 @@ const UserPoolPage: React.FC = () => {
   const DISCOVERY_QUOTA_KEY = ["merchant", "discovery-quota"] as const;
 
   // 1) 商家私域用户池 - 列表常变；60s stale 平衡新鲜度和重复拉取
-  const { data: merchantUsers = [] } = useQuery({
+  const {
+    data: merchantUsers = [],
+    isLoading: merchantUsersLoading,
+    isError: merchantUsersError,
+    refetch: refetchMerchantUsers,
+  } = useQuery({
     queryKey: USER_POOL_KEY,
     queryFn: async () => {
       const res = await getMerchantUserPool();
       return res.success ? (res.data?.users ?? []) : [];
     },
+    select: (data) =>
+      (data as unknown[])
+        .map(normalizeMerchantUser)
+        .filter(Boolean) as MerchantUser[],
     staleTime: 60 * 1000,
   });
 
   // 2) 商家自定义标签 - 几乎不变；5min stale
-  const { data: customTags = [] } = useQuery<CustomTag[]>({
+  const {
+    data: customTags = [],
+    isLoading: customTagsLoading,
+    isError: customTagsError,
+    refetch: refetchCustomTags,
+  } = useQuery<CustomTag[]>({
     queryKey: CUSTOM_TAGS_KEY,
     queryFn: async () => {
       const res = await listCustomTags();
@@ -197,7 +318,12 @@ const UserPoolPage: React.FC = () => {
   });
 
   // 3) 商家自己的活动列表 - 5min stale；分组排序需要它做活动名兜底
-  const { data: activities = [] } = useQuery<any[]>({
+  const {
+    data: activities = [],
+    isLoading: activitiesLoading,
+    isError: activitiesError,
+    refetch: refetchActivities,
+  } = useQuery<any[]>({
     queryKey: ACTIVITIES_KEY,
     queryFn: async () => {
       const res = await getMerchantActivities();
@@ -217,12 +343,21 @@ const UserPoolPage: React.FC = () => {
   const [inviteTarget, setInviteTarget] = useState<PlatformUser | null>(null);
 
   // 4) 平台公域用户库 - 仅在切到「发现用户」时拉取，省一次首屏请求
-  const { data: platformUsers = [] } = useQuery<PlatformUser[]>({
+  const {
+    data: platformUsers = [],
+    isLoading: platformUsersLoading,
+    isError: platformUsersError,
+    refetch: refetchPlatformUsers,
+  } = useQuery<PlatformUser[]>({
     queryKey: PLATFORM_USERS_KEY,
     queryFn: async () => {
       const res = await getPlatformUsers();
       return res.success ? (res.data?.users ?? []) : [];
     },
+    select: (data) =>
+      (data as unknown[])
+        .map(normalizePlatformUser)
+        .filter(Boolean) as PlatformUser[],
     staleTime: 2 * 60 * 1000,
     enabled: activeTab === "discover",
   });
@@ -245,6 +380,11 @@ const UserPoolPage: React.FC = () => {
     staleTime: 60 * 1000,
     enabled: activeTab === "discover",
   });
+
+  const myUsersLoading =
+    merchantUsersLoading || customTagsLoading || activitiesLoading;
+  const myUsersError =
+    merchantUsersError || customTagsError || activitiesError;
 
   // ---- 缓存级写入辅助：替代原本的 setXxx 乐观更新 ----
   const patchPlatformUsers = useCallback(
@@ -409,7 +549,8 @@ const UserPoolPage: React.FC = () => {
         id: a.id,
         title: a.title,
         participantCount:
-          userCountByActivity.get(a.id) ?? (a.current_participants || 0),
+          userCountByActivity.get(a.id) ??
+          (a.currentParticipants ?? a.current_participants ?? 0),
         status: a.status,
       })),
     [activities, userCountByActivity],
@@ -421,10 +562,10 @@ const UserPoolPage: React.FC = () => {
       activities.map((a: any) => ({
         id: a.id,
         title: a.title,
-        startTime: a.start_time,
+        startTime: a.activityStart ?? a.start_time,
         location: a.location || "",
-        participantCount: a.current_participants || 0,
-        maxParticipants: a.max_participants || 0,
+        participantCount: a.currentParticipants ?? a.current_participants ?? 0,
+        maxParticipants: a.capacity ?? a.max_participants ?? 0,
         status: a.status,
       })),
     [activities],
@@ -447,10 +588,10 @@ const UserPoolPage: React.FC = () => {
       activities.map((a: any) => ({
         id: a.id,
         title: a.title,
-        startTime: a.start_time,
+        startTime: a.activityStart ?? a.start_time,
         location: a.location || "",
-        participantCount: a.current_participants || 0,
-        maxParticipants: a.max_participants || 0,
+        participantCount: a.currentParticipants ?? a.current_participants ?? 0,
+        maxParticipants: a.capacity ?? a.max_participants ?? 0,
         status: a.status,
       })),
     [activities],
@@ -754,7 +895,31 @@ const UserPoolPage: React.FC = () => {
         {/* ============================================ */}
         {/* 「我的用户」视图 */}
         {/* ============================================ */}
-        {activeTab === "my-users" && (
+        {activeTab === "my-users" && myUsersError && (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
+            <AlertCircle size={36} className="text-red-300 mb-3" />
+            <p className="text-sm mb-3">用户数据加载失败</p>
+            <button
+              className="px-4 py-2 rounded-lg bg-primary-400 text-white text-sm font-medium"
+              onClick={() => {
+                refetchMerchantUsers();
+                refetchCustomTags();
+                refetchActivities();
+              }}
+            >
+              重新加载
+            </button>
+          </div>
+        )}
+
+        {activeTab === "my-users" && myUsersLoading && !myUsersError && (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
+            <Loader2 size={32} className="text-primary-400 animate-spin mb-3" />
+            <p className="text-sm">正在加载用户数据...</p>
+          </div>
+        )}
+
+        {activeTab === "my-users" && !myUsersLoading && !myUsersError && (
           <>
             {/* 统计卡片 */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1035,7 +1200,29 @@ const UserPoolPage: React.FC = () => {
         {/* ============================================ */}
         {/* 「发现用户」视图 */}
         {/* ============================================ */}
-        {activeTab === "discover" && (
+        {activeTab === "discover" && platformUsersError && (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
+            <AlertCircle size={36} className="text-red-300 mb-3" />
+            <p className="text-sm mb-3">发现用户加载失败</p>
+            <button
+              className="px-4 py-2 rounded-lg bg-primary-400 text-white text-sm font-medium"
+              onClick={() => refetchPlatformUsers()}
+            >
+              重新加载
+            </button>
+          </div>
+        )}
+
+        {activeTab === "discover" && platformUsersLoading && !platformUsersError && (
+          <div className="flex flex-col items-center justify-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
+            <Loader2 size={32} className="text-primary-400 animate-spin mb-3" />
+            <p className="text-sm">正在加载发现用户...</p>
+          </div>
+        )}
+
+        {activeTab === "discover" &&
+          !platformUsersLoading &&
+          !platformUsersError && (
           <>
             {/* 配额指示器 */}
             <QuotaIndicator quota={discoveryQuota} />

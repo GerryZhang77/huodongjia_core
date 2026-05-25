@@ -9,7 +9,10 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/stores";
 import { getCurrentUser } from "@/features/auth/services";
 import { debugLogger } from "@/utils/debugLogger";
-import { buildLoginPathWithRedirect } from "@/utils/redirect";
+import {
+  buildLoginPathWithRedirect,
+  savePendingRedirectPath,
+} from "@/utils/redirect";
 import type { UserType } from "@/features/auth/types";
 
 interface ProtectedRouteProps {
@@ -133,6 +136,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!isAuthenticated || !user) {
     debugLogger.warn("[ProtectedRoute] 未认证，重定向到登录页");
     const redirect = `${location.pathname}${location.search}${location.hash}`;
+    savePendingRedirectPath(redirect);
     return <Navigate to={buildLoginPathWithRedirect(redirect)} replace />;
   }
 

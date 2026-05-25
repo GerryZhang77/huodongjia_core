@@ -39,6 +39,7 @@ import {
   isOnlineOnlyActivity,
 } from "@/features/activities/utils/constants";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
+import { getRegistrationAvailability } from "@/features/user/activity/utils/registrationAvailability";
 import dayjs from "dayjs";
 
 // 状态配置
@@ -62,6 +63,27 @@ const statusConfig: Record<
     label: "待审核",
     color: "bg-warning-500",
     btnLabel: "审核中",
+    btnStyle: "bg-gray-200 text-gray-500",
+    disabled: true,
+  },
+  rejected: {
+    label: "未通过",
+    color: "bg-error-500",
+    btnLabel: "报名未通过",
+    btnStyle: "bg-gray-200 text-gray-500",
+    disabled: true,
+  },
+  waitlist: {
+    label: "候补中",
+    color: "bg-warning-500",
+    btnLabel: "候补中",
+    btnStyle: "bg-gray-200 text-gray-500",
+    disabled: true,
+  },
+  cancelled: {
+    label: "已取消",
+    color: "bg-gray-400",
+    btnLabel: "已取消报名",
     btnStyle: "bg-gray-200 text-gray-500",
     disabled: true,
   },
@@ -196,7 +218,10 @@ const UserActivityDetail: FC = () => {
   }
 
   const config = statusConfig[activity.userStatus];
-  const isFull = activity.currentParticipants >= activity.maxParticipants;
+  const registrationAvailability = getRegistrationAvailability(activity);
+  const isFull =
+    activity.maxParticipants > 0 &&
+    activity.currentParticipants >= activity.maxParticipants;
   const displayLocation = isOnlineOnlyActivity(activity.tags)
     ? "线上活动"
     : activity.location || "地点待定";
@@ -210,7 +235,15 @@ const UserActivityDetail: FC = () => {
         btnStyle: "bg-gray-200 text-gray-500",
         disabled: true,
       }
-    : config;
+    : activity.userStatus === "recruiting" &&
+        !registrationAvailability.canRegister
+      ? {
+          ...config,
+          label: registrationAvailability.reason || config.label,
+          btnLabel: registrationAvailability.reason || "暂不可报名",
+          disabled: true,
+        }
+      : config;
 
   return (
     <UserLayout
@@ -580,6 +613,18 @@ const UserActivityDetail: FC = () => {
                 </p>
               </div>
             )}
+            {activity.userStatus === "recruiting" &&
+              !registrationAvailability.canRegister && (
+                <div className="mt-5 p-3 bg-gray-50 dark:bg-gray-700/40 rounded-xl flex items-center gap-2">
+                  <AlertCircle
+                    size={16}
+                    className="text-gray-500 dark:text-gray-400 flex-shrink-0"
+                  />
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
+                    {registrationAvailability.reason || "当前暂不可报名"}
+                  </p>
+                </div>
+              )}
           </div>
 
           {/* 底部操作栏 - 相对于卡片容器定位 */}
@@ -609,7 +654,11 @@ const UserActivityDetail: FC = () => {
                   }
                   disabled={buttonConfig.disabled}
                   onClick={() => {
-                    if (activity.userStatus === "recruiting" && !isOrganizer) {
+                    if (
+                      activity.userStatus === "recruiting" &&
+                      !isOrganizer &&
+                      registrationAvailability.canRegister
+                    ) {
                       navigate(`/u/activities/${id}/register`);
                     } else if (activity.userStatus === "approved") {
                       navigate(`/u/activities/${id}/match-result`);

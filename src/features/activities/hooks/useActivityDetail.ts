@@ -10,25 +10,31 @@ import type { Activity } from "../types";
 import { demoActivity, isDemoActivity } from "@/mocks/demo-activity";
 
 export const useActivityDetail = (activityId: string | undefined) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(activityId));
   const [activity, setActivity] = useState<Activity | null>(null);
   const { setCurrentActivity } = useActivityStore();
 
   useEffect(() => {
-    if (!activityId) return;
+    if (!activityId) {
+      setActivity(null);
+      setLoading(false);
+      return;
+    }
 
     const fetchActivity = async () => {
+      setLoading(true);
+      setActivity(null);
+
       // 【Mock 环境】如果是演示活动，直接返回静态数据
       if (isDemoActivity(activityId)) {
         console.log("✅ useActivityDetail - 检测到演示活动 ID，使用静态数据");
         setActivity(demoActivity);
         setCurrentActivity(demoActivity);
+        setLoading(false);
         return;
       }
 
       // 【正常流程】从后端获取活动详情
-      setLoading(true);
-
       try {
         const activity = await getActivityById(activityId);
         console.log("✅ useActivityDetail - 从后端获取活动详情成功");
@@ -36,6 +42,7 @@ export const useActivityDetail = (activityId: string | undefined) => {
         setCurrentActivity(activity);
       } catch (error) {
         console.error("获取活动详情失败:", error);
+        setActivity(null);
         Toast.show({
           icon: "fail",
           content: "获取活动详情失败",

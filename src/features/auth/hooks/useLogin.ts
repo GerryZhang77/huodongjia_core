@@ -10,7 +10,10 @@ import { login as loginApi, loginBySms as loginBySmsApi } from "../services";
 import type { LoginCredentials, LoginResponse, User } from "../types";
 import { authNotification } from "@/components/ui/AuthNotification/manager";
 import { debugLogger } from "@/utils/debugLogger";
-import { sanitizeRedirectPath } from "@/utils/redirect";
+import {
+  consumePendingRedirectPath,
+  sanitizeRedirectPath,
+} from "@/utils/redirect";
 
 const phoneRe = /^1[3-9]\d{9}$/;
 const maskPhone = (v: string) =>
@@ -70,8 +73,10 @@ export function useLogin() {
     );
 
     const safeRedirect = sanitizeRedirectPath(searchParams.get("redirect"));
+    const pendingRedirect = consumePendingRedirectPath();
     const targetPath =
       safeRedirect ||
+      pendingRedirect ||
       (response.user.user_type === "user" ? "/u/home" : "/dashboard");
     setTimeout(() => {
       navigate(targetPath, { replace: true });

@@ -790,7 +790,7 @@ const EnrollmentManagementNew: React.FC = () => {
                 onClick={() => setShowQrModal(true)}
               >
                 <QrCode size={14} />
-                报名二维码
+                活动二维码
               </button>
               <button
                 className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 flex items-center gap-1 transition-colors"

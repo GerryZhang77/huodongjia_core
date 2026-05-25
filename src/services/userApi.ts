@@ -147,6 +147,9 @@ export type UserActivityStatus =
   | "recruiting"
   | "pending"
   | "approved"
+  | "rejected"
+  | "waitlist"
+  | "cancelled"
   | "completed";
 
 export interface UserActivity {

@@ -8,6 +8,9 @@ export type UserActivityStatus =
   | "recruiting" // 报名中
   | "pending" // 待审核
   | "approved" // 已通过
+  | "rejected" // 未通过
+  | "waitlist" // 候补
+  | "cancelled" // 已取消
   | "completed"; // 已结束
 
 export interface UserActivity {

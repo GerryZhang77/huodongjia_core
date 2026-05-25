@@ -355,8 +355,8 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-x-0 top-0 bottom-mobile-tabbar z-50 flex items-center justify-center bg-black/50 px-4 py-4 lg:inset-0 lg:p-0">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-full lg:mx-4 lg:max-h-[90vh] flex flex-col overflow-hidden">
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <div className="flex items-center gap-2">

@@ -58,7 +58,7 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
 
   const registrationUrl = useMemo(() => {
     if (!activityId) return "";
-    return `${getPublicAppOrigin()}/u/activities/${encodeURIComponent(activityId)}/register`;
+    return `${getPublicAppOrigin()}/u/activities/${encodeURIComponent(activityId)}`;
   }, [activityId]);
 
   const hasLocalAddress = isLocalAddress(registrationUrl);
@@ -83,7 +83,7 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
         throw new Error("clipboard unavailable");
       }
       setShowCopyFallback(false);
-      Toast.show({ content: "报名链接已复制" });
+      Toast.show({ content: "活动详情链接已复制" });
     } catch {
       setShowCopyFallback(true);
       Toast.show({ content: "复制失败，请长按链接复制" });
@@ -99,7 +99,7 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
 
     const link = document.createElement("a");
     link.href = qrDataUrl;
-    link.download = `activity-${activityId}-registration-qr.png`;
+    link.download = `activity-${activityId}-detail-qr.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -113,7 +113,7 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <div className="flex items-center gap-2 font-semibold text-gray-900">
             <QrCode size={18} />
-            报名二维码
+            活动二维码
           </div>
           <button
             className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
@@ -130,7 +130,7 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
           )}
           <div className="flex justify-center">
             {qrDataUrl ? (
-              <img src={qrDataUrl} alt="报名二维码" className="w-64 h-64" />
+              <img src={qrDataUrl} alt="活动二维码" className="w-64 h-64" />
             ) : (
               <div className="w-64 h-64 bg-gray-50 rounded-xl flex items-center justify-center text-sm text-gray-400">
                 生成中...
@@ -176,7 +176,7 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
       {showQrPreview && qrDataUrl && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-xs rounded-2xl bg-white p-4 text-center">
-            <img src={qrDataUrl} alt="报名二维码" className="w-full aspect-square" />
+            <img src={qrDataUrl} alt="活动二维码" className="w-full aspect-square" />
             <p className="mt-3 text-sm text-gray-600">长按二维码图片保存</p>
             <button
               type="button"

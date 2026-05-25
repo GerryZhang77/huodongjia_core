@@ -22,6 +22,7 @@ import {
   type UpsertFieldLibraryItem,
 } from "@/features/user/field-library";
 import type { RegistrationFormField } from "@/features/activities/types";
+import { getRegistrationAvailability } from "@/features/user/activity/utils/registrationAvailability";
 import dayjs from "dayjs";
 
 // ============================================
@@ -32,6 +33,21 @@ const DEFAULT_FORM_SCHEMA: RegistrationFormField[] = [
   { key: "phone", label: "手机号", type: "text", required: false, preset: true, placeholder: "请输入手机号" },
   { key: "gender", label: "性别", type: "radio", required: false, preset: true, options: ["男", "女"] },
 ];
+
+function getSubmitErrorMessage(error: unknown): string {
+  if (typeof error === "object" && error !== null) {
+    const maybeAxiosError = error as {
+      response?: { data?: { message?: string } };
+      message?: string;
+    };
+    return (
+      maybeAxiosError.response?.data?.message ||
+      maybeAxiosError.message ||
+      "报名失败，请稍后重试"
+    );
+  }
+  return "报名失败，请稍后重试";
+}
 
 // ============================================
 // 多选标签组件
@@ -192,13 +208,17 @@ const UserRegistration: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { data: activityData } = useActivityDetail(id);
+  const { data: activityData, isLoading } = useActivityDetail(id);
   const { mutateAsync: submitEnrollment, isPending: isSubmitting } =
     useSubmitEnrollment(id || "");
   const { data: prefillData } = useProfilePrefill();
   const { mutateAsync: upsertFieldsAsync } = useUpsertFieldLibrary();
 
   const activity = useMemo(() => activityData?.data, [activityData]);
+  const registrationAvailability = useMemo(
+    () => getRegistrationAvailability(activity),
+    [activity],
+  );
 
   // 获取报名表 schema
   const formSchema = useMemo<RegistrationFormField[]>(() => {
@@ -254,6 +274,14 @@ const UserRegistration: FC = () => {
   }, [formSchema, formData]);
 
   const handleSubmit = async () => {
+    if (!registrationAvailability.canRegister) {
+      Toast.show({
+        icon: "fail",
+        content: registrationAvailability.reason || "当前暂不可报名",
+      });
+      return;
+    }
+
     if (!isFormValid) {
       // 找到第一个未填的必填字段
       const missing = formSchema.find((f) => {
@@ -322,11 +350,23 @@ const UserRegistration: FC = () => {
     } catch (error: any) {
       Toast.show({
         icon: "fail",
-        content: error.message || "报名失败，请稍后重试",
+        content: getSubmitErrorMessage(error),
         duration: 3000,
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <UserLayout showTabBar={true} showTopBar={true}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            正在加载活动信息...
+          </div>
+        </div>
+      </UserLayout>
+    );
+  }
 
   if (!activity) {
     return (
@@ -344,6 +384,31 @@ const UserRegistration: FC = () => {
             className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
           >
             返回首页
+          </button>
+        </div>
+      </UserLayout>
+    );
+  }
+
+  if (!registrationAvailability.canRegister) {
+    return (
+      <UserLayout showTabBar={true} showTopBar={true}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-center">
+          <AlertCircle
+            size={40}
+            className="text-gray-300 dark:text-gray-600 mb-3"
+          />
+          <p className="text-gray-700 dark:text-gray-200 text-base font-medium mb-2">
+            暂不可报名
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+            {registrationAvailability.reason || "当前活动暂不可报名"}
+          </p>
+          <button
+            onClick={() => navigate(`/u/activities/${id}`, { replace: true })}
+            className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
+          >
+            返回活动详情
           </button>
         </div>
       </UserLayout>

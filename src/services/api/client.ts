@@ -14,6 +14,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import {
   buildLoginPathWithRedirect,
   getCurrentRedirectPath,
+  savePendingRedirectPath,
 } from "@/utils/redirect";
 
 // ========================================
@@ -125,9 +126,9 @@ api.interceptors.response.use(
 
       // 避免在登录页重复跳转
       if (!window.location.pathname.includes("/login")) {
-        window.location.href = buildLoginPathWithRedirect(
-          getCurrentRedirectPath(),
-        );
+        const redirect = getCurrentRedirectPath();
+        savePendingRedirectPath(redirect);
+        window.location.href = buildLoginPathWithRedirect(redirect);
       }
     }
 

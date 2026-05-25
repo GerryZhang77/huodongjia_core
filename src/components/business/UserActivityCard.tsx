@@ -46,6 +46,24 @@ const statusConfig: Record<
     bgColor: "bg-primary-50",
     borderColor: "border-primary-200",
   },
+  rejected: {
+    label: "未通过",
+    color: "text-error-600",
+    bgColor: "bg-error-50",
+    borderColor: "border-error-200",
+  },
+  waitlist: {
+    label: "候补中",
+    color: "text-warning-600",
+    bgColor: "bg-warning-50",
+    borderColor: "border-warning-200",
+  },
+  cancelled: {
+    label: "已取消",
+    color: "text-gray-500",
+    bgColor: "bg-gray-100",
+    borderColor: "border-gray-200",
+  },
   completed: {
     label: "已结束",
     color: "text-gray-500",

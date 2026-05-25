@@ -8,7 +8,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../stores/authStore";
 import * as authApi from "../services/authApi";
-import { sanitizeRedirectPath } from "@/utils/redirect";
+import {
+  consumePendingRedirectPath,
+  sanitizeRedirectPath,
+} from "@/utils/redirect";
 
 export interface UseRegisterReturn {
   /** 注册（手机号 + 验证码 + 密码 + 用户名） */
@@ -108,7 +111,8 @@ export function useRegister(): UseRegisterReturn {
         setAuth(response.user, response.token);
         queryClient.clear();
         const redirect = sanitizeRedirectPath(searchParams.get("redirect"));
-        navigate(redirect || "/u/home", { replace: true });
+        const pendingRedirect = consumePendingRedirectPath();
+        navigate(redirect || pendingRedirect || "/u/home", { replace: true });
       }
 
       return true;
