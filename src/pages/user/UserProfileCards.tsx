@@ -35,7 +35,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useUserProfile, useUserActivities } from "@/features/user";
 import { useUnreadCount } from "@/features/social";
-import { userApi } from "@/services";
+import { useImageUpload } from "@/features/uploads";
 import type { UserProfile } from "@/services/userApi";
 import type { UserActivity } from "@/services/userApi";
 import { eventBus, EVENTS } from "@/utils/eventBus";
@@ -213,6 +213,17 @@ const UserProfileCards: FC = () => {
   // 头像上传状态
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
+  const avatarUpload = useImageUpload({ kind: "avatar" });
+
+  const patchAvatar = (avatar: string | null) => {
+    queryClient.setQueryData<{ success: boolean; profile?: UserProfile }>(
+      ["user", "profile"],
+      (old) =>
+        old?.profile
+          ? { ...old, profile: { ...old.profile, avatar: avatar ?? undefined } }
+          : old,
+    );
+  };
 
   // 监听资料更新事件（用于本地刷新）
   useEffect(() => {
@@ -245,38 +256,34 @@ const UserProfileCards: FC = () => {
   }, [myActivities, activeStatusTab]);
 
   // 处理头像上传
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 验证文件类型
-    if (!file.type.startsWith("image/")) {
-      Toast.show({ icon: "fail", content: "请选择图片文件" });
-      return;
-    }
+    const handle = avatarUpload.uploadWithPreview(file);
+    if (!handle.tempUrl) return;
 
-    // 验证文件大小（限制 5MB）
-    if (file.size > 5 * 1024 * 1024) {
-      Toast.show({ icon: "fail", content: "图片大小不能超过 5MB" });
-      return;
-    }
-
+    const previousAvatar = profile?.avatar ?? null;
+    patchAvatar(handle.tempUrl);
     setAvatarUploading(true);
-    try {
-      const res = await userApi.uploadAvatar(file);
-      if (res.success && res.avatarUrl) {
-        queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+
+    handle.finalUrlPromise
+      .then((realUrl) => {
+        patchAvatar(realUrl);
+        queryClient.invalidateQueries({
+          queryKey: ["user", "profile"],
+          refetchType: "none",
+        });
         Toast.show({ icon: "success", content: "头像更新成功" });
-      } else {
-        Toast.show({ icon: "fail", content: "上传失败，请重试" });
-      }
-    } catch (error) {
-      console.error("头像上传失败:", error);
-      Toast.show({ icon: "fail", content: "上传失败，请稍后重试" });
-    } finally {
-      setAvatarUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+      })
+      .catch((error) => {
+        console.error("头像上传失败:", error);
+        patchAvatar(previousAvatar);
+      })
+      .finally(() => {
+        setAvatarUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      });
   };
 
   // 加载中状态

@@ -248,6 +248,12 @@ export async function updateUserProfile(data: UpdateProfileRequest): Promise<{
 export async function uploadAvatar(file: File): Promise<{
   success: boolean;
   avatarUrl?: string;
+  url?: string;
+  data?: {
+    url?: string;
+    avatarUrl?: string;
+  };
+  message?: string;
 }> {
   const formData = new FormData();
   formData.append("avatar", file);

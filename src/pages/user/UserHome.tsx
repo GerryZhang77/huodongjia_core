@@ -16,7 +16,7 @@ import {
 import { ActivityFilterDrawer } from "@/components/business/ActivityFilterDrawer";
 import { CitySelector } from "@/components/ui/CitySelector";
 import { Tag } from "@/components/ui";
-import { useUserActivities, useRecommendedActivities } from "@/features/user";
+import { useRecommendedActivities } from "@/features/user";
 import { useUserProfile } from "@/features/user";
 import { usePrefetchActivityDetail } from "@/hooks/usePrefetchActivity";
 import { useSeedFavoriteStatus } from "@/hooks/useSeedFavoriteStatus";
@@ -105,10 +105,8 @@ const UserHome: FC = () => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode);
   }, [viewMode]);
 
-  // 使用 hooks 获取活动数据
+  // 使用公开活动接口获取活动广场数据。/api/user/activities 是“我的活动”，只返回已报名活动。
   const { data: activitiesData, isLoading: isLoadingActivities } =
-    useUserActivities();
-  const { data: recommendedData, isLoading: isLoadingRecommended } =
     useRecommendedActivities();
 
   // 获取活动列表
@@ -119,21 +117,13 @@ const UserHome: FC = () => {
   // 一次性批量预热当前可见列表的收藏状态，避免每张卡片各自 fetch
   const visibleIds = useMemo(
     () =>
-      [
-        ...allActivities.map((a) => a.id),
-        ...(recommendedData?.data?.activities || []).map((a) => a.id),
-      ].filter(Boolean),
-    [allActivities, recommendedData],
+      allActivities.map((a) => a.id).filter(Boolean),
+    [allActivities],
   );
   useSeedFavoriteStatus(visibleIds);
 
   // 热门活动（取参与率最高的前4个）
   const hotActivities = useMemo(() => {
-    const recommended = recommendedData?.data?.activities || [];
-    if (recommended.length > 0) {
-      return recommended.slice(0, 4);
-    }
-    // 降级使用普通列表
     return [...allActivities]
       .filter((a) => a.activityStatus === "recruiting")
       .sort(
@@ -142,7 +132,7 @@ const UserHome: FC = () => {
           a.currentParticipants / a.maxParticipants,
       )
       .slice(0, 4);
-  }, [recommendedData, allActivities]);
+  }, [allActivities]);
 
   // 过滤和排序活动列表
   const filteredActivities = useMemo(() => {

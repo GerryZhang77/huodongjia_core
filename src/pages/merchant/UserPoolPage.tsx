@@ -146,6 +146,21 @@ function normalizeActivityLevel(value: unknown): ActivityLevel {
     : "low";
 }
 
+function normalizeActivityList(raw: unknown): any[] {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== "object") return [];
+
+  const item = raw as Record<string, unknown>;
+  const data = item.data;
+  if (data && typeof data === "object") {
+    const dataItem = data as Record<string, unknown>;
+    if (Array.isArray(dataItem.activities)) return dataItem.activities;
+  }
+  if (Array.isArray(item.activities)) return item.activities;
+  if (Array.isArray(item.events)) return item.events;
+  return [];
+}
+
 function normalizeMerchantUser(raw: unknown): MerchantUser | null {
   if (!raw || typeof raw !== "object") return null;
   const item = raw as Record<string, unknown>;
@@ -323,12 +338,10 @@ const UserPoolPage: React.FC = () => {
     isLoading: activitiesLoading,
     isError: activitiesError,
     refetch: refetchActivities,
-  } = useQuery<any[]>({
+  } = useQuery({
     queryKey: ACTIVITIES_KEY,
-    queryFn: async () => {
-      const res = await getMerchantActivities();
-      return (res.data?.activities || []) as any[];
-    },
+    queryFn: () => getMerchantActivities(),
+    select: normalizeActivityList,
     staleTime: 5 * 60 * 1000,
   });
 

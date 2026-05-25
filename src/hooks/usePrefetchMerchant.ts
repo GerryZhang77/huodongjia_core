@@ -58,10 +58,7 @@ export function usePrefetchMerchantUserPool() {
     });
     qc.prefetchQuery({
       queryKey: ["merchant", "activities"],
-      queryFn: async () => {
-        const res = await getMerchantActivities();
-        return (res.data?.activities || []) as any[];
-      },
+      queryFn: () => getMerchantActivities(),
       staleTime: 5 * 60 * 1000,
     });
   }, [qc]);

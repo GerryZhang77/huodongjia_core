@@ -63,6 +63,12 @@ function getDefaultMaxDimension(kind: ImageUploadKind): number {
   return 1800;
 }
 
+function rejectedUploadHandle(message: string): UploadHandle {
+  const finalUrlPromise = Promise.reject(new Error(message));
+  finalUrlPromise.catch(() => undefined);
+  return { tempUrl: "", finalUrlPromise };
+}
+
 function getFileExtension(type: string): string {
   if (type === "image/png") return "png";
   if (type === "image/webp") return "webp";
@@ -201,8 +207,9 @@ async function dispatchUpload(kind: ImageUploadKind, file: File): Promise<string
   switch (kind) {
     case "avatar": {
       const res = await userApi.uploadAvatar(file);
-      if (!res.success || !res.avatarUrl) throw new Error("上传失败");
-      return res.avatarUrl;
+      const avatarUrl = res.avatarUrl || res.data?.avatarUrl || res.data?.url || res.url;
+      if (!res.success || !avatarUrl) throw new Error(res.message || "上传失败");
+      return avatarUrl;
     }
     case "merchant-avatar": {
       const res = await uploadMerchantAvatar(file);
@@ -238,10 +245,7 @@ export function useImageUpload(opts: Options) {
           Toast.show({ icon: "fail", content: "请选择图片文件" });
         }
         // 仍返回一个 handle，但 promise reject；tempUrl 用空字符串避免污染列表
-        return {
-          tempUrl: "",
-          finalUrlPromise: Promise.reject(new Error("file is not image")),
-        };
+        return rejectedUploadHandle("file is not image");
       }
       if (file.size > maxBytes) {
         if (showToastOnError) {
@@ -250,10 +254,7 @@ export function useImageUpload(opts: Options) {
             content: `图片大小不能超过 ${(maxBytes / 1024 / 1024).toFixed(0)}MB`,
           });
         }
-        return {
-          tempUrl: "",
-          finalUrlPromise: Promise.reject(new Error("file too large")),
-        };
+        return rejectedUploadHandle("file too large");
       }
 
       // 2) 立即生成 blob URL 给调用方做预览
