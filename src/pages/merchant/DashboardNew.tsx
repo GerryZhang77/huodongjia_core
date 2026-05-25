@@ -3,8 +3,9 @@
  * 使用新的 MerchantLayout 和设计系统
  */
 
-import { FC, useEffect, useState } from "react";
+import { FC, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Calendar,
   MapPin,
@@ -110,6 +111,7 @@ interface ActivityCardProps {
   activity: MerchantActivity;
   onView: () => void;
   onEdit: () => void;
+  onEditPreload?: () => void;
   onManage: () => void;
   onMatch: () => void;
   onDelete: () => void;
@@ -119,6 +121,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
   activity,
   onView,
   onEdit,
+  onEditPreload,
   onManage,
   onMatch,
   onDelete,
@@ -221,7 +224,10 @@ const ActivityCard: FC<ActivityCardProps> = ({
                 </button>
                 <button
                   className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  onMouseEnter={onEditPreload}
+                  onFocus={onEditPreload}
                   onClick={() => {
+                    onEditPreload?.();
                     onEdit();
                     setShowMenu(false);
                   }}
@@ -330,6 +336,10 @@ const ActivityCard: FC<ActivityCardProps> = ({
   );
 };
 
+const preloadActivityEdit = () => {
+  void import("./ActivityEditNew");
+};
+
 // 将后端 Activity 转换为 MerchantActivity 格式
 function toMerchantActivity(a: Activity): MerchantActivity {
   // 后端返回的是 camelCase 格式，需要转换
@@ -384,35 +394,41 @@ export const DashboardNew: FC = () => {
   const { data, isLoading, isError, refetch } = useMerchantActivities();
   const deleteMutation = useDeleteActivity();
 
-  // 存储活动报名人数
-  const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
+  const activities: MerchantActivity[] = useMemo(
+    () => (data?.data?.activities ?? []).map(toMerchantActivity),
+    [data]
+  );
 
-  const activities: MerchantActivity[] = (data?.data?.activities ?? []).map(toMerchantActivity);
+  const activityIds = useMemo(
+    () => activities.map((activity) => activity.id).sort(),
+    [activities]
+  );
 
-  // 加载每个活动的报名人数
-  useEffect(() => {
-    const loadEnrollmentCounts = async () => {
-      if (!activities || activities.length === 0) return;
-
-      const counts: Record<string, number> = {};
-
-      await Promise.all(
-        activities.map(async (activity) => {
+  const { data: enrollmentCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["merchant", "enrollment-counts", activityIds],
+    queryFn: async () => {
+      const countEntries = await Promise.all(
+        activityIds.map(async (activityId) => {
           try {
-            const result = await getEnrollmentsDetailed(activity.id, { page: 1, pageSize: 1 });
-            counts[activity.id] = result.total || 0;
+            const result = await getEnrollmentsDetailed(activityId, {
+              page: 1,
+              pageSize: 1,
+            });
+            return [activityId, result.total ?? 0] as const;
           } catch (error) {
-            console.error(`Failed to load enrollment count for ${activity.id}:`, error);
-            counts[activity.id] = 0;
+            console.error(`Failed to load enrollment count for ${activityId}:`, error);
+            throw error;
           }
         })
       );
 
-      setEnrollmentCounts(counts);
-    };
-
-    loadEnrollmentCounts();
-  }, [data]); // 依赖 data 而不是 activities，避免无限循环
+      return Object.fromEntries(countEntries);
+    },
+    enabled: activityIds.length > 0,
+    staleTime: 0,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+  });
 
   // 合并报名人数到活动数据
   const activitiesWithCounts = activities.map(activity => ({
@@ -633,9 +649,11 @@ export const DashboardNew: FC = () => {
                   onView={() =>
                     navigate(`/dashboard/activity/${activity.id}/detail`)
                   }
-                  onEdit={() =>
-                    navigate(`/dashboard/activity/${activity.id}/edit`)
-                  }
+                  onEdit={() => {
+                    preloadActivityEdit();
+                    navigate(`/dashboard/activity/${activity.id}/edit`);
+                  }}
+                  onEditPreload={preloadActivityEdit}
                   onManage={() =>
                     navigate(`/dashboard/activity/${activity.id}/enrollment`)
                   }

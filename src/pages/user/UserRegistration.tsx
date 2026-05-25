@@ -338,11 +338,25 @@ const UserRegistration: FC = () => {
         });
         if (ok) {
           try {
-            await upsertFieldsAsync(toSave);
+            const res = await upsertFieldsAsync(toSave);
+            if (!res.success) {
+              Toast.show({
+                icon: "fail",
+                content: res.message || "保存失败，可稍后在个人中心重试",
+              });
+              navigateToDetail();
+              return;
+            }
             Toast.show({ icon: "success", content: "已保存到信息库" });
-          } catch {
+          } catch (err: any) {
             // 保存失败不阻塞流程
-            Toast.show({ content: "保存失败，可稍后在个人中心重试" });
+            Toast.show({
+              icon: "fail",
+              content:
+                err?.response?.data?.message ||
+                err?.message ||
+                "保存失败，可稍后在个人中心重试",
+            });
           }
         }
       }

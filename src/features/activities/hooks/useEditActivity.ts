@@ -59,6 +59,7 @@ export const useEditActivity = (activityId: string) => {
 
       const activity = await updateActivity(activityId, requestData);
 
+      Toast.clear();
       Toast.show({
         icon: "success",
         content: "活动更新成功",
@@ -76,6 +77,7 @@ export const useEditActivity = (activityId: string) => {
       navigate(`/dashboard/activity/${activity.id}/detail`);
     } catch (error) {
       console.error("更新活动失败:", error);
+      Toast.clear();
       Toast.show({
         icon: "fail",
         content: "更新活动失败，请稍后重试",

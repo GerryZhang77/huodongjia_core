@@ -1,4 +1,12 @@
-import { lazy, Suspense } from "react";
+import {
+  Component,
+  lazy,
+  Suspense,
+  useEffect,
+  useState,
+  type ErrorInfo,
+  type ReactNode,
+} from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -93,14 +101,90 @@ import "./index.css";
 // 判断是否为开发环境
 const isDevelopment = import.meta.env.DEV;
 
+interface RouteChunkErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface RouteChunkErrorBoundaryState {
+  error: Error | null;
+}
+
+class RouteChunkErrorBoundary extends Component<
+  RouteChunkErrorBoundaryProps,
+  RouteChunkErrorBoundaryState
+> {
+  state: RouteChunkErrorBoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[RouteChunkErrorBoundary] 页面资源加载失败", error, info);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/90 px-6 text-center backdrop-blur-sm">
+          <div className="max-w-sm">
+            <p className="text-base font-semibold text-gray-900">
+              页面资源加载失败
+            </p>
+            <p className="mt-2 text-sm leading-6 text-gray-500">
+              当前网络没有完成页面代码加载，刷新后会重新请求资源。
+            </p>
+            <button
+              type="button"
+              className="mt-5 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white"
+              onClick={() => window.location.reload()}
+            >
+              刷新重试
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+const RouteLoadingFallback = () => {
+  const [slow, setSlow] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSlow(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 px-6 text-center backdrop-blur-sm">
+      <div>
+        <Loading tip={slow ? "资源加载较慢，请检查网络" : "加载中..."} />
+        {slow && (
+          <button
+            type="button"
+            className="mt-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm"
+            onClick={() => window.location.reload()}
+          >
+            刷新重试
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={zhCN}>
         <Router>
           <div className="min-h-screen bg-gray-50">
-            <Suspense fallback={<Loading fullScreen tip="加载中..." />}>
-              <Routes>
+            <RouteChunkErrorBoundary>
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Routes>
                 {/* ========== 公开路由 ========== */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -519,8 +603,9 @@ function App() {
 
                 {/* ========== 默认路由 ========== */}
                 <Route path="/" element={<Navigate to="/login" replace />} />
-              </Routes>
-            </Suspense>
+                </Routes>
+              </Suspense>
+            </RouteChunkErrorBoundary>
           </div>
         </Router>
       </ConfigProvider>

@@ -4,9 +4,8 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { Toast } from "@/components/ui/Toast";
-import { createActivity, getActivities } from "../services";
+import { createActivity } from "../services";
 import { activitiesKeys } from "./useActivities";
 import { isOnlineOnlyActivity } from "../utils";
 import type { ActivityFormData, CreateActivityRequest } from "../types";
@@ -65,7 +64,6 @@ const transformFormDataToRequest = (
  * 创建活动 Hook
  */
 export const useCreateActivity = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -82,7 +80,7 @@ export const useCreateActivity = () => {
 
       return result;
     },
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       console.log("useCreateActivity - 创建成功", data);
 
       // 清除可能存在的加载提示
@@ -95,23 +93,8 @@ export const useCreateActivity = () => {
         duration: 1500,
       });
 
-      // 🚀 优化：预取最新活动列表数据
-      // 在用户看到成功提示的同时，后台预先加载数据
-      try {
-        await queryClient.prefetchQuery({
-          queryKey: activitiesKeys.list(),
-          queryFn: getActivities,
-        });
-        console.log("useCreateActivity - 数据预取成功");
-      } catch (error) {
-        console.error("useCreateActivity - 数据预取失败:", error);
-        // 预取失败不影响跳转，跳转后会自动重新请求
-      }
-
-      // 延迟跳转，让用户看到成功提示，同时数据已在后台加载
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1500);
+      queryClient.invalidateQueries({ queryKey: activitiesKeys.list() });
+      queryClient.invalidateQueries({ queryKey: ["merchant", "activities"] });
     },
     onError: (error: Error) => {
       console.error("useCreateActivity - 创建失败:", error);
