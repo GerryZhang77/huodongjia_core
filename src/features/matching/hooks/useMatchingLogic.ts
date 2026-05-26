@@ -32,6 +32,7 @@ import type {
   MatchingHistory,
   ParticipantMatchResult,
   MatchingSchemaField,
+  MatchingSchemaGroup,
 } from "../types";
 
 // === 模块级缓存（stale-while-revalidate） ===
@@ -40,6 +41,8 @@ import type {
 interface MatchingCacheEntry {
   rules: MatchRule[];
   participants: Participant[];
+  registrationSchema: MatchingSchemaField[];
+  registrationSchemaGroups: MatchingSchemaGroup[];
   history: MatchingHistory[];
   matchResults: ParticipantMatchResult[];
   stage: MatchingStage;
@@ -88,6 +91,8 @@ export interface MatchingStats {
   totalParticipants?: number;
 }
 
+const DEFAULT_SCHEMA_GROUP_ID = '__default__';
+
 // 本地 GroupMember 类型 (兼容多种格式)
 export interface LocalGroupMember {
   id: string;
@@ -126,6 +131,45 @@ const normalizeRuleForUi = (rule: MatchRule, index = 0): MatchRule => {
   };
 };
 
+const buildRegistrationSchemaGroups = (activityData: any): MatchingSchemaGroup[] => {
+  const registrationTypes = Array.isArray(activityData?.registrationTypes)
+    ? activityData.registrationTypes
+    : [];
+
+  if (registrationTypes.length > 0) {
+    return registrationTypes
+      .map((type: any, index: number) => ({
+        id: type?.id ? String(type.id) : `${DEFAULT_SCHEMA_GROUP_ID}-${index}`,
+        name: String(type?.name || `报名表 ${index + 1}`),
+        fields: Array.isArray(type?.formSchema) ? type.formSchema : [],
+      }))
+      .filter((group: MatchingSchemaGroup) => group.fields.length > 0);
+  }
+
+  const fallbackFields = Array.isArray(activityData?.registrationFormSchema)
+    ? activityData.registrationFormSchema
+    : [];
+
+  return fallbackFields.length > 0
+    ? [{ id: DEFAULT_SCHEMA_GROUP_ID, name: "默认报名表", fields: fallbackFields }]
+    : [];
+};
+
+const flattenRegistrationSchemaGroups = (
+  groups: MatchingSchemaGroup[],
+): MatchingSchemaField[] => {
+  const fieldsByKey = new Map<string, MatchingSchemaField>();
+
+  for (const group of groups) {
+    for (const field of group.fields) {
+      if (!field.key || fieldsByKey.has(field.key)) continue;
+      fieldsByKey.set(field.key, field);
+    }
+  }
+
+  return Array.from(fieldsByKey.values());
+};
+
 export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const FOREGROUND_POLL_INTERVAL_MS = 3000;
   const BACKGROUND_POLL_INTERVAL_MS = 5000;
@@ -148,6 +192,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [registrationSchema, setRegistrationSchema] = useState<
     MatchingSchemaField[]
+  >([]);
+  const [registrationSchemaGroups, setRegistrationSchemaGroups] = useState<
+    MatchingSchemaGroup[]
   >([]);
   // per-user top5 匹配结果（新模型）
   const [matchResults, setMatchResults] = useState<ParticipantMatchResult[]>([]);
@@ -230,7 +277,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         if (participantsData && participantsData.length > 0) {
           setParticipants(participantsData);
         }
-        setRegistrationSchema(activityData?.registrationFormSchema || []);
+        const schemaGroups = buildRegistrationSchemaGroups(activityData);
+        setRegistrationSchemaGroups(schemaGroups);
+        setRegistrationSchema(flattenRegistrationSchemaGroups(schemaGroups));
 
         let publishedResolved = false;
         if (historyData && historyData.length > 0) {
@@ -296,6 +345,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     if (cached) {
       setRules(cached.rules);
       setParticipants(cached.participants);
+      setRegistrationSchema(cached.registrationSchema);
+      setRegistrationSchemaGroups(cached.registrationSchemaGroups);
       setHistory(cached.history);
       setMatchResults(cached.matchResults);
       setStage(cached.stage);
@@ -327,6 +378,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     matchingCache.set(activityId, {
       rules,
       participants,
+      registrationSchema,
+      registrationSchemaGroups,
       history,
       matchResults,
       stage,
@@ -339,6 +392,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     isLoading,
     rules,
     participants,
+    registrationSchema,
+    registrationSchemaGroups,
     history,
     matchResults,
     stage,
@@ -699,6 +754,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     matchingStats,
     savedConfigs,
     registrationSchema,
+    registrationSchemaGroups,
 
     // 设置方法
     setActiveTab,

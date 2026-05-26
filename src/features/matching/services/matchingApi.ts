@@ -34,6 +34,8 @@ const normalizeRule = (
   name: buildRuleName(rule, fallbackIndex),
   source_field: rule.source_field || rule.field || "",
   target_field: rule.target_field || rule.field || "",
+  source_registration_type_id: rule.source_registration_type_id,
+  target_registration_type_id: rule.target_registration_type_id,
   operator: rule.operator || (rule.type as MatchRule["operator"]) || DEFAULT_OPERATOR,
   type: rule.type || rule.operator || DEFAULT_OPERATOR,
   field: rule.field,
@@ -56,6 +58,8 @@ const serializeRulesForBackend = (rules: MatchRule[]) =>
     .map((rule) => ({
       source_field: rule.source_field,
       target_field: rule.target_field,
+      source_registration_type_id: rule.source_registration_type_id,
+      target_registration_type_id: rule.target_registration_type_id,
       operator: rule.operator,
       weight: rule.weight,
     }));
@@ -82,6 +86,8 @@ interface EnrollmentParticipant {
   id?: string;
   userId?: string;
   name?: string;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string;
   status?: string;
   industry?: string;
   interests?: string | string[];
@@ -98,6 +104,8 @@ type MatchingParticipant = Participant & {
   skills?: string;
   expertise?: string;
   status?: string;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string;
   formData?: Record<string, unknown>;
 };
 
@@ -142,6 +150,8 @@ const mapEnrollmentToParticipant = (
     id: e.userId,
     enrollmentId: e.id,
     name: asString(e.name) || asString(f["姓名"]) || asString(f.name) || "未知用户",
+    registrationTypeId: e.registrationTypeId ?? null,
+    registrationTypeName: e.registrationTypeName,
     phone: asString(f["手机号"]) || asString(f.phone),
     gender: asGender(f["性别"]) || asGender(f.gender),
     age: asNumber(f["年龄"]) ?? asNumber(f.age),
@@ -455,6 +465,8 @@ export const getMatchGroups = async (
         expertise: e.expertise || f["擅长领域"],
         tags: Array.isArray(f["标签"]) ? f["标签"] : [],
         status: e.status,
+        registrationTypeId: e.registrationTypeId ?? null,
+        registrationTypeName: e.registrationTypeName,
         formData: f,
       };
     });
@@ -517,7 +529,7 @@ export const toggleGroupLock = async (
 export const getParticipants = async (activityId: string): Promise<any[]> => {
   const token = getToken();
 
-  const response = await fetch(`/api/match/${activityId}/participants`, {
+  const response = await fetch(`/api/enrollments/${activityId}/participants`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",

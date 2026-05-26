@@ -45,6 +45,8 @@ interface Participant {
   id: string;
   enrollmentId?: string;
   name: string;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string;
   avatar?: string;
   gender?: string;
   age?: number;
@@ -62,6 +64,39 @@ interface Participant {
   email?: string;
   status?: string;
 }
+
+type RankedCandidate = {
+  uid: string;
+  rank: number;
+  candidate?: Participant;
+};
+
+const DEFAULT_REGISTRATION_TYPE_KEY = "__default__";
+
+const getParticipantTypeKey = (participant?: Participant) =>
+  participant?.registrationTypeId || DEFAULT_REGISTRATION_TYPE_KEY;
+
+const splitCandidatesByRegistrationType = (
+  owner: Participant | undefined,
+  record: ParticipantMatchResult,
+  topCandidates: Array<Participant | undefined>,
+) => {
+  const ownerTypeKey = getParticipantTypeKey(owner);
+  const rankedCandidates = record.bestMatchUserIds.map((uid, index) => ({
+    uid,
+    rank: index + 1,
+    candidate: topCandidates[index],
+  }));
+
+  return {
+    sameType: rankedCandidates.filter(
+      (item) => getParticipantTypeKey(item.candidate) === ownerTypeKey,
+    ),
+    crossType: rankedCandidates.filter(
+      (item) => getParticipantTypeKey(item.candidate) !== ownerTypeKey,
+    ),
+  };
+};
 
 interface ResultsTabProps {
   /** per-user top5 记录 */
@@ -144,11 +179,71 @@ const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }>
   );
 };
 
+const CandidateDetailSection: React.FC<{
+  title: string;
+  candidates: RankedCandidate[];
+  onViewProfile: (userId: string) => void;
+}> = ({ title, candidates, onViewProfile }) => {
+  if (candidates.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-500">{title}</span>
+        <div className="h-px flex-1 bg-gray-200" />
+      </div>
+      {candidates.map(({ uid, rank, candidate }) => (
+        <div
+          key={uid}
+          className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-gray-100"
+        >
+          <span
+            className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ${
+              rank === 1
+                ? "bg-yellow-400 text-yellow-900"
+                : rank === 2
+                  ? "bg-gray-300 text-gray-700"
+                  : rank === 3
+                    ? "bg-orange-300 text-orange-900"
+                    : "bg-gray-100 text-gray-500"
+            }`}
+          >
+            {rank}
+          </span>
+          <UserHoverCard
+            user={toUserBrief(candidate)}
+            onViewProfile={onViewProfile}
+          >
+            <Avatar participant={candidate} size="sm" />
+          </UserHoverCard>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {candidate?.name || uid.slice(0, 8)}
+            </p>
+            <p className="text-xs text-gray-500 truncate">
+              {candidate?.occupation || candidate?.industry || candidate?.company || "—"}
+            </p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewProfile(uid);
+            }}
+            className="text-xs text-primary-500 hover:text-primary-600 font-medium px-2 py-1 rounded hover:bg-primary-50"
+          >
+            查看详情
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 /** 单个参与者行：左侧本人信息 + 右侧 top5 头像 */
 interface ResultRowProps {
   record: ParticipantMatchResult;
   owner?: Participant;
-  topCandidates: Participant[];
+  topCandidates: Array<Participant | undefined>;
   expanded: boolean;
   onToggle: () => void;
   onViewProfile: (userId: string) => void;
@@ -162,6 +257,12 @@ const ResultRow: React.FC<ResultRowProps> = ({
   onToggle,
   onViewProfile,
 }) => {
+  const candidateGroups = splitCandidatesByRegistrationType(
+    owner,
+    record,
+    topCandidates,
+  );
+
   return (
     <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:border-primary-200 transition-colors">
       <div
@@ -237,52 +338,18 @@ const ResultRow: React.FC<ResultRowProps> = ({
               该参与者暂无匹配候选
             </p>
           ) : (
-            record.bestMatchUserIds.map((uid, idx) => {
-              const candidate = topCandidates[idx];
-              return (
-                <div
-                  key={uid}
-                  className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-gray-100"
-                >
-                  <span
-                    className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ${
-                      idx === 0
-                        ? "bg-yellow-400 text-yellow-900"
-                        : idx === 1
-                          ? "bg-gray-300 text-gray-700"
-                          : idx === 2
-                            ? "bg-orange-300 text-orange-900"
-                            : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {idx + 1}
-                  </span>
-                  <UserHoverCard
-                    user={toUserBrief(candidate)}
-                    onViewProfile={onViewProfile}
-                  >
-                    <Avatar participant={candidate} size="sm" />
-                  </UserHoverCard>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {candidate?.name || uid.slice(0, 8)}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {candidate?.occupation || candidate?.industry || candidate?.company || "—"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewProfile(uid);
-                    }}
-                    className="text-xs text-primary-500 hover:text-primary-600 font-medium px-2 py-1 rounded hover:bg-primary-50"
-                  >
-                    查看详情
-                  </button>
-                </div>
-              );
-            })
+            <>
+              <CandidateDetailSection
+                title="同表匹配"
+                candidates={candidateGroups.sameType}
+                onViewProfile={onViewProfile}
+              />
+              <CandidateDetailSection
+                title="跨表匹配"
+                candidates={candidateGroups.crossType}
+                onViewProfile={onViewProfile}
+              />
+            </>
           )}
         </div>
       )}
@@ -483,9 +550,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
       <div className="space-y-2">
         {filteredResults.map((r) => {
           const owner = participantMap.get(r.userId);
-          const topCandidates = r.bestMatchUserIds.map(
-            (uid) => participantMap.get(uid) as Participant | undefined,
-          ).filter(Boolean) as Participant[];
+          const topCandidates = r.bestMatchUserIds.map((uid) =>
+            participantMap.get(uid),
+          );
           return (
             <ResultRow
               key={r.id}

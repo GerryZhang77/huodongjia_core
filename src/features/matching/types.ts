@@ -29,6 +29,8 @@ export interface MatchingRule {
   field?: string;
   source_field?: string;
   target_field?: string;
+  source_registration_type_id?: string;
+  target_registration_type_id?: string;
   operator?: MatchOperator;
   weight: number;
   enabled: boolean;
@@ -40,6 +42,12 @@ export interface MatchingRule {
 }
 
 export type MatchingSchemaField = RegistrationFormField;
+
+export interface MatchingSchemaGroup {
+  id?: string;
+  name: string;
+  fields: MatchingSchemaField[];
+}
 
 // 边界条件/约束
 export interface MatchConstraints {
@@ -56,6 +64,8 @@ export interface MatchConstraints {
 export interface Participant {
   id: string;
   name: string;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string;
   gender?: "male" | "female" | "other";
   age?: number;
   ageGroup?: string;

@@ -58,6 +58,7 @@ const MatchingConfigPage: React.FC = () => {
     history,
     matchingStats,
     registrationSchema,
+    registrationSchemaGroups,
 
     // 设置方法
     setActiveTab,
@@ -206,6 +207,7 @@ const MatchingConfigPage: React.FC = () => {
             matchingMessage={matchingMessage}
             participantCount={participants.length}
             schemaFields={registrationSchema}
+            schemaGroups={registrationSchemaGroups}
           />
         ) : (
           <ResultsTab

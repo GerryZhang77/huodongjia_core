@@ -18,6 +18,7 @@ import { Button, Switch } from "@/components/ui";
 import type {
   MatchConstraints,
   MatchingRule,
+  MatchingSchemaGroup,
   MatchingSchemaField,
   MatchOperator,
 } from "../../types";
@@ -35,6 +36,7 @@ interface RulesTabProps {
   participantCount: number;
   isRulesLocked?: boolean;
   schemaFields?: MatchingSchemaField[];
+  schemaGroups?: MatchingSchemaGroup[];
   schemaLoading?: boolean;
 }
 
@@ -80,10 +82,14 @@ const RulesTab: React.FC<RulesTabProps> = ({
   participantCount,
   isRulesLocked = false,
   schemaFields = [],
+  schemaGroups = [],
   schemaLoading = false,
 }) => {
   const [showConstraints, setShowConstraints] = useState(false);
-  const [draggingFieldKey, setDraggingFieldKey] = useState<string | null>(null);
+  const [draggingField, setDraggingField] = useState<{
+    key: string;
+    registrationTypeId?: string;
+  } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedWeightRuleIds, setExpandedWeightRuleIds] = useState<string[]>(
     [],
@@ -95,6 +101,11 @@ const RulesTab: React.FC<RulesTabProps> = ({
 
   const visibleRules = rules.length > 0 ? rules : [createRule()];
   const enabledRules = visibleRules.filter((rule) => rule.enabled);
+  const visibleSchemaGroups = schemaGroups.length > 0
+    ? schemaGroups
+    : schemaFields.length > 0
+      ? [{ name: "默认报名表", fields: schemaFields }]
+      : [];
 
   const getFieldLabel = (fieldKey?: string) => {
     if (!fieldKey) return "";
@@ -197,9 +208,9 @@ const RulesTab: React.FC<RulesTabProps> = ({
 
   return (
     <div className="pb-32">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="lg:sticky lg:top-24 lg:self-start bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5">
-          <div className="flex items-center gap-2 mb-3">
+      <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-13rem)] lg:min-h-[520px] lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5 lg:h-full lg:overflow-hidden lg:flex lg:flex-col">
+          <div className="flex items-center gap-2 mb-3 flex-shrink-0">
             <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
               <GripVertical size={16} className="text-primary-500" />
             </div>
@@ -209,54 +220,58 @@ const RulesTab: React.FC<RulesTabProps> = ({
             </div>
           </div>
 
-          {schemaLoading ? (
-            <div className="text-sm text-gray-500 py-8 text-center">字段加载中...</div>
-          ) : schemaFields.length === 0 ? (
-            <div className="text-sm text-gray-500 py-8 text-center">
-              当前活动还没有报名表字段
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {schemaFields.map((field) => (
-                <button
-                  key={field.key}
-                  type="button"
-                  draggable={!isRulesLocked}
-                  onDragStart={() => setDraggingFieldKey(field.key)}
-                  onDragEnd={() => setDraggingFieldKey(null)}
-                  className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:opacity-60"
-                >
-                  <div className="font-medium text-gray-900 truncate">
-                    {field.label}
+          <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+            {schemaLoading ? (
+              <div className="text-sm text-gray-500 py-8 text-center">字段加载中...</div>
+            ) : visibleSchemaGroups.length === 0 ? (
+              <div className="text-sm text-gray-500 py-8 text-center">
+                当前活动还没有报名表字段
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {visibleSchemaGroups.map((group, groupIndex) => (
+                  <div key={`${group.name}-${groupIndex}`}>
+                    {groupIndex > 0 && <div className="border-t border-gray-200 mb-3" />}
+                    <div className="text-xs text-gray-400 mb-2 truncate">
+                      {group.name}
+                    </div>
+                    <div className="space-y-2">
+                      {group.fields.map((field) => (
+                        <button
+                          key={`${groupIndex}-${field.key}`}
+                          type="button"
+                          draggable={!isRulesLocked}
+                          onDragStart={() =>
+                            setDraggingField({
+                              key: field.key,
+                              registrationTypeId: group.id,
+                            })
+                          }
+                          onDragEnd={() => setDraggingField(null)}
+                          className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:opacity-60"
+                        >
+                          <div className="font-medium text-gray-900 truncate">
+                            {field.label}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="text-xs font-medium text-gray-500 mb-2">操作</div>
-            <button
-              type="button"
-              onClick={handleAddRule}
-              disabled={isRulesLocked}
-              className="w-full inline-flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium rounded-xl border border-gray-200 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50/40 disabled:opacity-50"
-            >
-              <Plus size={16} />
-              新增规则
-            </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6">
-          <div className="mb-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 lg:h-full lg:overflow-hidden lg:flex lg:flex-col">
+          <div className="mb-4 flex-shrink-0">
             <h3 className="text-base font-semibold text-gray-900">规则设置器</h3>
             <p className="text-xs text-gray-500 mt-1">
               每行一条规则，左右字段可分别拖入，后端将按对应 operator 和 weight 执行匹配。
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
             {visibleRules.map((rule, index) => (
               <div
                 key={rule.id || index}
@@ -300,9 +315,14 @@ const RulesTab: React.FC<RulesTabProps> = ({
                         onDragOver={(event) => event.preventDefault()}
                         onDrop={(event) => {
                           event.preventDefault();
-                          if (!draggingFieldKey || isRulesLocked) return;
-                          handleRuleChange(rule.id || "", { [slot]: draggingFieldKey });
-                          setDraggingFieldKey(null);
+                          if (!draggingField || isRulesLocked) return;
+                          handleRuleChange(rule.id || "", {
+                            [slot]: draggingField.key,
+                            [slot === "source_field"
+                              ? "source_registration_type_id"
+                              : "target_registration_type_id"]: draggingField.registrationTypeId,
+                          });
+                          setDraggingField(null);
                         }}
                         className={`min-h-[72px] rounded-2xl border-2 border-dashed px-4 py-3 transition-colors ${
                           fieldKey
@@ -393,6 +413,15 @@ const RulesTab: React.FC<RulesTabProps> = ({
                 </div>
               </div>
             ))}
+            <button
+              type="button"
+              onClick={handleAddRule}
+              disabled={isRulesLocked}
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium rounded-xl border border-dashed border-gray-300 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50/40 disabled:opacity-50"
+            >
+              <Plus size={16} />
+              新增规则
+            </button>
           </div>
         </div>
       </div>
