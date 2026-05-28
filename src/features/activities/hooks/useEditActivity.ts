@@ -17,6 +17,16 @@ export const useEditActivity = (activityId: string) => {
   const queryClient = useQueryClient();
   const { setCurrentActivity } = useActivityStore();
 
+  const invalidateActivityCaches = (id: string) => {
+    const options = { refetchType: "none" as const };
+
+    queryClient.invalidateQueries({ queryKey: ["activities"], ...options });
+    queryClient.invalidateQueries({ queryKey: ["merchant", "activities"], ...options });
+    queryClient.invalidateQueries({ queryKey: ["public", "activity", id], ...options });
+    queryClient.invalidateQueries({ queryKey: ["user", "activity", id], ...options });
+    queryClient.invalidateQueries({ queryKey: ["user", "activities"], ...options });
+  };
+
   const edit = async (data: ActivityFormData) => {
     setLoading(true);
 
@@ -65,13 +75,7 @@ export const useEditActivity = (activityId: string) => {
         content: "活动更新成功",
       });
 
-      // 手动失效相关查询缓存，确保数据更新
-      queryClient.invalidateQueries({
-        queryKey: ["activity", "detail", activityId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["merchant", "activities"],
-      });
+      invalidateActivityCaches(activityId);
 
       setCurrentActivity(activity);
       navigate(`/dashboard/activity/${activity.id}/detail`);
