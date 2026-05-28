@@ -519,7 +519,12 @@ const UserActivityDetail: FC = () => {
 
                 {/* 底部标签 */}
                 <div className="absolute bottom-3 left-4 flex gap-1.5 z-20">
-                  {activity.tags.slice(0, 3).map((tag, i) => (
+                  {activity.category && (
+                    <span className="px-2 py-0.5 bg-white/95 backdrop-blur-sm text-primary-700 text-[10px] font-medium rounded-full">
+                      {getCategoryLabel(activity.category)}
+                    </span>
+                  )}
+                  {activity.tags.slice(0, activity.category ? 2 : 3).map((tag, i) => (
                     <span
                       key={i}
                       className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"

@@ -15,6 +15,7 @@ import {
   User,
   Image as ImageIcon,
   Phone,
+  Tag,
 } from "lucide-react";
 import dayjs from "dayjs";
 import type { ActivityFormData } from "@/features/activities/types";
@@ -141,7 +142,12 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
 
             {/* 底部标签 */}
             <div className="absolute bottom-3 left-3 flex gap-1 z-20">
-              {previewData.tags.slice(0, 3).map((tag, i) => (
+              {previewData.category && (
+                <span className="px-1.5 py-0.5 bg-white/95 backdrop-blur-sm text-primary-700 text-[9px] font-medium rounded-full">
+                  {getCategoryLabel(previewData.category)}
+                </span>
+              )}
+              {previewData.tags.slice(0, previewData.category ? 2 : 3).map((tag, i) => (
                 <span
                   key={i}
                   className="px-1.5 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-medium rounded-full"
@@ -149,11 +155,6 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
                   {getTagLabel(tag)}
                 </span>
               ))}
-              {previewData.tags.length === 0 && previewData.category && (
-                <span className="px-1.5 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-medium rounded-full">
-                  {getCategoryLabel(previewData.category)}
-                </span>
-              )}
             </div>
           </>
         )}
@@ -202,6 +203,23 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
               </p>
             </div>
           </div>
+
+          {/* 分类 */}
+          {previewData.category && (
+            <div className="flex items-start gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
+                <Tag size={14} className="text-purple-500" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                  活动分类
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                  {getCategoryLabel(previewData.category)}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* 人数 */}
           <div className="flex items-start gap-2.5">
@@ -358,7 +376,12 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
 
               {/* 底部标签 */}
               <div className="absolute bottom-4 left-4 flex gap-1.5 z-20">
-                {previewData.tags.slice(0, 3).map((tag, i) => (
+                {previewData.category && (
+                  <span className="px-2 py-0.5 bg-white/95 backdrop-blur-sm text-primary-700 text-[10px] font-medium rounded-full">
+                    {getCategoryLabel(previewData.category)}
+                  </span>
+                )}
+                {previewData.tags.slice(0, previewData.category ? 2 : 3).map((tag, i) => (
                   <span
                     key={i}
                     className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
@@ -366,11 +389,6 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
                     {getTagLabel(tag)}
                   </span>
                 ))}
-                {previewData.tags.length === 0 && previewData.category && (
-                  <span className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full">
-                    {getCategoryLabel(previewData.category)}
-                  </span>
-                )}
               </div>
             </>
           )}
@@ -419,6 +437,23 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* 分类 */}
+            {previewData.category && (
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
+                  <Tag size={16} className="text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    活动分类
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {getCategoryLabel(previewData.category)}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* 人数 */}
             <div className="flex items-start gap-3">
