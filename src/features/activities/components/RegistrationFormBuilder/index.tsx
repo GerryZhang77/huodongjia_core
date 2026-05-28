@@ -87,6 +87,7 @@ const FieldEditCard: React.FC<{
   onToggleExpand: () => void;
   onChange: (field: RegistrationFormField) => void;
   onRemove: () => void;
+  onAddAfter: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   isFirst: boolean;
@@ -97,6 +98,7 @@ const FieldEditCard: React.FC<{
   onToggleExpand,
   onChange,
   onRemove,
+  onAddAfter,
   onMoveUp,
   onMoveDown,
   isFirst,
@@ -107,6 +109,7 @@ const FieldEditCard: React.FC<{
   const isLocked = LOCKED_PRESET_KEYS.includes(field.key);
   // 未命名的自定义项不允许折叠（强制展开编辑），锁定项不允许展开
   const canExpand = !isLocked;
+  const isEditingCustomField = isExpanded && !field.preset;
 
   const addOption = () => {
     const trimmed = newOption.trim();
@@ -131,9 +134,9 @@ const FieldEditCard: React.FC<{
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-              {field.label || "未命名"}
+              {isEditingCustomField ? "收集项设置" : field.label || "未命名"}
             </span>
-            {field.required && (
+            {field.required && !isEditingCustomField && (
               <span className="text-[10px] text-red-500 font-medium">必填</span>
             )}
             {field.preset && (
@@ -153,6 +156,14 @@ const FieldEditCard: React.FC<{
           <Lock size={14} className="text-gray-300 flex-shrink-0" />
         ) : (
           <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={onAddAfter}
+              className="p-1 text-gray-300 hover:text-primary-500 transition-colors"
+              title="在下方添加"
+            >
+              <Plus size={14} />
+            </button>
             {(!field.preset || field.deletable) && (
               <button
                 type="button"
@@ -315,18 +326,28 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
     onChange?.(newFields);
   };
 
-  const addField = () => {
-    const newField: RegistrationFormField = {
+  const createEmptyField = (): RegistrationFormField => ({
       key: `custom_${Date.now()}`,
       label: "",
       type: "text",
       required: false,
       preset: false,
       placeholder: "",
-    };
+  });
+
+  const addField = () => {
+    const newField = createEmptyField();
     const newFields = [...fields, newField];
     updateFields(newFields);
     setExpandedIndex(newFields.length - 1);
+  };
+
+  const insertFieldAfter = (index: number) => {
+    const newField = createEmptyField();
+    const newFields = [...fields];
+    newFields.splice(index + 1, 0, newField);
+    updateFields(newFields);
+    setExpandedIndex(index + 1);
   };
 
   const updateField = (index: number, field: RegistrationFormField) => {
@@ -426,6 +447,7 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
                 }}
                 onChange={(f) => updateField(index, f)}
                 onRemove={() => removeField(index)}
+                onAddAfter={() => insertFieldAfter(index)}
                 onMoveUp={() => moveField(index, index - 1)}
                 onMoveDown={() => moveField(index, index + 1)}
                 isFirst={index === 0}
