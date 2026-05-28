@@ -30,7 +30,7 @@ function normalizeTypes(types?: ActivityRegistrationType[]): ActivityRegistratio
   return types.map((item, index) => ({
     ...item,
     formSchema: item.formSchema?.length ? item.formSchema : createDefaultFormSchema(),
-    eligibilityMode: item.isDefault ? "public" : item.eligibilityMode || "allowlist",
+    eligibilityMode: item.members?.length ? "allowlist" : item.eligibilityMode || "public",
     isDefault: defaultIndex >= 0 ? index === defaultIndex : index === 0,
     matchEnabled: item.matchEnabled !== false,
     sortOrder: item.sortOrder ?? index,
@@ -74,7 +74,7 @@ export const RegistrationTypesBuilder: React.FC<RegistrationTypesBuilderProps> =
       {
         name: "",
         formSchema: createDefaultFormSchema(),
-        eligibilityMode: "allowlist",
+        eligibilityMode: "public",
         isDefault: false,
         matchEnabled: true,
         sortOrder: registrationTypes.length,
@@ -189,87 +189,87 @@ export const RegistrationTypesBuilder: React.FC<RegistrationTypesBuilderProps> =
           />
         </div>
 
-        {!activeType.isDefault && (
-          <div className="bg-white rounded-lg border border-gray-100 p-3 space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
-              <Users size={15} />
-              可报名用户名单
-            </div>
-            <div className="flex gap-2">
-              <input
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    searchUsers();
-                  }
-                }}
-                placeholder="输入用户ID、手机号或账号搜索"
-                className="flex-1 h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-primary-400"
-              />
-              <button
-                type="button"
-                onClick={searchUsers}
-                disabled={searching}
-                className="h-9 px-3 rounded-lg bg-primary-50 text-primary-600 text-sm inline-flex items-center gap-1 disabled:opacity-50"
-              >
-                <Search size={14} />
-                搜索
-              </button>
-            </div>
-
-            {searchResults.length > 0 && (
-              <div className="space-y-1.5">
-                {searchResults.map((user) => (
-                  <div
-                    key={user.userId}
-                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-sm text-gray-800 truncate">
-                        {user.name || user.account || user.phone || user.userId}
-                      </div>
-                      <div className="text-xs text-gray-400 truncate">
-                        {user.account || "-"} · {user.phone || user.userId}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => addMember(user)}
-                      className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-primary-600"
-                    >
-                      <UserPlus size={13} />
-                      添加
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeType.members.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {activeType.members.map((member) => (
-                  <span
-                    key={member.userId}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary-50 text-primary-600 text-xs"
-                  >
-                    {member.name || member.account || member.phone || member.userId}
-                    <button
-                      type="button"
-                      onClick={() => removeMember(member.userId)}
-                      className="text-primary-400 hover:text-red-500"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400">名单为空时，没有用户会命中该报名类型。</p>
-            )}
+        <div className="bg-white rounded-lg border border-gray-100 p-3 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
+            <Users size={15} />
+            可报名用户名单
           </div>
-        )}
+          <div className="flex gap-2">
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  searchUsers();
+                }
+              }}
+              placeholder="输入用户ID、手机号或账号搜索"
+              className="flex-1 h-9 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-primary-400"
+            />
+            <button
+              type="button"
+              onClick={searchUsers}
+              disabled={searching}
+              className="h-9 px-3 rounded-lg bg-primary-50 text-primary-600 text-sm inline-flex items-center gap-1 disabled:opacity-50"
+            >
+              <Search size={14} />
+              搜索
+            </button>
+          </div>
+
+          {searchResults.length > 0 && (
+            <div className="space-y-1.5">
+              {searchResults.map((user) => (
+                <div
+                  key={user.userId}
+                  className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm text-gray-800 truncate">
+                      {user.name || user.account || user.phone || user.userId}
+                    </div>
+                    <div className="text-xs text-gray-400 truncate">
+                      {user.account || "-"} · {user.phone || user.userId}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addMember(user)}
+                    className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-primary-600"
+                  >
+                    <UserPlus size={13} />
+                    添加
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeType.members.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {activeType.members.map((member) => (
+                <span
+                  key={member.userId}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary-50 text-primary-600 text-xs"
+                >
+                  {member.name || member.account || member.phone || member.userId}
+                  <button
+                    type="button"
+                    onClick={() => removeMember(member.userId)}
+                    className="text-primary-400 hover:text-red-500"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">
+              名单为空时，扫码进入该链接的用户都可报名。
+            </p>
+          )}
+        </div>
 
         <div>
           <div className="text-sm font-medium text-gray-800 mb-2">

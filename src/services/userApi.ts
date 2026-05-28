@@ -185,6 +185,9 @@ export interface UserActivity {
     name: string;
     matchEnabled: boolean;
     isDefault: boolean;
+    eligibilityMode?: "public" | "allowlist";
+    accessAllowed?: boolean;
+    accessDeniedReason?: string;
   } | null;
 }
 
@@ -352,22 +355,26 @@ export async function getActivityCategories(): Promise<{
  * 获取活动详情
  * GET /api/user/activities/:id
  */
-export async function getUserActivityDetail(id: string): Promise<{
+export async function getUserActivityDetail(id: string, registrationTypeId?: string): Promise<{
   success: boolean;
   data?: UserActivity;
 }> {
-  return api.get(`/api/user/activities/${id}`);
+  return api.get(`/api/user/activities/${id}`, {
+    params: registrationTypeId ? { registrationTypeId } : undefined,
+  });
 }
 
 /**
  * 获取公开活动详情
  * GET /api/public/activities/:id
  */
-export async function getPublicActivityDetail(id: string): Promise<{
+export async function getPublicActivityDetail(id: string, registrationTypeId?: string): Promise<{
   success: boolean;
   data?: UserActivity;
 }> {
-  return api.get(`/api/public/activities/${id}`);
+  return api.get(`/api/public/activities/${id}`, {
+    params: registrationTypeId ? { registrationTypeId } : undefined,
+  });
 }
 
 // ============================================

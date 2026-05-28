@@ -52,6 +52,7 @@ import {
   getActiveFilterCount,
 } from "@/utils/enrollmentFilters";
 import { isDemoActivity } from "@/mocks/demo-activity";
+import { useActivityDetail } from "@/features/activities/hooks/useActivityDetail";
 
 /**
  * 状态标签颜色映射
@@ -461,6 +462,7 @@ const EnrollmentManagementNew: React.FC = () => {
   const { id } = useParams();
   const { token } = useAuthStore();
   const { updateStatus } = useUpdateEnrollmentStatus(id || "");
+  const { activity } = useActivityDetail(id);
 
   // 报名数据
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -1032,6 +1034,8 @@ const EnrollmentManagementNew: React.FC = () => {
       <RegistrationQrModal
         visible={showQrModal}
         activityId={id || ""}
+        activityTitle={activity?.title}
+        registrationTypes={activity?.registrationTypes}
         onClose={() => setShowQrModal(false)}
       />
 

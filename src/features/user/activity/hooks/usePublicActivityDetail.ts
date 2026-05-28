@@ -11,10 +11,10 @@ interface PublicActivityDetailResponse {
   data?: UserActivity;
 }
 
-export function usePublicActivityDetail(id?: string) {
+export function usePublicActivityDetail(id?: string, registrationTypeId?: string) {
   return useQuery<PublicActivityDetailResponse, Error>({
-    queryKey: ["public", "activity", id],
-    queryFn: () => getPublicActivityDetail(id!),
+    queryKey: ["public", "activity", id, registrationTypeId || ""],
+    queryFn: () => getPublicActivityDetail(id!, registrationTypeId),
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,

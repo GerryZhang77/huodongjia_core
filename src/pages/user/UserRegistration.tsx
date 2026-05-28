@@ -5,7 +5,7 @@
  */
 
 import { FC, useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Calendar, MapPin, AlertCircle, Sparkles } from "lucide-react";
 import { Dialog } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
@@ -207,10 +207,16 @@ const DynamicField: FC<{
 const UserRegistration: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const registrationTypeId = searchParams.get("rt") || "";
+  const registrationTypeQuery = registrationTypeId
+    ? `?rt=${encodeURIComponent(registrationTypeId)}`
+    : "";
+  const detailPath = id ? `/u/activities/${id}${registrationTypeQuery}` : "/u/home";
 
-  const { data: activityData, isLoading } = useActivityDetail(id);
+  const { data: activityData, isLoading } = useActivityDetail(id, registrationTypeId);
   const { mutateAsync: submitEnrollment, isPending: isSubmitting } =
-    useSubmitEnrollment(id || "");
+    useSubmitEnrollment(id || "", registrationTypeId);
   const { data: prefillData } = useProfilePrefill();
   const { mutateAsync: upsertFieldsAsync } = useUpsertFieldLibrary();
 
@@ -326,7 +332,7 @@ const UserRegistration: FC = () => {
 
       // 提交成功后询问是否保存到信息库（保存按用户选择决定，不阻塞跳转）
       const navigateToDetail = () =>
-        navigate(`/u/activities/${id}`, { replace: true });
+        navigate(detailPath, { replace: true });
 
       if (toSave.length > 0) {
         const ok = await Dialog.confirm({
@@ -419,7 +425,32 @@ const UserRegistration: FC = () => {
             {registrationAvailability.reason || "当前活动暂不可报名"}
           </p>
           <button
-            onClick={() => navigate(`/u/activities/${id}`, { replace: true })}
+            onClick={() => navigate(detailPath, { replace: true })}
+            className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
+          >
+            返回活动详情
+          </button>
+        </div>
+      </UserLayout>
+    );
+  }
+
+  if (activity.registrationType?.accessAllowed === false) {
+    return (
+      <UserLayout showTabBar={true} showTopBar={true}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-center">
+          <AlertCircle
+            size={40}
+            className="text-gray-300 dark:text-gray-600 mb-3"
+          />
+          <p className="text-gray-700 dark:text-gray-200 text-base font-medium mb-2">
+            暂不可报名
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+            {activity.registrationType.accessDeniedReason || "你不在该报名表单的可报名名单中"}
+          </p>
+          <button
+            onClick={() => navigate(detailPath, { replace: true })}
             className="px-4 py-2 bg-primary-500 text-white text-sm rounded-lg"
           >
             返回活动详情
@@ -436,7 +467,7 @@ const UserRegistration: FC = () => {
       showBreadcrumb={true}
       breadcrumbItems={[
         { label: "首页", path: "/u/home" },
-        { label: activity.title, path: `/u/activities/${id}` },
+        { label: activity.title, path: detailPath },
         { label: "报名" },
       ]}
       bgColor="bg-gray-50 dark:bg-gray-900"

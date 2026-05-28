@@ -4,7 +4,7 @@
  */
 
 import { FC, useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Heart,
@@ -116,6 +116,7 @@ const formatDate = (dateStr: string): string => dayjs(normalizeUtc(dateStr)).for
 const UserActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [enrolledCount, setEnrolledCount] = useState<number | null>(null);
   const showBreadcrumb = useIsDesktop();
 
@@ -126,7 +127,16 @@ const UserActivityDetail: FC = () => {
   const isBusinessUser =
     isAuthenticated && (userType === "organizer" || userType === "admin");
   const showUserChrome = isParticipantUser;
-  const detailPath = id ? `/u/activities/${id}` : "/u/home";
+  const registrationTypeId = useMemo(() => {
+    return new URLSearchParams(location.search).get("rt") || "";
+  }, [location.search]);
+  const registrationTypeQuery = registrationTypeId
+    ? `?rt=${encodeURIComponent(registrationTypeId)}`
+    : "";
+  const detailPath = id ? `/u/activities/${id}${registrationTypeQuery}` : "/u/home";
+  const registrationPath = id
+    ? `/u/activities/${id}/register${registrationTypeQuery}`
+    : "";
 
   const goLoginForActivity = () => {
     savePendingRedirectPath(detailPath);
@@ -167,9 +177,9 @@ const UserActivityDetail: FC = () => {
 
   // 使用 hooks 获取活动详情
   const { data: publicActivityData, isLoading: publicActivityLoading } =
-    usePublicActivityDetail(id);
+    usePublicActivityDetail(id, registrationTypeId);
   const { data: activityData, isLoading: userActivityLoading } =
-    useActivityDetail(isParticipantUser ? id : undefined);
+    useActivityDetail(isParticipantUser ? id : undefined, registrationTypeId);
   const { data: activitiesData } = useUserActivities(undefined, {
     enabled: isParticipantUser,
   });
@@ -340,7 +350,7 @@ const UserActivityDetail: FC = () => {
       activity.userStatus === "recruiting" &&
       registrationAvailability.canRegister
     ) {
-      navigate(`/u/activities/${id}/register`);
+      navigate(registrationPath);
     } else if (activity.userStatus === "approved") {
       navigate(`/u/activities/${id}/match-result`);
     } else if (activity.userStatus === "completed") {

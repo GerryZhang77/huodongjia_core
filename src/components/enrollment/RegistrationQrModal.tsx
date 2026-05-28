@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { Copy, Download, QrCode, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Download, QrCode, X } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
+import type { ActivityRegistrationType } from "@/features/activities/types";
 
 interface RegistrationQrModalProps {
   visible: boolean;
   activityId: string;
   activityTitle?: string;
+  registrationTypes?: ActivityRegistrationType[];
   onClose: () => void;
 }
 
@@ -50,18 +52,38 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
   visible,
   activityId,
   activityTitle,
+  registrationTypes,
   onClose,
 }) => {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [showCopyFallback, setShowCopyFallback] = useState(false);
   const [showQrPreview, setShowQrPreview] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  const registrationUrl = useMemo(() => {
-    if (!activityId) return "";
-    return `${getPublicAppOrigin()}/u/activities/${encodeURIComponent(activityId)}`;
-  }, [activityId]);
+  const qrItems = useMemo(() => {
+    if (!activityId) return [];
+    const baseUrl = `${getPublicAppOrigin()}/u/activities/${encodeURIComponent(activityId)}`;
+    const typedItems = (registrationTypes || [])
+      .filter((type) => type.id)
+      .map((type) => ({
+        id: type.id || "",
+        label: type.name || "未命名报名类型",
+        url: `${baseUrl}?rt=${encodeURIComponent(type.id || "")}`,
+      }));
+
+    if (typedItems.length > 0) return typedItems;
+    return [{ id: activityId, label: "活动详情", url: baseUrl }];
+  }, [activityId, registrationTypes]);
+
+  const activeItem = qrItems[Math.min(activeIndex, qrItems.length - 1)];
+  const registrationUrl = activeItem?.url || "";
 
   const hasLocalAddress = isLocalAddress(registrationUrl);
+
+  useEffect(() => {
+    if (!visible) return;
+    setActiveIndex(0);
+  }, [visible, qrItems]);
 
   useEffect(() => {
     if (!visible || !registrationUrl) return;
@@ -99,10 +121,21 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
 
     const link = document.createElement("a");
     link.href = qrDataUrl;
-    link.download = `activity-${activityId}-detail-qr.png`;
+    const safeLabel = (activeItem?.label || "detail").replace(/[\\/:*?"<>|]/g, "-");
+    link.download = `activity-${activityId}-${safeLabel}-qr.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const showSwitcher = qrItems.length > 1;
+  const goPrev = () => {
+    if (!showSwitcher) return;
+    setActiveIndex((index) => (index - 1 + qrItems.length) % qrItems.length);
+  };
+  const goNext = () => {
+    if (!showSwitcher) return;
+    setActiveIndex((index) => (index + 1) % qrItems.length);
   };
 
   if (!visible) return null;
@@ -126,6 +159,38 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
           {activityTitle && (
             <div className="text-sm font-medium text-gray-900 truncate">
               {activityTitle}
+            </div>
+          )}
+          {activeItem && (
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={!showSwitcher}
+                className="w-8 h-8 rounded-full bg-white text-gray-500 flex items-center justify-center disabled:opacity-40"
+                aria-label="上一个二维码"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="min-w-0 text-center">
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {activeItem.label}
+                </div>
+                {showSwitcher && (
+                  <div className="mt-0.5 text-xs text-gray-400">
+                    {activeIndex + 1} / {qrItems.length}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!showSwitcher}
+                className="w-8 h-8 rounded-full bg-white text-gray-500 flex items-center justify-center disabled:opacity-40"
+                aria-label="下一个二维码"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           )}
           <div className="flex justify-center">

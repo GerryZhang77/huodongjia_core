@@ -31,6 +31,7 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
   const selectedValueKey = selectedValues.join("\u0000");
   const [showInput, setShowInput] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [isComposing, setIsComposing] = useState(false);
   const [customOptions, setCustomOptions] = useState<
     { label: string; value: string }[]
   >(() => {
@@ -42,6 +43,10 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
   });
 
   const allOptions = [...options, ...customOptions];
+
+  const countChars = (value: string) => Array.from(value).length;
+  const limitChars = (value: string) =>
+    Array.from(value).slice(0, maxCustomLength).join("");
 
   useEffect(() => {
     const presetValues = new Set(options.map((o) => o.value));
@@ -58,7 +63,7 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
   }, [options, selectedValueKey, selectedValues]);
 
   const addCustomOption = () => {
-    const trimmed = inputValue.trim();
+    const trimmed = limitChars(inputValue.trim());
     if (!trimmed) return;
     if (allOptions.some((o) => o.value === trimmed || o.label === trimmed))
       return;
@@ -121,9 +126,16 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
             type="text"
             value={inputValue}
             onChange={(e) => {
-              if (e.target.value.length <= maxCustomLength) {
-                setInputValue(e.target.value);
-              }
+              const nextValue = e.target.value;
+              const composing =
+                isComposing ||
+                Boolean((e.nativeEvent as InputEvent).isComposing);
+              setInputValue(composing ? nextValue : limitChars(nextValue));
+            }}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={(e) => {
+              setIsComposing(false);
+              setInputValue(limitChars(e.currentTarget.value));
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -133,11 +145,16 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
             }}
             className="flex-1 px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary-400 transition-colors"
             placeholder={placeholder}
-            maxLength={maxCustomLength}
             autoFocus
           />
-          <span className="text-xs text-gray-400 whitespace-nowrap">
-            {inputValue.length}/{maxCustomLength}
+          <span
+            className={`text-xs whitespace-nowrap ${
+              countChars(inputValue) > maxCustomLength
+                ? "text-red-400"
+                : "text-gray-400"
+            }`}
+          >
+            {Math.min(countChars(inputValue), maxCustomLength)}/{maxCustomLength}
           </span>
           <button
             type="button"

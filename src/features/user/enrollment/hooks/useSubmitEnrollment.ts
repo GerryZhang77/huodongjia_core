@@ -9,12 +9,12 @@ import type { EnrollmentFormData } from "../types";
 /**
  * 提交报名 Hook
  */
-export function useSubmitEnrollment(activityId: string) {
+export function useSubmitEnrollment(activityId: string, registrationTypeId?: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: EnrollmentFormData) =>
-      submitEnrollment(activityId, data),
+      submitEnrollment(activityId, data, registrationTypeId),
     onSuccess: () => {
       // 刷新我的报名列表
       queryClient.invalidateQueries({ queryKey: ["user", "enrollments"] });

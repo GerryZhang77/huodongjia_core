@@ -40,6 +40,7 @@ import {
   isOnlineOnlyActivity,
 } from "@/features/activities/utils/constants";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
+import type { ActivityRegistrationType } from "@/features/activities/types";
 import dayjs from "dayjs";
 
 // 活动接口定义 (与后端 camelCase 格式匹配)
@@ -64,6 +65,7 @@ interface Activity {
   fee?: number;
   isPublic?: boolean;
   allowWaitlist?: boolean;
+  registrationTypes?: ActivityRegistrationType[];
   organizer?: {
     id: string;
     name: string;
@@ -735,6 +737,7 @@ const ActivityDetail: FC = () => {
             visible={showQrModal}
             activityId={id || ""}
             activityTitle={activity.title}
+            registrationTypes={activity.registrationTypes}
             onClose={() => setShowQrModal(false)}
           />
         </div>

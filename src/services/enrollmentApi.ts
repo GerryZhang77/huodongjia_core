@@ -191,10 +191,14 @@ export async function sendNotification(
  */
 export async function submitEnrollment(
   activityId: string,
-  data: EnrollmentFormData
+  data: EnrollmentFormData,
+  registrationTypeId?: string,
 ): Promise<EnrollmentDetailResponse> {
   // 后端期望 { enrollment: {...} } 格式
-  return api.post(`/api/user/activities/${activityId}/enroll`, { enrollment: data });
+  return api.post(`/api/user/activities/${activityId}/enroll`, {
+    enrollment: data,
+    ...(registrationTypeId ? { registrationTypeId } : {}),
+  });
 }
 
 /**

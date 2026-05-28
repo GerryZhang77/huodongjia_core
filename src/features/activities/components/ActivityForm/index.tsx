@@ -312,7 +312,8 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           <Form.Item name="category" label="活动分类">
             <CustomSelector
               options={CATEGORY_OPTIONS}
-              placeholder="自定义分类（最多7字）"
+              maxCustomLength={15}
+              placeholder="自定义分类（最多15字）"
             />
           </Form.Item>
 

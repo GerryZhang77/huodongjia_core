@@ -14,10 +14,10 @@ interface ActivityDetailResponse {
 /**
  * 获取单个活动详情
  */
-export function useActivityDetail(id?: string) {
+export function useActivityDetail(id?: string, registrationTypeId?: string) {
   return useQuery<ActivityDetailResponse, Error>({
-    queryKey: ["user", "activity", id],
-    queryFn: () => getUserActivityDetail(id!),
+    queryKey: ["user", "activity", id, registrationTypeId || ""],
+    queryFn: () => getUserActivityDetail(id!, registrationTypeId),
     enabled: !!id,
     staleTime: 15 * 60 * 1000, // 15分钟（活动详情相对稳定）
     gcTime: 30 * 60 * 1000,
