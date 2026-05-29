@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { Popup } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import {
-  ArrowRight,
   Check,
   ChevronDown,
   ChevronUp,
@@ -10,11 +9,7 @@ import {
   Plus,
   Play,
   Save,
-  Settings,
   Trash2,
-  Users,
-  Scale,
-  Building2,
   X,
 } from "lucide-react";
 import { Button, Switch } from "@/components/ui";
@@ -101,8 +96,6 @@ const normalizeWeight = (value: number) => {
 const RulesTab: React.FC<RulesTabProps> = ({
   rules,
   onRulesChange,
-  constraints,
-  onConstraintsChange,
   onSaveRules,
   onStartMatching,
   isMatching,
@@ -114,7 +107,6 @@ const RulesTab: React.FC<RulesTabProps> = ({
   schemaGroups = [],
   schemaLoading = false,
 }) => {
-  const [showConstraints, setShowConstraints] = useState(false);
   const [fieldPicker, setFieldPicker] = useState<{
     ruleId: string;
     slot: RuleFieldSlot;
@@ -618,118 +610,6 @@ const RulesTab: React.FC<RulesTabProps> = ({
           </div>
         </div>
       </Popup>
-
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-4 mb-4">
-        <button
-          onClick={() => setShowConstraints(!showConstraints)}
-          className="w-full px-4 md:px-6 py-4 flex items-center justify-between"
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <Settings size={16} className="text-gray-500" />
-            </div>
-            <h3 className="text-base font-semibold text-gray-900">边界条件（可选）</h3>
-          </div>
-          <ArrowRight
-            size={18}
-            className={`text-gray-400 transition-transform ${showConstraints ? "rotate-90" : ""}`}
-          />
-        </button>
-
-        {showConstraints && (
-          <div className="px-4 md:px-6 pb-6 space-y-4 border-t border-gray-100 pt-4">
-            <div className="p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center gap-2 mb-3">
-                <Users size={16} className="text-primary-500" />
-                <span className="text-sm font-medium text-gray-700">每组人数</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  min={2}
-                  value={constraints.minGroupSize || 3}
-                  onChange={(event) =>
-                    onConstraintsChange({
-                      ...constraints,
-                      minGroupSize: Number(event.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
-                />
-                <input
-                  type="number"
-                  min={constraints.minGroupSize || 2}
-                  value={constraints.maxGroupSize || 8}
-                  onChange={(event) =>
-                    onConstraintsChange({
-                      ...constraints,
-                      maxGroupSize: Number(event.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center gap-2 mb-3">
-                <Scale size={16} className="text-secondary-500" />
-                <span className="text-sm font-medium text-gray-700">性别比例</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={constraints.genderRatioMin || 40}
-                  onChange={(event) =>
-                    onConstraintsChange({
-                      ...constraints,
-                      genderRatioMin: Number(event.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={constraints.genderRatioMax || 60}
-                  onChange={(event) =>
-                    onConstraintsChange({
-                      ...constraints,
-                      genderRatioMax: Number(event.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 rounded-xl">
-              <div className="flex items-center gap-2 mb-3">
-                <Building2 size={16} className="text-accent-500" />
-                <span className="text-sm font-medium text-gray-700">同行业限制</span>
-              </div>
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={constraints.sameIndustryMax || 2}
-                onChange={(event) =>
-                  onConstraintsChange({
-                    ...constraints,
-                    sameIndustryMax: Number(event.target.value),
-                  })
-                }
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
-              />
-            </div>
-          </div>
-        )}
-      </div>
 
       {isMatching && (
         <div className="bg-white rounded-2xl border border-primary-200 shadow-sm p-4 md:p-6 mb-4">
