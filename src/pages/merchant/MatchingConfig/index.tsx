@@ -44,6 +44,7 @@ const MatchingConfigPage: React.FC = () => {
     isLoading,
     isMatching,
     isPublishing,
+    isRulesLocked,
     matchingProgress,
     matchingMessage,
 
@@ -203,6 +204,7 @@ const MatchingConfigPage: React.FC = () => {
             onSaveRules={handleSaveRules}
             onStartMatching={handleStartMatching}
             isMatching={isMatching}
+            isRulesLocked={isRulesLocked}
             matchingProgress={matchingProgress}
             matchingMessage={matchingMessage}
             participantCount={participants.length}

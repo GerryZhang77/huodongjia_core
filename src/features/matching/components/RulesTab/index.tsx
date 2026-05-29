@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
+import { Popup } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import {
   ArrowRight,
+  Check,
   ChevronDown,
   ChevronUp,
-  GripVertical,
+  ListChecks,
   Plus,
   Play,
   Save,
@@ -13,6 +15,7 @@ import {
   Users,
   Scale,
   Building2,
+  X,
 } from "lucide-react";
 import { Button, Switch } from "@/components/ui";
 import type {
@@ -48,6 +51,32 @@ const OPERATORS: Array<{ value: MatchOperator; label: string }> = [
 ];
 
 const DEFAULT_OPERATOR: MatchOperator = "similarity";
+type RuleFieldSlot = "source_field" | "target_field";
+
+const FIELD_SLOT_CONFIG: Record<
+  RuleFieldSlot,
+  {
+    label: string;
+    emptyText: string;
+    helperText: string;
+    registrationTypeKey:
+      | "source_registration_type_id"
+      | "target_registration_type_id";
+  }
+> = {
+  source_field: {
+    label: "参与者字段",
+    emptyText: "请选择参与者字段",
+    helperText: "当前参与者用于计算的报名信息",
+    registrationTypeKey: "source_registration_type_id",
+  },
+  target_field: {
+    label: "匹配对象字段",
+    emptyText: "请选择匹配对象字段",
+    helperText: "候选匹配对象用于对比的报名信息",
+    registrationTypeKey: "target_registration_type_id",
+  },
+};
 
 const createRule = (): MatchingRule => ({
   id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -60,8 +89,8 @@ const createRule = (): MatchingRule => ({
   enabled: true,
 });
 
-const formatRuleName = (rule: MatchingRule, index: number) => {
-  return `${index + 1}-${rule.operator || DEFAULT_OPERATOR}`;
+const formatRuleName = (index: number) => {
+  return `规则 ${index + 1}`;
 };
 
 const normalizeWeight = (value: number) => {
@@ -86,9 +115,9 @@ const RulesTab: React.FC<RulesTabProps> = ({
   schemaLoading = false,
 }) => {
   const [showConstraints, setShowConstraints] = useState(false);
-  const [draggingField, setDraggingField] = useState<{
-    key: string;
-    registrationTypeId?: string;
+  const [fieldPicker, setFieldPicker] = useState<{
+    ruleId: string;
+    slot: RuleFieldSlot;
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedWeightRuleIds, setExpandedWeightRuleIds] = useState<string[]>(
@@ -106,17 +135,51 @@ const RulesTab: React.FC<RulesTabProps> = ({
     : schemaFields.length > 0
       ? [{ name: "默认报名表", fields: schemaFields }]
       : [];
+  const fieldOptions = visibleSchemaGroups.flatMap((group, groupIndex) =>
+    group.fields
+      .filter((field) => field.key)
+      .map((field) => ({
+        key: field.key,
+        label: field.label || field.key,
+        registrationTypeId: group.id,
+        groupName: group.name || `报名表 ${groupIndex + 1}`,
+      })),
+  );
 
-  const getFieldLabel = (fieldKey?: string) => {
+  const getFieldOption = (
+    fieldKey?: string,
+    registrationTypeId?: string,
+  ) => {
+    if (!fieldKey) return null;
+    return (
+      fieldOptions.find(
+        (field) =>
+          field.key === fieldKey &&
+          (!registrationTypeId ||
+            field.registrationTypeId === registrationTypeId),
+      ) ||
+      fieldOptions.find((field) => field.key === fieldKey) ||
+      null
+    );
+  };
+
+  const getFieldLabel = (
+    fieldKey?: string,
+    registrationTypeId?: string,
+  ) => {
     if (!fieldKey) return "";
-    return schemaLabelMap.get(fieldKey) || fieldKey;
+    return (
+      getFieldOption(fieldKey, registrationTypeId)?.label ||
+      schemaLabelMap.get(fieldKey) ||
+      fieldKey
+    );
   };
 
   const updateRules = (nextRules: MatchingRule[]) => {
     onRulesChange(
       nextRules.map((rule, index) => ({
         ...rule,
-        name: formatRuleName(rule, index),
+        name: formatRuleName(index),
         type: rule.operator || DEFAULT_OPERATOR,
         operator: rule.operator || DEFAULT_OPERATOR,
         weight: normalizeWeight(rule.weight),
@@ -135,6 +198,30 @@ const RulesTab: React.FC<RulesTabProps> = ({
     );
   };
 
+  const handleOpenFieldPicker = (
+    ruleId: string | undefined,
+    slot: RuleFieldSlot,
+  ) => {
+    if (!ruleId || isRulesLocked || fieldOptions.length === 0) return;
+    setFieldPicker({ ruleId, slot });
+  };
+
+  const handleSelectField = (
+    ruleId: string,
+    slot: RuleFieldSlot,
+    field: {
+      key: string;
+      registrationTypeId?: string;
+    },
+  ) => {
+    const registrationTypeKey = FIELD_SLOT_CONFIG[slot].registrationTypeKey;
+    handleRuleChange(ruleId, {
+      [slot]: field.key,
+      [registrationTypeKey]: field.registrationTypeId,
+    } as Partial<MatchingRule>);
+    setFieldPicker(null);
+  };
+
   const handleAddRule = () => {
     updateRules([...visibleRules, createRule()]);
   };
@@ -150,7 +237,10 @@ const RulesTab: React.FC<RulesTabProps> = ({
     );
 
     if (hasIncompleteRule) {
-      Toast.show({ content: "字段设置不完整，无法保存", icon: "fail" });
+      Toast.show({
+        content: "请先选择参与者字段和匹配对象字段",
+        icon: "fail",
+      });
       return;
     }
 
@@ -163,7 +253,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
     );
 
     if (validRules.length === 0) {
-      Toast.show({ content: "请先至少配置一条完整规则", icon: "fail" });
+      Toast.show({ content: "请先至少配置一条完整匹配规则", icon: "fail" });
       return;
     }
 
@@ -185,7 +275,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
     );
 
     if (validRules.length === 0) {
-      Toast.show({ content: "请先至少配置一条完整规则", icon: "fail" });
+      Toast.show({ content: "请先至少配置一条完整匹配规则", icon: "fail" });
       return;
     }
 
@@ -206,17 +296,36 @@ const RulesTab: React.FC<RulesTabProps> = ({
     );
   };
 
+  const activePickerRule = fieldPicker
+    ? visibleRules.find((rule) => rule.id === fieldPicker.ruleId)
+    : undefined;
+  const activePickerSlot = fieldPicker?.slot;
+  const activePickerConfig = activePickerSlot
+    ? FIELD_SLOT_CONFIG[activePickerSlot]
+    : undefined;
+  const activePickerFieldKey =
+    activePickerRule && activePickerSlot
+      ? activePickerRule[activePickerSlot]
+      : undefined;
+  const activePickerRegistrationTypeId =
+    activePickerRule && activePickerSlot
+      ? activePickerRule[FIELD_SLOT_CONFIG[activePickerSlot].registrationTypeKey]
+      : undefined;
+  const activePickerSelectedOption = activePickerSlot
+    ? getFieldOption(activePickerFieldKey, activePickerRegistrationTypeId)
+    : null;
+
   return (
     <div className="pb-32">
       <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-13rem)] lg:min-h-[520px] lg:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5 lg:h-full lg:overflow-hidden lg:flex lg:flex-col">
+        <div className="hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5 lg:h-full lg:overflow-hidden lg:flex lg:flex-col">
           <div className="flex items-center gap-2 mb-3 flex-shrink-0">
             <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
-              <GripVertical size={16} className="text-primary-500" />
+              <ListChecks size={16} className="text-primary-500" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-900">报名字段</h3>
-              <p className="text-xs text-gray-500">拖到右侧规则槽位中</p>
+              <h3 className="text-base font-semibold text-gray-900">可用报名字段</h3>
+              <p className="text-xs text-gray-500">选择器中按报名表分组展示</p>
             </div>
           </div>
 
@@ -237,23 +346,14 @@ const RulesTab: React.FC<RulesTabProps> = ({
                     </div>
                     <div className="space-y-2">
                       {group.fields.map((field) => (
-                        <button
+                        <div
                           key={`${groupIndex}-${field.key}`}
-                          type="button"
-                          draggable={!isRulesLocked}
-                          onDragStart={() =>
-                            setDraggingField({
-                              key: field.key,
-                              registrationTypeId: group.id,
-                            })
-                          }
-                          onDragEnd={() => setDraggingField(null)}
-                          className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:opacity-60"
+                          className="w-full p-3 rounded-xl border border-gray-200 bg-white"
                         >
                           <div className="font-medium text-gray-900 truncate">
                             {field.label}
                           </div>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -267,7 +367,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
           <div className="mb-4 flex-shrink-0">
             <h3 className="text-base font-semibold text-gray-900">规则设置器</h3>
             <p className="text-xs text-gray-500 mt-1">
-              每行一条规则，左右字段可分别拖入，后端将按对应 operator 和 weight 执行匹配。
+              每条规则选择参与者字段和匹配对象字段，系统按匹配方式和权重计算推荐关系。
             </p>
           </div>
 
@@ -283,7 +383,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
                       {index + 1}
                     </span>
                     <span className="text-sm font-medium text-gray-900">
-                      {formatRuleName(rule, index)}
+                      {formatRuleName(index)}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -308,43 +408,49 @@ const RulesTab: React.FC<RulesTabProps> = ({
                 <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.2fr_1.2fr_0.9fr]">
                   {(["source_field", "target_field"] as const).map((slot) => {
                     const fieldKey = rule[slot];
-                    const fieldLabel = getFieldLabel(fieldKey);
+                    const slotConfig = FIELD_SLOT_CONFIG[slot];
+                    const registrationTypeId =
+                      rule[slotConfig.registrationTypeKey];
+                    const fieldOption = getFieldOption(fieldKey, registrationTypeId);
+                    const fieldLabel = getFieldLabel(fieldKey, registrationTypeId);
                     return (
-                      <div
+                      <button
                         key={slot}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          if (!draggingField || isRulesLocked) return;
-                          handleRuleChange(rule.id || "", {
-                            [slot]: draggingField.key,
-                            [slot === "source_field"
-                              ? "source_registration_type_id"
-                              : "target_registration_type_id"]: draggingField.registrationTypeId,
-                          });
-                          setDraggingField(null);
-                        }}
-                        className={`min-h-[72px] rounded-2xl border-2 border-dashed px-4 py-3 transition-colors ${
+                        type="button"
+                        onClick={() => handleOpenFieldPicker(rule.id, slot)}
+                        disabled={isRulesLocked || fieldOptions.length === 0}
+                        className={`min-h-[76px] rounded-2xl border px-4 py-3 text-left transition-colors disabled:opacity-60 ${
                           fieldKey
                             ? "border-primary-300 bg-primary-50/60"
                             : "border-gray-200 bg-white"
                         }`}
                       >
-                        <div className="text-xs text-gray-500 mb-2">
-                          {slot === "source_field" ? "左字段" : "右字段"}
+                        <div className="flex items-center justify-between gap-2 text-xs text-gray-500 mb-2">
+                          <span>{slotConfig.label}</span>
+                          <ChevronDown size={15} className="text-gray-400" />
                         </div>
                         {fieldKey ? (
                           <div>
                             <div className="font-medium text-gray-900 truncate">
                               {fieldLabel}
                             </div>
+                            {fieldOption?.groupName && (
+                              <div className="mt-1 text-xs text-gray-500 truncate">
+                                {fieldOption.groupName}
+                              </div>
+                            )}
                           </div>
                         ) : (
-                          <div className="text-sm text-gray-400">
-                            拖拽字段到这里
+                          <div>
+                            <div className="text-sm font-medium text-gray-400">
+                              {slotConfig.emptyText}
+                            </div>
+                            <div className="mt-1 text-xs text-gray-400">
+                              {slotConfig.helperText}
+                            </div>
                           </div>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
 
@@ -425,6 +531,93 @@ const RulesTab: React.FC<RulesTabProps> = ({
           </div>
         </div>
       </div>
+
+      <Popup
+        visible={Boolean(fieldPicker)}
+        position="bottom"
+        onMaskClick={() => setFieldPicker(null)}
+        destroyOnClose
+        bodyStyle={{
+          borderTopLeftRadius: 18,
+          borderTopRightRadius: 18,
+          maxHeight: "76vh",
+          overflow: "hidden",
+        }}
+      >
+        <div className="bg-white">
+          <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3 border-b border-gray-100">
+            <div className="min-w-0">
+              <div className="text-base font-semibold text-gray-900">
+                选择{activePickerConfig?.label || "字段"}
+              </div>
+              <div className="mt-1 text-xs text-gray-500 truncate">
+                {activePickerConfig?.helperText}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFieldPicker(null)}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100"
+              aria-label="关闭字段选择"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="max-h-[calc(76vh-73px)] overflow-y-auto px-4 py-3">
+            {visibleSchemaGroups.length === 0 ? (
+              <div className="py-10 text-center text-sm text-gray-500">
+                当前活动还没有报名表字段
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {visibleSchemaGroups.map((group, groupIndex) => (
+                  <div key={`picker-${group.name}-${groupIndex}`}>
+                    <div className="mb-2 text-xs font-medium text-gray-500 truncate">
+                      {group.name || `报名表 ${groupIndex + 1}`}
+                    </div>
+                    <div className="space-y-2">
+                      {group.fields.map((field) => {
+                        const isSelected =
+                          activePickerFieldKey === field.key &&
+                          (activePickerRegistrationTypeId
+                            ? activePickerRegistrationTypeId === group.id
+                            : activePickerSelectedOption?.registrationTypeId === group.id);
+                        return (
+                          <button
+                            key={`picker-${groupIndex}-${field.key}`}
+                            type="button"
+                            disabled={!fieldPicker || isRulesLocked}
+                            onClick={() => {
+                              if (!fieldPicker) return;
+                              handleSelectField(fieldPicker.ruleId, fieldPicker.slot, {
+                                key: field.key,
+                                registrationTypeId: group.id,
+                              });
+                            }}
+                            className={`w-full min-h-[48px] rounded-xl border px-3 py-3 text-left flex items-center justify-between gap-3 transition-colors ${
+                              isSelected
+                                ? "border-primary-300 bg-primary-50 text-primary-600"
+                                : "border-gray-200 bg-white text-gray-900"
+                            }`}
+                          >
+                            <span className="font-medium truncate">
+                              {field.label || field.key}
+                            </span>
+                            {isSelected && (
+                              <Check size={18} className="flex-shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Popup>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-4 mb-4">
         <button
