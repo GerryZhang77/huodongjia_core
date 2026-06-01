@@ -39,6 +39,32 @@ const formatFieldValue = (value: unknown): string => {
   return String(value);
 };
 
+const resolveScoreFieldValue = (
+  explicitValue: string | undefined,
+  fieldKey: string,
+  fallbackLabel: string | undefined,
+  formData: Record<string, unknown> | undefined,
+  schema: Array<{ key: string; label: string }>,
+): string => {
+  if (explicitValue && explicitValue.trim()) {
+    return explicitValue.trim();
+  }
+
+  const schemaLabel =
+    schema.find((field) => field.key === fieldKey)?.label?.trim() ||
+    fallbackLabel?.trim();
+  const candidates = [fieldKey, schemaLabel].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    const value = formData?.[candidate];
+    if (value !== null && value !== undefined && value !== "") {
+      return formatFieldValue(value);
+    }
+  }
+
+  return "未填写";
+};
+
 const MatchInfoCard: FC<{
   title: string;
   data: Record<string, unknown>;
@@ -94,7 +120,10 @@ const MatchInfoCard: FC<{
 const RuleScoreCard: FC<{
   rule: MatchRuleDetail;
   scoreField?: MatchScoreFieldDetail;
-}> = ({ rule, scoreField }) => {
+  currentUserFormData: Record<string, unknown>;
+  targetUserFormData: Record<string, unknown>;
+  schema: Array<{ key: string; label: string }>;
+}> = ({ rule, scoreField, currentUserFormData, targetUserFormData, schema }) => {
   const percent = scoreField?.score_percent ?? Math.round((scoreField?.score ?? 0) * 100);
 
   return (
@@ -130,13 +159,25 @@ const RuleScoreCard: FC<{
         <div className="flex items-start justify-between gap-4">
           <span className="text-gray-500">我的信息</span>
           <span className="text-gray-900 text-right break-words">
-            {scoreField?.current_user_value || "未填写"}
+            {resolveScoreFieldValue(
+              scoreField?.current_user_value,
+              rule.source_field,
+              rule.source_label,
+              currentUserFormData,
+              schema,
+            )}
           </span>
         </div>
         <div className="flex items-start justify-between gap-4">
           <span className="text-gray-500">对方信息</span>
           <span className="text-gray-900 text-right break-words">
-            {scoreField?.target_user_value || "未填写"}
+            {resolveScoreFieldValue(
+              scoreField?.target_user_value,
+              rule.target_field,
+              rule.target_label,
+              targetUserFormData,
+              schema,
+            )}
           </span>
         </div>
       </div>
@@ -318,6 +359,9 @@ const UserMatchDetail: FC = () => {
                     key={`${rule.source_field}-${rule.target_field}-${rule.operator}`}
                     rule={rule}
                     scoreField={scoreField}
+                    currentUserFormData={detail.currentUserEnrollment.form_data}
+                    targetUserFormData={detail.targetUserEnrollment.form_data}
+                    schema={orderedFields}
                   />
                 );
               })

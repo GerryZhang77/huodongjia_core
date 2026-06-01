@@ -6,23 +6,33 @@
  * 说明：后端不再区分"分组"与"最佳匹配"—— 每个用户的"小组"就是其 top5 匹配。
  */
 
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
+import { Toast } from "antd-mobile";
 import {
   AlertCircle,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
   Smartphone,
   Trophy,
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
-import { Tag } from "@/components/ui";
-import { UserHoverCard } from "@/components/business/UserHoverCard";
+import { Button } from "@/components/ui";
 import { NFCTouchModal } from "@/components/business/NFCTouchModal";
 import { useActivityDetail } from "@/features/user";
 import { useBestMatches } from "@/features/user/hooks/useBestMatches";
-import { getBestMatchDetail } from "@/features/user/services/matchApi";
+import {
+  getBestMatchDetail,
+  getExistingMatchMessage,
+  getMatchMessage,
+  type MatchScoreFieldDetail,
+} from "@/features/user/services/matchApi";
 import { generateDefaultAvatar } from "@/utils/avatar";
+import { cn } from "@/utils/cn";
 import dayjs from "dayjs";
 
 interface TopMatchUser {
@@ -41,7 +51,270 @@ interface TopMatchUser {
   matchScore: number;
   rank: number;
   commonTags: string[];
+  scoreHighlights: MatchScoreFieldDetail[];
 }
+
+const scoreToneClasses = [
+  "bg-amber-100 text-amber-700 border border-amber-200",
+  "bg-slate-100 text-slate-700 border border-slate-200",
+  "bg-orange-100 text-orange-700 border border-orange-200",
+  "bg-gray-100 text-gray-600 border border-gray-200",
+];
+
+const formatFieldValue = (value?: string): string => {
+  if (!value) return "未填写";
+  return value;
+};
+
+const normalizeDisplayValue = (value: unknown): string | undefined => {
+  if (Array.isArray(value)) {
+    const joined = value.map((item) => String(item ?? "").trim()).filter(Boolean).join("、");
+    return joined || undefined;
+  }
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  const text = typeof value === "string" ? value.trim() : String(value).trim();
+  return text || undefined;
+};
+
+const resolveScoreFieldValue = (
+  explicitValue: string | undefined,
+  fieldKey: string,
+  fallbackLabel: string | undefined,
+  formData?: Record<string, unknown>,
+  schema?: Array<{ key: string; label: string; type?: string }>,
+): string | undefined => {
+  if (explicitValue && explicitValue.trim()) {
+    return explicitValue.trim();
+  }
+
+  const schemaLabel =
+    schema?.find((field) => field.key === fieldKey)?.label?.trim() || fallbackLabel?.trim();
+  const candidates = [fieldKey, schemaLabel].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    const value = normalizeDisplayValue(formData?.[candidate]);
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
+const MatchUniverseCard: FC<{
+  activityId: string;
+  user: TopMatchUser;
+  index: number;
+  expanded: boolean;
+  generatedMessage?: string;
+  generatingUserId: string | null;
+  onToggle: (userId: string) => void;
+  onGenerateMessage: (userId: string) => Promise<void>;
+  onViewDetail: (userId: string) => void;
+}> = ({
+  activityId,
+  user,
+  index,
+  expanded,
+  generatedMessage,
+  generatingUserId,
+  onToggle,
+  onGenerateMessage,
+  onViewDetail,
+}) => {
+  const detailQuery = useQuery({
+    queryKey: ["user", "match-detail", activityId, user.id],
+    queryFn: () => getBestMatchDetail(activityId, user.id),
+    enabled: Boolean(activityId && user.id),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const detailFields =
+    detailQuery.data?.data?.score.fields && detailQuery.data.data.score.fields.length > 0
+      ? detailQuery.data.data.score.fields
+      : user.scoreHighlights;
+  const schema = detailQuery.data?.data?.schema || [];
+  const currentUserFormData = detailQuery.data?.data?.currentUserEnrollment.form_data;
+  const targetUserFormData = detailQuery.data?.data?.targetUserEnrollment.form_data;
+  const scoreHighlights = [...detailFields]
+    .sort((a, b) => (b.score_percent ?? 0) - (a.score_percent ?? 0))
+    .slice(0, 3);
+  const existingMessageQuery = useQuery({
+    queryKey: ["user", "match-message", "existing", activityId, user.id],
+    queryFn: () => getExistingMatchMessage(activityId, user.id),
+    enabled: Boolean(activityId && user.id),
+    staleTime: 30 * 60 * 1000,
+  });
+  const existingMessage =
+    typeof existingMessageQuery.data?.data === "string"
+      ? existingMessageQuery.data.data.trim()
+      : "";
+  const matchMessage = generatedMessage || existingMessage;
+  const isGeneratingCurrent = generatingUserId === user.id;
+  const isGeneratingOther = Boolean(generatingUserId && generatingUserId !== user.id);
+
+  const badgeLabels = [
+    "高度匹配",
+    ...scoreHighlights
+      .map((field) => field.source_label || field.target_label || field.source_field)
+      .filter(Boolean)
+      .slice(0, 2),
+    user.industry || user.role,
+  ].filter(Boolean);
+
+  return (
+    <div
+      className={cn(
+        "rounded-[24px] border bg-white p-5 shadow-sm transition-all",
+        expanded ? "border-accent-200 shadow-md" : "border-gray-100 hover:-translate-y-1 hover:shadow-md",
+      )}
+    >
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
+                scoreToneClasses[index] || scoreToneClasses[3],
+              )}
+            >
+              {user.rank}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-[18px] font-semibold text-gray-900">
+                {user.name}
+              </div>
+              <div className="mt-1 truncate text-sm text-gray-500">
+                {[user.company, user.industry, user.city].filter(Boolean).join(" · ") || user.role}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700">
+          契合度 {user.matchScore}%
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+            <Sparkles size={15} className="text-accent-500" />
+            匹配寄语
+          </div>
+          {!matchMessage ? (
+            <Button
+              variant="secondary"
+              className="h-8 px-3 text-sm"
+              loading={isGeneratingCurrent}
+              disabled={isGeneratingOther}
+              onClick={() => onGenerateMessage(user.id)}
+            >
+              生成寄语
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="text-sm leading-6 text-gray-600">
+          {matchMessage ? (
+            matchMessage
+          ) : existingMessageQuery.isLoading ? (
+            <span className="text-gray-400">正在加载寄语...</span>
+          ) : isGeneratingOther ? (
+            <span className="text-gray-400">正在生成其他匹配对象的寄语，请稍候再试。</span>
+          ) : (
+            <span className="text-gray-400">点击右侧按钮生成这位对象的匹配寄语。</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {badgeLabels.slice(0, 4).map((label, badgeIndex) => (
+          <span
+            key={`${user.id}-${label}-${badgeIndex}`}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs",
+              badgeIndex === 0
+                ? "bg-gray-100 text-gray-700"
+                : "border border-accent-100 bg-accent-50 text-accent-600",
+            )}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between">
+        <button
+          onClick={() => onToggle(user.id)}
+          className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900"
+        >
+          {expanded ? "收起细节" : "查看匹配细节"}
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+        <button
+          onClick={() => onViewDetail(user.id)}
+          className="inline-flex items-center gap-1 text-sm font-medium text-accent-500 hover:text-accent-600"
+        >
+          进入详情
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      {expanded ? (
+        <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+          <div className="grid gap-3">
+            {scoreHighlights.length > 0 ? (
+              scoreHighlights.map((field) => (
+                <div
+                  key={`${field.rule_index}-${field.source_field}-${field.target_field}-detail`}
+                  className="rounded-2xl border border-gray-100 bg-white p-4"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-gray-900">
+                      {field.source_label || field.target_label || field.source_field}
+                    </p>
+                    <span className="rounded-full bg-accent-50 px-2 py-1 text-xs font-medium text-accent-600">
+                      {field.score_percent ?? Math.round(field.score * 100)}分
+                    </span>
+                  </div>
+                  <p className="text-xs leading-5 text-gray-500">
+                    你的填写：{formatFieldValue(
+                      resolveScoreFieldValue(
+                        field.current_user_value,
+                        field.source_field,
+                        field.source_label,
+                        currentUserFormData,
+                        schema,
+                      ),
+                    )}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-gray-500">
+                    对方填写：{formatFieldValue(
+                      resolveScoreFieldValue(
+                        field.target_user_value,
+                        field.target_field,
+                        field.target_label,
+                        targetUserFormData,
+                        schema,
+                      ),
+                    )}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-gray-100 bg-white p-4 text-sm text-gray-500">
+                暂无可展示的匹配规则字段。
+              </div>
+            )}
+          </div>
+
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 const formatDate = (dateStr: string): string => {
   return dayjs(dateStr).format("M月D日");
@@ -60,6 +333,9 @@ const UserMatchResult: FC = () => {
   const queryClient = useQueryClient();
 
   const [showNFCModal, setShowNFCModal] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [generatedMessages, setGeneratedMessages] = useState<Record<string, string>>({});
+  const [generatingUserId, setGeneratingUserId] = useState<string | null>(null);
 
   const { data: activityData, isLoading } = useActivityDetail(id);
 
@@ -75,6 +351,10 @@ const UserMatchResult: FC = () => {
     if (!bestMatchesData || bestMatchesData.length === 0) return [];
     return bestMatchesData.map((user) => {
       const userRecord = user as typeof user & { bio?: string };
+      const scoreHighlights = [...(user.scoreDetail?.fields || [])]
+        .sort((a, b) => (b.score_percent ?? 0) - (a.score_percent ?? 0))
+        .slice(0, 3);
+
       return {
         id: user.user_id,
         name: user.name,
@@ -90,7 +370,8 @@ const UserMatchResult: FC = () => {
         tags: user.tags || [],
         matchScore: user.matchScore,
         rank: user.rank,
-        commonTags: user.tags?.slice(0, 2) || [],
+        commonTags: [],
+        scoreHighlights,
       };
     });
   }, [bestMatchesData]);
@@ -116,6 +397,54 @@ const UserMatchResult: FC = () => {
   const handleNavigateToDetail = (userId: string) => {
     if (!userId) return;
     navigate(`/u/activities/${id}/match-result/${userId}`);
+  };
+
+  const toggleExpandedCard = (userId: string) => {
+    setExpandedUserId((current) => (current === userId ? null : userId));
+  };
+
+  const generateMessageMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      if (!id) {
+        throw new Error("缺少活动信息");
+      }
+      return {
+        userId,
+        response: await getMatchMessage(id, userId),
+      };
+    },
+    onMutate: async (userId) => {
+      setGeneratingUserId(userId);
+    },
+    onSuccess: ({ userId, response }) => {
+      const message =
+        typeof response.data === "string" ? response.data.trim() : "";
+      if (message) {
+        setGeneratedMessages((current) => ({
+          ...current,
+          [userId]: message,
+        }));
+      }
+      Toast.show({
+        icon: "success",
+        content: message ? "匹配寄语已生成" : "匹配寄语已刷新",
+      });
+    },
+    onError: (err) => {
+      const errorMessage =
+        err instanceof Error ? err.message : "生成匹配寄语失败";
+      Toast.show({ icon: "fail", content: errorMessage });
+    },
+    onSettled: () => {
+      setGeneratingUserId(null);
+    },
+  });
+
+  const handleGenerateMessage = async (userId: string) => {
+    if (generatingUserId) {
+      return;
+    }
+    await generateMessageMutation.mutateAsync(userId);
   };
 
   // 加载中
@@ -194,114 +523,47 @@ const UserMatchResult: FC = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
-                  与你匹配度最高的用户
-                </h3>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  共 {topMatches.length} 人
-                </span>
+            <div className="space-y-6">
+              <section className="rounded-[28px] border border-gray-100 bg-white px-6 py-6 text-center shadow-sm">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  你的匹配结果已生成
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-gray-500">
+                  太棒了！系统基于你的报名信息，在本次活动中找到了
+                  <span className="mx-1 font-semibold text-accent-500">
+                    {Math.min(topMatches.length, 3)}
+                  </span>
+                  位与你契合度较高的对象，推荐优先认识。
+                </p>
+              </section>
+
+              <div className="flex items-center gap-2 text-base font-semibold text-gray-900">
+                <Sparkles size={18} className="text-accent-500" />
+                我的匹配小宇宙
               </div>
 
-              {topMatches.map((user, index) => (
-                <div
-                  key={user.id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start gap-3">
-                    {/* 排名 */}
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                        index === 0
-                          ? "bg-yellow-400 text-yellow-900"
-                          : index === 1
-                            ? "bg-gray-300 text-gray-700"
-                            : index === 2
-                              ? "bg-orange-300 text-orange-800"
-                              : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                      }`}
-                    >
-                      {user.rank}
-                    </div>
+              <section className="rounded-2xl border border-dashed border-accent-200 bg-accent-50 px-5 py-4 text-sm leading-6 text-gray-600">
+                <span className="font-medium text-accent-600">系统匹配通告：</span>
+                根据报名表关键词分析，你与当前推荐对象在核心规则上呈现出较高契合，
+                适合优先组队、聊天或现场破冰。
+              </section>
 
-                    {/* 头像 + HoverCard */}
-                    <UserHoverCard
-                      user={{
-                        id: user.id,
-                        name: user.name,
-                        avatar: user.avatar,
-                        role: user.role,
-                        occupation: user.occupation,
-                        company: user.company,
-                        industry: user.industry,
-                        city: user.city,
-                        gender: user.gender,
-                        age: user.age,
-                        bio: user.bio,
-                        tags: user.tags,
-                      }}
-                      matchScore={user.matchScore}
-                      onViewProfile={handleNavigateToDetail}
-                    >
-                      <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary-400 transition-all">
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </UserHoverCard>
-
-                    {/* 用户信息 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {user.name}
-                        </span>
-                        <span className="px-1.5 py-0.5 bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 text-[10px] font-medium rounded">
-                          {user.role}
-                        </span>
-                      </div>
-
-                      {(user.company || user.industry || user.city) && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 truncate">
-                          {[user.company, user.industry, user.city]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                      )}
-
-                      {user.commonTags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {user.commonTags.map((tag, idx) => (
-                            <Tag key={idx} color="primary" variant="soft" size="small">
-                              {tag}
-                            </Tag>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 匹配分数 - 暂时隐藏 */}
-                    {/* <div className="text-right flex-shrink-0">
-                      <p className="text-xl font-bold text-accent-500">
-                        {user.matchScore}
-                      </p>
-                      <p className="text-[10px] text-gray-400">匹配分</p>
-                    </div> */}
-                  </div>
-
-                  {/* 查看详情 */}
-                  <button
-                    onClick={() => handleNavigateToDetail(user.id)}
-                    className="w-full mt-3 py-2 text-xs text-accent-500 bg-accent-50 dark:bg-accent-900/20 rounded-lg flex items-center justify-center gap-1 hover:bg-accent-100 dark:hover:bg-accent-900/30 transition-colors"
-                  >
-                    查看匹配详情
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              ))}
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {topMatches.slice(0, 3).map((user, index) => (
+                  <MatchUniverseCard
+                    key={user.id}
+                    activityId={id!}
+                    user={user}
+                    index={index}
+                    expanded={expandedUserId === user.id}
+                    generatedMessage={generatedMessages[user.id]}
+                    generatingUserId={generatingUserId}
+                    onToggle={toggleExpandedCard}
+                    onGenerateMessage={handleGenerateMessage}
+                    onViewDetail={handleNavigateToDetail}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
