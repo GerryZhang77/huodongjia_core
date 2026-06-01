@@ -11,13 +11,13 @@ import {
   Users,
   RefreshCw,
   Send,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   BarChart3,
   Info,
   History,
   Search,
+  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
@@ -64,39 +64,6 @@ interface Participant {
   email?: string;
   status?: string;
 }
-
-type RankedCandidate = {
-  uid: string;
-  rank: number;
-  candidate?: Participant;
-};
-
-const DEFAULT_REGISTRATION_TYPE_KEY = "__default__";
-
-const getParticipantTypeKey = (participant?: Participant) =>
-  participant?.registrationTypeId || DEFAULT_REGISTRATION_TYPE_KEY;
-
-const splitCandidatesByRegistrationType = (
-  owner: Participant | undefined,
-  record: ParticipantMatchResult,
-  topCandidates: Array<Participant | undefined>,
-) => {
-  const ownerTypeKey = getParticipantTypeKey(owner);
-  const rankedCandidates = record.bestMatchUserIds.map((uid, index) => ({
-    uid,
-    rank: index + 1,
-    candidate: topCandidates[index],
-  }));
-
-  return {
-    sameType: rankedCandidates.filter(
-      (item) => getParticipantTypeKey(item.candidate) === ownerTypeKey,
-    ),
-    crossType: rankedCandidates.filter(
-      (item) => getParticipantTypeKey(item.candidate) !== ownerTypeKey,
-    ),
-  };
-};
 
 interface ResultsTabProps {
   /** per-user top5 记录 */
@@ -179,188 +146,44 @@ const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }>
   );
 };
 
-const CandidateDetailSection: React.FC<{
-  title: string;
-  candidates: RankedCandidate[];
-  onViewProfile: (userId: string) => void;
-}> = ({ title, candidates, onViewProfile }) => {
-  if (candidates.length === 0) return null;
+const HIGH_MATCH_THRESHOLD = 60;
+const LOW_MATCH_THRESHOLD = 40;
+const PAGE_SIZE = 10;
 
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-500">{title}</span>
-        <div className="h-px flex-1 bg-gray-200" />
-      </div>
-      {candidates.map(({ uid, rank, candidate }) => (
-        <div
-          key={uid}
-          className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-gray-100"
-        >
-          <span
-            className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ${
-              rank === 1
-                ? "bg-yellow-400 text-yellow-900"
-                : rank === 2
-                  ? "bg-gray-300 text-gray-700"
-                  : rank === 3
-                    ? "bg-orange-300 text-orange-900"
-                    : "bg-gray-100 text-gray-500"
-            }`}
-          >
-            {rank}
-          </span>
-          <UserHoverCard
-            user={toUserBrief(candidate)}
-            onViewProfile={onViewProfile}
-          >
-            <Avatar participant={candidate} size="sm" />
-          </UserHoverCard>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {candidate?.name || uid.slice(0, 8)}
-            </p>
-            <p className="text-xs text-gray-500 truncate">
-              {candidate?.occupation || candidate?.industry || candidate?.company || "—"}
-            </p>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewProfile(uid);
-            }}
-            className="text-xs text-primary-500 hover:text-primary-600 font-medium px-2 py-1 rounded hover:bg-primary-50"
-          >
-            查看详情
-          </button>
-        </div>
-      ))}
-    </div>
-  );
+type MatchPairRow = {
+  id: string;
+  ownerId: string;
+  owner?: Participant;
+  candidateId?: string;
+  candidate?: Participant;
+  scorePercent: number | null;
 };
 
-/** 单个参与者行：左侧本人信息 + 右侧 top5 头像 */
-interface ResultRowProps {
-  record: ParticipantMatchResult;
-  owner?: Participant;
-  topCandidates: Array<Participant | undefined>;
-  expanded: boolean;
-  onToggle: () => void;
-  onViewProfile: (userId: string) => void;
-}
+const toScorePercent = (
+  score?: {
+    total_score?: number;
+    total_score_percent?: number;
+  } | null,
+): number | null => {
+  if (!score) return null;
 
-const ResultRow: React.FC<ResultRowProps> = ({
-  record,
-  owner,
-  topCandidates,
-  expanded,
-  onToggle,
-  onViewProfile,
-}) => {
-  const candidateGroups = splitCandidatesByRegistrationType(
-    owner,
-    record,
-    topCandidates,
-  );
+  const percent = Number(score.total_score_percent);
+  if (Number.isFinite(percent)) {
+    return Math.max(0, Math.min(100, percent));
+  }
 
-  return (
-    <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:border-primary-200 transition-colors">
-      <div
-        className="flex items-center gap-3 p-3 md:p-4 cursor-pointer"
-        onClick={onToggle}
-      >
-        {/* 左：本人 */}
-        <UserHoverCard user={toUserBrief(owner)} onViewProfile={onViewProfile}>
-          <Avatar participant={owner} size="lg" />
-        </UserHoverCard>
-        <div className="min-w-0 flex-shrink-0 w-28 md:w-40">
-          <p className="text-sm font-semibold text-gray-900 truncate">
-            {owner?.name || record.userId.slice(0, 6)}
-          </p>
-          <p className="text-xs text-gray-500 truncate">
-            {owner?.occupation || owner?.industry || "参与者"}
-          </p>
-        </div>
+  const totalScore = Number(score.total_score);
+  if (!Number.isFinite(totalScore)) {
+    return null;
+  }
 
-        {/* 中：top5 头像 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 md:gap-2">
-            {record.bestMatchUserIds.slice(0, 5).map((uid, idx) => {
-              const candidate = topCandidates[idx];
-              return (
-                <div
-                  key={uid}
-                  className="relative"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <UserHoverCard
-                    user={toUserBrief(candidate)}
-                    matchScore={undefined}
-                    onViewProfile={onViewProfile}
-                  >
-                    <div className="relative">
-                      <Avatar participant={candidate} size="md" />
-                      <span
-                        className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ${
-                          idx === 0
-                            ? "bg-yellow-400 text-yellow-900"
-                            : idx === 1
-                              ? "bg-gray-300 text-gray-700"
-                              : idx === 2
-                                ? "bg-orange-300 text-orange-900"
-                                : "bg-gray-100 text-gray-500 border border-gray-200"
-                        }`}
-                      >
-                        {idx + 1}
-                      </span>
-                    </div>
-                  </UserHoverCard>
-                </div>
-              );
-            })}
-            {record.bestMatchUserIds.length === 0 && (
-              <span className="text-xs text-gray-400">暂无匹配候选</span>
-            )}
-          </div>
-        </div>
-
-        {/* 右：展开/收起 */}
-        <div className="text-gray-400 flex-shrink-0">
-          {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </div>
-      </div>
-
-      {/* 展开：top5 详细排名 */}
-      {expanded && (
-        <div className="px-3 md:px-4 pb-3 md:pb-4 border-t border-gray-100 pt-3 space-y-2 bg-gray-50/30">
-          {record.bestMatchUserIds.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-2">
-              该参与者暂无匹配候选
-            </p>
-          ) : (
-            <>
-              <CandidateDetailSection
-                title="同表匹配"
-                candidates={candidateGroups.sameType}
-                onViewProfile={onViewProfile}
-              />
-              <CandidateDetailSection
-                title="跨表匹配"
-                candidates={candidateGroups.crossType}
-                onViewProfile={onViewProfile}
-              />
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  const normalized = totalScore <= 1 ? totalScore * 100 : totalScore;
+  return Math.max(0, Math.min(100, Math.round(normalized)));
 };
 
 const ResultsTab: React.FC<ResultsTabProps> = ({
   matchResults,
   participants,
-  rules,
   isPublishing,
   onPublish,
   onRematch,
@@ -372,8 +195,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   onRestoreHistory,
 }) => {
   const navigate = useNavigate();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
@@ -409,6 +232,137 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
       );
     });
   }, [matchResults, participantMap, searchKeyword]);
+
+  const allPairRows = useMemo<MatchPairRow[]>(
+    () =>
+      filteredResults.flatMap((record) => {
+        const owner = participantMap.get(record.userId);
+        if (record.bestMatchUserIds.length === 0) {
+          return [
+            {
+              id: `${record.id}-empty`,
+              ownerId: record.userId,
+              owner,
+              candidateId: undefined,
+              candidate: undefined,
+              scorePercent: null,
+            },
+          ];
+        }
+
+        return record.bestMatchUserIds.map((candidateId, index) => {
+          const candidate = candidateId
+            ? participantMap.get(candidateId)
+            : undefined;
+          const scorePercent = toScorePercent(record.scores?.[index] || null);
+
+          return {
+            id: `${record.id}-${candidateId || index}`,
+            ownerId: record.userId,
+            owner,
+            candidateId,
+            candidate,
+            scorePercent,
+          };
+        });
+      }),
+    [filteredResults, participantMap],
+  );
+
+  const sortedPairRows = useMemo(
+    () =>
+      [...allPairRows].sort((a, b) => {
+        const aScore = a.scorePercent ?? -1;
+        const bScore = b.scorePercent ?? -1;
+        if (bScore !== aScore) {
+          return bScore - aScore;
+        }
+        return (a.owner?.name || a.ownerId).localeCompare(
+          b.owner?.name || b.ownerId,
+          "zh-CN",
+        );
+      }),
+    [allPairRows],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(sortedPairRows.length / PAGE_SIZE));
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const pagedPairRows = useMemo(
+    () =>
+      sortedPairRows.slice(
+        (currentPageSafe - 1) * PAGE_SIZE,
+        currentPageSafe * PAGE_SIZE,
+      ),
+    [currentPageSafe, sortedPairRows],
+  );
+
+  const overallAverageScore = useMemo(() => {
+    const validScores = allPairRows
+      .map((row) => row.scorePercent)
+      .filter((score): score is number => typeof score === "number");
+    if (validScores.length > 0) {
+      return Math.round(
+        validScores.reduce((sum, score) => sum + score, 0) / validScores.length,
+      );
+    }
+
+    if (matchingStats?.avgScore && matchingStats.avgScore > 0) {
+      return Math.round(
+        matchingStats.avgScore <= 1
+          ? matchingStats.avgScore * 100
+          : matchingStats.avgScore,
+      );
+    }
+
+    return 0;
+  }, [allPairRows, matchingStats?.avgScore]);
+
+  const highMatchCount = useMemo(
+    () =>
+      allPairRows.filter(
+        (row) =>
+          typeof row.scorePercent === "number" &&
+          row.scorePercent >= HIGH_MATCH_THRESHOLD,
+      ).length,
+    [allPairRows],
+  );
+
+  const lowMatchRows = useMemo(
+    () => {
+      const grouped = new Map<
+        string,
+        {
+          ownerId: string;
+          owner?: Participant;
+          bestScore: number | null;
+        }
+      >();
+
+      for (const row of allPairRows) {
+        const current = grouped.get(row.ownerId);
+        const nextBestScore =
+          current?.bestScore == null
+            ? row.scorePercent
+            : row.scorePercent == null
+              ? current.bestScore
+              : Math.max(current.bestScore, row.scorePercent);
+
+        grouped.set(row.ownerId, {
+          ownerId: row.ownerId,
+          owner: row.owner,
+          bestScore: nextBestScore ?? null,
+        });
+      }
+
+      return Array.from(grouped.values())
+        .filter(
+          (row) =>
+            row.bestScore == null || row.bestScore < LOW_MATCH_THRESHOLD,
+        )
+        .sort((a, b) => (a.bestScore ?? -1) - (b.bestScore ?? -1));
+    },
+    [allPairRows],
+  );
 
   // 跳转到用户主页：同标签跳，保证返回按钮可用
   const handleViewProfile = (userId: string) => {
@@ -484,29 +438,36 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   return (
     <div className="pb-32">
       {/* 顶部统计 */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 text-center">
           <Users size={18} className="mx-auto mb-1 text-primary-500" />
           <p className="text-lg md:text-xl font-bold text-gray-900">
-            {matchResults.length}
+            {participants.length}
           </p>
           <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">
-            已匹配参与者
+            参与人数
           </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 text-center">
           <BarChart3 size={18} className="mx-auto mb-1 text-accent-500" />
           <p className="text-lg md:text-xl font-bold text-gray-900">
-            {rules.filter((r) => r.enabled).length}
+            {matchResults.length}
           </p>
-          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">启用规则</p>
+          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">匹配人数</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 text-center">
+          <Sparkles size={18} className="mx-auto mb-1 text-secondary-500" />
+          <p className="text-lg md:text-xl font-bold text-gray-900">
+            {highMatchCount}
+          </p>
+          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">高匹配对数</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 text-center">
           <History size={18} className="mx-auto mb-1 text-secondary-500" />
           <p className="text-lg md:text-xl font-bold text-gray-900">
-            {history.length}
+            {overallAverageScore}%
           </p>
-          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">历史记录</p>
+          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">平均匹配度</p>
         </div>
       </div>
 
@@ -530,7 +491,10 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           <input
             type="text"
             value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
+            onChange={(e) => {
+              setSearchKeyword(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="搜索参与者姓名/职业/行业"
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
           />
@@ -546,33 +510,199 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         )}
       </div>
 
-      {/* 参与者列表 */}
-      <div className="space-y-2">
-        {filteredResults.map((r) => {
-          const owner = participantMap.get(r.userId);
-          const topCandidates = r.bestMatchUserIds.map((uid) =>
-            participantMap.get(uid),
-          );
-          return (
-            <ResultRow
-              key={r.id}
-              record={r}
-              owner={owner}
-              topCandidates={topCandidates}
-              expanded={expandedId === r.id}
-              onToggle={() =>
-                setExpandedId(expandedId === r.id ? null : r.id)
-              }
-              onViewProfile={handleViewProfile}
-            />
-          );
-        })}
-        {filteredResults.length === 0 && (
-          <div className="py-10 text-center text-gray-500 text-sm">
-            未找到匹配的参与者
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_320px]">
+        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">匹配结果明细</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                展示所有匹配结果，并按总匹配分数从高到低排序
+              </p>
+            </div>
           </div>
-        )}
+
+          {sortedPairRows.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead className="bg-gray-50">
+                  <tr className="text-xs text-gray-500">
+                    <th className="px-4 py-3 font-medium">用户 A</th>
+                    <th className="px-4 py-3 font-medium">用户 B</th>
+                    <th className="px-4 py-3 font-medium">全局匹配度</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedPairRows.map((row) => (
+                    <tr key={row.id} className="border-t border-gray-100">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <UserHoverCard user={toUserBrief(row.owner)} onViewProfile={handleViewProfile}>
+                            <Avatar participant={row.owner} size="sm" />
+                          </UserHoverCard>
+                          <div className="min-w-0">
+                            <button
+                              onClick={() => handleViewProfile(row.ownerId)}
+                              className="text-sm font-medium text-gray-900 hover:text-primary-600"
+                            >
+                              {row.owner?.name || row.ownerId.slice(0, 6)}
+                            </button>
+                            <p className="text-xs text-gray-500 truncate">
+                              {row.owner?.occupation || row.owner?.industry || "参与者"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.candidateId ? (
+                          <div className="flex items-center gap-3">
+                            <UserHoverCard user={toUserBrief(row.candidate)} onViewProfile={handleViewProfile}>
+                              <Avatar participant={row.candidate} size="sm" />
+                            </UserHoverCard>
+                            <div className="min-w-0">
+                              <button
+                                onClick={() => handleViewProfile(row.candidateId!)}
+                                className="text-sm font-medium text-gray-900 hover:text-primary-600"
+                              >
+                                {row.candidate?.name || row.candidateId.slice(0, 6)}
+                              </button>
+                              <p className="text-xs text-gray-500 truncate">
+                                {row.candidate?.occupation || row.candidate?.industry || "暂无标签"}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">暂无匹配对象</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                            row.scorePercent != null && row.scorePercent >= HIGH_MATCH_THRESHOLD
+                              ? "bg-emerald-50 text-emerald-600"
+                              : row.scorePercent != null && row.scorePercent < LOW_MATCH_THRESHOLD
+                                ? "bg-orange-50 text-orange-600"
+                                : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {row.scorePercent != null ? `${row.scorePercent}%` : "—"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm">
+                <span className="text-gray-500">
+                  共 {sortedPairRows.length} 条匹配结果
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }
+                    disabled={currentPageSafe <= 1}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    上一页
+                  </button>
+                  <span className="text-gray-500">
+                    第 {currentPageSafe} / {totalPages} 页
+                  </span>
+                  <label className="flex items-center gap-2 text-gray-500">
+                    <span>跳转</span>
+                    <select
+                      value={currentPageSafe}
+                      onChange={(e) => setCurrentPage(Number(e.target.value))}
+                      className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
+                    >
+                      {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                        (page) => (
+                          <option key={page} value={page}>
+                            第 {page} 页
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((page) => Math.min(totalPages, page + 1))
+                    }
+                    disabled={currentPageSafe >= totalPages}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    下一页
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="py-10 text-center text-gray-500 text-sm">
+              未找到匹配的参与者
+            </div>
+          )}
+        </section>
+
+        <aside className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 h-fit">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle size={18} className="text-orange-500" />
+            <h3 className="text-base font-semibold text-gray-900">低匹配成员</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            以下成员暂无强相关匹配，建议查看。
+          </p>
+          <div className="space-y-3">
+            {lowMatchRows.length > 0 ? (
+              lowMatchRows.map((row) => (
+                <button
+                  key={`${row.ownerId}-low`}
+                  onClick={() => handleViewProfile(row.ownerId)}
+                  className="w-full rounded-xl border border-gray-100 bg-gray-50 p-3 text-left hover:border-primary-200 hover:bg-white transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar participant={row.owner} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {row.owner?.name || row.ownerId.slice(0, 6)}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {row.owner?.occupation || row.owner?.industry || "参与者"}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {row.bestScore != null
+                      ? `当前最高匹配度 ${row.bestScore}%`
+                      : "当前暂无可展示的匹配对象"}
+                  </p>
+                </button>
+              ))
+            ) : (
+              <div className="rounded-xl bg-gray-50 px-3 py-4 text-sm text-gray-500">
+                当前没有低匹配成员，整体结果较稳定。
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
+
+      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">
+          匹配是怎么来的？
+        </h3>
+        <div className="grid gap-3 md:grid-cols-3 text-sm text-gray-600">
+          <div className="rounded-xl bg-gray-50 px-4 py-3">
+            系统会基于报名表里的字段规则计算每位参与者与候选对象的综合匹配度。
+          </div>
+          <div className="rounded-xl bg-gray-50 px-4 py-3">
+            商家侧看到的全局匹配度，是当前第一优先匹配对象的综合得分，用于快速判断结果质量。
+          </div>
+          <div className="rounded-xl bg-gray-50 px-4 py-3">
+            低匹配成员并不代表不可交流，只是当前规则下缺少强相关对象，建议人工查看后再判断。
+          </div>
+        </div>
+      </section>
 
       {/* 底部操作栏 */}
       {!currentHistoryId && (

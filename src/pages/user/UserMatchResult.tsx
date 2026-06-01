@@ -564,6 +564,23 @@ const UserMatchResult: FC = () => {
                   />
                 ))}
               </div>
+
+              <section className="rounded-2xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                  匹配是怎么来的？
+                </h3>
+                <div className="grid gap-3 md:grid-cols-3 text-sm text-gray-600">
+                  <div className="rounded-xl bg-gray-50 px-4 py-3">
+                    系统会根据活动方配置的字段规则，结合你的报名信息与其他参与者做综合匹配。
+                  </div>
+                  <div className="rounded-xl bg-gray-50 px-4 py-3">
+                    结果页优先展示与你契合度较高的对象，帮助你快速找到值得先认识的人。
+                  </div>
+                  <div className="rounded-xl bg-gray-50 px-4 py-3">
+                    匹配结果是辅助建议，不会公开敏感联系方式，是否进一步交流仍由你自己决定。
+                  </div>
+                </div>
+              </section>
             </div>
           )}
         </div>

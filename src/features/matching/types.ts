@@ -106,6 +106,12 @@ export interface ParticipantMatchResult {
   matchId: string;
   /** top5 候选用户 ID（按相似度降序） */
   bestMatchUserIds: string[];
+  /** 每个候选对象对应的总分与分项分数，顺序与 bestMatchUserIds 对齐 */
+  scores?: Array<{
+    total_score: number;
+    total_score_percent?: number;
+    fields?: Array<Record<string, unknown>>;
+  }> | null;
   /** 记录创建时间 */
   createdAt: string;
 }

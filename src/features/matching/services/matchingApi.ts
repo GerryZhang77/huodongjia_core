@@ -16,6 +16,12 @@ import type {
 // 兼容别名
 type MatchRule = MatchingRule;
 
+type MatchCandidateScore = {
+  total_score: number;
+  total_score_percent?: number;
+  fields?: Array<Record<string, unknown>>;
+};
+
 const DEFAULT_OPERATOR = "similarity" as const;
 
 const buildRuleName = (rule: Partial<MatchRule>, fallbackIndex?: number) => {
@@ -140,6 +146,52 @@ const asStringArray = (value: unknown): string[] => {
   }
   const single = asString(value);
   return single ? [single] : [];
+};
+
+const parseMatchCandidateScores = (
+  rawScores: unknown,
+): MatchCandidateScore[] | null => {
+  if (!rawScores) return null;
+
+  const parsed =
+    typeof rawScores === "string"
+      ? (() => {
+          try {
+            return JSON.parse(rawScores);
+          } catch {
+            return null;
+          }
+        })()
+      : rawScores;
+
+  if (!Array.isArray(parsed)) {
+    return null;
+  }
+
+  const normalized = parsed
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const totalScore = Number((item as MatchCandidateScore).total_score);
+      const totalScorePercent = Number(
+        (item as MatchCandidateScore).total_score_percent,
+      );
+
+      return {
+        total_score: Number.isFinite(totalScore) ? totalScore : 0,
+        total_score_percent: Number.isFinite(totalScorePercent)
+          ? totalScorePercent
+          : Math.round((Number.isFinite(totalScore) ? totalScore : 0) * 100),
+        fields: Array.isArray((item as MatchCandidateScore).fields)
+          ? (item as MatchCandidateScore).fields
+          : [],
+      };
+    })
+    .filter((item) => item !== null);
+
+  return normalized as MatchCandidateScore[];
 };
 
 const mapEnrollmentToParticipant = (
@@ -437,6 +489,7 @@ export const getMatchGroups = async (
     userId: r.user_id,
     matchId: r.match_id,
     bestMatchUserIds: Array.isArray(r.best_match_users) ? r.best_match_users : [],
+    scores: parseMatchCandidateScores(r.scores),
     createdAt: r.created_at,
   }));
 
