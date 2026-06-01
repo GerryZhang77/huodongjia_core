@@ -50,7 +50,9 @@ export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, "env", "");
   const useMock = env.VITE_USE_MOCK;
   const enableReactDevLocator =
-    command === "serve" && env.VITE_ENABLE_REACT_DEV_LOCATOR !== "false";
+    command === "serve" &&
+    env.VITE_ENABLE_REACT_DEV_LOCATOR !== "false" &&
+    env.VITE_ENABLE_DEV_LOCATOR !== "false";
 
   // 调试：打印所有环境变量
   console.log("🐛 调试信息:");

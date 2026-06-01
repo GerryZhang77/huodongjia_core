@@ -12,6 +12,5 @@ export {
   markNotificationRead,
   markAllNotificationsRead,
   getUserStats,
-  deleteAccount,
   changePassword,
 } from "@/services/userApi";

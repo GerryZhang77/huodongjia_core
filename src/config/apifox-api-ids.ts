@@ -62,45 +62,45 @@ export const AUTH_API_IDS: ApiEndpoint[] = [
 export const EVENT_API_IDS: ApiEndpoint[] = [
   {
     method: "GET",
-    path: "/api/events",
+    path: "/api/events/organizer/my",
     apiId: "366698236",
-    description: "获取所有活动",
+    description: "获取自己创建的活动",
   },
   {
     method: "GET",
-    path: "/api/events/:eventId",
+    path: "/api/events/organizer/:eventId",
     apiId: "366698237",
     description: "获取特定活动信息",
   },
   {
     method: "GET",
-    path: "/api/events/my",
+    path: "/api/events/organizer/my",
     apiId: "366698238",
     description: "获取自己创建的活动",
   },
   {
     method: "POST",
-    path: "/api/events/create",
+    path: "/api/events/organizer/create",
     apiId: "366698241",
     description: "商家创建活动",
   },
   {
     method: "PUT",
-    path: "/api/events/:eventId",
+    path: "/api/events/organizer/:eventId",
     apiId: "366698239",
     description: "编辑活动",
   },
   {
     method: "DELETE",
-    path: "/api/events/:eventId",
+    path: "/api/events/organizer/:eventId",
     apiId: "366698240",
     description: "取消活动",
   },
   {
     method: "POST",
-    path: "/api/events/upload-image",
+    path: "/api/file/upload",
     apiId: "367000012", // 请替换为实际的 API ID
-    description: "上传活动封面图片",
+    description: "上传活动封面图片（destination=activity-image）",
   },
   {
     method: "POST",
@@ -155,7 +155,7 @@ export const FILE_API_IDS: ApiEndpoint[] = [
     method: "POST",
     path: "/api/file/upload",
     apiId: "366621854",
-    description: "上传文件（Excel等）",
+    description: "上传图片（destination=user-photos|avatars|activity-image）",
   },
 ];
 

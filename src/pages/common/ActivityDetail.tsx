@@ -4,7 +4,7 @@
  * 保留商家特有功能：编辑、报名管理、匹配配置、参与者管理
  */
 
-import { FC, useState, useEffect, useRef } from "react";
+import { FC, useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -33,12 +33,11 @@ import {
   type ParticipantInfo,
 } from "@/components/business/ParticipantAvatar";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
-import { useAuthStore } from "@/features/auth/stores/authStore";
 import {
-  getCategoryLabel,
-  getTagLabel,
-  isOnlineOnlyActivity,
-} from "@/features/activities/utils/constants";
+  cancelActivity as cancelOrganizerActivity,
+} from "@/services/activityApi";
+import { getActivityById as fetchOrganizerActivityDetail } from "@/features/activities/services/api";
+import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
 import type { ActivityRegistrationType } from "@/features/activities/types";
 import dayjs from "dayjs";
@@ -58,8 +57,8 @@ interface Activity {
   status: ActivityStatus;
   coverImage?: string | null;
   images?: string[];
-  category: string;
-  tags: string[];
+  category?: string;
+  tags?: string[];
   requirements?: string;
   contactInfo?: string;
   fee?: number;
@@ -80,8 +79,10 @@ type ActivityStatus =
   | "draft"
   | "published"
   | "recruiting"
+  | "recruiting_ended"
   | "full"
   | "ongoing"
+  | "ended"
   | "completed"
   | "cancelled";
 
@@ -105,6 +106,11 @@ const statusConfig: Record<
     color: "text-success-600",
     bgColor: "bg-success-50",
   },
+  recruiting_ended: {
+    label: "报名结束",
+    color: "text-warning-600",
+    bgColor: "bg-warning-50",
+  },
   full: {
     label: "已满员",
     color: "text-warning-600",
@@ -116,6 +122,11 @@ const statusConfig: Record<
     bgColor: "bg-primary-50",
   },
   completed: {
+    label: "已结束",
+    color: "text-gray-500",
+    bgColor: "bg-gray-100",
+  },
+  ended: {
     label: "已结束",
     color: "text-gray-500",
     bgColor: "bg-gray-100",
@@ -134,7 +145,6 @@ const formatDateTime = (dateStr: string): string => dayjs(normalizeUtc(dateStr))
 const ActivityDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { token } = useAuthStore();
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [participants, setParticipants] = useState<ParticipantInfo[]>([]);
@@ -148,32 +158,19 @@ const ActivityDetail: FC = () => {
   const participantListRef = useRef<HTMLDivElement>(null);
 
   // 获取活动详情
-  const fetchActivityDetail = async () => {
+  const fetchActivityDetail = useCallback(async () => {
     try {
-      const response = await fetch(`/api/events/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setActivity(data.event);
-      } else {
-        Toast.show(data.message || "获取活动详情失败");
-        navigate("/dashboard");
-      }
+      const data = await fetchOrganizerActivityDetail(id!);
+      setActivity(data);
     } catch (error) {
       console.error("Fetch activity detail error:", error);
       Toast.show("网络错误，请重试");
       navigate("/dashboard");
     }
-  };
+  }, [id, navigate]);
 
   // 加载参与者（支持分页和状态筛选）
-  const loadParticipants = async (page: number, status: string | undefined) => {
+  const loadParticipants = useCallback(async (page: number, status: string | undefined) => {
     try {
       const res = await getEnrollmentsDetailed(id!, { page, pageSize: PAGE_SIZE, status });
       setParticipants(res.enrollments.map((e) => ({
@@ -193,7 +190,7 @@ const ActivityDetail: FC = () => {
     } catch (error) {
       console.error("Fetch participants error:", error);
     }
-  };
+  }, [id]);
 
   // 切换状态筛选
   const handleStatusFilter = (status: string | undefined) => {
@@ -215,7 +212,7 @@ const ActivityDetail: FC = () => {
         setLoading(false),
       );
     }
-  }, [id]);
+  }, [id, fetchActivityDetail, loadParticipants]);
 
   // 更多操作
   const handleMoreActions = () => {
@@ -250,15 +247,7 @@ const ActivityDetail: FC = () => {
       cancelText: "再想想",
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/delete-event/${id}`, {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-
-          const data = await response.json();
+          const data = await cancelOrganizerActivity(id!);
 
           if (data.success) {
             Toast.show("活动已取消");
@@ -320,10 +309,6 @@ const ActivityDetail: FC = () => {
       </div>
     );
   }
-
-  const displayLocation = isOnlineOnlyActivity(activity.tags)
-    ? "线上活动"
-    : activity.location || "地点待定";
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -471,7 +456,7 @@ const ActivityDetail: FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">活动地点</p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {displayLocation}
+                    {activity.location}
                   </p>
                 </div>
               </div>
