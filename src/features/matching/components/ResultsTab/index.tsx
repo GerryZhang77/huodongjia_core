@@ -644,46 +644,81 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           )}
         </section>
 
-        <aside className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 h-fit">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertCircle size={18} className="text-orange-500" />
-            <h3 className="text-base font-semibold text-gray-900">低匹配成员</h3>
+        <aside className="bg-white rounded-2xl border border-gray-100 shadow-sm h-fit overflow-hidden lg:sticky lg:top-4">
+          <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={18} className="text-orange-500" />
+                <h3 className="text-base font-semibold text-gray-900">低匹配成员</h3>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                按最高匹配度从低到高排序，点击姓名查看主页。
+              </p>
+            </div>
+            <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-600">
+              {lowMatchRows.length} 人
+            </span>
           </div>
-          <p className="text-sm text-gray-500 mb-4">
-            以下成员暂无强相关匹配，建议查看。
-          </p>
-          <div className="space-y-3">
+          <div>
             {lowMatchRows.length > 0 ? (
-              lowMatchRows.map((row) => (
-                <button
-                  key={`${row.ownerId}-low`}
-                  onClick={() => handleViewProfile(row.ownerId)}
-                  className="w-full rounded-xl border border-gray-100 bg-gray-50 p-3 text-left hover:border-primary-200 hover:bg-white transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar participant={row.owner} size="sm" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {row.owner?.name || row.ownerId.slice(0, 6)}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {row.owner?.occupation || row.owner?.industry || "参与者"}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-2 text-xs text-gray-500">
-                    {row.bestScore != null
-                      ? `当前最高匹配度 ${row.bestScore}%`
-                      : "当前暂无可展示的匹配对象"}
-                  </p>
-                </button>
-              ))
+              <div className="max-h-[360px] overflow-y-auto">
+                <table className="min-w-full text-left">
+                  <thead className="sticky top-0 z-10 bg-gray-50 text-xs text-gray-500">
+                    <tr>
+                      <th className="px-4 py-2.5 font-medium">成员</th>
+                      <th className="px-4 py-2.5 text-right font-medium">最高匹配度</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {lowMatchRows.map((row) => (
+                      <tr
+                        key={`${row.ownerId}-low`}
+                        className="hover:bg-orange-50/40"
+                      >
+                        <td className="px-4 py-2.5">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <Avatar participant={row.owner} size="sm" />
+                            <div className="min-w-0">
+                              <button
+                                onClick={() => handleViewProfile(row.ownerId)}
+                                className="block max-w-[150px] truncate text-sm font-medium text-gray-900 hover:text-primary-600"
+                                title={row.owner?.name || row.ownerId}
+                              >
+                                {row.owner?.name || row.ownerId.slice(0, 6)}
+                              </button>
+                              <p className="max-w-[150px] truncate text-xs text-gray-500">
+                                {row.owner?.occupation || row.owner?.industry || "参与者"}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                              row.bestScore != null
+                                ? "bg-orange-50 text-orange-600"
+                                : "bg-gray-100 text-gray-500"
+                            }`}
+                          >
+                            {row.bestScore != null ? `${row.bestScore}%` : "暂无"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <div className="rounded-xl bg-gray-50 px-3 py-4 text-sm text-gray-500">
+              <div className="px-4 py-5 text-sm text-gray-500">
                 当前没有低匹配成员，整体结果较稳定。
               </div>
             )}
           </div>
+          {lowMatchRows.length > 0 && (
+            <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-500">
+              低匹配成员不代表不可交流，只表示当前规则下缺少强相关对象。
+            </div>
+          )}
         </aside>
       </div>
 
