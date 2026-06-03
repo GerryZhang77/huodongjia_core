@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Popup } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import {
+  AlertCircle,
   Check,
   ChevronDown,
   ChevronUp,
@@ -19,6 +20,8 @@ import type {
   MatchingSchemaGroup,
   MatchingSchemaField,
   MatchOperator,
+  MatchFieldCatalogItem,
+  MatchPreflightResult,
 } from "../../types";
 
 interface RulesTabProps {
@@ -35,6 +38,8 @@ interface RulesTabProps {
   isRulesLocked?: boolean;
   schemaFields?: MatchingSchemaField[];
   schemaGroups?: MatchingSchemaGroup[];
+  fieldCatalog?: MatchFieldCatalogItem[];
+  preflightResult?: MatchPreflightResult | null;
   schemaLoading?: boolean;
 }
 
@@ -47,6 +52,16 @@ const OPERATORS: Array<{ value: MatchOperator; label: string }> = [
 
 const DEFAULT_OPERATOR: MatchOperator = "similarity";
 type RuleFieldSlot = "source_field" | "target_field";
+type RuleFieldOption = {
+  key: string;
+  label: string;
+  registrationTypeId?: string | null;
+  groupName: string;
+  coverage?: number;
+  totalEligibleParticipants?: number;
+  canMatch?: boolean;
+  source?: string;
+};
 
 const FIELD_SLOT_CONFIG: Record<
   RuleFieldSlot,
@@ -105,6 +120,8 @@ const RulesTab: React.FC<RulesTabProps> = ({
   isRulesLocked = false,
   schemaFields = [],
   schemaGroups = [],
+  fieldCatalog = [],
+  preflightResult,
   schemaLoading = false,
 }) => {
   const [fieldPicker, setFieldPicker] = useState<{
@@ -127,20 +144,47 @@ const RulesTab: React.FC<RulesTabProps> = ({
     : schemaFields.length > 0
       ? [{ name: "默认报名表", fields: schemaFields }]
       : [];
-  const fieldOptions = visibleSchemaGroups.flatMap((group, groupIndex) =>
+  const catalogFieldOptions = fieldCatalog.map((field): RuleFieldOption => ({
+    key: field.key,
+    label: field.label || field.key,
+    registrationTypeId: field.registrationTypeId,
+    groupName:
+      field.registrationTypeName ||
+      (field.source === "import_extra" ? "导入额外字段" : "可匹配字段"),
+    coverage: field.coverage,
+    totalEligibleParticipants: field.totalEligibleParticipants,
+    canMatch: field.canMatch,
+    source: field.source,
+  }));
+  const schemaFieldOptions = visibleSchemaGroups.flatMap((group, groupIndex) =>
     group.fields
       .filter((field) => field.key)
-      .map((field) => ({
+      .map((field): RuleFieldOption => ({
         key: field.key,
         label: field.label || field.key,
         registrationTypeId: group.id,
         groupName: group.name || `报名表 ${groupIndex + 1}`,
       })),
   );
+  const fieldOptions = catalogFieldOptions.length > 0
+    ? catalogFieldOptions
+    : schemaFieldOptions;
+  const fieldGroups = Array.from(
+    fieldOptions.reduce<Map<string, RuleFieldOption[]>>((groups, field) => {
+      const groupName = field.groupName || "可匹配字段";
+      groups.set(groupName, [...(groups.get(groupName) || []), field]);
+      return groups;
+    }, new Map()),
+  ).map(([name, fields]) => ({ name, fields }));
+  const failedFieldKeys = new Set(
+    preflightResult?.fieldDiagnostics
+      ?.filter((field) => !field.canMatch)
+      .map((field) => `${field.registrationTypeId || ""}::${field.key}`) || [],
+  );
 
   const getFieldOption = (
     fieldKey?: string,
-    registrationTypeId?: string,
+    registrationTypeId?: string | null,
   ) => {
     if (!fieldKey) return null;
     return (
@@ -157,7 +201,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
 
   const getFieldLabel = (
     fieldKey?: string,
-    registrationTypeId?: string,
+    registrationTypeId?: string | null,
   ) => {
     if (!fieldKey) return "";
     return (
@@ -203,7 +247,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
     slot: RuleFieldSlot,
     field: {
       key: string;
-      registrationTypeId?: string;
+      registrationTypeId?: string | null;
     },
   ) => {
     const registrationTypeKey = FIELD_SLOT_CONFIG[slot].registrationTypeKey;
@@ -272,7 +316,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
     }
 
     if (participantCount === 0) {
-      Toast.show({ content: "暂无参与者数据", icon: "fail" });
+      Toast.show({ content: "暂无审核通过且参与匹配的用户", icon: "fail" });
       return;
     }
 
@@ -324,13 +368,13 @@ const RulesTab: React.FC<RulesTabProps> = ({
           <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
             {schemaLoading ? (
               <div className="text-sm text-gray-500 py-8 text-center">字段加载中...</div>
-            ) : visibleSchemaGroups.length === 0 ? (
+            ) : fieldGroups.length === 0 ? (
               <div className="text-sm text-gray-500 py-8 text-center">
-                当前活动还没有报名表字段
+                当前活动还没有可匹配字段
               </div>
             ) : (
               <div className="space-y-4">
-                {visibleSchemaGroups.map((group, groupIndex) => (
+                {fieldGroups.map((group, groupIndex) => (
                   <div key={`${group.name}-${groupIndex}`}>
                     {groupIndex > 0 && <div className="border-t border-gray-200 mb-3" />}
                     <div className="text-xs text-gray-400 mb-2 truncate">
@@ -340,10 +384,27 @@ const RulesTab: React.FC<RulesTabProps> = ({
                       {group.fields.map((field) => (
                         <div
                           key={`${groupIndex}-${field.key}`}
-                          className="w-full p-3 rounded-xl border border-gray-200 bg-white"
+                          className={`w-full p-3 rounded-xl border bg-white ${
+                            field.canMatch === false
+                              ? "border-orange-200"
+                              : "border-gray-200"
+                          }`}
                         >
-                          <div className="font-medium text-gray-900 truncate">
-                            {field.label}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="font-medium text-gray-900 truncate">
+                              {field.label}
+                            </div>
+                            {typeof field.coverage === "number" && (
+                              <span
+                                className={`text-xs flex-shrink-0 ${
+                                  field.canMatch === false
+                                    ? "text-orange-500"
+                                    : "text-gray-400"
+                                }`}
+                              >
+                                {field.coverage}/{field.totalEligibleParticipants || 0}
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -405,6 +466,9 @@ const RulesTab: React.FC<RulesTabProps> = ({
                       rule[slotConfig.registrationTypeKey];
                     const fieldOption = getFieldOption(fieldKey, registrationTypeId);
                     const fieldLabel = getFieldLabel(fieldKey, registrationTypeId);
+                    const fieldWarning =
+                      fieldOption?.canMatch === false ||
+                      failedFieldKeys.has(`${registrationTypeId || ""}::${fieldKey || ""}`);
                     return (
                       <button
                         key={slot}
@@ -412,7 +476,9 @@ const RulesTab: React.FC<RulesTabProps> = ({
                         onClick={() => handleOpenFieldPicker(rule.id, slot)}
                         disabled={isRulesLocked || fieldOptions.length === 0}
                         className={`min-h-[76px] rounded-2xl border px-4 py-3 text-left transition-colors disabled:opacity-60 ${
-                          fieldKey
+                          fieldWarning
+                            ? "border-orange-300 bg-orange-50/80"
+                            : fieldKey
                             ? "border-primary-300 bg-primary-50/60"
                             : "border-gray-200 bg-white"
                         }`}
@@ -429,6 +495,15 @@ const RulesTab: React.FC<RulesTabProps> = ({
                             {fieldOption?.groupName && (
                               <div className="mt-1 text-xs text-gray-500 truncate">
                                 {fieldOption.groupName}
+                              </div>
+                            )}
+                            {typeof fieldOption?.coverage === "number" && (
+                              <div
+                                className={`mt-1 text-xs ${
+                                  fieldWarning ? "text-orange-500" : "text-gray-500"
+                                }`}
+                              >
+                                覆盖 {fieldOption.coverage}/{fieldOption.totalEligibleParticipants || 0}
                               </div>
                             )}
                           </div>
@@ -557,24 +632,24 @@ const RulesTab: React.FC<RulesTabProps> = ({
           </div>
 
           <div className="max-h-[calc(76vh-73px)] overflow-y-auto px-4 py-3">
-            {visibleSchemaGroups.length === 0 ? (
+            {fieldGroups.length === 0 ? (
               <div className="py-10 text-center text-sm text-gray-500">
-                当前活动还没有报名表字段
+                当前活动还没有可匹配字段
               </div>
             ) : (
               <div className="space-y-5">
-                {visibleSchemaGroups.map((group, groupIndex) => (
+                {fieldGroups.map((group, groupIndex) => (
                   <div key={`picker-${group.name}-${groupIndex}`}>
                     <div className="mb-2 text-xs font-medium text-gray-500 truncate">
-                      {group.name || `报名表 ${groupIndex + 1}`}
+                      {group.name || `字段分组 ${groupIndex + 1}`}
                     </div>
                     <div className="space-y-2">
                       {group.fields.map((field) => {
                         const isSelected =
                           activePickerFieldKey === field.key &&
                           (activePickerRegistrationTypeId
-                            ? activePickerRegistrationTypeId === group.id
-                            : activePickerSelectedOption?.registrationTypeId === group.id);
+                            ? activePickerRegistrationTypeId === field.registrationTypeId
+                            : activePickerSelectedOption?.registrationTypeId === field.registrationTypeId);
                         return (
                           <button
                             key={`picker-${groupIndex}-${field.key}`}
@@ -584,21 +659,38 @@ const RulesTab: React.FC<RulesTabProps> = ({
                               if (!fieldPicker) return;
                               handleSelectField(fieldPicker.ruleId, fieldPicker.slot, {
                                 key: field.key,
-                                registrationTypeId: group.id,
+                                registrationTypeId: field.registrationTypeId,
                               });
                             }}
                             className={`w-full min-h-[48px] rounded-xl border px-3 py-3 text-left flex items-center justify-between gap-3 transition-colors ${
                               isSelected
                                 ? "border-primary-300 bg-primary-50 text-primary-600"
-                                : "border-gray-200 bg-white text-gray-900"
+                                : field.canMatch === false
+                                  ? "border-orange-200 bg-orange-50 text-gray-900"
+                                  : "border-gray-200 bg-white text-gray-900"
                             }`}
                           >
-                            <span className="font-medium truncate">
-                              {field.label || field.key}
+                            <span className="min-w-0">
+                              <span className="block font-medium truncate">
+                                {field.label || field.key}
+                              </span>
+                              {typeof field.coverage === "number" && (
+                                <span
+                                  className={`block mt-1 text-xs ${
+                                    field.canMatch === false
+                                      ? "text-orange-500"
+                                      : "text-gray-400"
+                                  }`}
+                                >
+                                  覆盖 {field.coverage}/{field.totalEligibleParticipants || 0}
+                                </span>
+                              )}
                             </span>
-                            {isSelected && (
+                            {isSelected ? (
                               <Check size={18} className="flex-shrink-0" />
-                            )}
+                            ) : field.canMatch === false ? (
+                              <AlertCircle size={17} className="flex-shrink-0 text-orange-500" />
+                            ) : null}
                           </button>
                         );
                       })}
@@ -632,7 +724,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-3">
           <div className="flex items-center justify-center gap-4 mb-2 text-sm">
             <span className="text-gray-500">
-              参与人数: <span className="font-semibold text-primary-500">{participantCount} 人</span>
+              可匹配人数: <span className="font-semibold text-primary-500">{participantCount} 人</span>
             </span>
             <span className="text-gray-300">|</span>
             <span className="text-gray-500">

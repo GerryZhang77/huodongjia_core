@@ -22,6 +22,9 @@ import {
   getMatchingHistory,
   submitMatchingTask,
   getMatchingTaskStatus,
+  getMatchFieldCatalog,
+  preflightMatching,
+  MatchingApiError,
 } from "../services/matchingApi";
 
 // 使用重构版类型定义
@@ -33,6 +36,8 @@ import type {
   ParticipantMatchResult,
   MatchingSchemaField,
   MatchingSchemaGroup,
+  MatchFieldCatalogItem,
+  MatchPreflightResult,
 } from "../types";
 
 // === 模块级缓存（stale-while-revalidate） ===
@@ -43,6 +48,8 @@ interface MatchingCacheEntry {
   participants: Participant[];
   registrationSchema: MatchingSchemaField[];
   registrationSchemaGroups: MatchingSchemaGroup[];
+  fieldCatalog: MatchFieldCatalogItem[];
+  eligibleParticipantCount: number;
   history: MatchingHistory[];
   matchResults: ParticipantMatchResult[];
   stage: MatchingStage;
@@ -131,6 +138,17 @@ const normalizeRuleForUi = (rule: MatchRule, index = 0): MatchRule => {
   };
 };
 
+const formatPreflightFailureMessage = (result: MatchPreflightResult): string => {
+  if (result.message) return result.message;
+  const failedRule = result.ruleDiagnostics.find((item) => !item.canExecute);
+  if (failedRule?.message) return failedRule.message;
+  const failedField = result.fieldDiagnostics.find((item) => !item.canMatch);
+  if (failedField) {
+    return `${failedField.label} 覆盖 ${failedField.coverage}/${failedField.totalEligibleParticipants}，无法用于当前匹配`;
+  }
+  return "当前规则字段覆盖不足，无法开始匹配";
+};
+
 const buildRegistrationSchemaGroups = (activityData: any): MatchingSchemaGroup[] => {
   const registrationTypes = Array.isArray(activityData?.registrationTypes)
     ? activityData.registrationTypes
@@ -196,6 +214,10 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const [registrationSchemaGroups, setRegistrationSchemaGroups] = useState<
     MatchingSchemaGroup[]
   >([]);
+  const [fieldCatalog, setFieldCatalog] = useState<MatchFieldCatalogItem[]>([]);
+  const [eligibleParticipantCount, setEligibleParticipantCount] = useState(0);
+  const [lastPreflightResult, setLastPreflightResult] =
+    useState<MatchPreflightResult | null>(null);
   // per-user top5 匹配结果（新模型）
   const [matchResults, setMatchResults] = useState<ParticipantMatchResult[]>([]);
   // 旧分组结果（历史记录回放用，当前匹配流程不再使用）
@@ -258,12 +280,16 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     const fetchAll = async (silent: boolean) => {
       if (!silent) setIsLoading(true);
       try {
-        const [rulesData, participantsData, historyData, activityData] =
+        const [rulesData, participantsData, historyData, activityData, catalogData] =
           await Promise.all([
             getMatchRules(activityId).catch(() => [] as MatchRule[]),
             getParticipants(activityId).catch(() => [] as Participant[]),
             getMatchingHistory(activityId).catch(() => [] as MatchingHistory[]),
             getActivityById(activityId).catch(() => null),
+            getMatchFieldCatalog(activityId).catch(() => ({
+              fields: [] as MatchFieldCatalogItem[],
+              totalEligibleParticipants: 0,
+            })),
           ]);
         if (aborted) return;
 
@@ -280,6 +306,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         const schemaGroups = buildRegistrationSchemaGroups(activityData);
         setRegistrationSchemaGroups(schemaGroups);
         setRegistrationSchema(flattenRegistrationSchemaGroups(schemaGroups));
+        setFieldCatalog(catalogData.fields);
+        setEligibleParticipantCount(catalogData.totalEligibleParticipants);
 
         let publishedResolved = false;
         if (historyData && historyData.length > 0) {
@@ -347,6 +375,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       setParticipants(cached.participants);
       setRegistrationSchema(cached.registrationSchema);
       setRegistrationSchemaGroups(cached.registrationSchemaGroups);
+      setFieldCatalog(cached.fieldCatalog);
+      setEligibleParticipantCount(cached.eligibleParticipantCount);
       setHistory(cached.history);
       setMatchResults(cached.matchResults);
       setStage(cached.stage);
@@ -380,6 +410,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       participants,
       registrationSchema,
       registrationSchemaGroups,
+      fieldCatalog,
+      eligibleParticipantCount,
       history,
       matchResults,
       stage,
@@ -394,6 +426,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     participants,
     registrationSchema,
     registrationSchemaGroups,
+    fieldCatalog,
+    eligibleParticipantCount,
     history,
     matchResults,
     stage,
@@ -561,8 +595,25 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       return;
     }
 
-    if (participants.length === 0) {
-      Toast.show({ content: "暂无参与者数据", icon: "fail" });
+    if (eligibleParticipantCount === 0) {
+      Toast.show({ content: "暂无审核通过且参与匹配的用户", icon: "fail" });
+      return;
+    }
+
+    let preflightResult: MatchPreflightResult;
+    try {
+      preflightResult = await preflightMatching(activityId, enabledRules);
+      setLastPreflightResult(preflightResult);
+      if (!preflightResult.canExecute) {
+        Toast.show({
+          content: formatPreflightFailureMessage(preflightResult),
+          icon: "fail",
+        });
+        return;
+      }
+    } catch (error) {
+      console.error("Matching preflight failed:", error);
+      Toast.show({ content: "匹配预检失败", icon: "fail" });
       return;
     }
 
@@ -580,13 +631,26 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       void pollTaskStatus(activityId);
     } catch (error) {
       console.error("Failed to start matching:", error);
-      Toast.show({ content: "提交匹配任务失败", icon: "fail" });
+      const diagnostics =
+        error instanceof MatchingApiError ? error.diagnostics : undefined;
+      Toast.show({
+        content: diagnostics
+          ? formatPreflightFailureMessage(diagnostics)
+          : "提交匹配任务失败",
+        icon: "fail",
+      });
       setIsMatching(false);
       setIsRulesLocked(false);
       setStage("configuring");
       clearTaskPolling();
     }
-  }, [activityId, clearTaskPolling, rules, participants, pollTaskStatus]);
+  }, [
+    activityId,
+    clearTaskPolling,
+    rules,
+    eligibleParticipantCount,
+    pollTaskStatus,
+  ]);
 
   // === 最小化匹配进度到后台 ===
   const handleMinimizeMatching = useCallback(() => {
@@ -709,9 +773,13 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const handleRefresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [participantsData, historyData] = await Promise.all([
+      const [participantsData, historyData, catalogData] = await Promise.all([
         getParticipants(activityId).catch(() => []),
         getMatchingHistory(activityId).catch(() => []),
+        getMatchFieldCatalog(activityId).catch(() => ({
+          fields: [] as MatchFieldCatalogItem[],
+          totalEligibleParticipants: 0,
+        })),
       ]);
 
       if (participantsData.length > 0) {
@@ -720,6 +788,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       if (historyData.length > 0) {
         setHistory(historyData);
       }
+      setFieldCatalog(catalogData.fields);
+      setEligibleParticipantCount(catalogData.totalEligibleParticipants);
 
       Toast.show({ content: "数据已刷新", icon: "success" });
     } catch (error) {
@@ -755,6 +825,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     savedConfigs,
     registrationSchema,
     registrationSchemaGroups,
+    fieldCatalog,
+    eligibleParticipantCount,
+    lastPreflightResult,
 
     // 设置方法
     setActiveTab,

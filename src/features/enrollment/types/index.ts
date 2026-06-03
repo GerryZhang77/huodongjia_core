@@ -139,6 +139,11 @@ export interface FileUploadResponse {
 export interface CreateParticipantsRequest {
   filepath: string; // 服务端文件路径
   fieldMapping: Record<string, string>; // 字段映射：{ "Excel列名": "字段名" }
+  fieldActions?: Array<{
+    sourceField: string;
+    action: "map" | "keep" | "ignore";
+    targetField?: string;
+  }>;
 }
 
 /**

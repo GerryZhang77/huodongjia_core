@@ -60,6 +60,9 @@ const MatchingConfigPage: React.FC = () => {
     matchingStats,
     registrationSchema,
     registrationSchemaGroups,
+    fieldCatalog,
+    eligibleParticipantCount,
+    lastPreflightResult,
 
     // 设置方法
     setActiveTab,
@@ -207,9 +210,11 @@ const MatchingConfigPage: React.FC = () => {
             isRulesLocked={isRulesLocked}
             matchingProgress={matchingProgress}
             matchingMessage={matchingMessage}
-            participantCount={participants.length}
+            participantCount={eligibleParticipantCount}
             schemaFields={registrationSchema}
             schemaGroups={registrationSchemaGroups}
+            fieldCatalog={fieldCatalog}
+            preflightResult={lastPreflightResult}
           />
         ) : (
           <ResultsTab

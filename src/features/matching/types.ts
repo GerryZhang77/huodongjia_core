@@ -49,6 +49,64 @@ export interface MatchingSchemaGroup {
   fields: MatchingSchemaField[];
 }
 
+export type MatchFieldSource =
+  | "schema"
+  | "import_extra"
+  | "standard"
+  | "historical_label";
+
+export interface MatchFieldCatalogItem {
+  key: string;
+  label: string;
+  source: MatchFieldSource;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string | null;
+  coverage: number;
+  totalEligibleParticipants: number;
+  canMatch: boolean;
+  aliases?: string[];
+}
+
+export interface MatchFieldCatalogResponse {
+  fields: MatchFieldCatalogItem[];
+  totalEligibleParticipants: number;
+}
+
+export interface MatchFieldDiagnostic {
+  key: string;
+  label: string;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string | null;
+  coverage: number;
+  totalEligibleParticipants: number;
+  missingCount: number;
+  canMatch: boolean;
+}
+
+export interface MatchRuleDiagnostic {
+  groupKey: string;
+  kind: "same_type" | "cross_type";
+  sourceRegistrationTypeId?: string;
+  targetRegistrationTypeId?: string;
+  sourceFields: string[];
+  targetFields: string[];
+  sourceCoverage: number;
+  targetCoverage: number;
+  requiredSourceCoverage: number;
+  requiredTargetCoverage: number;
+  canExecute: boolean;
+  message: string;
+}
+
+export interface MatchPreflightResult {
+  canExecute: boolean;
+  totalParticipants: number;
+  eligibleParticipants: number;
+  ruleDiagnostics: MatchRuleDiagnostic[];
+  fieldDiagnostics: MatchFieldDiagnostic[];
+  message: string;
+}
+
 // 边界条件/约束
 export interface MatchConstraints {
   minGroupSize?: number;

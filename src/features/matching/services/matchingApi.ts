@@ -11,6 +11,8 @@ import type {
   GenerateRulesResponse,
   ExecuteMatchRequest,
   ExecuteMatchResponse,
+  MatchFieldCatalogResponse,
+  MatchPreflightResult,
 } from "../types";
 
 // 兼容别名
@@ -21,6 +23,18 @@ type MatchCandidateScore = {
   total_score_percent?: number;
   fields?: Array<Record<string, unknown>>;
 };
+
+export class MatchingApiError extends Error {
+  code?: string;
+  diagnostics?: MatchPreflightResult;
+
+  constructor(message: string, options?: { code?: string; diagnostics?: MatchPreflightResult }) {
+    super(message);
+    this.name = "MatchingApiError";
+    this.code = options?.code;
+    this.diagnostics = options?.diagnostics;
+  }
+}
 
 const DEFAULT_OPERATOR = "similarity" as const;
 
@@ -316,6 +330,53 @@ export const saveMatchRules = async (
   }
 };
 
+export const getMatchFieldCatalog = async (
+  activityId: string,
+): Promise<MatchFieldCatalogResponse> => {
+  const token = getToken();
+
+  const response = await fetch(`/api/match/${activityId}/field-catalog`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.message || "获取匹配字段目录失败");
+  }
+
+  return {
+    fields: Array.isArray(data.data?.fields) ? data.data.fields : [],
+    totalEligibleParticipants: Number(data.data?.totalEligibleParticipants) || 0,
+  };
+};
+
+export const preflightMatching = async (
+  activityId: string,
+  rules: MatchRule[],
+): Promise<MatchPreflightResult> => {
+  const token = getToken();
+  const payloadRules = serializeRulesForBackend(rules);
+
+  const response = await fetch(`/api/match/${activityId}/preflight`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ rules: payloadRules }),
+  });
+
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.message || "匹配预检失败");
+  }
+
+  return data.data as MatchPreflightResult;
+};
+
 /**
  * 更新匹配规则
  */
@@ -415,13 +476,28 @@ export const executeMatching = async (
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `HTTP ${response.status}`);
+    const rawText = await response.text();
+    try {
+      const errorData = rawText ? JSON.parse(rawText) : null;
+      throw new MatchingApiError(
+        errorData?.message || `HTTP ${response.status}`,
+        {
+          code: errorData?.code,
+          diagnostics: errorData?.diagnostics,
+        },
+      );
+    } catch (error) {
+      if (error instanceof MatchingApiError) throw error;
+      throw new Error(rawText || `HTTP ${response.status}`);
+    }
   }
   const data = await response.json();
 
   if (!data.success) {
-    throw new Error(data.message || "执行匹配失败");
+    throw new MatchingApiError(data.message || "执行匹配失败", {
+      code: data.code,
+      diagnostics: data.diagnostics,
+    });
   }
 
   return {

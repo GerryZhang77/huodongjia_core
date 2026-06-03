@@ -3,7 +3,7 @@
  * 支持 Excel 文件解析、智能字段映射、映射记忆、数据预览
  */
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 import {
   Upload,
   FileSpreadsheet,
@@ -21,6 +21,10 @@ import {
 import { Toast } from "@/components/ui/Toast";
 import * as XLSX from "xlsx";
 import { useAuthStore } from "@/features/auth/stores";
+import type {
+  ActivityRegistrationType,
+  RegistrationFormField,
+} from "@/features/activities/types";
 
 // ========================================
 // 类型定义
@@ -29,6 +33,8 @@ import { useAuthStore } from "@/features/auth/stores";
 interface ImportEnrollmentModalProps {
   visible: boolean;
   activityId: string;
+  registrationTypes?: ActivityRegistrationType[];
+  registrationFormSchema?: RegistrationFormField[] | null;
   onClose: () => void;
   onSuccess: (count: number) => void;
 }
@@ -37,9 +43,16 @@ interface ParsedRow {
   [key: string]: string | number | undefined;
 }
 
-interface FieldMapping {
+interface FieldImportAction {
   sourceField: string;
-  targetField: string;
+  action: "map" | "keep" | "ignore";
+  targetField?: string;
+}
+
+interface TargetField {
+  key: string;
+  label: string;
+  required: boolean;
 }
 
 // localStorage 存储的映射模板
@@ -49,9 +62,12 @@ interface MappingTemplate {
   lastUsed: number;
 }
 
+const KEEP_FIELD_VALUE = "__keep__";
+const IGNORE_FIELD_VALUE = "__ignore__";
+
 // 目标字段定义
 const TARGET_FIELDS = [
-  { key: "name", label: "姓名", required: true },
+  { key: "name", label: "姓名", required: false },
   { key: "account", label: "账号", required: false },
   { key: "gender", label: "性别", required: false },
   { key: "age", label: "年龄", required: false },
@@ -309,14 +325,14 @@ const loadMappingTemplate = (): MappingTemplate | null => {
 /**
  * 保存映射模板到 localStorage
  */
-const saveMappingTemplate = (mappings: FieldMapping[]) => {
+const saveMappingTemplate = (mappings: FieldImportAction[]) => {
   try {
     const template: MappingTemplate = {
       mappings: {},
       lastUsed: Date.now(),
     };
     mappings.forEach((m) => {
-      if (m.targetField) {
+      if (m.action === "map" && m.targetField) {
         template.mappings[m.sourceField] = m.targetField;
       }
     });
@@ -336,6 +352,45 @@ const normalizeFieldName = (name: string): string => {
     .trim();
 };
 
+const shouldKeepCellValue = (value: unknown): boolean => {
+  return value !== undefined && value !== null && String(value).trim() !== "";
+};
+
+const getDefaultRegistrationTypeId = (
+  registrationTypes?: ActivityRegistrationType[],
+): string => {
+  if (!registrationTypes?.length) return "";
+  return (
+    registrationTypes.find((type) => type.isDefault)?.id ||
+    registrationTypes[0]?.id ||
+    ""
+  );
+};
+
+const buildTargetFields = (
+  formSchema: RegistrationFormField[],
+): TargetField[] => {
+  const fieldsByKey = new Map<string, TargetField>();
+  const labels = new Set<string>();
+
+  formSchema.forEach((field) => {
+    if (!field.key || !field.label) return;
+    fieldsByKey.set(field.key, {
+      key: field.key,
+      label: field.label,
+      required: field.required,
+    });
+    labels.add(field.label);
+  });
+
+  TARGET_FIELDS.forEach((field) => {
+    if (fieldsByKey.has(field.key) || labels.has(field.label)) return;
+    fieldsByKey.set(field.key, field);
+  });
+
+  return Array.from(fieldsByKey.values());
+};
+
 // ========================================
 // 组件实现
 // ========================================
@@ -343,6 +398,8 @@ const normalizeFieldName = (name: string): string => {
 const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   visible,
   activityId,
+  registrationTypes,
+  registrationFormSchema,
   onClose,
   onSuccess,
 }) => {
@@ -353,12 +410,14 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   const [step, setStep] = useState(1);
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [sourceFields, setSourceFields] = useState<string[]>([]);
-  const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
+  const [fieldMappings, setFieldMappings] = useState<FieldImportAction[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
+  const [selectedRegistrationTypeId, setSelectedRegistrationTypeId] =
+    useState(() => getDefaultRegistrationTypeId(registrationTypes));
 
   // 映射分组展开状态
   const [showMatchedFields, setShowMatchedFields] = useState(false);
@@ -368,6 +427,37 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   const [usedTemplate, setUsedTemplate] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedRegistrationType = useMemo(() => {
+    if (!registrationTypes?.length) return undefined;
+    return (
+      registrationTypes.find((type) => type.id === selectedRegistrationTypeId) ||
+      registrationTypes.find((type) => type.isDefault) ||
+      registrationTypes[0]
+    );
+  }, [registrationTypes, selectedRegistrationTypeId]);
+
+  const targetFieldOptions = useMemo(() => {
+    const schema =
+      selectedRegistrationType?.formSchema ||
+      registrationFormSchema ||
+      [];
+    return buildTargetFields(schema);
+  }, [registrationFormSchema, selectedRegistrationType]);
+
+  React.useEffect(() => {
+    const defaultTypeId = getDefaultRegistrationTypeId(registrationTypes);
+    if (!registrationTypes?.length) {
+      setSelectedRegistrationTypeId("");
+      return;
+    }
+    if (
+      !selectedRegistrationTypeId ||
+      !registrationTypes.some((type) => type.id === selectedRegistrationTypeId)
+    ) {
+      setSelectedRegistrationTypeId(defaultTypeId);
+    }
+  }, [registrationTypes, selectedRegistrationTypeId]);
 
   // 重置状态
   const resetState = useCallback(() => {
@@ -398,50 +488,73 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   const autoMatchFields = useCallback(
     (
       headers: string[],
-    ): { mappings: FieldMapping[]; fromTemplate: boolean } => {
-      const mappings: FieldMapping[] = [];
+    ): { mappings: FieldImportAction[]; fromTemplate: boolean } => {
+      const mappings: FieldImportAction[] = [];
       const template = loadMappingTemplate();
       let fromTemplate = false;
 
       headers.forEach((header) => {
         const headerNormalized = normalizeFieldName(header);
+        let matchedTargetField = "";
 
         // 1. 优先使用记忆的模板
         if (template?.mappings[header]) {
           const targetField = template.mappings[header];
           // 验证目标字段是否有效且未被使用
           if (
-            TARGET_FIELDS.some((f) => f.key === targetField) &&
-            !mappings.some((m) => m.targetField === targetField)
+            targetFieldOptions.some((f) => f.key === targetField) &&
+            !mappings.some((m) => m.action === "map" && m.targetField === targetField)
           ) {
-            mappings.push({ sourceField: header, targetField });
+            matchedTargetField = targetField;
             fromTemplate = true;
-            return;
           }
         }
 
-        // 2. 使用别名库匹配
-        for (const [targetKey, aliases] of Object.entries(FIELD_NAME_ALIASES)) {
-          const matched = aliases.some((alias) => {
-            const aliasNormalized = normalizeFieldName(alias);
-            return (
-              aliasNormalized === headerNormalized ||
-              headerNormalized.includes(aliasNormalized) ||
-              aliasNormalized.includes(headerNormalized)
-            );
-          });
+        // 2. 使用活动报名表字段和系统别名库匹配
+        if (!matchedTargetField) {
+          for (const targetField of targetFieldOptions) {
+            const aliases = [
+              targetField.key,
+              targetField.label,
+              ...(FIELD_NAME_ALIASES[targetField.key] || []),
+            ];
+            const matched = aliases.some((alias) => {
+              const aliasNormalized = normalizeFieldName(alias);
+              return (
+                aliasNormalized === headerNormalized ||
+                headerNormalized.includes(aliasNormalized) ||
+                aliasNormalized.includes(headerNormalized)
+              );
+            });
 
-          if (matched && !mappings.some((m) => m.targetField === targetKey)) {
-            mappings.push({ sourceField: header, targetField: targetKey });
-            break;
+            if (
+              matched &&
+              !mappings.some((m) => m.action === "map" && m.targetField === targetField.key)
+            ) {
+              matchedTargetField = targetField.key;
+              break;
+            }
           }
         }
+
+        mappings.push(
+          matchedTargetField
+            ? { sourceField: header, action: "map", targetField: matchedTargetField }
+            : { sourceField: header, action: "keep" },
+        );
       });
 
       return { mappings, fromTemplate };
     },
-    [],
+    [targetFieldOptions],
   );
+
+  React.useEffect(() => {
+    if (sourceFields.length === 0) return;
+    const { mappings, fromTemplate } = autoMatchFields(sourceFields);
+    setFieldMappings(mappings);
+    setUsedTemplate(fromTemplate);
+  }, [autoMatchFields, sourceFields]);
 
   // 解析 Excel 文件
   const parseExcelFile = useCallback(
@@ -481,7 +594,9 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
         setStep(3);
 
         // 提示用户匹配情况
-        const hasName = mappings.some((m) => m.targetField === "name");
+        const hasName = mappings.some(
+          (m) => m.action === "map" && m.targetField === "name",
+        );
         if (hasName) {
           Toast.show({
             content: `已智能匹配 ${mappings.length} 个字段`,
@@ -545,14 +660,17 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   const updateMapping = useCallback(
     (sourceField: string, targetField: string) => {
       setFieldMappings((prev) => {
-        // 移除旧的映射
         const filtered = prev.filter((m) => m.sourceField !== sourceField);
 
-        if (targetField) {
-          // 添加新映射
-          return [...filtered, { sourceField, targetField }];
+        if (targetField === IGNORE_FIELD_VALUE) {
+          return [...filtered, { sourceField, action: "ignore" }];
         }
-        return filtered;
+
+        if (!targetField || targetField === KEEP_FIELD_VALUE) {
+          return [...filtered, { sourceField, action: "keep" }];
+        }
+
+        return [...filtered, { sourceField, action: "map", targetField }];
       });
     },
     [],
@@ -574,14 +692,28 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
       // 保存映射模板
       saveMappingTemplate(fieldMappings);
 
-      // 转换数据
+      // 转换数据：未映射列默认按 Excel 原始表头保留，避免丢失活动自定义报名字段。
       const importData = parsedData.map((row) => {
         const item: Record<string, unknown> = {};
 
-        fieldMappings.forEach((mapping) => {
-          const { sourceField, targetField } = mapping;
+        sourceFields.forEach((sourceField) => {
+          const action =
+            fieldMappings.find((mapping) => mapping.sourceField === sourceField) ||
+            ({ sourceField, action: "keep" } as FieldImportAction);
           const value = row[sourceField];
-          const targetKey = targetField;
+          if (!shouldKeepCellValue(value) || action.action === "ignore") {
+            return;
+          }
+
+          if (action.action === "keep") {
+            item[sourceField] = String(value).trim();
+            return;
+          }
+
+          const targetKey = action.targetField;
+          if (!targetKey) {
+            return;
+          }
 
           if (targetKey === "age") {
             const numValue = parseInt(String(value), 10);
@@ -589,15 +721,15 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
               item[targetKey] = numValue;
             }
           } else if (targetKey === "interests" || targetKey === "skills") {
-            const strValue = String(value || "");
+            const strValue = String(value).trim();
             item[targetKey] = strValue
               ? strValue
                   .split(/[,，、;；]/)
                   .map((s) => s.trim())
                   .filter(Boolean)
               : [];
-          } else if (value !== undefined && value !== "") {
-            item[targetKey] = String(value);
+          } else {
+            item[targetKey] = String(value).trim();
           }
         });
 
@@ -605,6 +737,25 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
       });
 
       // 调用导入 API
+      const fieldActionsPayload = sourceFields.map((sourceField) =>
+        fieldMappings.find((mapping) => mapping.sourceField === sourceField) || {
+          sourceField,
+          action: "keep" as const,
+        },
+      );
+      const mappedActions = fieldActionsPayload.filter(
+        (mapping) => mapping.action === "map" && mapping.targetField,
+      );
+      const fieldMappingPayload = mappedActions.reduce<Record<string, string>>(
+        (acc, mapping) => {
+          if (mapping.targetField) {
+            acc[mapping.sourceField] = mapping.targetField;
+          }
+          return acc;
+        },
+        {},
+      );
+
       const response = await fetch(
         `/api/enrollments/${activityId}/import`,
         {
@@ -614,6 +765,11 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            registrationTypeId: selectedRegistrationType?.id,
+            fieldActions: fieldActionsPayload,
+            fieldMapping: fieldMappingPayload,
+            rows: parsedData,
+            keepUnmappedFields: false,
             enrollments: importData,
           }),
         },
@@ -635,7 +791,15 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
     } finally {
       setIsImporting(false);
     }
-  }, [parsedData, fieldMappings, activityId, token, onSuccess]);
+  }, [
+    parsedData,
+    fieldMappings,
+    sourceFields,
+    activityId,
+    token,
+    selectedRegistrationType?.id,
+    onSuccess,
+  ]);
 
   // 计算已匹配和未匹配的字段
   const { matchedFields, unmatchedFields } = React.useMemo(() => {
@@ -643,7 +807,8 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
     const unmatched: string[] = [];
 
     sourceFields.forEach((field) => {
-      if (fieldMappings.some((m) => m.sourceField === field)) {
+      const action = fieldMappings.find((m) => m.sourceField === field);
+      if (action?.action === "map") {
         matched.push(field);
       } else {
         unmatched.push(field);
@@ -655,8 +820,34 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
   // 获取目标字段标签
   const getTargetFieldLabel = (key: string): string => {
-    return TARGET_FIELDS.find((f) => f.key === key)?.label || key;
+    return targetFieldOptions.find((f) => f.key === key)?.label || key;
   };
+
+  const getFieldAction = (sourceField: string): FieldImportAction => {
+    return (
+      fieldMappings.find((mapping) => mapping.sourceField === sourceField) || {
+        sourceField,
+        action: "keep",
+      }
+    );
+  };
+
+  const getActionSelectValue = (sourceField: string): string => {
+    const action = getFieldAction(sourceField);
+    if (action.action === "ignore") return IGNORE_FIELD_VALUE;
+    if (action.action === "keep") return KEEP_FIELD_VALUE;
+    return action.targetField || KEEP_FIELD_VALUE;
+  };
+
+  const mappedCount = fieldMappings.filter(
+    (mapping) => mapping.action === "map" && mapping.targetField,
+  ).length;
+  const keptCount = fieldMappings.filter(
+    (mapping) => mapping.action === "keep",
+  ).length;
+  const ignoredCount = fieldMappings.filter(
+    (mapping) => mapping.action === "ignore",
+  ).length;
 
   if (!visible) return null;
 
@@ -803,8 +994,17 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                 <Sparkles size={16} className="text-blue-500" />
                 <p className="text-sm text-blue-700">
                   已智能匹配{" "}
-                  <span className="font-medium">{matchedFields.length}</span>{" "}
+                  <span className="font-medium">{mappedCount}</span>{" "}
+                  个字段，默认保留{" "}
+                  <span className="font-medium">{keptCount}</span>{" "}
                   个字段
+                  {ignoredCount > 0 && (
+                    <>
+                      ，不导入{" "}
+                      <span className="font-medium">{ignoredCount}</span>{" "}
+                      个字段
+                    </>
+                  )}
                   {usedTemplate && "（基于上次配置）"}
                 </p>
                 <button
@@ -816,7 +1016,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                 </button>
               </div>
 
-              {/* 未匹配字段（优先显示） */}
+              {/* 保留/不导入字段（优先显示） */}
               {unmatchedFields.length > 0 && (
                 <div>
                   <button
@@ -829,7 +1029,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                       <ChevronUp size={16} className="text-gray-400" />
                     )}
                     <span className="text-sm font-medium text-orange-600">
-                      未匹配字段 ({unmatchedFields.length})
+                      保留/不导入字段 ({unmatchedFields.length})
                     </span>
                   </button>
                   {showUnmatchedFields && (
@@ -854,18 +1054,19 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                           />
                           <select
                             className="w-28 h-9 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
-                            value=""
+                            value={getActionSelectValue(sourceField)}
                             onChange={(e) =>
                               updateMapping(sourceField, e.target.value)
                             }
                           >
-                            <option value="">不导入</option>
-                            {TARGET_FIELDS.map((field) => (
+                            <option value={KEEP_FIELD_VALUE}>保留为额外字段</option>
+                            <option value={IGNORE_FIELD_VALUE}>不导入</option>
+                            {targetFieldOptions.map((field) => (
                               <option
                                 key={field.key}
                                 value={field.key}
                                 disabled={fieldMappings.some(
-                                  (m) => m.targetField === field.key,
+                                  (m) => m.action === "map" && m.targetField === field.key,
                                 )}
                               >
                                 {field.label}
@@ -923,18 +1124,20 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                             />
                             <select
                               className="w-28 h-9 px-2 border border-green-200 rounded-lg text-sm focus:outline-none focus:border-primary-400 bg-white"
-                              value={mapping?.targetField || ""}
+                              value={getActionSelectValue(sourceField)}
                               onChange={(e) =>
                                 updateMapping(sourceField, e.target.value)
                               }
                             >
-                              <option value="">不导入</option>
-                              {TARGET_FIELDS.map((field) => (
+                              <option value={KEEP_FIELD_VALUE}>保留为额外字段</option>
+                              <option value={IGNORE_FIELD_VALUE}>不导入</option>
+                              {targetFieldOptions.map((field) => (
                                 <option
                                   key={field.key}
                                   value={field.key}
                                   disabled={fieldMappings.some(
                                     (m) =>
+                                      m.action === "map" &&
                                       m.targetField === field.key &&
                                       m.sourceField !== sourceField,
                                   )}
@@ -957,6 +1160,31 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
           {/* 步骤 3: 预览确认 - Excel 表格风格 */}
           {!importSuccess && step === 3 && (
             <div className="space-y-4">
+              {registrationTypes && registrationTypes.length > 0 && (
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    导入到报名类型
+                  </label>
+                  <select
+                    className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-primary-400"
+                    value={selectedRegistrationType?.id || ""}
+                    onChange={(event) =>
+                      setSelectedRegistrationTypeId(event.target.value)
+                    }
+                  >
+                    {registrationTypes.map((type, index) => (
+                      <option key={type.id || index} value={type.id || ""}>
+                        {type.name || `报名类型 ${index + 1}`}
+                        {type.isDefault ? "（默认）" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-400">
+                    字段会优先按该报名类型的报名表保存，未匹配列将作为自定义信息保留。
+                  </p>
+                </div>
+              )}
+
               {/* 统计信息 */}
               <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-100">
                 <CheckCircle size={16} className="text-green-500" />
@@ -964,8 +1192,12 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                   已识别{" "}
                   <span className="font-semibold">{parsedData.length}</span>{" "}
                   条数据， 匹配{" "}
-                  <span className="font-semibold">{fieldMappings.length}</span>{" "}
-                  个字段
+                  <span className="font-semibold">{mappedCount}</span>{" "}
+                  个字段，保留{" "}
+                  <span className="font-semibold">{keptCount}</span>{" "}
+                  个，不导入{" "}
+                  <span className="font-semibold">{ignoredCount}</span>{" "}
+                  个
                 </span>
               </div>
 
@@ -984,26 +1216,31 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                           const mapping = fieldMappings.find(
                             (m) => m.sourceField === field,
                           );
+                          const isMapped = mapping?.action === "map" && mapping.targetField;
                           return (
                             <th key={field} className="px-2 py-2 min-w-[120px]">
                               <select
                                 className={`w-full h-7 px-2 text-xs rounded border focus:outline-none focus:ring-1 focus:ring-primary-400 ${
-                                  mapping?.targetField
+                                  isMapped
                                     ? "bg-green-50 border-green-300 text-green-700"
-                                    : "bg-white border-gray-300 text-gray-500"
+                                    : mapping?.action === "ignore"
+                                      ? "bg-red-50 border-red-200 text-red-600"
+                                      : "bg-white border-gray-300 text-gray-500"
                                 }`}
-                                value={mapping?.targetField || ""}
+                                value={getActionSelectValue(field)}
                                 onChange={(e) =>
                                   updateMapping(field, e.target.value)
                                 }
                               >
-                                <option value="">不导入</option>
-                                {TARGET_FIELDS.map((f) => (
+                                <option value={KEEP_FIELD_VALUE}>保留为额外字段</option>
+                                <option value={IGNORE_FIELD_VALUE}>不导入</option>
+                                {targetFieldOptions.map((f) => (
                                   <option
                                     key={f.key}
                                     value={f.key}
                                     disabled={fieldMappings.some(
                                       (m) =>
+                                        m.action === "map" &&
                                         m.targetField === f.key &&
                                         m.sourceField !== field,
                                     )}
@@ -1045,13 +1282,16 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                               (m) => m.sourceField === field,
                             );
                             const value = row[field];
+                            const isMapped = mapping?.action === "map" && mapping.targetField;
                             return (
                               <td
                                 key={field}
                                 className={`px-2 py-2 text-xs max-w-[150px] truncate ${
-                                  mapping?.targetField
+                                  isMapped
                                     ? "text-gray-900"
-                                    : "text-gray-400"
+                                    : mapping?.action === "ignore"
+                                      ? "text-red-300"
+                                      : "text-gray-500"
                                 }`}
                                 title={String(value || "")}
                               >
@@ -1079,18 +1319,28 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
               {/* 映射摘要 */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-gray-500">映射关系:</span>
+                <span className="text-gray-500">字段处理:</span>
                 {fieldMappings.length > 0 ? (
                   fieldMappings.map((m) => (
                     <span
                       key={m.sourceField}
-                      className="px-2 py-1 bg-green-50 text-green-700 rounded-full border border-green-200"
+                      className={`px-2 py-1 rounded-full border ${
+                        m.action === "map"
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : m.action === "ignore"
+                            ? "bg-red-50 text-red-600 border-red-100"
+                            : "bg-gray-50 text-gray-600 border-gray-200"
+                      }`}
                     >
-                      {m.sourceField} → {getTargetFieldLabel(m.targetField)}
+                      {m.action === "map" && m.targetField
+                        ? `${m.sourceField} → ${getTargetFieldLabel(m.targetField)}`
+                        : m.action === "ignore"
+                          ? `${m.sourceField} 不导入`
+                          : `${m.sourceField} 保留`}
                     </span>
                   ))
                 ) : (
-                  <span className="text-orange-500">未映射任何字段</span>
+                  <span className="text-orange-500">未配置字段处理方式</span>
                 )}
               </div>
             </div>
@@ -1121,10 +1371,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                 <button
                   className="px-4 py-2 bg-primary-400 text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
                   onClick={handleImport}
-                  disabled={
-                    isImporting ||
-                    !fieldMappings.some((m) => m.targetField === "name")
-                  }
+                  disabled={isImporting || parsedData.length === 0}
                 >
                   {isImporting ? (
                     <>

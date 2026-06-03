@@ -1003,6 +1003,8 @@ const EnrollmentManagementNew: React.FC = () => {
         visible={showImportModal}
         onClose={() => setShowImportModal(false)}
         activityId={id || ""}
+        registrationTypes={activity?.registrationTypes}
+        registrationFormSchema={activity?.registrationFormSchema}
         onSuccess={handleImportSuccess}
       />
 
