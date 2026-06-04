@@ -15,6 +15,7 @@ import {
   CheckCircle,
   CheckCircle2,
   Loader2,
+  Search,
   Sparkles,
   RotateCcw,
 } from "lucide-react";
@@ -53,6 +54,49 @@ interface TargetField {
   key: string;
   label: string;
   required: boolean;
+}
+
+type ImportPreviewAction =
+  | "create"
+  | "update"
+  | "unchanged"
+  | "missing"
+  | "invalid"
+  | "conflict";
+
+interface ImportPreviewDiffField {
+  field: string;
+  type: "added" | "removed" | "changed";
+  oldValue?: unknown;
+  newValue?: unknown;
+}
+
+interface ImportPreviewItem {
+  rowNumber?: number;
+  action: ImportPreviewAction;
+  identityKey?: string;
+  identitySource?: string;
+  identityValue?: string;
+  name: string;
+  diffFields: ImportPreviewDiffField[];
+  reason?: string;
+  duplicateRowNumbers?: number[];
+}
+
+interface ImportPreviewResult {
+  registrationTypeId: string | null;
+  registrationTypeName: string | null;
+  summary: {
+    totalRows: number;
+    create: number;
+    update: number;
+    unchanged: number;
+    missing: number;
+    invalid: number;
+    conflict: number;
+  };
+  canImport: boolean;
+  items: ImportPreviewItem[];
 }
 
 // localStorage 存储的映射模板
@@ -413,9 +457,14 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   const [fieldMappings, setFieldMappings] = useState<FieldImportAction[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
   const [importSuccess, setImportSuccess] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
+  const [previewResult, setPreviewResult] = useState<ImportPreviewResult | null>(
+    null,
+  );
+  const [selectedIdentityField, setSelectedIdentityField] = useState("");
   const [selectedRegistrationTypeId, setSelectedRegistrationTypeId] =
     useState(() => getDefaultRegistrationTypeId(registrationTypes));
 
@@ -467,9 +516,12 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
     setFieldMappings([]);
     setIsUploading(false);
     setIsImporting(false);
+    setIsPreviewing(false);
     setImportSuccess(false);
     setImportedCount(0);
     setErrors([]);
+    setPreviewResult(null);
+    setSelectedIdentityField("");
     setShowMatchedFields(false);
     setShowUnmatchedFields(true);
     setUsedTemplate(false);
@@ -584,6 +636,8 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
         const headers = Object.keys(jsonData[0]);
         setSourceFields(headers);
         setParsedData(jsonData);
+        setPreviewResult(null);
+        setSelectedIdentityField("");
 
         // 自动匹配字段
         const { mappings, fromTemplate } = autoMatchFields(headers);
@@ -659,6 +713,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   // 更新字段映射
   const updateMapping = useCallback(
     (sourceField: string, targetField: string) => {
+      setPreviewResult(null);
       setFieldMappings((prev) => {
         const filtered = prev.filter((m) => m.sourceField !== sourceField);
 
@@ -680,82 +735,164 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   const resetMappings = useCallback(() => {
     const { mappings } = autoMatchFields(sourceFields);
     setFieldMappings(mappings);
+    setPreviewResult(null);
     Toast.show({ content: "已重新自动匹配" });
   }, [autoMatchFields, sourceFields]);
 
+  React.useEffect(() => {
+    setPreviewResult(null);
+  }, [selectedRegistrationType?.id, selectedIdentityField]);
+
+  const getStoredFieldName = useCallback(
+    (sourceField: string): string | null => {
+      const action =
+        fieldMappings.find((mapping) => mapping.sourceField === sourceField) ||
+        ({ sourceField, action: "keep" } as FieldImportAction);
+      if (action.action === "ignore") return null;
+      return action.action === "map" && action.targetField
+        ? action.targetField
+        : sourceField;
+    },
+    [fieldMappings],
+  );
+
+  const identityFieldOptions = useMemo(() => {
+    const fields = new Map<string, string>();
+    sourceFields.forEach((sourceField) => {
+      const storedField = getStoredFieldName(sourceField);
+      if (!storedField) return;
+      const targetLabel = targetFieldOptions.find((field) => field.key === storedField)?.label;
+      fields.set(storedField, targetLabel ? `${sourceField} → ${targetLabel}` : sourceField);
+    });
+    return Array.from(fields.entries()).map(([value, label]) => ({
+      value,
+      label,
+    }));
+  }, [getStoredFieldName, sourceFields, targetFieldOptions]);
+
+  const buildImportPayload = useCallback(() => {
+    // 转换数据：未映射列默认按 Excel 原始表头保留，避免丢失活动自定义报名字段。
+    const importData = parsedData.map((row) => {
+      const item: Record<string, unknown> = {};
+
+      sourceFields.forEach((sourceField) => {
+        const action =
+          fieldMappings.find((mapping) => mapping.sourceField === sourceField) ||
+          ({ sourceField, action: "keep" } as FieldImportAction);
+        const value = row[sourceField];
+        if (!shouldKeepCellValue(value) || action.action === "ignore") {
+          return;
+        }
+
+        if (action.action === "keep") {
+          item[sourceField] = String(value).trim();
+          return;
+        }
+
+        const targetKey = action.targetField;
+        if (!targetKey) {
+          return;
+        }
+
+        if (targetKey === "age") {
+          const numValue = parseInt(String(value), 10);
+          if (!isNaN(numValue)) {
+            item[targetKey] = numValue;
+          }
+        } else if (targetKey === "interests" || targetKey === "skills") {
+          const strValue = String(value).trim();
+          item[targetKey] = strValue
+            ? strValue
+                .split(/[,，、;；]/)
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [];
+        } else {
+          item[targetKey] = String(value).trim();
+        }
+      });
+
+      return item;
+    });
+
+    const fieldActionsPayload = sourceFields.map((sourceField) =>
+      fieldMappings.find((mapping) => mapping.sourceField === sourceField) || {
+        sourceField,
+        action: "keep" as const,
+      },
+    );
+    const mappedActions = fieldActionsPayload.filter(
+      (mapping) => mapping.action === "map" && mapping.targetField,
+    );
+    const fieldMappingPayload = mappedActions.reduce<Record<string, string>>(
+      (acc, mapping) => {
+        if (mapping.targetField) {
+          acc[mapping.sourceField] = mapping.targetField;
+        }
+        return acc;
+      },
+      {},
+    );
+
+    return {
+      registrationTypeId: selectedRegistrationType?.id,
+      fieldActions: fieldActionsPayload,
+      fieldMapping: fieldMappingPayload,
+      rows: parsedData,
+      keepUnmappedFields: false,
+      enrollments: importData,
+      identityFields: selectedIdentityField ? [selectedIdentityField] : [],
+    };
+  }, [
+    parsedData,
+    fieldMappings,
+    sourceFields,
+    selectedRegistrationType?.id,
+    selectedIdentityField,
+  ]);
+
+  const handlePreview = useCallback(async () => {
+    setIsPreviewing(true);
+    setErrors([]);
+
+    try {
+      saveMappingTemplate(fieldMappings);
+      const response = await fetch(
+        `/api/enrollments/${activityId}/import/preview`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(buildImportPayload()),
+        },
+      );
+
+      const result = await response.json();
+      if (result.success) {
+        setPreviewResult(result.data);
+      } else {
+        setErrors([result.message || "导入预览失败，请重试"]);
+      }
+    } catch (error) {
+      console.error("导入预览失败:", error);
+      setErrors(["网络错误，请检查网络连接后重试"]);
+    } finally {
+      setIsPreviewing(false);
+    }
+  }, [activityId, buildImportPayload, fieldMappings, token]);
+
   // 提交导入
   const handleImport = useCallback(async () => {
+    if (!previewResult?.canImport) {
+      return;
+    }
+
     setIsImporting(true);
     setErrors([]);
 
     try {
-      // 保存映射模板
-      saveMappingTemplate(fieldMappings);
-
-      // 转换数据：未映射列默认按 Excel 原始表头保留，避免丢失活动自定义报名字段。
-      const importData = parsedData.map((row) => {
-        const item: Record<string, unknown> = {};
-
-        sourceFields.forEach((sourceField) => {
-          const action =
-            fieldMappings.find((mapping) => mapping.sourceField === sourceField) ||
-            ({ sourceField, action: "keep" } as FieldImportAction);
-          const value = row[sourceField];
-          if (!shouldKeepCellValue(value) || action.action === "ignore") {
-            return;
-          }
-
-          if (action.action === "keep") {
-            item[sourceField] = String(value).trim();
-            return;
-          }
-
-          const targetKey = action.targetField;
-          if (!targetKey) {
-            return;
-          }
-
-          if (targetKey === "age") {
-            const numValue = parseInt(String(value), 10);
-            if (!isNaN(numValue)) {
-              item[targetKey] = numValue;
-            }
-          } else if (targetKey === "interests" || targetKey === "skills") {
-            const strValue = String(value).trim();
-            item[targetKey] = strValue
-              ? strValue
-                  .split(/[,，、;；]/)
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-              : [];
-          } else {
-            item[targetKey] = String(value).trim();
-          }
-        });
-
-        return item;
-      });
-
-      // 调用导入 API
-      const fieldActionsPayload = sourceFields.map((sourceField) =>
-        fieldMappings.find((mapping) => mapping.sourceField === sourceField) || {
-          sourceField,
-          action: "keep" as const,
-        },
-      );
-      const mappedActions = fieldActionsPayload.filter(
-        (mapping) => mapping.action === "map" && mapping.targetField,
-      );
-      const fieldMappingPayload = mappedActions.reduce<Record<string, string>>(
-        (acc, mapping) => {
-          if (mapping.targetField) {
-            acc[mapping.sourceField] = mapping.targetField;
-          }
-          return acc;
-        },
-        {},
-      );
-
       const response = await fetch(
         `/api/enrollments/${activityId}/import`,
         {
@@ -764,21 +901,16 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            registrationTypeId: selectedRegistrationType?.id,
-            fieldActions: fieldActionsPayload,
-            fieldMapping: fieldMappingPayload,
-            rows: parsedData,
-            keepUnmappedFields: false,
-            enrollments: importData,
-          }),
+          body: JSON.stringify(buildImportPayload()),
         },
       );
 
       const result = await response.json();
 
       if (result.success) {
-        const count = result.data?.imported_count || importData.length;
+        const count =
+          result.data?.imported_count ??
+          (result.data?.created_count || 0) + (result.data?.updated_count || 0);
         setImportedCount(count);
         setImportSuccess(true);
         onSuccess(count);
@@ -792,12 +924,10 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
       setIsImporting(false);
     }
   }, [
-    parsedData,
-    fieldMappings,
-    sourceFields,
     activityId,
+    buildImportPayload,
+    previewResult?.canImport,
     token,
-    selectedRegistrationType?.id,
     onSuccess,
   ]);
 
@@ -848,6 +978,27 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   const ignoredCount = fieldMappings.filter(
     (mapping) => mapping.action === "ignore",
   ).length;
+  const previewBlockingCount =
+    (previewResult?.summary.invalid || 0) + (previewResult?.summary.conflict || 0);
+  const previewChangeCount =
+    (previewResult?.summary.create || 0) + (previewResult?.summary.update || 0);
+  const previewActionMeta: Record<
+    ImportPreviewAction,
+    { label: string; className: string }
+  > = {
+    create: { label: "新增", className: "bg-green-50 text-green-700 border-green-200" },
+    update: { label: "修改", className: "bg-blue-50 text-blue-700 border-blue-200" },
+    unchanged: { label: "未变化", className: "bg-gray-50 text-gray-600 border-gray-200" },
+    missing: { label: "本次缺失", className: "bg-orange-50 text-orange-700 border-orange-200" },
+    invalid: { label: "无法识别", className: "bg-red-50 text-red-700 border-red-200" },
+    conflict: { label: "冲突", className: "bg-red-50 text-red-700 border-red-200" },
+  };
+  const formatPreviewValue = (value: unknown): string => {
+    if (value === undefined || value === null || value === "") return "空";
+    if (Array.isArray(value)) return value.join("、") || "空";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  };
 
   if (!visible) return null;
 
@@ -1185,6 +1336,29 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                 </div>
               )}
 
+              <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  唯一识别字段
+                </label>
+                <select
+                  className="w-full h-10 px-3 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-primary-400"
+                  value={selectedIdentityField}
+                  onChange={(event) => setSelectedIdentityField(event.target.value)}
+                >
+                  <option value="">
+                    自动识别（平台用户ID / 手机号 / 账号 / 邮箱 / 学号）
+                  </option>
+                  {identityFieldOptions.map((field) => (
+                    <option key={field.value} value={field.value}>
+                      使用「{field.label}」
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-400">
+                  自动识别失败时，请选择一个能在本活动中唯一代表用户的字段。系统会拦截重复值。
+                </p>
+              </div>
+
               {/* 统计信息 */}
               <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-100">
                 <CheckCircle size={16} className="text-green-500" />
@@ -1200,6 +1374,127 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                   个
                 </span>
               </div>
+
+              {previewResult ? (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          导入差异预览
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          新增 {previewResult.summary.create}，修改{" "}
+                          {previewResult.summary.update}，未变化{" "}
+                          {previewResult.summary.unchanged}，本次缺失{" "}
+                          {previewResult.summary.missing}
+                          {previewBlockingCount > 0 &&
+                            `，需处理 ${previewBlockingCount} 个问题`}
+                        </p>
+                      </div>
+                      <button
+                        className="text-xs text-primary-500 hover:text-primary-600"
+                        onClick={handlePreview}
+                        disabled={isPreviewing || isImporting}
+                      >
+                        重新预览
+                      </button>
+                    </div>
+                  </div>
+
+                  {previewResult.items.length === 0 ? (
+                    <div className="p-4 text-sm text-gray-500 text-center">
+                      暂无差异
+                    </div>
+                  ) : (
+                    <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+                      {previewResult.items.slice(0, 20).map((item, index) => {
+                        const meta = previewActionMeta[item.action];
+                        return (
+                          <div key={`${item.identityKey || item.rowNumber || index}`} className="p-3">
+                            <div className="flex items-start gap-2">
+                              <span
+                                className={`px-2 py-0.5 rounded-full border text-xs flex-shrink-0 ${meta.className}`}
+                              >
+                                {meta.label}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {item.name || "未命名用户"}
+                                  </p>
+                                  {item.rowNumber && (
+                                    <span className="text-xs text-gray-400">
+                                      第 {item.rowNumber} 行
+                                    </span>
+                                  )}
+                                </div>
+                                {item.identityValue && (
+                                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                    唯一值：{item.identityValue}
+                                  </p>
+                                )}
+                                {item.reason && (
+                                  <p className="text-xs text-red-500 mt-1">
+                                    {item.reason}
+                                    {item.duplicateRowNumbers?.length
+                                      ? `（行 ${item.duplicateRowNumbers.join(", ")}）`
+                                      : ""}
+                                  </p>
+                                )}
+                                {item.diffFields.length > 0 && (
+                                  <div className="mt-2 space-y-1">
+                                    {item.diffFields.slice(0, 4).map((diff) => (
+                                      <div
+                                        key={`${item.identityKey}-${diff.field}`}
+                                        className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1"
+                                      >
+                                        <span className="font-medium text-gray-700">
+                                          {diff.field}
+                                        </span>
+                                        {diff.type === "added" && (
+                                          <span>
+                                            ：新增「{formatPreviewValue(diff.newValue)}」
+                                          </span>
+                                        )}
+                                        {diff.type === "removed" && (
+                                          <span>
+                                            ：删除「{formatPreviewValue(diff.oldValue)}」
+                                          </span>
+                                        )}
+                                        {diff.type === "changed" && (
+                                          <span>
+                                            ：「{formatPreviewValue(diff.oldValue)}」 → 「
+                                            {formatPreviewValue(diff.newValue)}」
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {item.diffFields.length > 4 && (
+                                      <p className="text-xs text-gray-400">
+                                        还有 {item.diffFields.length - 4} 个字段变化
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {previewResult.items.length > 20 && (
+                        <div className="px-3 py-2 bg-gray-50 text-center text-xs text-gray-500">
+                          还有 {previewResult.items.length - 20} 条差异未显示
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 text-sm text-blue-700">
+                  点击底部「预览差异」后，系统会先比较已导入数据和本次文件，再允许确认导入。
+                </div>
+              )}
 
               {/* 字段映射表头 - 可直接编辑 */}
               <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -1367,7 +1662,27 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                 {step === 1 ? "取消" : "重新选择"}
               </button>
 
-              {step === 3 && (
+              {step === 3 && !previewResult && (
+                <button
+                  className="px-4 py-2 bg-primary-400 text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+                  onClick={handlePreview}
+                  disabled={isPreviewing || parsedData.length === 0}
+                >
+                  {isPreviewing ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      预览中...
+                    </>
+                  ) : (
+                    <>
+                      <Search size={16} />
+                      预览差异 ({parsedData.length} 条)
+                    </>
+                  )}
+                </button>
+              )}
+
+              {step === 3 && previewResult && previewResult.canImport && (
                 <button
                   className="px-4 py-2 bg-primary-400 text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
                   onClick={handleImport}
@@ -1381,9 +1696,18 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                   ) : (
                     <>
                       <Upload size={16} />
-                      确认导入 ({parsedData.length} 条)
+                      确认导入 ({previewChangeCount} 条变化)
                     </>
                   )}
+                </button>
+              )}
+
+              {step === 3 && previewResult && !previewResult.canImport && (
+                <button
+                  className="px-4 py-2 bg-gray-200 text-gray-500 text-sm font-medium rounded-lg inline-flex items-center gap-2 cursor-not-allowed"
+                  disabled
+                >
+                  {previewBlockingCount > 0 ? "请先处理冲突" : "无需导入"}
                 </button>
               )}
             </>
