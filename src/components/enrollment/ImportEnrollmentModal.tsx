@@ -420,6 +420,44 @@ const normalizeFieldName = (name: string): string => {
     .trim();
 };
 
+const normalizeSourceFieldName = (name: string): string => {
+  return name.trim() || name;
+};
+
+const normalizeParsedRows = (
+  rows: ParsedRow[],
+): { rows: ParsedRow[]; headers: string[] } => {
+  const rawHeaders = Object.keys(rows[0] || {});
+  const usedHeaders = new Set<string>();
+  const headerMap = new Map<string, string>();
+
+  rawHeaders.forEach((rawHeader) => {
+    const baseHeader = normalizeSourceFieldName(rawHeader);
+    let normalizedHeader = baseHeader;
+    let suffix = 2;
+
+    while (usedHeaders.has(normalizedHeader)) {
+      normalizedHeader = `${baseHeader}_${suffix}`;
+      suffix += 1;
+    }
+
+    usedHeaders.add(normalizedHeader);
+    headerMap.set(rawHeader, normalizedHeader);
+  });
+
+  return {
+    headers: rawHeaders.map((header) => headerMap.get(header) || header),
+    rows: rows.map((row) => {
+      const normalizedRow: ParsedRow = {};
+      Object.entries(row).forEach(([rawHeader, value]) => {
+        const normalizedHeader = headerMap.get(rawHeader) || rawHeader;
+        normalizedRow[normalizedHeader] = value;
+      });
+      return normalizedRow;
+    }),
+  };
+};
+
 const shouldKeepCellValue = (value: unknown): boolean => {
   return value !== undefined && value !== null && String(value).trim() !== "";
 };
@@ -657,17 +695,18 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
         const worksheet = workbook.Sheets[sheetName];
 
         // 转换为 JSON
-        const jsonData = XLSX.utils.sheet_to_json<ParsedRow>(worksheet, {
+        const rawJsonData = XLSX.utils.sheet_to_json<ParsedRow>(worksheet, {
           defval: "",
         });
 
-        if (jsonData.length === 0) {
+        if (rawJsonData.length === 0) {
           setErrors(["Excel 文件为空，请检查文件内容"]);
           return;
         }
 
+        const { rows: jsonData, headers } = normalizeParsedRows(rawJsonData);
+
         // 获取表头（字段名）
-        const headers = Object.keys(jsonData[0]);
         setSourceFields(headers);
         setParsedData(jsonData);
         setPreviewResult(null);
