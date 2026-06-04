@@ -76,7 +76,10 @@ interface ImportPreviewItem {
   action: ImportPreviewAction;
   identityKey?: string;
   identitySource?: string;
+  identityLabel?: string;
   identityValue?: string;
+  displayIdentityLabel?: string;
+  displayIdentityValue?: string;
   name: string;
   diffFields: ImportPreviewDiffField[];
   reason?: string;
@@ -99,6 +102,15 @@ interface ImportPreviewResult {
   items: ImportPreviewItem[];
 }
 
+type PreviewFilter =
+  | "actionable"
+  | "update"
+  | "create"
+  | "issues"
+  | "unchanged"
+  | "missing"
+  | "all";
+
 // localStorage 存储的映射模板
 interface MappingTemplate {
   // key: sourceField, value: targetField
@@ -108,6 +120,18 @@ interface MappingTemplate {
 
 const KEEP_FIELD_VALUE = "__keep__";
 const IGNORE_FIELD_VALUE = "__ignore__";
+const PREVIEW_PAGE_SIZE = 20;
+
+const getDefaultPreviewFilter = (
+  preview: ImportPreviewResult,
+): PreviewFilter => {
+  if (preview.summary.invalid + preview.summary.conflict > 0) return "issues";
+  if (preview.summary.update > 0) return "update";
+  if (preview.summary.create > 0) return "create";
+  if (preview.summary.missing > 0) return "missing";
+  if (preview.summary.unchanged > 0) return "unchanged";
+  return "all";
+};
 
 // 目标字段定义
 const TARGET_FIELDS = [
@@ -464,6 +488,13 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
   const [previewResult, setPreviewResult] = useState<ImportPreviewResult | null>(
     null,
   );
+  const [previewFilter, setPreviewFilter] =
+    useState<PreviewFilter>("actionable");
+  const [previewVisibleCount, setPreviewVisibleCount] =
+    useState(PREVIEW_PAGE_SIZE);
+  const [expandedPreviewItems, setExpandedPreviewItems] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [selectedIdentityField, setSelectedIdentityField] = useState("");
   const [selectedRegistrationTypeId, setSelectedRegistrationTypeId] =
     useState(() => getDefaultRegistrationTypeId(registrationTypes));
@@ -521,6 +552,9 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
     setImportedCount(0);
     setErrors([]);
     setPreviewResult(null);
+    setPreviewFilter("actionable");
+    setPreviewVisibleCount(PREVIEW_PAGE_SIZE);
+    setExpandedPreviewItems(new Set());
     setSelectedIdentityField("");
     setShowMatchedFields(false);
     setShowUnmatchedFields(true);
@@ -871,7 +905,11 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
       const result = await response.json();
       if (result.success) {
-        setPreviewResult(result.data);
+        const preview = result.data as ImportPreviewResult;
+        setPreviewResult(preview);
+        setPreviewFilter(getDefaultPreviewFilter(preview));
+        setPreviewVisibleCount(PREVIEW_PAGE_SIZE);
+        setExpandedPreviewItems(new Set());
       } else {
         setErrors([result.message || "导入预览失败，请重试"]);
       }
@@ -998,6 +1036,80 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
     if (Array.isArray(value)) return value.join("、") || "空";
     if (typeof value === "object") return JSON.stringify(value);
     return String(value);
+  };
+  const getPreviewItemKey = (
+    item: ImportPreviewItem,
+    index: number,
+  ): string =>
+    `${item.action}-${item.identityKey || "no-key"}-${item.rowNumber || "existing"}-${index}`;
+  const previewFilteredItems = useMemo(() => {
+    if (!previewResult) return [];
+    return previewResult.items.filter((item) => {
+      if (previewFilter === "all") return true;
+      if (previewFilter === "actionable") {
+        return item.action === "create" || item.action === "update";
+      }
+      if (previewFilter === "issues") {
+        return item.action === "invalid" || item.action === "conflict";
+      }
+      return item.action === previewFilter;
+    });
+  }, [previewFilter, previewResult]);
+  const visiblePreviewItems = previewFilteredItems.slice(
+    0,
+    previewVisibleCount,
+  );
+  const remainingPreviewCount = Math.max(
+    previewFilteredItems.length - visiblePreviewItems.length,
+    0,
+  );
+  const previewTabs = useMemo(() => {
+    const summary = previewResult?.summary;
+    return [
+      {
+        key: "actionable" as const,
+        label: "待导入",
+        count: (summary?.create || 0) + (summary?.update || 0),
+      },
+      { key: "update" as const, label: "修改", count: summary?.update || 0 },
+      { key: "create" as const, label: "新增", count: summary?.create || 0 },
+      {
+        key: "issues" as const,
+        label: "问题",
+        count: (summary?.invalid || 0) + (summary?.conflict || 0),
+      },
+      {
+        key: "unchanged" as const,
+        label: "未变化",
+        count: summary?.unchanged || 0,
+      },
+      {
+        key: "missing" as const,
+        label: "本次未包含",
+        count: summary?.missing || 0,
+      },
+      { key: "all" as const, label: "全部", count: previewResult?.items.length || 0 },
+    ];
+  }, [previewResult]);
+  const handlePreviewFilterChange = (filter: PreviewFilter) => {
+    setPreviewFilter(filter);
+    setPreviewVisibleCount(PREVIEW_PAGE_SIZE);
+    setExpandedPreviewItems(new Set());
+  };
+  const togglePreviewItemExpanded = (key: string) => {
+    setExpandedPreviewItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+  const getPreviewIdentityText = (item: ImportPreviewItem): string => {
+    if (!item.displayIdentityValue) return "";
+    return `${item.displayIdentityLabel || "识别值"}：${item.displayIdentityValue}`;
   };
 
   if (!visible) return null;
@@ -1378,16 +1490,16 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
               {previewResult ? (
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-medium text-gray-900">
                           导入差异预览
                         </p>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          新增 {previewResult.summary.create}，修改{" "}
-                          {previewResult.summary.update}，未变化{" "}
-                          {previewResult.summary.unchanged}，本次缺失{" "}
-                          {previewResult.summary.missing}
+                          本次文件 {previewResult.summary.totalRows} 条，待导入{" "}
+                          {previewResult.summary.create + previewResult.summary.update}{" "}
+                          条，未变化 {previewResult.summary.unchanged} 条，本次未包含{" "}
+                          {previewResult.summary.missing} 条
                           {previewBlockingCount > 0 &&
                             `，需处理 ${previewBlockingCount} 个问题`}
                         </p>
@@ -1402,16 +1514,41 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                     </div>
                   </div>
 
-                  {previewResult.items.length === 0 ? (
+                  <div className="px-3 py-2 border-b border-gray-100 overflow-x-auto">
+                    <div className="flex min-w-max gap-2">
+                      {previewTabs.map((tab) => (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          className={`h-8 px-3 rounded-lg border text-xs font-medium transition-colors ${
+                            previewFilter === tab.key
+                              ? "bg-primary-50 text-primary-700 border-primary-200"
+                              : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                          }`}
+                          onClick={() => handlePreviewFilterChange(tab.key)}
+                        >
+                          {tab.label} {tab.count}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {previewFilteredItems.length === 0 ? (
                     <div className="p-4 text-sm text-gray-500 text-center">
-                      暂无差异
+                      当前筛选暂无数据
                     </div>
                   ) : (
-                    <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
-                      {previewResult.items.slice(0, 20).map((item, index) => {
+                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                      {visiblePreviewItems.map((item, index) => {
                         const meta = previewActionMeta[item.action];
+                        const itemKey = getPreviewItemKey(item, index);
+                        const isExpanded = expandedPreviewItems.has(itemKey);
+                        const visibleDiffFields = isExpanded
+                          ? item.diffFields
+                          : item.diffFields.slice(0, 4);
+                        const identityText = getPreviewIdentityText(item);
                         return (
-                          <div key={`${item.identityKey || item.rowNumber || index}`} className="p-3">
+                          <div key={itemKey} className="p-3">
                             <div className="flex items-start gap-2">
                               <span
                                 className={`px-2 py-0.5 rounded-full border text-xs flex-shrink-0 ${meta.className}`}
@@ -1429,9 +1566,9 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                                     </span>
                                   )}
                                 </div>
-                                {item.identityValue && (
+                                {identityText && (
                                   <p className="text-xs text-gray-500 mt-0.5 truncate">
-                                    唯一值：{item.identityValue}
+                                    {identityText}
                                   </p>
                                 )}
                                 {item.reason && (
@@ -1444,7 +1581,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                                 )}
                                 {item.diffFields.length > 0 && (
                                   <div className="mt-2 space-y-1">
-                                    {item.diffFields.slice(0, 4).map((diff) => (
+                                    {visibleDiffFields.map((diff) => (
                                       <div
                                         key={`${item.identityKey}-${diff.field}`}
                                         className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1"
@@ -1471,9 +1608,17 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                                       </div>
                                     ))}
                                     {item.diffFields.length > 4 && (
-                                      <p className="text-xs text-gray-400">
-                                        还有 {item.diffFields.length - 4} 个字段变化
-                                      </p>
+                                      <button
+                                        type="button"
+                                        className="text-xs text-primary-500 hover:text-primary-600"
+                                        onClick={() =>
+                                          togglePreviewItemExpanded(itemKey)
+                                        }
+                                      >
+                                        {isExpanded
+                                          ? "收起字段变化"
+                                          : `展开全部 ${item.diffFields.length} 个字段变化`}
+                                      </button>
                                     )}
                                   </div>
                                 )}
@@ -1482,9 +1627,20 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                           </div>
                         );
                       })}
-                      {previewResult.items.length > 20 && (
-                        <div className="px-3 py-2 bg-gray-50 text-center text-xs text-gray-500">
-                          还有 {previewResult.items.length - 20} 条差异未显示
+                      {remainingPreviewCount > 0 && (
+                        <div className="px-3 py-2 bg-gray-50 text-center">
+                          <button
+                            type="button"
+                            className="text-xs text-primary-500 hover:text-primary-600"
+                            onClick={() =>
+                              setPreviewVisibleCount((count) =>
+                                count + PREVIEW_PAGE_SIZE,
+                              )
+                            }
+                          >
+                            加载更多 {Math.min(PREVIEW_PAGE_SIZE, remainingPreviewCount)} 条
+                            （剩余 {remainingPreviewCount} 条）
+                          </button>
                         </div>
                       )}
                     </div>
