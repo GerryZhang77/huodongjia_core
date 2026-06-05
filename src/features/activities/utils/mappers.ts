@@ -22,6 +22,7 @@ export interface ApiActivityData {
   description: string;
   cover_image?: string;
   coverImage?: string;
+  images?: unknown;
   start_time?: string;
   end_time?: string;
   activityStart?: string;
@@ -72,12 +73,20 @@ export const mapApiActivityToActivity = (
     const updatedAt = apiActivity.updatedAt || apiActivity.updated_at || "";
     const activityStart = apiActivity.activityStart || apiActivity.start_time || "";
     const activityEnd = apiActivity.activityEnd || apiActivity.end_time || "";
+    const coverImage = apiActivity.coverImage || apiActivity.cover_image || "";
+    const images = Array.isArray(apiActivity.images)
+      ? apiActivity.images.filter(
+          (image): image is string =>
+            typeof image === "string" && image.trim().length > 0,
+        )
+      : [];
 
     const result: Activity = {
       id: apiActivity.id,
       title: apiActivity.title,
       description: apiActivity.description,
-      coverImage: apiActivity.coverImage || apiActivity.cover_image || "",
+      coverImage,
+      images: images.length > 0 ? images : coverImage ? [coverImage] : [],
       status: mapApiStatus(apiActivity.status),
       registrationStart:
         apiActivity.registrationStart ||

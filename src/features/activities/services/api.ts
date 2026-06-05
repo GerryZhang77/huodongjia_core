@@ -191,9 +191,6 @@ export const uploadCoverImage = async (file: File): Promise<string> => {
   formData.append("destination", "activity-image");
 
   const data = (await api.post("/api/file/upload", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
     timeout: 60_000,
   })) as ApiResponse<{
     url: string;

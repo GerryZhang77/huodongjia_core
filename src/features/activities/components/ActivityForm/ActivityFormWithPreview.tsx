@@ -5,7 +5,7 @@
  * 移动端：全宽表单 + 底部预览按钮
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   useNavigate } from "react-router-dom";
 import {
@@ -36,7 +36,7 @@ import {
   type FormTemplate,
 } from "@/features/merchant/form-templates";
 import { useActivityDetail } from "../../hooks";
-import { uploadCoverImage } from "../../services";
+import { useImageUpload } from "@/features/uploads";
 import {
   CATEGORY_OPTIONS,
   isOnlineOnlyActivity,
@@ -92,6 +92,8 @@ export const ActivityFormWithPreview: React.FC<
   const [form] = Form.useForm();
   const [uploading, setUploading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
+  const pendingUploadsRef = useRef(0);
+  const activityImageUpload = useImageUpload({ kind: "cover" });
   const isDesktopViewport = useIsDesktop();
 
   // 预览相关状态
@@ -303,19 +305,23 @@ export const ActivityFormWithPreview: React.FC<
 
   // 图片上传处理
   const handleImageUpload = async (file: File) => {
+    pendingUploadsRef.current += 1;
     setUploading(true);
     try {
-      const url = await uploadCoverImage(file);
+      const { finalUrlPromise } = activityImageUpload.uploadWithPreview(file);
+      const url = await finalUrlPromise;
       return {
         url,
         key: Date.now().toString(),
       };
     } catch (error) {
       console.error("Image upload error:", error);
-      Toast.show({ icon: "fail", content: "图片上传失败，请重试" });
       throw error;
     } finally {
-      setUploading(false);
+      pendingUploadsRef.current = Math.max(0, pendingUploadsRef.current - 1);
+      if (pendingUploadsRef.current === 0) {
+        setUploading(false);
+      }
     }
   };
 
