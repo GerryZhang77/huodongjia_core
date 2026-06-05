@@ -80,6 +80,15 @@ export const api = axios.create({
 // ========================================
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (
+      typeof FormData !== "undefined" &&
+      config.data instanceof FormData &&
+      config.headers
+    ) {
+      config.headers.delete?.("Content-Type");
+      config.headers.delete?.("content-type");
+    }
+
     // 1. 添加 Authorization 头部（从 localStorage 获取 token）
     const authStorage = localStorage.getItem("auth-storage");
     if (authStorage) {
