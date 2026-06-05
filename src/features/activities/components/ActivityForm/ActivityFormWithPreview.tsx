@@ -93,7 +93,11 @@ export const ActivityFormWithPreview: React.FC<
   const [uploading, setUploading] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
   const pendingUploadsRef = useRef(0);
-  const activityImageUpload = useImageUpload({ kind: "cover" });
+  const activityImageUpload = useImageUpload({
+    kind: "cover",
+    uploadMaxBytes: 4.5 * 1024 * 1024,
+    maxDimension: 2560,
+  });
   const isDesktopViewport = useIsDesktop();
 
   // 预览相关状态
@@ -541,6 +545,7 @@ export const ActivityFormWithPreview: React.FC<
               value={fileList}
               onChange={handleImageListChange}
               upload={handleImageUpload}
+              accept="image/*,.heic,.heif"
               maxCount={9}
               columns={3}
             >

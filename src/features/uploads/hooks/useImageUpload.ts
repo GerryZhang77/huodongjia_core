@@ -57,6 +57,14 @@ interface Options {
 
 const DEFAULT_SOURCE_MAX = 25 * 1024 * 1024;
 const DEFAULT_UPLOAD_MAX = 2 * 1024 * 1024;
+const SERVER_SAFE_UPLOAD_MAX = 4.5 * 1024 * 1024;
+const IMAGE_FILE_NAME_PATTERN = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
+const DIRECT_UPLOAD_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 function getDefaultMaxDimension(kind: ImageUploadKind): number {
   if (kind === "avatar" || kind === "merchant-avatar") return 1200;
@@ -78,6 +86,10 @@ function getFileExtension(type: string): string {
 function replaceImageExtension(name: string, type: string): string {
   const baseName = name.replace(/\.[^.]+$/, "") || "image";
   return `${baseName}.${getFileExtension(type)}`;
+}
+
+function isLikelyImageFile(file: File): boolean {
+  return file.type.startsWith("image/") || IMAGE_FILE_NAME_PATTERN.test(file.name);
 }
 
 function canvasToBlob(
@@ -107,13 +119,18 @@ async function loadImageSource(file: File): Promise<{
   cleanup: () => void;
 }> {
   if ("createImageBitmap" in window) {
-    const bitmap = await createImageBitmap(file);
-    return {
-      source: bitmap,
-      width: bitmap.width,
-      height: bitmap.height,
-      cleanup: () => bitmap.close(),
-    };
+    try {
+      const bitmap = await createImageBitmap(file);
+      return {
+        source: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        cleanup: () => bitmap.close(),
+      };
+    } catch {
+      // Fall back to HTMLImageElement. Some mobile browsers expose
+      // createImageBitmap but cannot decode HEIC/HEIF through it.
+    }
   }
 
   const url = URL.createObjectURL(file);
@@ -142,7 +159,11 @@ async function optimizeImageForUpload(
     uploadMaxBytes: number;
   },
 ): Promise<File> {
-  if (file.size <= options.uploadMaxBytes) return file;
+  const fileType = file.type.toLowerCase();
+  const shouldTransform =
+    file.size > options.uploadMaxBytes || !DIRECT_UPLOAD_TYPES.has(fileType);
+
+  if (!shouldTransform) return file;
 
   if (file.type === "image/gif") {
     throw new Error("GIF 图片过大，请换一张较小的图片");
@@ -176,7 +197,7 @@ async function optimizeImageForUpload(
       }
     }
 
-    if (bestBlob && bestBlob.size < file.size) {
+    if (bestBlob && bestBlob.size <= SERVER_SAFE_UPLOAD_MAX) {
       return new File([bestBlob], replaceImageExtension(file.name, outputType), {
         type: outputType,
         lastModified: Date.now(),
@@ -240,7 +261,7 @@ export function useImageUpload(opts: Options) {
   const uploadWithPreview = useCallback(
     (file: File): UploadHandle => {
       // 1) 前置校验
-      if (!file.type.startsWith("image/")) {
+      if (!isLikelyImageFile(file)) {
         if (showToastOnError) {
           Toast.show({ icon: "fail", content: "请选择图片文件" });
         }
