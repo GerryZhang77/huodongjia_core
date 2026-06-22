@@ -10,7 +10,7 @@
  */
 
 import React, { useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Settings, Users, Loader2, AlertCircle } from "lucide-react";
 import MerchantLayout from "@/components/layout/MerchantLayout";
 import { Button } from "@/components/ui";
@@ -36,6 +36,14 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 const MatchingConfigPage: React.FC = () => {
   const { id: activityId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as {
+    returnTo?: string;
+    enrollmentReturnTo?: string;
+  } | null;
+  const returnTo =
+    locationState?.returnTo ||
+    (activityId ? `/dashboard/activity/${activityId}/detail` : "/dashboard");
 
   // 使用匹配逻辑 Hook
   const {
@@ -90,9 +98,14 @@ const MatchingConfigPage: React.FC = () => {
     return matchResults.length > 0 ? matchResults.length : undefined;
   }, [matchResults]);
 
-  // 处理返回 - 返回到活动详情页
+  // 处理返回
   const handleBack = () => {
-    navigate(`/dashboard/activity/${activityId}/detail`);
+    navigate(
+      returnTo,
+      locationState?.enrollmentReturnTo
+        ? { state: { returnTo: locationState.enrollmentReturnTo } }
+        : undefined,
+    );
   };
 
   // 适配器：将 handlePublish 转换为 ResultsTab 期望的签名

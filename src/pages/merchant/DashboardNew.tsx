@@ -655,10 +655,14 @@ export const DashboardNew: FC = () => {
                   }}
                   onEditPreload={preloadActivityEdit}
                   onManage={() =>
-                    navigate(`/dashboard/activity/${activity.id}/enrollment`)
+                    navigate(`/dashboard/activity/${activity.id}/enrollment`, {
+                      state: { returnTo: "/dashboard" },
+                    })
                   }
                   onMatch={() =>
-                    navigate(`/dashboard/activity/${activity.id}/matching`)
+                    navigate(`/dashboard/activity/${activity.id}/matching`, {
+                      state: { returnTo: "/dashboard" },
+                    })
                   }
                   onDelete={() => {
                     Dialog.confirm({

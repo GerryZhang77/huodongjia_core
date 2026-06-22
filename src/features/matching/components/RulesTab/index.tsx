@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { Button, Switch } from "@/components/ui";
+import { getStandardFieldLabel } from "@/utils/fieldLabels";
 import type {
   MatchConstraints,
   MatchingRule,
@@ -134,7 +135,12 @@ const RulesTab: React.FC<RulesTabProps> = ({
   );
 
   const schemaLabelMap = useMemo(() => {
-    return new Map(schemaFields.map((field) => [field.key, field.label]));
+    return new Map(
+      schemaFields.map((field) => [
+        field.key,
+        getStandardFieldLabel(field.key, field.label),
+      ]),
+    );
   }, [schemaFields]);
 
   const visibleRules = rules.length > 0 ? rules : [createRule()];
@@ -146,7 +152,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
       : [];
   const catalogFieldOptions = fieldCatalog.map((field): RuleFieldOption => ({
     key: field.key,
-    label: field.label || field.key,
+    label: getStandardFieldLabel(field.key, field.label || field.key),
     registrationTypeId: field.registrationTypeId,
     groupName:
       field.registrationTypeName ||
@@ -161,7 +167,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
       .filter((field) => field.key)
       .map((field): RuleFieldOption => ({
         key: field.key,
-        label: field.label || field.key,
+        label: getStandardFieldLabel(field.key, field.label || field.key),
         registrationTypeId: group.id,
         groupName: group.name || `报名表 ${groupIndex + 1}`,
       })),
@@ -207,7 +213,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
     return (
       getFieldOption(fieldKey, registrationTypeId)?.label ||
       schemaLabelMap.get(fieldKey) ||
-      fieldKey
+      getStandardFieldLabel(fieldKey)
     );
   };
 

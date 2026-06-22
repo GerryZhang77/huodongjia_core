@@ -31,6 +31,7 @@ import {
   getMatchMessage,
   type MatchScoreFieldDetail,
 } from "@/features/user/services/matchApi";
+import { getStandardFieldLabel } from "@/utils/fieldLabels";
 import { generateDefaultAvatar } from "@/utils/avatar";
 import { cn } from "@/utils/cn";
 import dayjs from "dayjs";
@@ -89,8 +90,11 @@ const resolveScoreFieldValue = (
     return explicitValue.trim();
   }
 
-  const schemaLabel =
-    schema?.find((field) => field.key === fieldKey)?.label?.trim() || fallbackLabel?.trim();
+  const schemaLabel = getStandardFieldLabel(
+    fieldKey,
+    schema?.find((field) => field.key === fieldKey)?.label?.trim() ||
+      fallbackLabel?.trim(),
+  );
   const candidates = [fieldKey, schemaLabel].filter(Boolean) as string[];
 
   for (const candidate of candidates) {
@@ -158,7 +162,12 @@ const MatchUniverseCard: FC<{
   const badgeLabels = [
     "高度匹配",
     ...scoreHighlights
-      .map((field) => field.source_label || field.target_label || field.source_field)
+      .map((field) =>
+        getStandardFieldLabel(
+          field.source_field,
+          field.source_label || field.target_label || field.source_field,
+        ),
+      )
       .filter(Boolean)
       .slice(0, 2),
     user.industry || user.role,
@@ -273,7 +282,10 @@ const MatchUniverseCard: FC<{
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-sm font-medium text-gray-900">
-                      {field.source_label || field.target_label || field.source_field}
+                      {getStandardFieldLabel(
+                        field.source_field,
+                        field.source_label || field.target_label || field.source_field,
+                      )}
                     </p>
                     <span className="rounded-full bg-accent-50 px-2 py-1 text-xs font-medium text-accent-600">
                       {field.score_percent ?? Math.round(field.score * 100)}分

@@ -55,7 +55,7 @@ interface Participant {
   industry?: string;
   city?: string;
   bio?: string;
-  interests?: string;
+  interests?: string | string[];
   department?: string;
   skills?: string;
   expertise?: string;
@@ -112,6 +112,32 @@ const toUserBrief = (p: Participant | undefined): UserBrief => ({
   industry: p?.industry,
   bio: p?.bio,
 });
+
+const getParticipantTags = (participant?: Participant): string[] => {
+  if (!participant?.tags) return [];
+  return participant.tags
+    .map((tag) => String(tag).trim())
+    .filter(Boolean);
+};
+
+const getParticipantMeta = (participant?: Participant): string => {
+  if (!participant) return "";
+
+  const tagText = getParticipantTags(participant).slice(0, 3).join("、");
+  if (tagText) return tagText;
+
+  return [
+    participant.occupation,
+    participant.industry,
+    participant.company,
+    participant.city,
+    participant.registrationTypeName,
+  ]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(" · ");
+};
 
 /** 头像色块（无头像时的回退） */
 const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }> = ({
@@ -546,9 +572,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                             >
                               {row.owner?.name || row.ownerId.slice(0, 6)}
                             </button>
-                            <p className="text-xs text-gray-500 truncate">
-                              {row.owner?.occupation || row.owner?.industry || "参与者"}
-                            </p>
+                            {getParticipantMeta(row.owner) && (
+                              <p className="text-xs text-gray-500 truncate">
+                                {getParticipantMeta(row.owner)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -565,9 +593,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                               >
                                 {row.candidate?.name || row.candidateId.slice(0, 6)}
                               </button>
-                              <p className="text-xs text-gray-500 truncate">
-                                {row.candidate?.occupation || row.candidate?.industry || "暂无标签"}
-                              </p>
+                              {getParticipantMeta(row.candidate) && (
+                                <p className="text-xs text-gray-500 truncate">
+                                  {getParticipantMeta(row.candidate)}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -686,9 +716,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                               >
                                 {row.owner?.name || row.ownerId.slice(0, 6)}
                               </button>
-                              <p className="max-w-[150px] truncate text-xs text-gray-500">
-                                {row.owner?.occupation || row.owner?.industry || "参与者"}
-                              </p>
+                              {getParticipantMeta(row.owner) && (
+                                <p className="max-w-[150px] truncate text-xs text-gray-500">
+                                  {getParticipantMeta(row.owner)}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </td>

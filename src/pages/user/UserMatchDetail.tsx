@@ -18,6 +18,7 @@ import {
   type MatchRuleDetail,
   type MatchScoreFieldDetail,
 } from "@/features/user/services/matchApi";
+import { getStandardFieldLabel } from "@/utils/fieldLabels";
 
 const operatorTone: Record<string, string> = {
   similarity: "bg-emerald-50 text-emerald-600",
@@ -50,9 +51,11 @@ const resolveScoreFieldValue = (
     return explicitValue.trim();
   }
 
-  const schemaLabel =
+  const schemaLabel = getStandardFieldLabel(
+    fieldKey,
     schema.find((field) => field.key === fieldKey)?.label?.trim() ||
-    fallbackLabel?.trim();
+      fallbackLabel?.trim(),
+  );
   const candidates = [fieldKey, schemaLabel].filter(Boolean) as string[];
 
   for (const candidate of candidates) {
@@ -76,15 +79,23 @@ const MatchInfoCard: FC<{
       .filter((field) => Object.prototype.hasOwnProperty.call(data, field.key))
       .map((field) => {
         seenKeys.add(field.key);
-        return [field.label, data[field.key]] as const;
+        return {
+          id: field.key,
+          label: getStandardFieldLabel(field.key, field.label),
+          value: data[field.key],
+        };
       });
 
     const extraEntries = Object.entries(data)
       .filter(([key]) => !seenKeys.has(key))
-      .map(([key, value]) => [key, value] as const);
+      .map(([key, value]) => ({
+        id: key,
+        label: getStandardFieldLabel(key),
+        value,
+      }));
 
     return [...orderedEntries, ...extraEntries].filter(
-      ([, value]) => value !== null && value !== undefined && value !== "",
+      ({ value }) => value !== null && value !== undefined && value !== "",
     );
   }, [data, orderedFields]);
 
@@ -96,9 +107,9 @@ const MatchInfoCard: FC<{
       </div>
       <div className="space-y-3">
         {entries.length > 0 ? (
-          entries.map(([label, value]) => (
+          entries.map(({ id, label, value }) => (
             <div
-              key={label}
+              key={id}
               className="flex items-start justify-between gap-4 border-b border-gray-50 pb-3 last:border-b-0 last:pb-0"
             >
               <span className="text-sm text-gray-500 flex-shrink-0">
@@ -131,11 +142,17 @@ const RuleScoreCard: FC<{
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <h4 className="text-sm font-semibold text-gray-900">
-            {rule.source_label || rule.source_field}
+            {getStandardFieldLabel(
+              rule.source_field,
+              rule.source_label || rule.source_field,
+            )}
             {" · "}
             {rule.operator_label || rule.operator}
             {" · "}
-            {rule.target_label || rule.target_field}
+            {getStandardFieldLabel(
+              rule.target_field,
+              rule.target_label || rule.target_field,
+            )}
           </h4>
           <p className="text-xs text-gray-400 mt-1">
             权重 {rule.weight}
@@ -215,7 +232,7 @@ const UserMatchDetail: FC = () => {
     () =>
       (detail?.schema || []).map((field) => ({
         key: field.key,
-        label: field.label || field.key,
+        label: getStandardFieldLabel(field.key, field.label || field.key),
       })),
     [detail?.schema],
   );

@@ -676,7 +676,9 @@ const ActivityDetail: FC = () => {
                 </button>
                 <button
                   onClick={() =>
-                    navigate(`/dashboard/activity/${id}/enrollment`)
+                    navigate(`/dashboard/activity/${id}/enrollment`, {
+                      state: { returnTo: `/dashboard/activity/${id}/detail` },
+                    })
                   }
                   className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                 >
@@ -691,7 +693,11 @@ const ActivityDetail: FC = () => {
                   <span className="text-xs text-gray-600">活动二维码</span>
                 </button>
                 <button
-                  onClick={() => navigate(`/dashboard/activity/${id}/matching`)}
+                  onClick={() =>
+                    navigate(`/dashboard/activity/${id}/matching`, {
+                      state: { returnTo: `/dashboard/activity/${id}/detail` },
+                    })
+                  }
                   className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <Settings size={20} className="text-secondary-500" />
@@ -710,7 +716,9 @@ const ActivityDetail: FC = () => {
                 <Button
                   variant="primary"
                   onClick={() =>
-                    navigate(`/dashboard/activity/${id}/enrollment`)
+                    navigate(`/dashboard/activity/${id}/enrollment`, {
+                      state: { returnTo: `/dashboard/activity/${id}/detail` },
+                    })
                   }
                   className="flex-1 h-12"
                 >

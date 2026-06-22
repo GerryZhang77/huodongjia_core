@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Users,
   Upload,
@@ -27,6 +27,7 @@ import {
   ChevronUp,
   RotateCcw,
   QrCode,
+  Settings,
 } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
@@ -459,10 +460,15 @@ const PCFilterPanel: React.FC<PCFilterPanelProps> = ({
 
 const EnrollmentManagementNew: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const { token } = useAuthStore();
   const { updateStatus } = useUpdateEnrollmentStatus(id || "");
   const { activity } = useActivityDetail(id);
+  const returnTo =
+    (location.state as { returnTo?: string } | null)?.returnTo ||
+    (id ? `/dashboard/activity/${id}/detail` : "/dashboard");
+  const enrollmentPath = id ? `/dashboard/activity/${id}/enrollment` : "/dashboard";
 
   // 报名数据
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -673,6 +679,17 @@ const EnrollmentManagementNew: React.FC = () => {
     setShowNotifyModal(true);
   };
 
+  const handleBack = () => {
+    navigate(returnTo);
+  };
+
+  const handleGoMatching = () => {
+    if (!id) return;
+    navigate(`/dashboard/activity/${id}/matching`, {
+      state: { returnTo: enrollmentPath, enrollmentReturnTo: returnTo },
+    });
+  };
+
   // 统计数据
   const stats = useMemo(() => {
     return {
@@ -687,7 +704,7 @@ const EnrollmentManagementNew: React.FC = () => {
     <MerchantLayout
       title="报名管理"
       showBack
-      onBack={() => navigate("/dashboard")}
+      onBack={handleBack}
     >
       {/* PC端使用两栏布局：左侧列表 + 右侧筛选面板 */}
       <div className="md:flex md:gap-6 md:items-start">
@@ -793,6 +810,13 @@ const EnrollmentManagementNew: React.FC = () => {
               >
                 <QrCode size={14} />
                 活动二维码
+              </button>
+              <button
+                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-secondary-50 text-secondary-600 text-sm font-medium hover:bg-secondary-100 flex items-center gap-1 transition-colors"
+                onClick={handleGoMatching}
+              >
+                <Settings size={14} />
+                匹配配置
               </button>
               <button
                 className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 flex items-center gap-1 transition-colors"

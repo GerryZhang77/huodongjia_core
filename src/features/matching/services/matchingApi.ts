@@ -111,6 +111,7 @@ interface EnrollmentParticipant {
   status?: string;
   industry?: string;
   interests?: string | string[];
+  tags?: string[];
   department?: string;
   skills?: string;
   expertise?: string;
@@ -159,8 +160,22 @@ const asStringArray = (value: unknown): string[] => {
       .filter((item): item is string => Boolean(item));
   }
   const single = asString(value);
-  return single ? [single] : [];
+  if (!single) return [];
+  return single
+    .split(/[,，、;；]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 };
+
+const mergeStringArrays = (...values: unknown[]): string[] =>
+  Array.from(
+    new Set(
+      values
+        .flatMap((value) => asStringArray(value))
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
 
 const parseMatchCandidateScores = (
   rawScores: unknown,
@@ -235,7 +250,14 @@ const mapEnrollmentToParticipant = (
     department: asString(e.department) || asString(f["所在职能部门"]),
     skills: asString(e.skills) || asString(f["软件技能"]),
     expertise: asString(e.expertise) || asString(f["擅长领域"]),
-    tags: asStringArray(f["标签"]),
+    tags: mergeStringArrays(
+      e.tags,
+      e.interests,
+      f["标签"],
+      f.tags,
+      f["兴趣爱好"],
+      f.interests,
+    ),
     status: e.status,
     formData: f,
   };
@@ -592,7 +614,14 @@ export const getMatchGroups = async (
         department: e.department || f["所在职能部门"],
         skills: e.skills || f["软件技能"],
         expertise: e.expertise || f["擅长领域"],
-        tags: Array.isArray(f["标签"]) ? f["标签"] : [],
+        tags: mergeStringArrays(
+          e.tags,
+          e.interests,
+          f["标签"],
+          f.tags,
+          f["兴趣爱好"],
+          f.interests,
+        ),
         status: e.status,
         registrationTypeId: e.registrationTypeId ?? null,
         registrationTypeName: e.registrationTypeName,
