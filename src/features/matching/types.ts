@@ -10,6 +10,7 @@ export type MatchOperator =
   | "similarity"
   | "complement"
   | "exact"
+  | "opposite"
   | "distance_decay";
 
 // 兼容旧页面保留的规则类型别名

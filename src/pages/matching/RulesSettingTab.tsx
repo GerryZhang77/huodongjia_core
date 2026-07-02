@@ -27,6 +27,7 @@ const OPERATOR_OPTIONS: Array<{ value: MatchOperator; label: string }> = [
   { value: "similarity", label: "similarity" },
   { value: "complement", label: "complement" },
   { value: "exact", label: "exact" },
+  { value: "opposite", label: "opposite" },
   { value: "distance_decay", label: "distance_decay" },
 ];
 
@@ -35,6 +36,7 @@ const buildRuleName = (rule: MatchingRule) => {
     similarity: "相似",
     complement: "互补",
     exact: "一致",
+    opposite: "相反",
     distance_decay: "距离衰减",
   };
 
