@@ -29,3 +29,5 @@ ui_design_drafts
 docs-private
 .github/*instructions.md
 .github/*private/*
+.vercel
+.env*
