@@ -39,6 +39,7 @@ export const useMatchingLogic = ({ eventId }: UseMatchingLogicProps) => {
         similarity: "相似",
         complement: "互补",
         exact: "一致",
+        opposite: "相反",
         distance_decay: "距离衰减",
       };
 

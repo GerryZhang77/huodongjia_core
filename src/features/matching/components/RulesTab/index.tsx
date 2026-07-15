@@ -50,6 +50,7 @@ const OPERATORS: Array<{ value: MatchOperator; label: string }> = [
   { value: "similarity", label: "相似度匹配" },
   { value: "complement", label: "互补匹配" },
   { value: "exact", label: "精确匹配" },
+  { value: "opposite", label: "相反匹配" },
   { value: "distance_decay", label: "数值距离匹配" },
 ];
 

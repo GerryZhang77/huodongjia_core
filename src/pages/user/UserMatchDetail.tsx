@@ -24,6 +24,7 @@ const operatorTone: Record<string, string> = {
   similarity: "bg-emerald-50 text-emerald-600",
   complement: "bg-amber-50 text-amber-700",
   exact: "bg-sky-50 text-sky-700",
+  opposite: "bg-rose-50 text-rose-700",
   distance_decay: "bg-violet-50 text-violet-700",
 };
 

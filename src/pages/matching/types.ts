@@ -6,6 +6,7 @@ export type MatchOperator =
   | "similarity"
   | "complement"
   | "exact"
+  | "opposite"
   | "distance_decay";
 
 export interface RegistrationSchemaField {
