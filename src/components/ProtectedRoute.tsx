@@ -4,10 +4,8 @@
  * 支持角色权限控制
  */
 
-import { useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/stores";
-import { getCurrentUser } from "@/features/auth/services";
 import { debugLogger } from "@/utils/debugLogger";
 import {
   buildLoginPathWithRedirect,
@@ -61,79 +59,56 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRole,
 }) => {
-  const { isAuthenticated, user, token, setAuth, clearAuth } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const authStatus = useAuthStore((state) => state.authStatus);
+  const user = useAuthStore((state) => state.user);
+  const setAuthChecking = useAuthStore((state) => state.setAuthChecking);
   const location = useLocation();
-  const [refreshAttempted, setRefreshAttempted] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const userType = isUserType(user?.user_type) ? user.user_type : undefined;
-  const requiredRoleKey = useMemo(
-    () => (Array.isArray(requiredRole) ? requiredRole.join("|") : requiredRole || ""),
-    [requiredRole],
-  );
-  const shouldRefreshAuth =
-    !!token &&
-    (!isAuthenticated ||
-      !user ||
-      !userType ||
-      (requiredRole ? !hasPermission(userType, requiredRole) : false));
-
-  useEffect(() => {
-    if (!shouldRefreshAuth || refreshAttempted) return;
-
-    let cancelled = false;
-    setRefreshing(true);
-
-    getCurrentUser()
-      .then((response) => {
-        if (cancelled) return;
-        if (response.success && response.user && token) {
-          setAuth(response.user, token);
-        } else if (response.code === "UNAUTHORIZED") {
-          clearAuth();
-        }
-      })
-      .catch(() => {
-        debugLogger.warn("[ProtectedRoute] 刷新认证状态失败");
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setRefreshAttempted(true);
-          setRefreshing(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    shouldRefreshAuth,
-    refreshAttempted,
-    token,
-    setAuth,
-    clearAuth,
-    requiredRoleKey,
-  ]);
 
   debugLogger.log("[ProtectedRoute] 检查认证状态", {
+    authStatus,
     isAuthenticated,
     hasUser: !!user,
-    hasToken: !!token,
-    userName: user?.name,
     userType: user?.user_type,
     requiredRole,
-    refreshAttempted,
   });
 
-  if (shouldRefreshAuth && !refreshAttempted) {
+  if (authStatus === "checking") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500">
-        {refreshing ? "正在校验登录状态..." : "正在恢复登录状态..."}
+      <div
+        className="flex min-h-screen items-center justify-center bg-gray-50 text-sm text-gray-500"
+        role="status"
+      >
+        正在校验登录状态...
+      </div>
+    );
+  }
+
+  if (authStatus === "unavailable") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-6 text-center">
+        <div className="max-w-sm" role="alert">
+          <h1 className="text-base font-semibold text-gray-900">
+            暂时无法验证登录状态
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-gray-500">
+            服务暂时不可用。为保护个人信息，当前不会展示缓存账号，请稍后重试。
+          </p>
+          <button
+            type="button"
+            className="mt-5 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white"
+            onClick={setAuthChecking}
+          >
+            重新验证
+          </button>
+        </div>
       </div>
     );
   }
 
   // 未登录，重定向到登录页
-  if (!isAuthenticated || !user) {
+  if (authStatus !== "authenticated" || !isAuthenticated || !user) {
     debugLogger.warn("[ProtectedRoute] 未认证，重定向到登录页");
     const redirect = `${location.pathname}${location.search}${location.hash}`;
     savePendingRedirectPath(redirect);

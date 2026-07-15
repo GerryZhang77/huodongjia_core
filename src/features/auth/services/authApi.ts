@@ -150,12 +150,19 @@ export async function getCurrentUser(): Promise<LoginResponse> {
       user,
     };
   } catch (error) {
-    console.error("❌ [authApi] 获取用户信息失败:", error);
     const axiosError = error as { response?: { status?: number; data?: { message?: string } } };
+    const status = axiosError?.response?.status;
     return {
       success: false,
       message: axiosError?.response?.data?.message || "获取用户信息失败",
-      code: axiosError?.response?.status === 401 ? "UNAUTHORIZED" : undefined,
+      code:
+        status === 401
+          ? "UNAUTHORIZED"
+          : status === 503
+            ? "SERVICE_UNAVAILABLE"
+            : status
+              ? "REQUEST_FAILED"
+              : "NETWORK_ERROR",
     };
   }
 }

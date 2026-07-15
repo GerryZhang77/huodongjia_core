@@ -154,7 +154,7 @@ export const LoginForm: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowTestAccounts(!showTestAccounts)}
-                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary-500 transition-colors mx-auto"
+          className="mx-auto flex flex-nowrap items-center gap-2 whitespace-nowrap text-sm text-gray-600 transition-colors hover:text-primary-500 [&>svg]:shrink-0"
                 >
                   <Info className="w-4 h-4" />
                   <span>{showTestAccounts ? "收起" : "查看"}测试账号</span>

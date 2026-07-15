@@ -7,6 +7,7 @@
 export {
   getUserActivities,
   getRecommendedActivities,
+  getPublicActivityList,
   searchActivities,
   getActivityCategories,
   getUserActivityDetail,

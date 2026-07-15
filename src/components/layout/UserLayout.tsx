@@ -10,6 +10,8 @@ import { useNotifications } from "@/features/user/profile/hooks/useNotifications
 import { DesktopSidebar } from "./DesktopSidebar";
 import { TopBar } from "./TopBar";
 import { BreadcrumbItem } from "./types";
+import { useAuthStore } from "@/features/auth/stores";
+import { useRequireAuthNavigation } from "@/features/auth/hooks";
 
 interface UserLayoutProps {
   children: ReactNode;
@@ -52,16 +54,27 @@ export const UserLayout: FC<UserLayoutProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const authStatus = useAuthStore((state) => state.authStatus);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  const { navigateWithAuth } = useRequireAuthNavigation();
+  const hasIdentity =
+    authStatus === "authenticated" && isAuthenticated && !!user;
 
   // 获取未读消息数 - 使用 React Query 实现响应式更新
   const { data: notificationsData } = useNotifications({
-    enabled: showTabBar,
+    enabled: showTabBar && hasIdentity,
   });
   const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
   // Tab 配置 - 3Tab: 首页 | 消息 | 我的
   const tabs: TabItem[] = [
-    { key: "home", label: "首页", icon: Home, path: "/u/home" },
+    {
+      key: "home",
+      label: "首页",
+      icon: Home,
+      path: hasIdentity ? "/u/home" : "/",
+    },
     {
       key: "notifications",
       label: "消息",
@@ -75,14 +88,20 @@ export const UserLayout: FC<UserLayoutProps> = ({
   // 判断当前激活的 Tab
   const getActiveTab = () => {
     const path = location.pathname;
-    const tab = tabs.find((t) => path.startsWith(t.path));
+    const tab = tabs.find((t) =>
+      t.path === "/" ? path === "/" : path.startsWith(t.path),
+    );
     return tab?.key || "";
   };
 
   const activeTab = getActiveTab();
 
   const handleTabClick = (tab: TabItem) => {
-    navigate(tab.path);
+    if (tab.key === "home") {
+      navigate(tab.path);
+      return;
+    }
+    navigateWithAuth(tab.path, { redirectAfterLogin: "/u/home" });
   };
 
   return (
@@ -158,7 +177,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
                             strokeWidth={isActive ? 2.5 : 1.8}
                           />
                           {tab.badge !== undefined && tab.badge > 0 && (
-                            <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-error-500 rounded-full">
+                  <span className="absolute -right-2 -top-1 flex h-[16px] min-w-[16px] items-center justify-center whitespace-nowrap rounded-full bg-error-500 px-1 text-[10px] font-bold tabular-nums text-white">
                               {tab.badge > 99 ? "99+" : tab.badge}
                             </span>
                           )}

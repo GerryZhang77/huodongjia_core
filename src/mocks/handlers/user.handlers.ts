@@ -1,6 +1,6 @@
 /**
  * 用户模块 MSW Handlers (C端)
- * 处理 /api/user/* 路径的所有请求
+ * 处理 /api/user/* 及游客首页公开活动请求
  */
 import { http, HttpResponse, delay } from "msw";
 import {
@@ -30,6 +30,36 @@ let favoriteActivityIds: Set<string> = new Set(["ua_001", "ua_003", "ua_006"]);
 // 用户模块 Handlers
 // ========================================
 export const userHandlers = [
+  /**
+   * 游客首页公开活动列表
+   * GET /api/public/activities
+   */
+  http.get("/api/public/activities", async () => {
+    await delay(200);
+
+    const activities = mockUserActivities.map((activity) => ({
+      id: activity.id,
+      title: activity.title,
+      coverImage: activity.coverImage,
+      eventStartTime: activity.eventStartTime,
+      eventEndTime: activity.eventEndTime,
+      location: activity.location,
+      maxParticipants: activity.maxParticipants,
+      currentParticipants: activity.currentParticipants,
+      tags: activity.tags,
+      category: activity.category,
+      activityStatus: activity.activityStatus,
+      userStatus: activity.userStatus === "completed" ? "completed" : "recruiting",
+      isFavorite: false,
+      organizer: activity.organizer,
+    }));
+
+    return HttpResponse.json({
+      success: true,
+      data: { activities, total: activities.length, page: 1, pageSize: 20 },
+    });
+  }),
+
   // ==========================================
   // 用户资料相关
   // ==========================================

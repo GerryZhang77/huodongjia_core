@@ -24,6 +24,7 @@ import { UserLayout } from "@/components/layout/UserLayout";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { useThemeStore } from "@/store/themeStore";
 import { deleteAccount } from "@/features/auth/services/authApi";
+import { useLogout } from "@/features/auth/hooks";
 import { NotificationPreferencesPanel } from "@/features/social";
 
 // 设置项类型
@@ -46,8 +47,8 @@ interface SettingGroup {
 
 const UserSettings: FC = () => {
   const navigate = useNavigate();
-  const clearAuth = useAuthStore((state) => state.clearAuth);
   const user = useAuthStore((state) => state.user);
+  const logout = useLogout();
   const { isDark, toggleTheme } = useThemeStore();
 
   const [idCopied, setIdCopied] = useState(false);
@@ -144,8 +145,7 @@ const UserSettings: FC = () => {
           type: "action",
           danger: true,
           onClick: () => {
-            clearAuth();
-            navigate("/login");
+            logout();
           },
         },
         {
@@ -161,8 +161,7 @@ const UserSettings: FC = () => {
             }
             const result = await deleteAccount();
             if (result.success) {
-              clearAuth();
-              navigate("/login");
+              logout();
             } else {
               alert(result.message);
             }

@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="&#233;&#130;&#174;&#228;&#187;&#182;">
+<circle id="Ellipse 52" cx="24" cy="24" r="24" fill="var(--fill-0, #ABC3FF)" fill-opacity="0.44"/>
+<g id="Frame">
+<path id="Vector" d="M14 31.5H34V24V16.5H24H14V24V31.5Z" fill="var(--fill-0, #4D5EF8)" stroke="var(--stroke-1, #CDE0FF)" stroke-linejoin="round"/>
+<path id="Vector_2" d="M14 16.5L24 24L34 16.5" stroke="var(--stroke-0, #CDE0FF)" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_3" d="M24 16.5H14V24" stroke="var(--stroke-0, #CDE0FF)" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_4" d="M34 24V16.5H24" stroke="var(--stroke-0, #CDE0FF)" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</g>
+</svg>

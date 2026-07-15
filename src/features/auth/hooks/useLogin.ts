@@ -14,6 +14,7 @@ import {
   consumePendingRedirectPath,
   sanitizeRedirectPath,
 } from "@/utils/redirect";
+import { clearProtectedImageObjectUrlCache } from "@/services/protectedImageCache";
 
 const phoneRe = /^1[3-9]\d{9}$/;
 const maskPhone = (v: string) =>
@@ -57,6 +58,7 @@ export function useLogin() {
     if (!response.user || !response.token) return;
 
     setAuth(response.user, response.token);
+    clearProtectedImageObjectUrlCache();
     queryClient.clear();
 
     const displayName = computeDisplayName(response.user, rawIdentifier);

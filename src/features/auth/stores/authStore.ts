@@ -6,61 +6,84 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User } from "../types";
+import type { AuthStatus, User } from "../types";
 
-interface AuthState {
+interface AuthStoreState {
   // 状态
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  authStatus: AuthStatus;
 
   // Actions
   setAuth: (user: User, token: string) => void;
   clearAuth: () => void;
+  setAuthChecking: () => void;
+  setAuthAnonymous: () => void;
+  setAuthUnavailable: () => void;
   updateUser: (user: Partial<User>) => void;
 }
+
+type PersistedAuthState = Pick<AuthStoreState, "token">;
 
 /**
  * Auth Store
  *
  * 持久化存储到 localStorage
  */
-export const useAuthStore = create<AuthState>()(
-  persist(
+export const useAuthStore = create<AuthStoreState>()(
+  persist<AuthStoreState, [], [], PersistedAuthState>(
     (set) => ({
       // 初始状态
       user: null,
       token: null,
       isAuthenticated: false,
+      authStatus: "checking",
 
       // 设置认证信息
       setAuth: (user, token) => {
-        console.log("💾 [authStore] setAuth 被调用:", {
-          userName: user.name,
-          userId: user.id,
-          tokenLength: token.length,
-        });
-
         set({
           user,
           token,
           isAuthenticated: true,
+          authStatus: "authenticated",
         });
-
-        console.log("✅ [authStore] 状态已更新为已认证");
       },
 
       // 清除认证信息
       clearAuth: () => {
-        console.log("🗑️  [authStore] clearAuth 被调用");
-
         set({
           user: null,
           token: null,
           isAuthenticated: false,
+          authStatus: "anonymous",
         });
+      },
 
-        console.log("✅ [authStore] 认证信息已清除");
+      // 刷新页面后先隐藏缓存身份，等待 /api/auth/me 确认。
+      setAuthChecking: () => {
+        set({
+          user: null,
+          isAuthenticated: false,
+          authStatus: "checking",
+        });
+      },
+
+      setAuthAnonymous: () => {
+        set({
+          user: null,
+          isAuthenticated: false,
+          authStatus: "anonymous",
+        });
+      },
+
+      // 服务异常时保留 token 供重试，但绝不恢复缓存用户信息。
+      setAuthUnavailable: () => {
+        set({
+          user: null,
+          isAuthenticated: false,
+          authStatus: "unavailable",
+        });
       },
 
       // 更新用户信息
@@ -72,12 +95,25 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage", // localStorage key
-      // 保存 user, token 和 isAuthenticated
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
-      }),
+      version: 2,
+      // 用户资料和 isAuthenticated 都必须由 /api/auth/me 重新确认。
+      partialize: (state) => ({ token: state.token }),
+      migrate: (persistedState) => {
+        const previous = persistedState as Partial<PersistedAuthState> | null;
+        return {
+          token: typeof previous?.token === "string" ? previous.token : null,
+        };
+      },
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<PersistedAuthState> | null;
+        return {
+          ...currentState,
+          token: typeof persisted?.token === "string" ? persisted.token : null,
+          user: null,
+          isAuthenticated: false,
+          authStatus: "checking",
+        };
+      },
     }
   )
 );

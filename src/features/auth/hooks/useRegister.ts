@@ -12,6 +12,7 @@ import {
   consumePendingRedirectPath,
   sanitizeRedirectPath,
 } from "@/utils/redirect";
+import { clearProtectedImageObjectUrlCache } from "@/services/protectedImageCache";
 
 export interface UseRegisterReturn {
   /** 注册（手机号 + 验证码 + 密码 + 用户名） */
@@ -109,6 +110,7 @@ export function useRegister(): UseRegisterReturn {
 
       if (response.token && response.user) {
         setAuth(response.user, response.token);
+        clearProtectedImageObjectUrlCache();
         queryClient.clear();
         const redirect = sanitizeRedirectPath(searchParams.get("redirect"));
         const pendingRedirect = consumePendingRedirectPath();

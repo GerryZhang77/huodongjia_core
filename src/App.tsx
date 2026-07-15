@@ -18,6 +18,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import zhCN from "antd-mobile/es/locales/zh-CN";
 import { queryClient } from "@/config/queryClient";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { useAuthStore } from "@/features/auth/stores";
+import { AuthBootstrap } from "@/features/auth/components/AuthBootstrap";
+import { LoginRequiredPromptProvider } from "@/features/auth/components/LoginRequiredPromptProvider";
 
 // 加载占位组件
 import { Loading } from "./components/Loading";
@@ -98,6 +101,7 @@ const SimpleTailwindTest = lazy(() => import("./pages/dev/SimpleTailwindTest"));
 const ButtonTest = lazy(() => import("./pages/dev/ButtonTest"));
 
 import "./index.css";
+import { RouteScrollRestoration } from "./components/routing/RouteScrollRestoration";
 
 // 判断是否为开发环境
 const isDevelopment = import.meta.env.DEV;
@@ -177,15 +181,36 @@ const RouteLoadingFallback = () => {
   );
 };
 
+/** 根入口按身份分流：游客看公开首页，已登录用户进入各自工作台。 */
+const DefaultEntryRoute = () => {
+  const authStatus = useAuthStore((state) => state.authStatus);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+
+  if (authStatus === "authenticated" && isAuthenticated && user) {
+    return (
+      <Navigate
+        to={user.user_type === "user" ? "/u/home" : "/dashboard"}
+        replace
+      />
+    );
+  }
+
+  return <UserHome accessMode="guest" />;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider locale={zhCN}>
-        <Router>
-          <div className="min-h-screen bg-gray-50">
-            <RouteChunkErrorBoundary>
-              <Suspense fallback={<RouteLoadingFallback />}>
-                <Routes>
+        <AuthBootstrap>
+          <Router>
+            <RouteScrollRestoration />
+            <LoginRequiredPromptProvider>
+              <div className="min-h-screen bg-gray-50">
+                <RouteChunkErrorBoundary>
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <Routes>
                 {/* ========== 公开路由 ========== */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -363,7 +388,7 @@ function App() {
                   path="/activity/:id"
                   element={
                     <ProtectedRoute>
-                      <ActivityDetail />
+                      <UserActivityDetail />
                     </ProtectedRoute>
                   }
                 />
@@ -612,12 +637,14 @@ function App() {
                 />
 
                 {/* ========== 默认路由 ========== */}
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                </Routes>
-              </Suspense>
-            </RouteChunkErrorBoundary>
-          </div>
-        </Router>
+                <Route path="/" element={<DefaultEntryRoute />} />
+                    </Routes>
+                  </Suspense>
+                </RouteChunkErrorBoundary>
+              </div>
+            </LoginRequiredPromptProvider>
+          </Router>
+        </AuthBootstrap>
       </ConfigProvider>
     </QueryClientProvider>
   );

@@ -11,11 +11,9 @@
  * - 请求路径保持一致，如 /api/auth/login
  */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
-import {
-  buildLoginPathWithRedirect,
-  getCurrentRedirectPath,
-  savePendingRedirectPath,
-} from "@/utils/redirect";
+import { queryClient } from "@/config/queryClient";
+import { useAuthStore } from "@/features/auth/stores/authStore";
+import { clearProtectedImageObjectUrlCache } from "@/services/protectedImageCache";
 
 // ========================================
 // 自定义 API 响应类型
@@ -89,19 +87,10 @@ api.interceptors.request.use(
       config.headers.delete?.("content-type");
     }
 
-    // 1. 添加 Authorization 头部（从 localStorage 获取 token）
-    const authStorage = localStorage.getItem("auth-storage");
-    if (authStorage) {
-      try {
-        const authData = JSON.parse(authStorage);
-        const token = authData?.state?.token;
-
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-      } catch (error) {
-        console.error("[API] 解析 auth-storage 失败:", error);
-      }
+    // 1. 添加 Authorization 头部（与内存中的可信会话保持一致）
+    const token = useAuthStore.getState().token;
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     // 2. 开发环境日志
@@ -134,18 +123,17 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message;
 
-    console.error("[API Error]", { status, message, url: error.config?.url });
-
-    // 401 未授权：清除 token，跳转登录
+    // 401 是会话失效信号：同步清理 Zustand 与 React Query，路由守卫再按
+    // 当前页面决定进入游客首页还是登录页，避免公开首页被全局强制跳转。
     if (status === 401) {
-      localStorage.removeItem("auth-storage");
-
-      // 避免在登录页重复跳转
-      if (!window.location.pathname.includes("/login")) {
-        const redirect = getCurrentRedirectPath();
-        savePendingRedirectPath(redirect);
-        window.location.href = buildLoginPathWithRedirect(redirect);
+      useAuthStore.getState().clearAuth();
+      clearProtectedImageObjectUrlCache();
+      queryClient.clear();
+      if (import.meta.env.DEV) {
+        console.warn("[API] 登录状态已失效", { url: error.config?.url });
       }
+    } else {
+      console.error("[API Error]", { status, message, url: error.config?.url });
     }
 
     return Promise.reject(error);

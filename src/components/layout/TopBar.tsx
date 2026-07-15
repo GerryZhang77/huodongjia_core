@@ -10,6 +10,8 @@ import { Bell, Sparkles } from "lucide-react";
 import { Breadcrumb } from "./Breadcrumb";
 import { TopBarProps } from "./types";
 import { useNotifications } from "@/features/user/profile/hooks/useNotifications";
+import { useAuthStore } from "@/features/auth/stores";
+import { useRequireAuthNavigation } from "@/features/auth/hooks";
 
 /**
  * 顶部导航栏
@@ -29,10 +31,16 @@ export const TopBar: FC<TopBarProps> = ({
   rightContent,
 }) => {
   const navigate = useNavigate();
+  const authStatus = useAuthStore((state) => state.authStatus);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  const { navigateWithAuth } = useRequireAuthNavigation();
+  const hasIdentity =
+    authStatus === "authenticated" && isAuthenticated && !!user;
 
   // 获取未读消息数 - 使用 React Query 实现响应式更新
   const { data: notificationsData } = useNotifications({
-    enabled: showNotification,
+    enabled: showNotification && hasIdentity,
   });
   const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
@@ -40,12 +48,12 @@ export const TopBar: FC<TopBarProps> = ({
     if (onLogoClick) {
       onLogoClick();
     } else {
-      navigate("/u/home");
+      navigate(hasIdentity ? "/u/home" : "/");
     }
   };
 
   const handleNotificationClick = () => {
-    navigate("/u/notifications");
+    navigateWithAuth("/u/notifications", { redirectAfterLogin: "/u/home" });
   };
 
   return (
@@ -57,7 +65,7 @@ export const TopBar: FC<TopBarProps> = ({
             {/* Logo - 可点击返回首页（桌面端隐藏，因为 Sidebar 已有 Logo） */}
             <button
               onClick={handleLogoClick}
-              className="lg:hidden flex items-center gap-3 flex-shrink-0 group transition-transform duration-150 active:scale-95"
+        className="group flex flex-shrink-0 flex-nowrap items-center gap-3 whitespace-nowrap transition-transform duration-150 active:scale-95 lg:hidden [&>svg]:shrink-0"
               aria-label="返回首页"
             >
               <div className="relative">
@@ -92,7 +100,7 @@ export const TopBar: FC<TopBarProps> = ({
               >
                 <Bell size={20} className="text-gray-600 dark:text-gray-300" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-r from-red-500 to-rose-500 rounded-full shadow-sm">
+            <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-r from-red-500 to-rose-500 px-1 text-[10px] font-bold tabular-nums text-white shadow-sm">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}

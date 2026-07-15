@@ -325,6 +325,18 @@ export async function getRecommendedActivities(): Promise<UserActivityListRespon
 }
 
 /**
+ * 获取游客首页公开活动摘要
+ * GET /api/public/activities
+ */
+export async function getPublicActivityList(params?: {
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<UserActivityListResponse> {
+  return api.get("/api/public/activities", { params });
+}
+
+/**
  * 搜索活动
  * GET /api/user/activities/search
  */

@@ -1,87 +1,102 @@
-/**
- * 登录表单组件
- *
- * 支持两种登录方式（Tab 切换，默认密码登录）：
- * 1. 密码登录：账号（用户名或手机号）+ 密码
- * 2. 验证码登录：手机号 + 短信验证码
- *
- * 设计规范：
- * - 卡片: 540x660px, 圆角30px (响应式)
- * - 使用 Input 组件 (size="large")
- * - 使用 lucide-react 图标库
- * - 完整响应式支持 (移动端/平板/桌面)
- */
-
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Input, Modal, Checkbox } from "@/components/ui";
+import { Info } from "lucide-react";
+import { Modal } from "@/components/ui";
+import { Toast } from "@/components/ui/Toast";
+import { UserAgreement, PrivacyPolicy } from "@/components/legal";
 import { useLogin } from "@/features/auth/hooks";
 import { sendSmsCode } from "@/features/auth/services";
 import { TEST_ACCOUNTS } from "@/features/auth/utils";
-import { UserAgreement, PrivacyPolicy } from "@/components/legal";
-import {
-  Mail,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  Info,
-  Phone,
-  KeyRound,
-} from "lucide-react";
+import checkIcon from "@/assets/auth/login/check.svg";
+import emailLoginIcon from "@/assets/auth/login/email-login.svg";
+import qqLoginIcon from "@/assets/auth/login/qq-login.svg";
+import socialCircle from "@/assets/auth/login/social-circle.svg";
+import tabDivider from "@/assets/auth/login/tab-divider.svg";
+import wechatLogo from "@/assets/auth/login/wechat-logo.svg";
 
 type LoginMode = "password" | "sms";
 
 const SMS_CODE_LENGTH = 4;
 const SMS_COUNTDOWN_SECONDS = 60;
+const REMEMBERED_ACCOUNT_KEY = "openevent:remembered-login-account";
 
-export const LoginForm: React.FC = () => {
+function readRememberedAccount() {
+  try {
+    return localStorage.getItem(REMEMBERED_ACCOUNT_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function persistRememberedAccount(enabled: boolean, account: string) {
+  try {
+    if (enabled && account.trim()) {
+      localStorage.setItem(REMEMBERED_ACCOUNT_KEY, account.trim());
+    } else {
+      localStorage.removeItem(REMEMBERED_ACCOUNT_KEY);
+    }
+  } catch {
+    // 隐私模式下 localStorage 可能不可用，不阻断登录。
+  }
+}
+
+export const LoginForm = () => {
+  const rememberedAccount = useRef(readRememberedAccount()).current;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, loginBySms, loading } = useLogin();
 
   const [mode, setMode] = useState<LoginMode>("password");
-
-  // 密码登录字段
-  const [identifier, setIdentifier] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [rememberMe, setRememberMe] = useState<boolean>(true);
+  const [identifier, setIdentifier] = useState(rememberedAccount);
+  const [password, setPassword] = useState("");
+  const [smsPhone, setSmsPhone] = useState(
+    /^1[3-9]\d{9}$/.test(rememberedAccount) ? rememberedAccount : "",
+  );
+  const [smsCode, setSmsCode] = useState("");
+  const [smsCountdown, setSmsCountdown] = useState(0);
+  const [smsSentTo, setSmsSentTo] = useState("");
+  const [sendingSms, setSendingSms] = useState(false);
+  const [rememberAccount, setRememberAccount] = useState(
+    Boolean(rememberedAccount),
+  );
+  const [error, setError] = useState("");
+  const [showUserAgreement, setShowUserAgreement] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showTestAccounts, setShowTestAccounts] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
-
-  // 验证码登录字段
-  const [smsPhone, setSmsPhone] = useState<string>("");
-  const [smsCode, setSmsCode] = useState<string>("");
-  const [smsCountdown, setSmsCountdown] = useState<number>(0);
-  const [sendingSms, setSendingSms] = useState<boolean>(false);
   const smsCodeRef = useRef<HTMLInputElement>(null);
 
-  const [showTestAccounts, setShowTestAccounts] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
+  const canShowTestAccounts =
+    import.meta.env.DEV &&
+    import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
+    searchParams.get("testAccounts") === "1";
+  const validSmsPhone = /^1[3-9]\d{9}$/.test(smsPhone);
+  const hasCompleteSmsCode = smsCode.length === SMS_CODE_LENGTH;
+  const hasSentCurrentPhone = validSmsPhone && smsSentTo === smsPhone;
 
-  // 协议弹窗状态
-  const [showUserAgreement, setShowUserAgreement] = useState<boolean>(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState<boolean>(false);
-
-  // 验证码倒计时
   useEffect(() => {
     if (smsCountdown <= 0) return;
-    const timer = setTimeout(() => setSmsCountdown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
+    const timer = window.setTimeout(
+      () => setSmsCountdown((current) => current - 1),
+      1000,
+    );
+    return () => window.clearTimeout(timer);
   }, [smsCountdown]);
 
-  const switchMode = (next: LoginMode) => {
-    if (next === mode) return;
-    setMode(next);
+  const clearError = () => {
+    if (error) setError("");
+  };
+
+  const switchMode = (nextMode: LoginMode) => {
+    if (nextMode === mode) return;
+    setMode(nextMode);
     setError("");
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    setError("");
+  const handlePasswordSubmit = async () => {
     const normalizedIdentifier = identifier.trim();
-
     if (!normalizedIdentifier) {
-      setError("请输入用户名或手机号");
+      setError("请输入账号");
       return;
     }
     if (!password) {
@@ -89,405 +104,342 @@ export const LoginForm: React.FC = () => {
       return;
     }
 
-    login({ identifier: normalizedIdentifier, password });
+    const success = await login({
+      identifier: normalizedIdentifier,
+      password,
+    });
+    if (success) {
+      persistRememberedAccount(rememberAccount, normalizedIdentifier);
+    }
   };
 
   const handleSendSmsCode = async () => {
     setError("");
-
-    if (!smsPhone) {
-      setError("请输入手机号");
-      return;
-    }
-    if (!/^1[3-9]\d{9}$/.test(smsPhone)) {
-      setError("请输入正确的手机号");
+    if (!validSmsPhone) {
+      setError(smsPhone ? "请输入正确的手机号" : "请输入手机号");
       return;
     }
 
     setSendingSms(true);
     try {
-      const res = await sendSmsCode(smsPhone, "login");
-      if (res.success) {
-        setSmsCountdown(SMS_COUNTDOWN_SECONDS);
-        // 聚焦到验证码输入框，减少用户操作
-        setTimeout(() => smsCodeRef.current?.focus(), 0);
-      } else {
-        setError(res.message || "发送验证码失败");
+      const response = await sendSmsCode(smsPhone, "login");
+      if (!response.success) {
+        setError(response.message || "发送验证码失败");
+        return;
       }
-    } catch (err) {
-      console.error("❌ [LoginForm] 发送验证码失败:", err);
+      setSmsSentTo(smsPhone);
+      setSmsCountdown(SMS_COUNTDOWN_SECONDS);
+      window.setTimeout(() => smsCodeRef.current?.focus(), 0);
+    } catch (sendError) {
+      console.error("[LoginForm] 发送验证码失败", sendError);
       setError("发送验证码失败，请稍后重试");
     } finally {
       setSendingSms(false);
     }
   };
 
-  const handleSmsSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    setError("");
-
-    if (!smsPhone) {
-      setError("请输入手机号");
+  const handleSmsLogin = async () => {
+    if (!validSmsPhone) {
+      setError(smsPhone ? "请输入正确的手机号" : "请输入手机号");
       return;
     }
-    if (!/^1[3-9]\d{9}$/.test(smsPhone)) {
-      setError("请输入正确的手机号");
-      return;
-    }
-    if (!smsCode) {
-      setError("请输入验证码");
-      return;
-    }
-    if (smsCode.length !== SMS_CODE_LENGTH) {
+    if (!hasCompleteSmsCode) {
       setError(`请输入${SMS_CODE_LENGTH}位验证码`);
       return;
     }
 
-    loginBySms(smsPhone, smsCode);
+    const success = await loginBySms(smsPhone, smsCode);
+    if (success) {
+      persistRememberedAccount(rememberAccount, smsPhone);
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+
+    if (mode === "password") {
+      await handlePasswordSubmit();
+      return;
+    }
+
+    if (hasCompleteSmsCode) {
+      await handleSmsLogin();
+      return;
+    }
+
+    if (smsCountdown === 0) {
+      await handleSendSmsCode();
+    }
+  };
+
+  const getSmsActionLabel = () => {
+    if (loading && hasCompleteSmsCode) return "登录中...";
+    if (sendingSms) return "发送中...";
+    if (hasCompleteSmsCode) return "登录";
+    if (smsCountdown > 0) return `重新获取（${smsCountdown}）`;
+    return hasSentCurrentPhone ? "重新获取" : "获取验证码";
+  };
+
+  const isActionDisabled =
+    mode === "password"
+      ? loading || !identifier.trim() || !password
+      : loading ||
+        sendingSms ||
+        !validSmsPhone ||
+        (!hasCompleteSmsCode && smsCountdown > 0);
+
+  const navigateToRegister = () => {
+    const redirect = searchParams.get("redirect");
+    navigate(
+      redirect
+        ? `/register?redirect=${encodeURIComponent(redirect)}`
+        : "/register",
+    );
+  };
+
+  const showUnavailable = (channel: string) => {
+    Toast.show({ content: `${channel}登录暂未开放`, position: "center" });
   };
 
   const handleQuickFill = (account: (typeof TEST_ACCOUNTS)[0]) => {
+    setMode("password");
     setIdentifier(account.value);
     setPassword("123456");
+    setRememberAccount(false);
     setError("");
+    setShowTestAccounts(false);
   };
 
   return (
-    <div className="w-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-[30px] shadow-2xl overflow-hidden">
-      <div className="px-[70px] py-20 max-md:px-8 max-md:py-10 max-sm:px-6 max-sm:py-8">
-        {/* Logo 和标题 */}
-        <div className="flex flex-col items-center mb-[60px] max-md:mb-10 max-sm:mb-8">
-          <div
-            className="w-[70px] h-[70px] max-sm:w-14 max-sm:h-14 rounded-full flex items-center justify-center mb-5"
-            style={{
-              background: "linear-gradient(to right, #4facfe, #00c6ff)",
-            }}
-          >
-            <svg
-              viewBox="0 0 30 30"
-              className="w-[30px] h-[30px] max-sm:w-6 max-sm:h-6"
-            >
-              <path
-                d="M7.5 17.5 L15 10 L22.5 17.5"
-                stroke="#ffffff"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              <circle cx="10" cy="10" r="3" fill="#ffffff" />
-              <circle cx="20" cy="10" r="3" fill="#ffffff" />
-            </svg>
-          </div>
-          <h1 className="text-[32px] max-md:text-3xl max-sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            活动+
-          </h1>
-          <p className="text-base max-sm:text-sm text-gray-600 dark:text-gray-300">
-            欢迎回来！让我们一起创造美好回忆
-          </p>
-        </div>
-
-        {/* 登录方式 Tab 切换 */}
-        <div className="flex items-center mb-6 border-b border-gray-200 dark:border-gray-700">
-          {(
-            [
-              { key: "password", label: "密码登录" },
-              { key: "sms", label: "验证码登录" },
-            ] as const
-          ).map((tab) => {
-            const active = mode === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => switchMode(tab.key)}
-                className={`flex-1 pb-3 text-base font-semibold transition-colors ${
-                  active
-                    ? "text-primary-400 border-b-2 border-primary-400"
-                    : "text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 表单容器：固定最小高度，避免切换时整体跳动 */}
-        <div className="min-h-[440px] max-sm:min-h-[380px]">
-          {/* 密码登录表单 */}
-          {mode === "password" && (
-            <form
-              key="password-form"
-              onSubmit={handleSubmit}
-              autoComplete="off"
-              className="space-y-[30px] max-sm:space-y-5 animate-fade-in"
-            >
-              <Input
-                label="用户名 / 手机号"
-                type="text"
-                name="login-identifier"
-                value={identifier}
-                onChange={(e) => {
-                  setIdentifier(e.target.value);
-                  if (error) setError("");
-                }}
-                placeholder="请输入用户名或手机号"
-                autoComplete="off"
-                size="large"
-                suffix={<Mail className="w-5 h-5 text-gray-400" />}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    passwordRef.current?.focus();
-                  }
-                }}
-                required
-              />
-
-              <Input
-                ref={passwordRef}
-                label="密码"
-                type={showPassword ? "text" : "password"}
-                name="login-password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (error) setError("");
-                }}
-                placeholder="••••••••"
-                autoComplete="new-password"
-                size="large"
-                suffix={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                }
-                required
-              />
-
-              {/* 记住我 */}
-              <div className="flex items-center">
-                <Checkbox
-                  checked={rememberMe}
-                  onChange={(checked) => setRememberMe(checked)}
-                  size="medium"
-                >
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    记住我
-                  </span>
-                </Checkbox>
-              </div>
-
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-shake">
-                  <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span>{error}</span>
-                  </p>
-                </div>
-              )}
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-[54px] flex items-center justify-center gap-2 text-base font-bold text-white rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{
-                    background: "linear-gradient(to right, #4facfe, #00c6ff)",
-                  }}
-                >
-                  {loading ? (
-                    <>
-                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>登录中...</span>
-                    </>
-                  ) : (
-                    "登录"
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* 验证码登录表单 */}
-          {mode === "sms" && (
-            <form
-              key="sms-form"
-              onSubmit={handleSmsSubmit}
-              className="space-y-[30px] max-sm:space-y-5 animate-fade-in"
-            >
-              <Input
-                label="手机号"
-                type="tel"
-                value={smsPhone}
-                onChange={(e) => {
-                  setSmsPhone(e.target.value.replace(/\D/g, "").slice(0, 11));
-                  if (error) setError("");
-                }}
-                placeholder="请输入手机号"
-                autoComplete="tel"
-                size="large"
-                maxLength={11}
-                suffix={<Phone className="w-5 h-5 text-gray-400" />}
-                required
-              />
-
-              {/* 验证码 + 发送按钮 */}
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <Input
-                    ref={smsCodeRef}
-                    label="验证码"
-                    type="text"
-                    inputMode="numeric"
-                    value={smsCode}
-                    onChange={(e) => {
-                      setSmsCode(
-                        e.target.value.replace(/\D/g, "").slice(0, SMS_CODE_LENGTH),
-                      );
-                      if (error) setError("");
-                    }}
-                    placeholder={`请输入${SMS_CODE_LENGTH}位验证码`}
-                    autoComplete="one-time-code"
-                    size="large"
-                    maxLength={SMS_CODE_LENGTH}
-                    suffix={<KeyRound className="w-5 h-5 text-gray-400" />}
-                    required
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSendSmsCode}
-                  disabled={smsCountdown > 0 || sendingSms}
-                  className="h-[54px] px-4 text-sm font-semibold text-primary-400 border border-primary-200 rounded-xl bg-primary-50 hover:bg-primary-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
-                >
-                  {sendingSms
-                    ? "发送中..."
-                    : smsCountdown > 0
-                      ? `${smsCountdown}s`
-                      : "获取验证码"}
-                </button>
-              </div>
-
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-shake">
-                  <p className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span>{error}</span>
-                  </p>
-                </div>
-              )}
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-[54px] flex items-center justify-center gap-2 text-base font-bold text-white rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{
-                    background: "linear-gradient(to right, #4facfe, #00c6ff)",
-                  }}
-                >
-                  {loading ? (
-                    <>
-                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>登录中...</span>
-                    </>
-                  ) : (
-                    "登录"
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-
-        {/* 辅助操作：忘记密码（统一显示，避免 Tab 切换时高度差异） */}
-        <div className="flex items-center justify-end mt-4">
+    <div className="openevent-login-form-shell">
+      <div className="openevent-login-card">
+        <div className="openevent-login-tabs" role="tablist" aria-label="登录方式">
+          <img src={tabDivider} alt="" aria-hidden="true" />
           <button
             type="button"
-            onClick={() => navigate("/forgot-password")}
-            className="text-sm font-medium text-primary-400 hover:text-primary-500 transition-colors"
+            role="tab"
+            aria-selected={mode === "password"}
+            className={mode === "password" ? "is-active" : ""}
+            onClick={() => switchMode("password")}
           >
-            忘记密码？
+            密码登录
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "sms"}
+            className={mode === "sms" ? "is-active" : ""}
+            onClick={() => switchMode("sms")}
+          >
+            手机登录
           </button>
         </div>
 
-        {/* 注册链接 */}
-        <p className="text-center mt-6 max-sm:mt-5 text-sm text-gray-600 dark:text-gray-400">
-          还没有账号？
+        <form onSubmit={handleSubmit} noValidate>
+          {mode === "password" ? (
+            <>
+              <label className="openevent-login-field openevent-login-field-first">
+                <span className="sr-only">账号</span>
+                <input
+                  type="text"
+                  name="login-identifier"
+                  aria-label="账号"
+                  value={identifier}
+                  onChange={(event) => {
+                    setIdentifier(event.target.value);
+                    clearError();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      passwordRef.current?.focus();
+                    }
+                  }}
+                  placeholder="请输入账号"
+                  autoComplete="username"
+                />
+              </label>
+              <label className="openevent-login-field openevent-login-field-second">
+                <span className="sr-only">密码</span>
+                <input
+                  ref={passwordRef}
+                  type="password"
+                  name="login-password"
+                  aria-label="密码"
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    clearError();
+                  }}
+                  placeholder="请输入密码"
+                  autoComplete="current-password"
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <label className="openevent-login-field openevent-login-field-first openevent-phone-field">
+                <span className="sr-only">手机号</span>
+                <span className="openevent-phone-prefix" aria-hidden="true">
+                  +86
+                </span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  aria-label="手机号"
+                  value={smsPhone}
+                  maxLength={11}
+                  onChange={(event) => {
+                    const nextPhone = event.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 11);
+                    setSmsPhone(nextPhone);
+                    if (nextPhone !== smsSentTo) {
+                      setSmsCountdown(0);
+                      setSmsCode("");
+                    }
+                    clearError();
+                  }}
+                  placeholder="请输入手机号"
+                  autoComplete="tel"
+                />
+              </label>
+              <label className="openevent-login-field openevent-login-field-second">
+                <span className="sr-only">验证码</span>
+                <input
+                  ref={smsCodeRef}
+                  type="text"
+                  inputMode="numeric"
+                  aria-label="验证码"
+                  value={smsCode}
+                  maxLength={SMS_CODE_LENGTH}
+                  onChange={(event) => {
+                    setSmsCode(
+                      event.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, SMS_CODE_LENGTH),
+                    );
+                    clearError();
+                  }}
+                  placeholder="请输入验证码"
+                  autoComplete="one-time-code"
+                />
+              </label>
+            </>
+          )}
+
           <button
-            type="button"
-            onClick={() => {
-              const redirect = searchParams.get("redirect");
-              navigate(redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : "/register");
-            }}
-            className="ml-1 font-semibold text-primary-400 hover:text-primary-500 transition-colors"
+            type="submit"
+            className="openevent-login-action"
+            disabled={isActionDisabled}
           >
+            {mode === "password"
+              ? loading
+                ? "登录中..."
+                : "登录"
+              : getSmsActionLabel()}
+          </button>
+        </form>
+
+        <p className="openevent-login-error" role="alert" aria-live="polite">
+          {error}
+        </p>
+
+        <div className="openevent-login-assist">
+          <label className="openevent-remember-account">
+            <input
+              type="checkbox"
+              checked={rememberAccount}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setRememberAccount(checked);
+                if (!checked) persistRememberedAccount(false, "");
+              }}
+            />
+            <span className="openevent-remember-box" aria-hidden="true">
+              {rememberAccount && <img src={checkIcon} alt="" />}
+            </span>
+            <span>记住账号</span>
+          </label>
+          <button type="button" onClick={() => navigate("/forgot-password")}>
+            忘记密码?
+          </button>
+        </div>
+
+        <p className="openevent-register-entry">
+          还没有账号?
+          <button type="button" onClick={navigateToRegister}>
             立即注册
           </button>
         </p>
 
-        {/* 测试账号折叠区域 - 仅开发环境，只对密码登录展示 */}
-        {mode === "password" &&
-          import.meta.env.VITE_PRODUCTION_MODE !== "true" &&
-          import.meta.env.DEV && (
-            <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={() => setShowTestAccounts(!showTestAccounts)}
-                className="flex items-center gap-2 mx-auto text-[13px] text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-              >
-                <Info className="w-3.5 h-3.5" />
-                <span>{showTestAccounts ? "收起" : "查看"}测试账号</span>
-              </button>
+        <div className="openevent-social-logins" aria-label="其他登录方式">
+          <button
+            type="button"
+            onClick={() => showUnavailable("QQ")}
+            aria-label="QQ登录，暂未开放"
+            title="QQ登录暂未开放"
+          >
+            <img src={qqLoginIcon} alt="" />
+          </button>
+          <button
+            type="button"
+            className="openevent-wechat-login"
+            onClick={() => showUnavailable("微信")}
+            aria-label="微信登录，暂未开放"
+            title="微信登录暂未开放"
+          >
+            <img src={socialCircle} alt="" className="openevent-social-circle" />
+            <img src={wechatLogo} alt="" className="openevent-wechat-logo" />
+          </button>
+          <button
+            type="button"
+            onClick={() => showUnavailable("邮箱")}
+            aria-label="邮箱登录，暂未开放"
+            title="邮箱登录暂未开放"
+          >
+            <img src={emailLoginIcon} alt="" />
+          </button>
+        </div>
 
-              {showTestAccounts && (
-                <div className="mt-4 space-y-2.5 animate-fade-in">
-                  {TEST_ACCOUNTS.map((account) => (
-                    <div
-                      key={account.value}
-                      className="p-3 bg-gradient-to-br from-gray-50 to-white dark:from-gray-700 dark:to-gray-800 border border-gray-200 dark:border-gray-600 rounded-[10px] transition-all duration-200 hover:shadow-md"
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[13px] font-semibold text-gray-900 dark:text-gray-100">
-                          {account.label}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickFill(account)}
-                          className="px-3 py-1 text-xs font-medium text-primary-400 bg-primary-50 rounded-md hover:bg-primary-100 transition-colors"
-                        >
-                          快速填充
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        账号:{" "}
-                        <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-600 rounded text-gray-700 dark:text-gray-300">
-                          {account.value}
-                        </code>{" "}
-                        | {account.description}
-                      </p>
-                    </div>
-                  ))}
-                  <p className="text-center pt-2 text-[11px] text-gray-400">
-                    此区域仅在开发环境显示
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+        <p className="openevent-login-legal">
+          <span>登录即代表同意</span>
+          <button type="button" onClick={() => setShowUserAgreement(true)}>
+            《用户协议》
+          </button>
+          <span>和</span>
+          <button type="button" onClick={() => setShowPrivacyPolicy(true)}>
+            《隐私政策》
+          </button>
+        </p>
       </div>
 
-      {/* 用户协议弹窗 */}
+      {canShowTestAccounts && (
+        <div className="openevent-test-accounts">
+          <button
+            type="button"
+            onClick={() => setShowTestAccounts((current) => !current)}
+          >
+            <Info size={14} />
+            {showTestAccounts ? "收起测试账号" : "查看测试账号"}
+          </button>
+          {showTestAccounts && (
+            <div>
+              {TEST_ACCOUNTS.map((account) => (
+                <button
+                  type="button"
+                  key={account.value}
+                  onClick={() => handleQuickFill(account)}
+                >
+                  {account.label} · {account.value}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <Modal
         open={showUserAgreement}
         onClose={() => setShowUserAgreement(false)}
@@ -500,7 +452,6 @@ export const LoginForm: React.FC = () => {
         </div>
       </Modal>
 
-      {/* 隐私政策弹窗 */}
       <Modal
         open={showPrivacyPolicy}
         onClose={() => setShowPrivacyPolicy(false)}

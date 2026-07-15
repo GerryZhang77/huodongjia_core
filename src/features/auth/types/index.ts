@@ -12,6 +12,16 @@
 export type UserType = "user" | "organizer" | "admin";
 
 /**
+ * 当前浏览器会话的可信认证状态。
+ * unavailable 表示服务暂时不可用，不能把缓存 token 当成已登录。
+ */
+export type AuthStatus =
+  | "checking"
+  | "authenticated"
+  | "anonymous"
+  | "unavailable";
+
+/**
  * 用户信息
  * 对应 OpenAPI schema: User
  */
@@ -57,6 +67,7 @@ export interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  authStatus: AuthStatus;
 }
 
 /**

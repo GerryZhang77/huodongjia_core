@@ -20,6 +20,7 @@ import { useRecommendedActivities } from "@/features/user";
 import { useUserProfile } from "@/features/user";
 import { usePrefetchActivityDetail } from "@/hooks/usePrefetchActivity";
 import { useSeedFavoriteStatus } from "@/hooks/useSeedFavoriteStatus";
+import { useRequireAuthNavigation } from "@/features/auth/hooks";
 import dayjs from "dayjs";
 import {
   type ActivityFilters, defaultFilters, timeRangeOptions, priceRangeOptions,
@@ -34,6 +35,10 @@ interface FilterTag {
 }
 
 type ViewMode = "grid" | "list";
+
+interface UserHomeProps {
+  accessMode?: "authenticated" | "guest";
+}
 
 // ============ 常量配置 ============
 
@@ -60,23 +65,26 @@ const VIEW_MODE_KEY = "user_home_view_mode";
 
 // ============ 主组件 ============
 
-const UserHome: FC = () => {
+const UserHome: FC<UserHomeProps> = ({ accessMode = "authenticated" }) => {
   const navigate = useNavigate();
+  const { navigateWithAuth } = useRequireAuthNavigation();
+  const isGuest = accessMode === "guest";
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // 资料完善引导
-  const { data: profileData } = useUserProfile();
+  const { data: profileData } = useUserProfile({ enabled: !isGuest });
   const [bannerDismissed, setBannerDismissed] = useState(
     () => sessionStorage.getItem("profile_banner_dismissed") === "1"
   );
   const showProfileBanner = useMemo(() => {
+    if (isGuest) return false;
     if (bannerDismissed) return false;
     const p = profileData?.profile;
     if (!p) return false;
     const fields = [p.name, p.avatar, p.bio, p.occupation, p.tags?.length];
     const filled = fields.filter(Boolean).length;
     return filled / fields.length < 0.6;
-  }, [profileData, bannerDismissed]);
+  }, [profileData, bannerDismissed, isGuest]);
 
   const dismissBanner = () => {
     sessionStorage.setItem("profile_banner_dismissed", "1");
@@ -106,8 +114,7 @@ const UserHome: FC = () => {
   }, [viewMode]);
 
   // 使用公开活动接口获取活动广场数据。/api/user/activities 是“我的活动”，只返回已报名活动。
-  const { data: activitiesData, isLoading: isLoadingActivities } =
-    useRecommendedActivities();
+  const { data: activitiesData } = useRecommendedActivities({ guest: isGuest });
 
   // 获取活动列表
   const allActivities = useMemo(() => {
@@ -120,7 +127,7 @@ const UserHome: FC = () => {
       allActivities.map((a) => a.id).filter(Boolean),
     [allActivities],
   );
-  useSeedFavoriteStatus(visibleIds);
+  useSeedFavoriteStatus(visibleIds, !isGuest);
 
   // 热门活动（取参与率最高的前4个）
   const hotActivities = useMemo(() => {
@@ -291,9 +298,11 @@ const UserHome: FC = () => {
 
   const handleActivityClick = useCallback(
     (id: string) => {
-      navigate(`/u/activities/${id}`);
+      navigateWithAuth(`/u/activities/${id}`, {
+        redirectAfterLogin: "/u/home",
+      });
     },
-    [navigate]
+    [navigateWithAuth],
   );
 
   const prefetchActivity = usePrefetchActivityDetail();
@@ -579,8 +588,12 @@ const UserHome: FC = () => {
               </h2>
             </div>
             <button
-              onClick={() => navigate("/u/discover?sort=hot")}
-              className="text-xs text-primary-500 font-medium flex items-center gap-0.5"
+              onClick={() =>
+                navigateWithAuth("/u/discover?sort=hot", {
+                  redirectAfterLogin: "/u/home",
+                })
+              }
+                className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap text-xs font-medium text-primary-500 [&>svg]:shrink-0"
             >
               查看更多
               <ChevronRight size={14} />
@@ -712,8 +725,9 @@ const UserHome: FC = () => {
                   key={activity.id}
                   activity={activity}
                   onClick={handleActivityClick}
-                  onMouseEnter={prefetchActivity}
+                  onMouseEnter={isGuest ? undefined : prefetchActivity}
                   showUserStatus={false}
+                  enableQuickFavorite={!isGuest}
                   priority={idx < 4}
                 />
               ))}
@@ -726,7 +740,7 @@ const UserHome: FC = () => {
                   key={activity.id}
                   activity={activity}
                   onClick={handleActivityClick}
-                  onMouseEnter={prefetchActivity}
+                  onMouseEnter={isGuest ? undefined : prefetchActivity}
                   size="default"
                   showUserStatus={false}
                   priority={idx < 4}
