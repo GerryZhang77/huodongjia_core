@@ -8,3 +8,4 @@ export * from "./useEnrollmentImportExport";
 export * from "./useSendNotification";
 export * from "./useFileUpload";
 export * from "./useCreateParticipants";
+export * from "./useEnrollmentImages";

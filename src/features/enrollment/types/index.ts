@@ -44,6 +44,12 @@ export interface Enrollment {
   registrationTypeId?: string;
   registrationTypeName?: string;
   registrationTypeMatchEnabled?: boolean;
+  /** 私有报名图片数量；图片本身必须经商家鉴权接口读取。 */
+  imageCount?: number;
+  /** 导入报名等没有平台账号的参与者。 */
+  isExternal?: boolean;
+  /** 原始报名表答案，保留动态字段和图片占位信息。 */
+  formData?: Record<string, unknown>;
   status: EnrollmentStatus;
   enrolledAt: string;
   updatedAt: string;

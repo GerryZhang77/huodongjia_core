@@ -34,13 +34,16 @@ export type ImageUploadKind =
   | "photo"
   | "cover"
   | "recap"
-  | "merchant-avatar";
+  | "merchant-avatar"
+  | "enrollment";
 
 export interface UploadHandle {
   /** 立即可用的本地预览 URL（blob:）— 上传成功/失败后会自动 revoke */
   tempUrl: string;
   /** 上传成功 → 返回 server 真实 URL；失败 → reject */
   finalUrlPromise: Promise<string>;
+  /** 当调用方需要长期保留本地预览时，主动释放 blob URL。 */
+  releasePreview: () => void;
 }
 
 interface Options {
@@ -53,6 +56,10 @@ interface Options {
   maxDimension?: number;
   /** 校验失败时是否自动 toast，默认 true */
   showToastOnError?: boolean;
+  /** 覆盖 kind 对应的上传实现，例如报名图片返回私有资源 ID。 */
+  upload?: (file: File) => Promise<string>;
+  /** 默认 true；设为 false 时由调用方通过 releasePreview 释放。 */
+  revokePreviewOnSettled?: boolean;
 }
 
 const DEFAULT_SOURCE_MAX = 25 * 1024 * 1024;
@@ -74,7 +81,7 @@ function getDefaultMaxDimension(kind: ImageUploadKind): number {
 function rejectedUploadHandle(message: string): UploadHandle {
   const finalUrlPromise = Promise.reject(new Error(message));
   finalUrlPromise.catch(() => undefined);
-  return { tempUrl: "", finalUrlPromise };
+  return { tempUrl: "", finalUrlPromise, releasePreview: () => undefined };
 }
 
 function getFileExtension(type: string): string {
@@ -246,6 +253,8 @@ async function dispatchUpload(kind: ImageUploadKind, file: File): Promise<string
     case "recap":
       // 二者都用活动图片 bucket
       return uploadCoverImage(file);
+    case "enrollment":
+      throw new Error("报名图片需要提供专用上传函数");
   }
 }
 
@@ -256,6 +265,8 @@ export function useImageUpload(opts: Options) {
     uploadMaxBytes = DEFAULT_UPLOAD_MAX,
     maxDimension = getDefaultMaxDimension(kind),
     showToastOnError = true,
+    upload,
+    revokePreviewOnSettled = true,
   } = opts;
 
   const uploadWithPreview = useCallback(
@@ -280,16 +291,22 @@ export function useImageUpload(opts: Options) {
 
       // 2) 立即生成 blob URL 给调用方做预览
       const tempUrl = URL.createObjectURL(file);
+      let previewReleased = false;
+      const releasePreview = () => {
+        if (previewReleased) return;
+        previewReleased = true;
+        URL.revokeObjectURL(tempUrl);
+      };
 
       // 3) 异步压缩并上传，settle 时统一 revoke
       const finalUrlPromise = optimizeImageForUpload(file, { maxDimension, uploadMaxBytes })
-        .then((uploadFile) => dispatchUpload(kind, uploadFile))
+        .then((uploadFile) => upload ? upload(uploadFile) : dispatchUpload(kind, uploadFile))
         .then((realUrl) => {
-          URL.revokeObjectURL(tempUrl);
+          if (revokePreviewOnSettled) releasePreview();
           return realUrl;
         })
         .catch((err) => {
-          URL.revokeObjectURL(tempUrl);
+          releasePreview();
           if (showToastOnError) {
             Toast.show({
               icon: "fail",
@@ -299,9 +316,9 @@ export function useImageUpload(opts: Options) {
           throw err;
         });
 
-      return { tempUrl, finalUrlPromise };
+      return { tempUrl, finalUrlPromise, releasePreview };
     },
-    [kind, maxBytes, maxDimension, showToastOnError, uploadMaxBytes],
+    [kind, maxBytes, maxDimension, revokePreviewOnSettled, showToastOnError, upload, uploadMaxBytes],
   );
 
   return { uploadWithPreview };

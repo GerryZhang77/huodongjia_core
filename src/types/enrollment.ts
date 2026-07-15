@@ -68,6 +68,8 @@ export interface Enrollment {
   registrationTypeId?: string;
   registrationTypeName?: string;
   registrationTypeMatchEnabled?: boolean;
+  /** 私有报名图片数量；图片内容需经商家鉴权接口获取。 */
+  imageCount?: number;
 
   // 表单数据（原始提交数据）
   formData?: Record<string, unknown>;

@@ -43,6 +43,9 @@ interface BackendEnrollment {
   registrationTypeId?: string | null;
   registrationTypeName?: string | null;
   registrationTypeMatchEnabled?: boolean | null;
+  imageCount?: number | null;
+  isExternal?: boolean | null;
+  is_external?: boolean | null;
   status: string;
   created_at?: string;
   createdAt?: string;
@@ -110,6 +113,11 @@ const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
     registrationTypeId: backend.registrationTypeId || undefined,
     registrationTypeName,
     registrationTypeMatchEnabled: backend.registrationTypeMatchEnabled ?? undefined,
+    imageCount: Number(backend.imageCount) || 0,
+    isExternal: backend.isExternal ?? backend.is_external ?? !(
+      backend.user_id ?? backend.userId
+    ),
+    formData: otherInfo,
     status: backend.status as EnrollmentStatus,
     enrolledAt: backend.created_at ?? backend.createdAt ?? "",
     updatedAt: backend.updated_at ?? backend.updatedAt ?? "",

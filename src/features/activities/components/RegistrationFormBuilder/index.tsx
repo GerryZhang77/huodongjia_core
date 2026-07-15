@@ -63,6 +63,7 @@ const FIELD_TYPE_OPTIONS: { value: FormFieldType; label: string }[] = [
   { value: "radio", label: "单选" },
   { value: "select", label: "下拉选择" },
   { value: "multi-select", label: "多选" },
+  { value: "image", label: "图片上传" },
 ];
 
 const TYPE_LABEL_MAP: Record<FormFieldType, string> = {
@@ -71,6 +72,7 @@ const TYPE_LABEL_MAP: Record<FormFieldType, string> = {
   radio: "单选",
   select: "下拉选择",
   "multi-select": "多选",
+  image: "图片上传",
 };
 
 interface RegistrationFormBuilderProps {
@@ -223,6 +225,10 @@ const FieldEditCard: React.FC<{
                         if (["select", "multi-select", "radio"].includes(opt.value) && !updated.options?.length) {
                           updated.options = [];
                         }
+                        if (opt.value === "image") {
+                          updated.maxImages = updated.maxImages || 1;
+                          delete updated.options;
+                        }
                         onChange(updated);
                       }}
                       className={`px-2.5 py-1.5 text-xs rounded-lg border transition-colors ${
@@ -278,6 +284,28 @@ const FieldEditCard: React.FC<{
                       </button>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {field.type === "image" && (
+                <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/60 p-3 dark:border-blue-900/50 dark:bg-blue-900/20">
+                  <label className="text-xs text-gray-600 dark:text-gray-300 block">
+                    最多上传张数
+                  </label>
+                  <select
+                    value={field.maxImages || 1}
+                    onChange={(event) =>
+                      onChange({ ...field, maxImages: Number(event.target.value) })
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((count) => (
+                      <option key={count} value={count}>{count} 张</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] leading-relaxed text-blue-700 dark:text-blue-300">
+                    图片仅用于本次报名，只有本活动商家可查看，不会进入用户个人资料或公开页面。
+                  </p>
                 </div>
               )}
 
@@ -441,8 +469,11 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
                 field={field}
                 isExpanded={expandedIndex === index}
                 onToggleExpand={() => {
-                  // 未命名的自定义项强制保持展开
-                  if (!field.preset && !field.label.trim()) return;
+                  // 未命名的自定义项允许重新展开，但不通过点击折叠。
+                  if (!field.preset && !field.label.trim()) {
+                    setExpandedIndex(index);
+                    return;
+                  }
                   setExpandedIndex(expandedIndex === index ? null : index);
                 }}
                 onChange={(f) => updateField(index, f)}
@@ -460,7 +491,7 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
           <button
             type="button"
             onClick={addField}
-            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:border-primary-300 hover:text-primary-500 transition-colors"
+          className="flex w-full flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-xl border-2 border-dashed border-gray-200 py-3 text-sm text-gray-500 transition-colors hover:border-primary-300 hover:text-primary-500 dark:border-gray-600 dark:text-gray-400 [&>svg]:shrink-0"
           >
             <Plus size={16} />
             添加收集项

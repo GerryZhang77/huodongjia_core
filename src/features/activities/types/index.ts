@@ -26,7 +26,13 @@ export type ActivityTag = string;
 /**
  * 报名表字段类型
  */
-export type FormFieldType = "text" | "textarea" | "select" | "multi-select" | "radio";
+export type FormFieldType =
+  | "text"
+  | "textarea"
+  | "select"
+  | "multi-select"
+  | "radio"
+  | "image";
 
 /**
  * 报名表字段定义
@@ -40,6 +46,8 @@ export interface RegistrationFormField {
   deletable?: boolean; // 预设字段中允许删除的（如性别）
   placeholder?: string;
   options?: string[]; // select/multi-select/radio 时的选项
+  /** 图片字段最多允许上传的数量，后端仍会按 schema 再校验一次。 */
+  maxImages?: number;
 }
 
 export type RegistrationTypeEligibilityMode = "public" | "allowlist";

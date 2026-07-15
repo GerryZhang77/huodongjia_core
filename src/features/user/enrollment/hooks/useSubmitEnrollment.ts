@@ -5,6 +5,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { submitEnrollment } from "../services/userEnrollmentApi";
 import type { EnrollmentFormData } from "../types";
+import type { EnrollmentImageAnswers } from "@/services/enrollmentApi";
+
+export interface SubmitEnrollmentInput {
+  enrollment: EnrollmentFormData;
+  imageAnswers?: EnrollmentImageAnswers;
+}
 
 /**
  * 提交报名 Hook
@@ -13,8 +19,13 @@ export function useSubmitEnrollment(activityId: string, registrationTypeId?: str
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: EnrollmentFormData) =>
-      submitEnrollment(activityId, data, registrationTypeId),
+    mutationFn: (input: SubmitEnrollmentInput) =>
+      submitEnrollment(
+        activityId,
+        input.enrollment,
+        registrationTypeId,
+        input.imageAnswers,
+      ),
     onSuccess: () => {
       // 刷新我的报名列表
       queryClient.invalidateQueries({ queryKey: ["user", "enrollments"] });

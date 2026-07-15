@@ -17,10 +17,11 @@ import {
   Clock,
   Send,
 } from "lucide-react";
-import { useActivityDetail } from "@/features/shared/activity/hooks";
+import { useActivityDetail } from "@/features/activities/hooks/useActivityDetail";
 import type { RegistrationFormField } from "@/features/activities/types";
 import type { Enrollment } from "@/types/enrollment";
 import { STATUS_LABELS } from "@/types/enrollment";
+import PrivateEnrollmentImageGallery from "./PrivateEnrollmentImageGallery";
 
 // ========================================
 // 类型定义
@@ -102,29 +103,40 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
   onReject,
   onNotify,
 }) => {
-  const { data: activityDetail } = useActivityDetail(activityId);
+  const { activity } = useActivityDetail(activityId);
 
   const fieldLabelMap = useMemo(() => {
-    const event = activityDetail?.event as
-      | {
-          registrationFormSchema?: RegistrationFormField[] | null;
-          registration_form_schema?: RegistrationFormField[] | null;
-        }
+    const event = activity as
+      | { registrationFormSchema?: RegistrationFormField[] | null }
       | undefined;
-    const schema =
-      event?.registrationFormSchema ?? event?.registration_form_schema ?? [];
+    const schema = event?.registrationFormSchema ?? [];
 
     return new Map(
       (Array.isArray(schema) ? schema : [])
         .filter((field) => field?.key)
         .map((field) => [field.key, field.label || field.key]),
     );
-  }, [activityDetail]);
+  }, [activity]);
 
   if (!visible || !enrollment) return null;
 
   const formDataEntries = Object.entries(enrollment.formData || {}).filter(
     ([, value]) => value !== null && value !== undefined && value !== "",
+  );
+  const formDataKeys = new Set(formDataEntries.map(([key]) => key));
+  const formDataLabels = new Set(
+    formDataEntries.map(([key]) => fieldLabelMap.get(key) || key),
+  );
+  const customFieldEntries = Object.entries(
+    enrollment.customFields || {},
+  ).filter(
+    ([key, value]) =>
+      key !== "报名类型" &&
+      !formDataKeys.has(key) &&
+      !formDataLabels.has(key) &&
+      value !== null &&
+      value !== undefined &&
+      value !== "",
   );
 
   const formatDate = (dateStr: string): string => {
@@ -173,12 +185,12 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
                   {enrollment.name}
                 </h2>
                 <span
-                  className={`px-2 py-0.5 text-xs rounded-full font-medium ${statusStyles[enrollment.status] || "bg-gray-100 text-gray-500"}`}
+              className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[enrollment.status] || "bg-gray-100 text-gray-500"}`}
                 >
                   {STATUS_LABELS[enrollment.status] || enrollment.status}
                 </span>
                 {enrollment.registrationTypeName && (
-                  <span className="px-2 py-0.5 text-xs rounded-full font-medium bg-blue-50 text-blue-600">
+              <span className="whitespace-nowrap rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">
                     {enrollment.registrationTypeName}
                   </span>
                 )}
@@ -233,6 +245,13 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
             </div>
           </div>
 
+          {activityId && enrollment.imageCount !== 0 && (
+            <PrivateEnrollmentImageGallery
+              activityId={activityId}
+              participantId={enrollment.id}
+            />
+          )}
+
           {/* 个人简介 / 匹配需求 */}
           {(enrollment.bio || enrollment.matchingNeeds) && (
             <div className="mb-5">
@@ -256,7 +275,7 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
                 {enrollment.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-600 border border-gray-200"
+                  className="max-w-full truncate whitespace-nowrap rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-xs text-gray-600"
                   >
                     {tag}
                   </span>
@@ -266,28 +285,25 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
           )}
 
           {/* 自定义字段 */}
-          {enrollment.customFields &&
-            Object.keys(enrollment.customFields).length > 0 && (
-              <div className="mb-5">
-                <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                  其他信息
-                </h4>
-                <div className="bg-gray-50 rounded-xl px-4 py-2 space-y-2">
-                  {Object.entries(enrollment.customFields).map(
-                    ([key, value]) => (
-                      <div key={key} className="flex items-start gap-3 py-1">
-                        <span className="text-sm text-gray-500 w-20 flex-shrink-0">
-                          {key}
-                        </span>
-                        <span className="text-sm text-gray-900 flex-1">
-                          {String(value)}
-                        </span>
-                      </div>
-                    ),
-                  )}
-                </div>
+          {customFieldEntries.length > 0 && (
+            <div className="mb-5">
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                其他信息
+              </h4>
+              <div className="bg-gray-50 rounded-xl px-4 py-2 space-y-2">
+                {customFieldEntries.map(([key, value]) => (
+                  <div key={key} className="flex items-start gap-3 py-1">
+                    <span className="text-sm text-gray-500 w-20 flex-shrink-0">
+                      {key}
+                    </span>
+                    <span className="text-sm text-gray-900 flex-1">
+                      {formatFieldValue(value)}
+                    </span>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
         </div>
 
         {/* 底部操作栏 */}
@@ -295,14 +311,14 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
           {enrollment.status === "pending" ? (
             <>
               <button
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-[22px] border border-red-300 text-red-500 font-medium text-sm hover:bg-red-50 transition-colors"
+            className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] border border-red-300 py-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 [&>svg]:shrink-0"
                 onClick={() => onReject?.(enrollment.id)}
               >
                 <XCircle size={16} />
                 拒绝
               </button>
               <button
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-[22px] bg-gradient-to-br from-green-500 to-green-600 text-white font-medium text-sm shadow-sm hover:shadow-md transition-all"
+            className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-green-500 to-green-600 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
                 onClick={() => onApprove?.(enrollment.id)}
               >
                 <CheckCircle size={16} />
@@ -311,7 +327,7 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
             </>
           ) : (
             <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 text-white font-medium text-sm shadow-sm hover:shadow-md transition-all"
+            className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
               onClick={() => onNotify?.(enrollment.id)}
             >
               <Send size={16} />

@@ -6,7 +6,16 @@
 
 import { FC, useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Calendar, MapPin, AlertCircle, Sparkles } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  AlertCircle,
+  Sparkles,
+  ImagePlus,
+  LoaderCircle,
+  Trash2,
+  ShieldCheck,
+} from "lucide-react";
 import { Dialog } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui";
@@ -23,6 +32,11 @@ import {
 } from "@/features/user/field-library";
 import type { RegistrationFormField } from "@/features/activities/types";
 import { getRegistrationAvailability } from "@/features/user/activity/utils/registrationAvailability";
+import { useImageUpload, type UploadHandle } from "@/features/uploads";
+import {
+  deletePendingEnrollmentImage,
+  uploadEnrollmentImage,
+} from "@/services/enrollmentApi";
 import dayjs from "dayjs";
 
 // ============================================
@@ -34,7 +48,7 @@ const DEFAULT_FORM_SCHEMA: RegistrationFormField[] = [
   { key: "gender", label: "性别", type: "radio", required: false, preset: true, options: ["男", "女"] },
 ];
 
-function getSubmitErrorMessage(error: unknown): string {
+function getSubmitErrorMessage(error: unknown, fallback = "报名失败，请稍后重试"): string {
   if (typeof error === "object" && error !== null) {
     const maybeAxiosError = error as {
       response?: { data?: { message?: string } };
@@ -43,10 +57,10 @@ function getSubmitErrorMessage(error: unknown): string {
     return (
       maybeAxiosError.response?.data?.message ||
       maybeAxiosError.message ||
-      "报名失败，请稍后重试"
+      fallback
     );
   }
-  return "报名失败，请稍后重试";
+  return fallback;
 }
 
 // ============================================
@@ -109,6 +123,184 @@ const RadioTags: FC<{
           {opt}
         </button>
       ))}
+    </div>
+  );
+};
+
+type EnrollmentImageItem = {
+  localId: string;
+  assetId?: string;
+  previewUrl: string;
+  name: string;
+  status: "uploading" | "ready";
+  uploadHandle: UploadHandle;
+};
+
+const EnrollmentImageField: FC<{
+  activityId: string;
+  registrationTypeId?: string;
+  field: RegistrationFormField;
+  onChange: (fieldKey: string, ids: string[]) => void;
+  onUploadingChange: (fieldKey: string, uploading: boolean) => void;
+}> = ({ activityId, registrationTypeId, field, onChange, onUploadingChange }) => {
+  const [items, setItems] = useState<EnrollmentImageItem[]>([]);
+  const itemsRef = useRef<EnrollmentImageItem[]>([]);
+  const mountedRef = useRef(true);
+  const maxImages = Math.max(1, Math.min(6, field.maxImages || 1));
+  const uploadFile = useCallback(
+    async (file: File) => {
+      const asset = await uploadEnrollmentImage(
+        activityId,
+        file,
+        field.key,
+        registrationTypeId,
+      );
+      return asset.id;
+    },
+    [activityId, field.key, registrationTypeId],
+  );
+  const { uploadWithPreview } = useImageUpload({
+    kind: "enrollment",
+    upload: uploadFile,
+    maxBytes: 25 * 1024 * 1024,
+    uploadMaxBytes: 2 * 1024 * 1024,
+    maxDimension: 1800,
+    revokePreviewOnSettled: false,
+  });
+
+  useEffect(() => {
+    itemsRef.current = items;
+    onChange(
+      field.key,
+      items
+        .filter((item) => item.status === "ready" && item.assetId)
+        .map((item) => item.assetId!),
+    );
+    onUploadingChange(field.key, items.some((item) => item.status === "uploading"));
+  }, [field.key, items, onChange, onUploadingChange]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      itemsRef.current.forEach((item) => {
+        item.uploadHandle.releasePreview();
+        if (item.assetId) {
+          void deletePendingEnrollmentImage(item.assetId).catch(() => undefined);
+        }
+      });
+    };
+  }, []);
+
+  const handleFiles = (files: FileList | null) => {
+    const available = Math.max(0, maxImages - itemsRef.current.length);
+    const selected = Array.from(files || []).slice(0, available);
+    if (selected.length === 0) {
+      if (available === 0) {
+        Toast.show({ icon: "fail", content: `最多上传 ${maxImages} 张图片` });
+      }
+      return;
+    }
+
+    selected.forEach((file) => {
+      const uploadHandle = uploadWithPreview(file);
+      if (!uploadHandle.tempUrl) return;
+      const localId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      setItems((current) => [
+        ...current,
+        {
+          localId,
+          previewUrl: uploadHandle.tempUrl,
+          name: file.name,
+          status: "uploading",
+          uploadHandle,
+        },
+      ]);
+      uploadHandle.finalUrlPromise
+        .then((assetId) => {
+          if (!mountedRef.current) {
+            uploadHandle.releasePreview();
+            void deletePendingEnrollmentImage(assetId).catch(() => undefined);
+            return;
+          }
+          setItems((current) =>
+            current.map((item) =>
+              item.localId === localId
+                ? { ...item, assetId, status: "ready" }
+                : item,
+            ),
+          );
+        })
+        .catch(() => {
+          if (mountedRef.current) {
+            setItems((current) => current.filter((item) => item.localId !== localId));
+          }
+        });
+    });
+  };
+
+  const removeItem = async (item: EnrollmentImageItem) => {
+    if (item.status === "uploading" || !item.assetId) return;
+    try {
+      await deletePendingEnrollmentImage(item.assetId);
+      item.uploadHandle.releasePreview();
+      setItems((current) => current.filter((candidate) => candidate.localId !== item.localId));
+    } catch (error: unknown) {
+      Toast.show({
+        icon: "fail",
+        content: getSubmitErrorMessage(error, "删除图片失败"),
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {items.length > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          {items.map((item) => (
+            <div key={item.localId} className="relative aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
+              <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
+              {item.status === "uploading" ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/45 text-xs text-white">
+                  <LoaderCircle size={20} className="animate-spin" />
+                  上传中
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`删除 ${item.name}`}
+                  onClick={() => void removeItem(item)}
+                  className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {items.length < maxImages && (
+        <label className="flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 text-gray-500 transition-colors hover:border-primary-300 hover:text-primary-500 dark:border-gray-700 dark:bg-gray-800">
+          <ImagePlus size={24} />
+          <span className="text-sm">选择图片（{items.length}/{maxImages}）</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+            multiple={maxImages > 1}
+            className="hidden"
+            onChange={(event) => {
+              handleFiles(event.target.files);
+              event.target.value = "";
+            }}
+          />
+        </label>
+      )}
+
+      <div className="flex items-start gap-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+        <ShieldCheck size={14} className="mt-0.5 flex-shrink-0 text-green-600" />
+        <span>仅本活动商家可查看，不会公开展示，也不会保存到你的个人信息或信息库。</span>
+      </div>
     </div>
   );
 };
@@ -236,6 +428,8 @@ const UserRegistration: FC = () => {
 
   // 表单数据状态：key -> value
   const [formData, setFormData] = useState<Record<string, string | string[]>>({});
+  const [imageAnswers, setImageAnswers] = useState<Record<string, string[]>>({});
+  const [uploadingImageFields, setUploadingImageFields] = useState<Set<string>>(new Set());
   // 哪些字段被自动预填了（用于视觉提示）
   const [prefilledKeys, setPrefilledKeys] = useState<Set<string>>(new Set());
   // 防止 prefill 多次覆盖用户已修改值
@@ -269,15 +463,29 @@ const UserRegistration: FC = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  const setImageField = useCallback((key: string, ids: string[]) => {
+    setImageAnswers((previous) => ({ ...previous, [key]: ids }));
+  }, []);
+
+  const setImageFieldUploading = useCallback((key: string, uploading: boolean) => {
+    setUploadingImageFields((previous) => {
+      const next = new Set(previous);
+      if (uploading) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
+
   // 校验必填字段
   const isFormValid = useMemo(() => {
     return formSchema.every((field) => {
       if (!field.required) return true;
+      if (field.type === "image") return (imageAnswers[field.key]?.length || 0) > 0;
       const val = formData[field.key];
       if (Array.isArray(val)) return val.length > 0;
       return typeof val === "string" && val.trim().length > 0;
     });
-  }, [formSchema, formData]);
+  }, [formSchema, formData, imageAnswers]);
 
   const handleSubmit = async () => {
     if (!registrationAvailability.canRegister) {
@@ -292,6 +500,7 @@ const UserRegistration: FC = () => {
       // 找到第一个未填的必填字段
       const missing = formSchema.find((f) => {
         if (!f.required) return false;
+        if (f.type === "image") return (imageAnswers[f.key]?.length || 0) === 0;
         const val = formData[f.key];
         if (Array.isArray(val)) return val.length === 0;
         return !val || (typeof val === "string" && !val.trim());
@@ -303,9 +512,15 @@ const UserRegistration: FC = () => {
       return;
     }
 
+    if (uploadingImageFields.size > 0) {
+      Toast.show({ icon: "fail", content: "图片仍在上传，请稍候" });
+      return;
+    }
+
     // 构建提交数据：将 key-value 映射为 label-value（后端按 label 存储）
     const submitData: Record<string, string> = {};
     for (const field of formSchema) {
+      if (field.type === "image") continue;
       const val = formData[field.key];
       if (val !== undefined && val !== "") {
         submitData[field.label] = Array.isArray(val) ? val.join(",") : val;
@@ -313,12 +528,13 @@ const UserRegistration: FC = () => {
     }
 
     try {
-      await submitEnrollment(submitData as any);
+      await submitEnrollment({ enrollment: submitData, imageAnswers });
       Toast.show({ icon: "success", content: "报名成功！", duration: 1500 });
 
       // 收集这次填写中可保存到信息库的字段（非空）
       const toSave: UpsertFieldLibraryItem[] = [];
       for (const field of formSchema) {
+        if (field.type === "image") continue;
         const val = formData[field.key];
         if (val === undefined) continue;
         if (Array.isArray(val) ? val.length === 0 : !String(val).trim()) continue;
@@ -354,20 +570,18 @@ const UserRegistration: FC = () => {
               return;
             }
             Toast.show({ icon: "success", content: "已保存到信息库" });
-          } catch (err: any) {
+          } catch (err: unknown) {
             // 保存失败不阻塞流程
             Toast.show({
               icon: "fail",
               content:
-                err?.response?.data?.message ||
-                err?.message ||
-                "保存失败，可稍后在个人中心重试",
+                getSubmitErrorMessage(err, "保存失败，可稍后在个人中心重试"),
             });
           }
         }
       }
       navigateToDetail();
-    } catch (error: any) {
+    } catch (error: unknown) {
       Toast.show({
         icon: "fail",
         content: getSubmitErrorMessage(error),
@@ -491,7 +705,7 @@ const UserRegistration: FC = () => {
                 {activity.location.split(" ")[0]}
               </p>
             </div>
-            <span className="px-2 py-1 h-fit bg-success-50 dark:bg-success-900/30 text-success-600 dark:text-success-400 text-[10px] font-medium rounded-full">
+                      <span className="h-fit shrink-0 whitespace-nowrap rounded-full bg-success-50 px-2 py-1 text-[10px] font-medium text-success-600 dark:bg-success-900/30 dark:text-success-400">
               {activity.registrationType?.name || "报名中"}
             </span>
           </div>
@@ -523,11 +737,21 @@ const UserRegistration: FC = () => {
                     </span>
                   )}
                 </label>
-                <DynamicField
-                  field={field}
-                  value={formData[field.key] ?? (field.type === "multi-select" ? [] : "")}
-                  onChange={(val) => setField(field.key, val)}
-                />
+                {field.type === "image" ? (
+                  <EnrollmentImageField
+                    activityId={id || ""}
+                    registrationTypeId={registrationTypeId || undefined}
+                    field={field}
+                    onChange={setImageField}
+                    onUploadingChange={setImageFieldUploading}
+                  />
+                ) : (
+                  <DynamicField
+                    field={field}
+                    value={formData[field.key] ?? (field.type === "multi-select" ? [] : "")}
+                    onChange={(val) => setField(field.key, val)}
+                  />
+                )}
               </div>
             );
           })}
@@ -538,11 +762,11 @@ const UserRegistration: FC = () => {
           <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_12px_rgba(0,0,0,0.3)]">
             <Button
               onClick={handleSubmit}
-              disabled={!isFormValid}
-              loading={isSubmitting}
+              disabled={!isFormValid || uploadingImageFields.size > 0}
+              loading={isSubmitting || uploadingImageFields.size > 0}
               className="w-full h-12 text-base"
             >
-              确认报名
+              {uploadingImageFields.size > 0 ? "图片上传中" : "确认报名"}
             </Button>
           </div>
         </div>

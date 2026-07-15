@@ -35,6 +35,7 @@ export interface Enrollment {
   registrationTypeId?: string;
   registrationTypeName?: string;
   registrationTypeMatchEnabled?: boolean;
+  imageCount?: number;
   status: EnrollmentStatus;
   isInfoComplete?: boolean;
   enrolledAt?: string;
@@ -72,6 +73,17 @@ export interface ImportEnrollmentResult {
 }
 
 export type EnrollmentFormData = Record<string, string | string[]>;
+export type EnrollmentImageAnswers = Record<string, string[]>;
+
+export interface EnrollmentImageAsset {
+  id: string;
+  field_key: string;
+  field_label_snapshot: string;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
+}
 
 export interface SendNotificationRequest {
   enrollmentIds: string[];
@@ -168,12 +180,59 @@ export async function submitEnrollment(
   activityId: string,
   data: EnrollmentFormData,
   registrationTypeId?: string,
+  imageAnswers?: EnrollmentImageAnswers,
 ): Promise<EnrollmentDetailResponse> {
   // 后端期望 { enrollment: {...} } 格式
   return api.post(`/api/user/activities/${activityId}/enroll`, {
     enrollment: data,
+    imageAnswers: imageAnswers || {},
     ...(registrationTypeId ? { registrationTypeId } : {}),
   });
+}
+
+export async function uploadEnrollmentImage(
+  activityId: string,
+  file: File,
+  fieldKey: string,
+  registrationTypeId?: string,
+): Promise<EnrollmentImageAsset> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("fieldKey", fieldKey);
+  if (registrationTypeId) formData.append("registrationTypeId", registrationTypeId);
+  const response = await api.post<{
+    success: boolean;
+    data: { asset: EnrollmentImageAsset };
+  }>(`/api/user/activities/${activityId}/enrollment-images`, formData, {
+    timeout: 60_000,
+  });
+  return response.data.asset;
+}
+
+export async function deletePendingEnrollmentImage(assetId: string): Promise<void> {
+  await api.delete(`/api/user/enrollment-images/${assetId}`);
+}
+
+export async function getEnrollmentImages(
+  activityId: string,
+  participantId: string,
+): Promise<EnrollmentImageAsset[]> {
+  const response = await api.get<{
+    success: boolean;
+    data: { images: EnrollmentImageAsset[] };
+  }>(`/api/enrollments/${activityId}/${participantId}/images`);
+  return response.data.images || [];
+}
+
+export async function getEnrollmentImageBlob(
+  activityId: string,
+  participantId: string,
+  assetId: string,
+): Promise<Blob> {
+  return api.get(
+    `/api/enrollments/${activityId}/${participantId}/images/${assetId}/content`,
+    { responseType: "blob" },
+  );
 }
 
 /**
