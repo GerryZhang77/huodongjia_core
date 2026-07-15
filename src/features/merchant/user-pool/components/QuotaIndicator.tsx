@@ -44,7 +44,7 @@ const QuotaIndicator: React.FC<QuotaIndicatorProps> = ({
         </div>
         {onUpgrade && (
           <button
-            className="flex items-center gap-1 text-xs font-medium text-accent-600 hover:text-accent-700 transition-colors"
+          className="flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs font-medium text-accent-600 transition-colors hover:text-accent-700 [&>svg]:shrink-0"
             onClick={onUpgrade}
           >
             <Zap size={12} />

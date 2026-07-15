@@ -75,7 +75,7 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
   if (message.message_type === "system") {
     return (
       <div className="flex justify-center my-2">
-        <span className="text-xs text-gray-400 dark:text-gray-500 px-3 py-1 bg-gray-100/60 dark:bg-gray-800/60 rounded-full">
+          <span className="whitespace-nowrap rounded-full bg-gray-100/60 px-3 py-1 text-xs text-gray-400 dark:bg-gray-800/60 dark:text-gray-500">
           {message.content}
         </span>
       </div>

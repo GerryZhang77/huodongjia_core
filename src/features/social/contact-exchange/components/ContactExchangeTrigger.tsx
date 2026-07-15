@@ -165,7 +165,7 @@ export const ContactExchangeTrigger: FC<ContactExchangeTriggerProps> = ({
         disabled={buttonState.disabled || request.isPending}
         title={tooltip}
         className={[
-          "inline-flex items-center rounded-full font-medium transition-colors flex-shrink-0",
+          "inline-flex flex-shrink-0 flex-nowrap items-center whitespace-nowrap rounded-full font-medium transition-colors [&>svg]:shrink-0",
           sizeCls,
           buttonState.disabled
             ? "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"

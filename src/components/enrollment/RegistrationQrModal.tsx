@@ -220,7 +220,7 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
           )}
           <div className="grid grid-cols-2 gap-2">
             <button
-              className="h-10 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium flex items-center justify-center gap-1"
+            className="flex h-10 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-gray-100 text-sm font-medium text-gray-700 [&>svg]:shrink-0"
               onClick={copyLink}
             >
               <Copy size={14} />
@@ -228,7 +228,7 @@ export const RegistrationQrModal: React.FC<RegistrationQrModalProps> = ({
             </button>
             <button
               type="button"
-              className="h-10 rounded-lg bg-primary-400 text-white text-sm font-medium flex items-center justify-center gap-1 disabled:opacity-50"
+            className="flex h-10 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-primary-400 text-sm font-medium text-white disabled:opacity-50 [&>svg]:shrink-0"
               onClick={saveQrCode}
               disabled={!qrDataUrl}
             >

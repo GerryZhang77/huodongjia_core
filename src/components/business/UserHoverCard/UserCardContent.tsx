@@ -145,7 +145,7 @@ export const UserCardContent: FC<UserCardContentProps> = ({
             {user.tags.slice(0, 3).map((tag, index) => (
               <span
                 key={index}
-                className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] rounded-full"
+              className="max-w-full truncate whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600 dark:bg-gray-700 dark:text-gray-300"
               >
                 {tag}
               </span>
@@ -167,7 +167,7 @@ export const UserCardContent: FC<UserCardContentProps> = ({
         {onViewProfile && (
           <button
             onClick={onViewProfile}
-            className="w-full flex items-center justify-center gap-1 py-2 text-xs font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 rounded-lg transition-colors"
+          className="flex w-full flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-gradient-to-r from-primary-500 to-primary-600 py-2 text-xs font-semibold text-white transition-colors hover:from-primary-600 hover:to-primary-700 [&>svg]:shrink-0"
           >
             查看个人主页
             <ChevronRight size={14} />

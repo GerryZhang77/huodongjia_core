@@ -288,7 +288,7 @@ const UserFieldLibrary: FC = () => {
           <button
             onClick={handleAdd}
             disabled={upsertMutation.isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-500 text-white text-sm font-medium disabled:opacity-60"
+          className="inline-flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary-500 px-3 py-2 text-sm font-medium text-white disabled:opacity-60 [&>svg]:shrink-0"
           >
             <Plus size={15} />
             新增资料
@@ -323,7 +323,7 @@ const UserFieldLibrary: FC = () => {
             <button
               onClick={() => refetch()}
               disabled={isFetching}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 disabled:opacity-60"
+            className="inline-flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 [&>svg]:shrink-0"
             >
               <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
               重试
@@ -341,7 +341,7 @@ const UserFieldLibrary: FC = () => {
             </p>
             <button
               onClick={handleAdd}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-500 text-white text-sm font-medium"
+            className="inline-flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary-500 px-3 py-2 text-sm font-medium text-white [&>svg]:shrink-0"
             >
               <Plus size={15} />
               新增资料

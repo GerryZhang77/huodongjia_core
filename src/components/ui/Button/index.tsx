@@ -20,6 +20,7 @@
  */
 
 import { FC } from "react";
+import { cn } from "../../../utils/cn";
 import type { ButtonProps } from "./types";
 
 /**
@@ -27,7 +28,7 @@ import type { ButtonProps } from "./types";
  */
 const LoadingIcon: FC = () => (
   <svg
-    className="animate-spin w-4 h-4"
+    className="h-4 w-4 shrink-0 animate-spin"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -61,12 +62,12 @@ export const Button: FC<ButtonProps> = ({
   icon,
   iconRight,
   className = "",
-  onClick,
   type = "button",
+  ...buttonProps
 }) => {
   // 基础类名 - 所有按钮共享
   let classes =
-    "inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+    "inline-flex flex-nowrap items-center justify-center gap-2 whitespace-nowrap font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
   // 块级按钮
   if (block) {
@@ -183,34 +184,30 @@ export const Button: FC<ButtonProps> = ({
     classes += " cursor-not-allowed";
   }
 
-  // 自定义类名
-  if (className) {
-    classes += " " + className;
-  }
-
   return (
     <button
+      {...buttonProps}
       type={type}
       disabled={disabled || loading}
-      onClick={onClick}
-      className={classes}
+      aria-busy={loading || buttonProps["aria-busy"] || undefined}
+      className={cn(classes, className)}
     >
       {/* 加载图标 */}
       {loading && <LoadingIcon />}
 
       {/* 左侧图标 */}
       {!loading && icon && (
-        <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center [&>svg]:h-full [&>svg]:w-full">
           {icon}
         </span>
       )}
 
       {/* 按钮文本 */}
-      <span>{children}</span>
+      <span className="min-w-0 whitespace-nowrap">{children}</span>
 
       {/* 右侧图标 */}
       {!loading && iconRight && (
-        <span className="w-4 h-4 shrink-0 flex items-center justify-center">
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center [&>svg]:h-full [&>svg]:w-full">
           {iconRight}
         </span>
       )}

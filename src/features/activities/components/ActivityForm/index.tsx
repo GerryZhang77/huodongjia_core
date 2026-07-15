@@ -487,7 +487,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
             label={
               <div className="flex items-center gap-2">
                 <span>NFC 碰一碰</span>
-                <span className="px-1.5 py-0.5 bg-accent-100 text-accent-600 text-xs rounded-full font-medium">
+              <span className="whitespace-nowrap rounded-full bg-accent-100 px-1.5 py-0.5 text-xs font-medium text-accent-600">
                   推荐
                 </span>
               </div>

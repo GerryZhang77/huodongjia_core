@@ -163,7 +163,7 @@ const BatchTagModal: React.FC<BatchTagModalProps> = ({
                 return (
                   <button
                     key={tag.name}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all ${getCustomTagClassName(tag.color)} ${
+              className={`flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition-all [&>svg]:shrink-0 ${getCustomTagClassName(tag.color)} ${
                       isSelected
                         ? "ring-2 ring-offset-1 ring-primary-400 shadow-sm"
                         : "opacity-80 hover:opacity-100"
@@ -202,7 +202,7 @@ const BatchTagModal: React.FC<BatchTagModalProps> = ({
               maxLength={20}
             />
             <button
-              className="flex items-center gap-1 px-4 py-2.5 rounded-xl bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 transition-colors flex-shrink-0"
+          className="flex flex-shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap rounded-xl bg-accent-50 px-4 py-2.5 text-sm font-medium text-accent-600 transition-colors hover:bg-accent-100 [&>svg]:shrink-0"
               onClick={handleCreateTag}
               disabled={!newTagName.trim()}
             >
@@ -222,7 +222,7 @@ const BatchTagModal: React.FC<BatchTagModalProps> = ({
           取消
         </button>
         <button
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[22px] font-medium text-sm transition-all ${
+          className={`flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] py-3 text-sm font-medium transition-all [&>svg]:shrink-0 ${
             selectedTagNames.size > 0
               ? "bg-gradient-to-br from-accent-400 to-accent-500 text-white shadow-sm hover:shadow-md"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"

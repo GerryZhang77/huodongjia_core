@@ -104,7 +104,7 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
           {customOptions.map((opt) => (
             <span
               key={opt.value}
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full"
+              className="inline-flex max-w-full flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
             >
               {opt.label}
               <button
@@ -178,7 +178,7 @@ export const CustomSelector: React.FC<CustomSelectorProps> = ({
         <button
           type="button"
           onClick={() => setShowInput(true)}
-          className="flex items-center gap-1 mt-2 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-300 hover:text-primary-500 transition-colors"
+          className="mt-2 flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 transition-colors hover:border-primary-300 hover:text-primary-500 dark:border-gray-600 dark:text-gray-400 [&>svg]:shrink-0"
         >
           <Plus size={12} />
           自定义

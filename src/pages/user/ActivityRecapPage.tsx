@@ -91,7 +91,7 @@ const ActivityRecapPage: React.FC = () => {
           {isOrganizer && eventId && (
             <button
               onClick={() => navigate(`/dashboard/activity/${eventId}/recap/edit`)}
-              className="inline-flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600"
+              className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs text-primary-500 hover:text-primary-600 [&>svg]:shrink-0"
             >
               <Edit size={13} /> 编辑
             </button>
@@ -138,7 +138,7 @@ const ActivityRecapPage: React.FC = () => {
               {/* 图片墙 */}
               {recap.images && recap.images.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
-                  <ImageCarousel images={recap.images} heightClass="aspect-[4/3]" />
+                  <ImageCarousel images={recap.images} variant="recap" />
                   {recap.images.length > 1 && (
                     <div className="px-4 py-2 text-xs text-gray-400 text-right">
                       共 {recap.images.length} 张

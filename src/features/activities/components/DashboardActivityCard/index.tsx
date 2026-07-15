@@ -48,11 +48,11 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
 
   return (
     <Card
-      className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200"
-      bodyClassName="p-0"
+      className="h-full overflow-hidden rounded-xl shadow-sm transition-shadow duration-200 hover:shadow-md"
+      bodyClassName="flex h-full flex-col p-0"
     >
       {/* 卡片头部：封面图区域 */}
-      <div className="relative w-full h-40 bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="relative h-40 w-full shrink-0 bg-gradient-to-br from-blue-50 to-indigo-100">
         {activity.coverImage ? (
           <img
             src={activity.coverImage}
@@ -78,7 +78,7 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
       </div>
 
       {/* 卡片内容区域 */}
-      <div className="p-5">
+      <div className="flex flex-1 flex-col p-5">
         {/* 标题和简介 */}
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 leading-snug">
@@ -152,12 +152,12 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
         </div>
 
         {/* 操作按钮组 */}
-        <div className={`grid ${isDemo ? "grid-cols-2" : "grid-cols-3"} gap-2`}>
+        <div className={`mt-auto grid ${isDemo ? "grid-cols-2" : "grid-cols-3"} gap-2`}>
           {/* 演示活动：显示详情和管理按钮 */}
           {isDemo ? (
             <>
               <button
-                className="flex items-center justify-center gap-1 rounded-lg bg-success-500/10 text-success-600 border-0 hover:bg-success-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
+                className="flex h-8 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg border-0 bg-success-500/10 px-2 text-sm font-medium text-success-600 transition-all duration-150 hover:bg-success-500/20 [&>svg]:shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   onViewDetail?.(activity.id);
@@ -168,7 +168,7 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
               </button>
 
               <button
-                className="flex items-center justify-center gap-1 rounded-lg bg-accent-500/10 text-accent-600 border-0 hover:bg-accent-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
+                className="flex h-8 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg border-0 bg-accent-500/10 px-2 text-sm font-medium text-accent-600 transition-all duration-150 hover:bg-accent-500/20 [&>svg]:shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   onManageEnroll(activity.id);
@@ -182,7 +182,7 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
             <>
               {/* 正常活动：显示编辑、管理、删除按钮 */}
               <button
-                className="flex items-center justify-center gap-1 rounded-lg bg-primary-500/10 text-primary-600 border-0 hover:bg-primary-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
+                className="flex h-8 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg border-0 bg-primary-500/10 px-2 text-sm font-medium text-primary-600 transition-all duration-150 hover:bg-primary-500/20 [&>svg]:shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(activity.id);
@@ -193,7 +193,7 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
               </button>
 
               <button
-                className="flex items-center justify-center gap-1 rounded-lg bg-accent-500/10 text-accent-600 border-0 hover:bg-accent-500/20 transition-all duration-150 h-8 font-medium text-sm px-2"
+                className="flex h-8 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg border-0 bg-accent-500/10 px-2 text-sm font-medium text-accent-600 transition-all duration-150 hover:bg-accent-500/20 [&>svg]:shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   onManageEnroll(activity.id);
@@ -205,7 +205,7 @@ export const DashboardActivityCard: FC<DashboardActivityCardProps> = ({
 
               <button
                 disabled={!canDelete}
-                className={`flex items-center justify-center gap-1 rounded-lg transition-all duration-150 h-8 font-medium text-sm px-2 border-0 ${
+                className={`flex h-8 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg border-0 px-2 text-sm font-medium transition-all duration-150 [&>svg]:shrink-0 ${
                   !canDelete
                     ? "bg-gray-200 text-gray-600 cursor-not-allowed"
                     : "bg-error-50 text-error-600 hover:bg-error-100"

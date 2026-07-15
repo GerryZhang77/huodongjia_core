@@ -82,7 +82,7 @@ const UserPoolTabs: React.FC<UserPoolTabsProps> = ({
             <span>{tab.label}</span>
             {count !== undefined && (
               <span
-                className={`text-xs px-1.5 py-0.5 rounded-full ${
+            className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
                   isActive
                     ? "bg-primary-50 text-primary-600"
                     : "bg-gray-200 text-gray-500"

@@ -112,7 +112,7 @@ export const ActivityFilterDrawer: FC<ActivityFilterDrawerProps> = ({
         <div className="flex items-center gap-2">
           <span>筛选</span>
           {filterCount > 0 && (
-            <span className="px-2 py-0.5 bg-primary-500 text-white text-xs font-semibold rounded-full">
+          <span className="whitespace-nowrap rounded-full bg-primary-500 px-2 py-0.5 text-xs font-semibold tabular-nums text-white">
               {filterCount}
             </span>
           )}

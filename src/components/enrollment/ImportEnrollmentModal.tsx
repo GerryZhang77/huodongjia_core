@@ -1272,7 +1272,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                   <p className="text-sm text-gray-400 mb-4">
                     支持 .xlsx、.xls 格式
                   </p>
-                  <button className="px-4 py-2 bg-primary-400 text-white rounded-full text-sm font-medium hover:bg-primary-500 transition-colors inline-flex items-center gap-2">
+                  <button className="inline-flex flex-nowrap items-center gap-2 whitespace-nowrap rounded-full bg-primary-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-500 [&>svg]:shrink-0">
                     <Upload size={16} />
                     选择文件
                   </button>
@@ -1310,7 +1310,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                   {usedTemplate && "（基于上次配置）"}
                 </p>
                 <button
-                  className="ml-auto text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  className="ml-auto flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs text-blue-600 hover:text-blue-800 [&>svg]:shrink-0"
                   onClick={resetMappings}
                 >
                   <RotateCcw size={12} />
@@ -1322,7 +1322,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
               {unmatchedFields.length > 0 && (
                 <div>
                   <button
-                    className="flex items-center gap-2 w-full text-left py-2"
+                    className="flex w-full flex-nowrap items-center gap-2 whitespace-nowrap py-2 text-left [&>svg]:shrink-0"
                     onClick={() => setShowUnmatchedFields(!showUnmatchedFields)}
                   >
                     {showUnmatchedFields ? (
@@ -1387,7 +1387,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
               {matchedFields.length > 0 && (
                 <div>
                   <button
-                    className="flex items-center gap-2 w-full text-left py-2"
+                    className="flex w-full flex-nowrap items-center gap-2 whitespace-nowrap py-2 text-left [&>svg]:shrink-0"
                     onClick={() => setShowMatchedFields(!showMatchedFields)}
                   >
                     {showMatchedFields ? (
@@ -1590,7 +1590,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                           <div key={itemKey} className="p-3">
                             <div className="flex items-start gap-2">
                               <span
-                                className={`px-2 py-0.5 rounded-full border text-xs flex-shrink-0 ${meta.className}`}
+                          className={`flex-shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${meta.className}`}
                               >
                                 {meta.label}
                               </span>
@@ -1814,7 +1814,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                   fieldMappings.map((m) => (
                     <span
                       key={m.sourceField}
-                      className={`px-2 py-1 rounded-full border ${
+                          className={`max-w-full truncate whitespace-nowrap rounded-full border px-2 py-1 ${
                         m.action === "map"
                           ? "bg-green-50 text-green-700 border-green-200"
                           : m.action === "ignore"
@@ -1841,7 +1841,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
           {importSuccess ? (
             <button
-              className="w-full px-6 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors inline-flex items-center justify-center gap-2"
+              className="inline-flex w-full flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-green-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600 [&>svg]:shrink-0"
               onClick={handleClose}
             >
               <CheckCircle2 size={16} />
@@ -1859,7 +1859,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
               {step === 3 && !previewResult && (
                 <button
-                  className="px-4 py-2 bg-primary-400 text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+                  className="inline-flex flex-nowrap items-center gap-2 whitespace-nowrap rounded-lg bg-primary-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-500 disabled:opacity-50 [&>svg]:shrink-0"
                   onClick={handlePreview}
                   disabled={isPreviewing || parsedData.length === 0}
                 >
@@ -1879,7 +1879,7 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
               {step === 3 && previewResult && previewResult.canImport && (
                 <button
-                  className="px-4 py-2 bg-primary-400 text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+                  className="inline-flex flex-nowrap items-center gap-2 whitespace-nowrap rounded-lg bg-primary-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-500 disabled:opacity-50 [&>svg]:shrink-0"
                   onClick={handleImport}
                   disabled={isImporting || parsedData.length === 0}
                 >

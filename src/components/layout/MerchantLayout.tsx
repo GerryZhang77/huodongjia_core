@@ -230,7 +230,7 @@ export const MerchantLayout: FC<MerchantLayoutProps> = ({
                             strokeWidth={isActive ? 2.5 : 1.8}
                           />
                           {tab.badge !== undefined && tab.badge > 0 && (
-                            <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-error-500 rounded-full">
+                  <span className="absolute -right-2 -top-1 flex h-[16px] min-w-[16px] items-center justify-center whitespace-nowrap rounded-full bg-error-500 px-1 text-[10px] font-bold tabular-nums text-white">
                               {tab.badge > 99 ? "99+" : tab.badge}
                             </span>
                           )}

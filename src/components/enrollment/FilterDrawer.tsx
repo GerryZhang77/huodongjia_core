@@ -328,20 +328,20 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({
         {/* 底部操作 */}
         <div className="flex items-center gap-3 px-4 py-3 border-t border-gray-100 bg-white">
           <button
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          className="flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-full border border-gray-200 px-4 py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 [&>svg]:shrink-0"
             onClick={handleReset}
           >
             <RotateCcw size={14} />
             重置
           </button>
           <button
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-primary-400 text-white text-sm font-medium hover:bg-primary-500 transition-colors"
+          className="flex flex-1 flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-primary-400 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-500 [&>svg]:shrink-0"
             onClick={handleConfirm}
           >
             <Check size={14} />
             确认筛选
             {activeCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
+          <span className="ml-1 whitespace-nowrap rounded-full bg-white/20 px-1.5 py-0.5 text-xs tabular-nums">
                 {activeCount}
               </span>
             )}

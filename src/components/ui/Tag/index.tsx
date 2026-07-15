@@ -177,7 +177,7 @@ export const Tag: FC<TagProps> = ({
       onClick={onClick}
       className={clsx(
         // 基础样式
-        "inline-flex items-center justify-center",
+        "inline-flex max-w-full flex-nowrap items-center justify-center whitespace-nowrap",
         "rounded-full", // Pill 样式
         "font-semibold", // 更粗的字重
         "transition-all duration-150",
@@ -206,7 +206,7 @@ export const Tag: FC<TagProps> = ({
       )}
 
       {/* 文本 */}
-      <span className="truncate">{children}</span>
+      <span className="min-w-0 truncate">{children}</span>
 
       {/* 关闭按钮 */}
       {closable && (

@@ -176,7 +176,7 @@ const UserPoolFilterDrawer: React.FC<UserPoolFilterDrawerProps> = ({
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <button
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
+          className="flex flex-nowrap items-center gap-1.5 whitespace-nowrap text-sm text-gray-500 hover:text-gray-700 [&>svg]:shrink-0"
             onClick={handleReset}
           >
             <RotateCcw size={14} />

@@ -117,7 +117,7 @@ const CompactHeader: FC<{ title: string; onBack: () => void; label?: string }> =
         </div>
       </div>
       {label && (
-        <span className="flex-shrink-0 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-500 dark:bg-primary-900/25 dark:text-primary-300">
+              <span className="flex-shrink-0 whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-500 dark:bg-primary-900/25 dark:text-primary-300">
           {label}
         </span>
       )}

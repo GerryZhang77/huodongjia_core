@@ -130,7 +130,7 @@ export const RequirementListEditor: React.FC<RequirementListEditorProps> = ({
             type="button"
             onClick={addItem}
             disabled={!inputValue.trim()}
-            className="flex items-center gap-1 px-3 py-2 text-xs text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors disabled:opacity-40"
+          className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-xs text-primary-500 transition-colors hover:bg-primary-50 disabled:opacity-40 dark:hover:bg-primary-900/30 [&>svg]:shrink-0"
           >
             <Plus size={14} />
             添加

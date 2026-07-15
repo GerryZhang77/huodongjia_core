@@ -212,7 +212,7 @@ const DiscoveryFilterBar: React.FC<DiscoveryFilterBarProps> = ({
 
         {/* 更多筛选按钮 */}
         <button
-          className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+          className={`flex flex-shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors [&>svg]:shrink-0 ${
             activeCount > 0
               ? "bg-primary-50 text-primary-600 border border-primary-200"
               : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
@@ -222,7 +222,7 @@ const DiscoveryFilterBar: React.FC<DiscoveryFilterBarProps> = ({
           <SlidersHorizontal size={12} />
           更多
           {activeCount > 0 && (
-            <span className="min-w-[16px] h-[16px] flex items-center justify-center text-[10px] font-bold text-white bg-primary-400 rounded-full">
+            <span className="flex h-[16px] min-w-[16px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-primary-400 text-[10px] font-bold tabular-nums text-white">
               {activeCount}
             </span>
           )}
@@ -231,7 +231,7 @@ const DiscoveryFilterBar: React.FC<DiscoveryFilterBarProps> = ({
         {/* 清除 */}
         {activeCount > 0 && (
           <button
-            className="flex-shrink-0 flex items-center gap-0.5 px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex flex-shrink-0 flex-nowrap items-center gap-0.5 whitespace-nowrap px-2 py-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600 [&>svg]:shrink-0"
             onClick={handleReset}
           >
             <X size={12} />
@@ -253,7 +253,7 @@ const DiscoveryFilterBar: React.FC<DiscoveryFilterBarProps> = ({
             <h3 className="text-base font-semibold text-gray-900">筛选条件</h3>
             <div className="flex items-center gap-3">
               <button
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+            className="flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs text-gray-400 hover:text-gray-600 [&>svg]:shrink-0"
                 onClick={handleReset}
               >
                 <RotateCcw size={12} />
@@ -329,7 +329,7 @@ const DiscoveryFilterBar: React.FC<DiscoveryFilterBarProps> = ({
             {/* 收藏 */}
             <div className="mb-4">
               <button
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+            className={`flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors [&>svg]:shrink-0 ${
                   criteria.favoritedOnly
                     ? "bg-red-50 text-red-600 border border-red-200"
                     : "bg-gray-50 text-gray-600 border border-gray-200"

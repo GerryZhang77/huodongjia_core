@@ -257,7 +257,7 @@ const TemplateListPage: React.FC = () => {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 px-4 pt-2 safe-area-pb bg-gradient-to-t from-white via-white/95 to-transparent dark:from-gray-800 dark:via-gray-800/95">
         <button
           onClick={() => navigate("/dashboard/profile")}
-          className="w-full max-w-2xl mx-auto flex items-center justify-center gap-1 py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+          className="mx-auto flex w-full max-w-2xl flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 [&>svg]:shrink-0"
         >
           <ChevronLeft size={14} />
           返回个人中心
@@ -315,7 +315,7 @@ const TemplateListPage: React.FC = () => {
                           </div>
                         </div>
                         {field.required && (
-                          <span className="flex-shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-500">
+                  <span className="flex-shrink-0 whitespace-nowrap rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-500">
                             必填
                           </span>
                         )}
@@ -325,7 +325,7 @@ const TemplateListPage: React.FC = () => {
                           {field.options.map((option) => (
                             <span
                               key={option}
-                              className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500"
+                      className="max-w-full truncate whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500"
                             >
                               {option}
                             </span>

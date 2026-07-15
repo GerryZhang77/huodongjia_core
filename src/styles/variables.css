@@ -112,6 +112,25 @@
   --color-white: #ffffff;
   --color-black: #000000;
 
+  /* 登录页（OpenEvent Figma）- 页面域 Token，不改变全局品牌色 */
+  --auth-action: #4d5ef8;
+  --auth-action-disabled: #bac1ff;
+  --auth-field-surface: #f1f4fb;
+  --auth-placeholder: var(--color-gray-400);
+  --auth-hint: #9e9e9e;
+  --auth-selection: #81a2fd;
+  --auth-control-off: #d9d9d9;
+  --auth-link: #007aff;
+  --auth-hero-title: #00095c;
+  --auth-hero-copy: #7870cd;
+  --auth-text: var(--color-black);
+  --auth-text-muted: rgba(0, 0, 0, 0.54);
+  --auth-card: var(--color-white);
+  --auth-focus-ring: rgba(77, 94, 248, 0.2);
+  --auth-font-chinese: "PingFang SC", "Source Han Sans SC", "Noto Sans SC",
+    "Microsoft YaHei", sans-serif;
+  --auth-font-display: "Inter", "Arial Black", "Helvetica Neue", sans-serif;
+
   /* ===== 语义化颜色映射 ===== */
 
   /* 文本颜色 */

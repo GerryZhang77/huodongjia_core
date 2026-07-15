@@ -60,7 +60,7 @@ const MenuItem: FC<{
     </div>
     <div className="flex items-center gap-2">
       {badge !== undefined && badge > 0 && (
-        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center">
+        <span className="flex h-[18px] min-w-[18px] items-center justify-center whitespace-nowrap rounded-full bg-red-500 px-1 text-[10px] font-medium tabular-nums text-white">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -161,7 +161,7 @@ const MyActivityCard: FC<{
           </h4>
           {/* 状态标签 */}
           <span
-            className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}
+            className={`inline-flex flex-shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${status.bg} ${status.text}`}
           >
             <StatusIcon size={12} />
             {status.label}
@@ -407,13 +407,13 @@ const UserProfileCards: FC = () => {
                 {profile.tags!.slice(0, 5).map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-600"
+                    className="inline-flex max-w-full truncate whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-600"
                   >
                     {tag}
                   </span>
                 ))}
                 {profile.tags!.length > 5 && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                  <span className="inline-flex flex-nowrap items-center whitespace-nowrap rounded-full bg-gray-100 px-2 py-1 text-xs font-medium tabular-nums text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                     +{profile.tags!.length - 5}
                   </span>
                 )}
@@ -499,7 +499,7 @@ const UserProfileCards: FC = () => {
             </h3>
             <button
               onClick={() => navigate("/u/activities/history")}
-              className="text-xs text-primary-500 dark:text-primary-400 font-medium flex items-center gap-0.5"
+              className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap text-xs font-medium text-primary-500 dark:text-primary-400 [&>svg]:shrink-0"
             >
               查看全部
               <ChevronRight size={14} />
@@ -537,7 +537,7 @@ const UserProfileCards: FC = () => {
                 {filteredActivities.length > 3 && (
                   <button
                     onClick={() => navigate("/u/activities/history")}
-                    className="w-full flex items-center justify-center gap-1 py-2.5 text-xs text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
+            className="flex w-full flex-nowrap items-center justify-center gap-1 whitespace-nowrap py-2.5 text-xs text-gray-500 transition-colors hover:text-primary-500 dark:text-gray-400 dark:hover:text-primary-400 [&>svg]:shrink-0"
                   >
                     <MoreHorizontal size={14} />
                     查看更多 ({filteredActivities.length - 3})

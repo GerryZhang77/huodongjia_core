@@ -116,7 +116,7 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
       {/* 封面区域 - 图片轮播 */}
       <ImageCarousel
         images={carouselImages.length > 0 ? carouselImages : []}
-        heightClass="aspect-[4/3]"
+        variant="detail-mobile"
         placeholder={<CoverPlaceholder />}
         renderOverlay={() => (
           <>
@@ -136,21 +136,21 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
             </div>
 
             {/* 状态标签 */}
-            <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-medium text-white bg-success-500 z-20">
+            <div className="absolute bottom-3 right-3 z-20 whitespace-nowrap rounded-full bg-success-500 px-2 py-0.5 text-[10px] font-medium text-white">
               报名中
             </div>
 
             {/* 底部标签 */}
             <div className="absolute bottom-3 left-3 flex gap-1 z-20">
               {previewData.category && (
-                <span className="px-1.5 py-0.5 bg-white/95 backdrop-blur-sm text-primary-700 text-[9px] font-medium rounded-full">
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-white/95 px-1.5 py-0.5 text-[9px] font-medium text-primary-700 backdrop-blur-sm">
                   {getCategoryLabel(previewData.category)}
                 </span>
               )}
               {previewData.tags.slice(0, previewData.category ? 2 : 3).map((tag, i) => (
                 <span
                   key={i}
-                  className="px-1.5 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[9px] font-medium rounded-full"
+                  className="shrink-0 whitespace-nowrap rounded-full bg-white/90 px-1.5 py-0.5 text-[9px] font-medium text-gray-700 backdrop-blur-sm"
                 >
                   {getTagLabel(tag)}
                 </span>
@@ -349,7 +349,7 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
         {/* 封面区域 - 图片轮播 */}
         <ImageCarousel
           images={carouselImages.length > 0 ? carouselImages : []}
-          heightClass="aspect-[21/9]"
+          variant="detail-desktop"
           className="rounded-t-2xl"
           placeholder={<CoverPlaceholder isDesktop />}
           renderOverlay={() => (
@@ -370,21 +370,21 @@ export const ActivityPreview: FC<ActivityPreviewProps> = ({
               </div>
 
               {/* 状态标签 */}
-              <div className="absolute bottom-4 right-4 px-3 py-1 rounded-full text-xs font-medium text-white bg-success-500 z-20">
+              <div className="absolute bottom-4 right-4 z-20 whitespace-nowrap rounded-full bg-success-500 px-3 py-1 text-xs font-medium text-white">
                 报名中
               </div>
 
               {/* 底部标签 */}
               <div className="absolute bottom-4 left-4 flex gap-1.5 z-20">
                 {previewData.category && (
-                  <span className="px-2 py-0.5 bg-white/95 backdrop-blur-sm text-primary-700 text-[10px] font-medium rounded-full">
+                  <span className="shrink-0 whitespace-nowrap rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-medium text-primary-700 backdrop-blur-sm">
                     {getCategoryLabel(previewData.category)}
                   </span>
                 )}
                 {previewData.tags.slice(0, previewData.category ? 2 : 3).map((tag, i) => (
                   <span
                     key={i}
-                    className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
+                    className="shrink-0 whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-gray-700 backdrop-blur-sm"
                   >
                     {getTagLabel(tag)}
                   </span>

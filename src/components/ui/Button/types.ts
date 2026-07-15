@@ -2,7 +2,7 @@
  * Button 组件类型定义 - 纯 Tailwind v4
  */
 
-import type { ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 /**
  * 按钮尺寸
@@ -26,7 +26,8 @@ export type ButtonVariant =
 /**
  * Button 组件 Props
  */
-export interface ButtonProps {
+export interface ButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   /** 按钮文本 */
   children: ReactNode;
 
@@ -35,9 +36,6 @@ export interface ButtonProps {
 
   /** 变体 @default 'primary' */
   variant?: ButtonVariant;
-
-  /** 是否禁用 @default false */
-  disabled?: boolean;
 
   /** 是否加载中 @default false */
   loading?: boolean;
@@ -51,17 +49,4 @@ export interface ButtonProps {
   /** 右侧图标 */
   iconRight?: ReactNode;
 
-  /** 自定义类名 */
-  className?: string;
-
-  /** 点击事件 */
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-
-  /** 按钮类型 @default 'button' */
-  type?: "button" | "submit" | "reset";
-
-  /**
-   * ARIA 标签（无障碍）
-   */
-  "aria-label"?: string;
 }

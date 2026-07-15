@@ -140,7 +140,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
               <button
                 type="button"
                 onClick={onEdit}
-                className="mb-1 inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-primary-500 px-4 text-sm font-medium text-white transition-colors hover:bg-primary-600"
+                className="mb-1 inline-flex h-9 flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-primary-500 px-4 text-sm font-medium text-white transition-colors hover:bg-primary-600 [&>svg]:shrink-0"
               >
                 <Edit3 size={14} />
                 <span>编辑资料</span>
@@ -156,7 +156,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
               <button
                 type="button"
                 onClick={onLogin}
-                className="mb-1 inline-flex h-9 items-center justify-center gap-1.5 rounded-full bg-primary-500 px-4 text-sm font-medium text-white transition-colors hover:bg-primary-600"
+                className="mb-1 inline-flex h-9 flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-primary-500 px-4 text-sm font-medium text-white transition-colors hover:bg-primary-600 [&>svg]:shrink-0"
               >
                 <LogIn size={14} />
                 <span>登录互动</span>
@@ -171,7 +171,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
               {displayName}
             </h2>
             {contextLabel && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-600 dark:bg-green-900/25 dark:text-green-300">
+            <span className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-600 dark:bg-green-900/25 dark:text-green-300">
                 <BadgeCheck size={12} />
                 {contextLabel}
               </span>
@@ -258,7 +258,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
             <button
               type="button"
               onClick={onEdit}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-primary-500 px-4 text-sm font-semibold text-white shadow-primary transition-colors hover:bg-primary-600"
+              className="inline-flex h-11 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary-500 px-4 text-sm font-semibold text-white shadow-primary transition-colors hover:bg-primary-600 [&>svg]:shrink-0"
             >
               <Edit3 size={16} />
               <span>编辑资料</span>
@@ -269,7 +269,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
               type="button"
               onClick={onAddPhotos}
               disabled={photoActionDisabled || photoActionLoading}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-4 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-full border border-primary-200 bg-primary-50 px-4 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 [&>svg]:shrink-0"
             >
               {photoActionLoading ? (
                 <RefreshCw size={16} className="animate-spin" />
@@ -297,7 +297,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
         <button
           type="button"
           onClick={onLogin}
-          className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary-500 px-4 text-sm font-semibold text-white shadow-primary transition-colors hover:bg-primary-600"
+          className="mt-5 inline-flex h-11 w-full flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary-500 px-4 text-sm font-semibold text-white shadow-primary transition-colors hover:bg-primary-600 [&>svg]:shrink-0"
         >
           <LogIn size={16} />
           <span>登录后关注或私信</span>
@@ -333,7 +333,7 @@ export const PublicProfileCard: FC<PublicProfileCardProps> = ({
             {displayName}
           </h2>
           {contextLabel && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600 dark:bg-green-900/25 dark:text-green-300">
+            <span className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600 dark:bg-green-900/25 dark:text-green-300">
               <BadgeCheck size={12} />
               {contextLabel}
             </span>

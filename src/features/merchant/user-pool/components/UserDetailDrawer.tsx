@@ -108,7 +108,7 @@ const TagGroup: React.FC<TagGroupProps> = ({
         {tags.map((tag) => (
           <span
             key={tag}
-            className={`px-2.5 py-1 text-xs rounded-full ${
+        className={`max-w-full truncate whitespace-nowrap rounded-full px-2.5 py-1 text-xs ${
               variant === "auto" ? "border" : ""
             } ${getTagStyle(tag)}`}
           >
@@ -181,7 +181,7 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
         <div className="flex items-center gap-1">
           {onViewProfile && (
             <button
-              className="flex items-center gap-1 px-2.5 h-8 rounded-full text-sm text-primary-600 hover:bg-primary-50 transition-colors"
+            className="flex h-8 flex-nowrap items-center gap-1 whitespace-nowrap rounded-full px-2.5 text-sm text-primary-600 transition-colors hover:bg-primary-50 [&>svg]:shrink-0"
               onClick={() => onViewProfile(user.id)}
               title="查看用户公开主页"
             >
@@ -221,7 +221,7 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
                 {user.name}
               </h2>
               <span
-                className={`px-2 py-0.5 text-xs rounded-full font-medium ${ACTIVITY_LEVEL_COLORS[user.activityLevel]}`}
+                className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${ACTIVITY_LEVEL_COLORS[user.activityLevel]}`}
               >
                 {ACTIVITY_LEVEL_LABELS[user.activityLevel]}
               </span>
@@ -330,14 +330,14 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
       {/* 底部操作栏 - 固定在底部 */}
       <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-4 flex gap-3 safe-area-pb">
         <button
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-[22px] border border-accent-300 text-accent-600 font-medium text-sm hover:bg-accent-50 transition-colors"
+            className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] border border-accent-300 py-3 text-sm font-medium text-accent-600 transition-colors hover:bg-accent-50 [&>svg]:shrink-0"
           onClick={() => onTagUser?.(user.id)}
         >
           <TagIcon size={16} />
           打标签
         </button>
         <button
-          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 text-white font-medium text-sm shadow-sm hover:shadow-md transition-all"
+            className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
           onClick={() => onPushActivity?.(user.id)}
         >
           <Send size={16} />

@@ -991,7 +991,7 @@ const UserPoolPage: React.FC = () => {
                   )}
                 </div>
                 <button
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors flex-shrink-0 ${
+          className={`flex flex-shrink-0 flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors [&>svg]:shrink-0 ${
                     activeFilterCount > 0
                       ? "border-primary-400 bg-primary-50 text-primary-600"
                       : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
@@ -1001,13 +1001,13 @@ const UserPoolPage: React.FC = () => {
                   <Filter size={16} />
                   筛选
                   {activeFilterCount > 0 && (
-                    <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-primary-400 rounded-full">
+            <span className="flex h-[18px] min-w-[18px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-primary-400 px-1 text-[10px] font-bold tabular-nums text-white">
                       {activeFilterCount}
                     </span>
                   )}
                 </button>
                 <button
-                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:border-gray-300 transition-colors flex-shrink-0"
+          className="flex flex-shrink-0 flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:border-gray-300 [&>svg]:shrink-0"
                   onClick={() => setTagManagerVisible(true)}
                 >
                   <Settings size={16} />
@@ -1096,14 +1096,14 @@ const UserPoolPage: React.FC = () => {
                     已选 {selectedUserIds.size} 人
                   </span>
                   <button
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-[22px] bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 transition-colors"
+              className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-[22px] bg-accent-50 px-3 py-1.5 text-sm font-medium text-accent-600 transition-colors hover:bg-accent-100 [&>svg]:shrink-0"
                     onClick={handleBatchTag}
                   >
                     <TagIcon size={14} />
                     打标签
                   </button>
                   <button
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 text-white text-sm font-medium shadow-sm hover:shadow-md transition-all"
+              className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
                     onClick={handleBatchPush}
                   >
                     <Send size={14} />
@@ -1158,7 +1158,7 @@ const UserPoolPage: React.FC = () => {
                               );
                             }
                           }}
-                          className={`text-xs font-medium px-2 py-1 rounded-md inline-flex items-center gap-1.5 transition-colors ${
+                      className={`inline-flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium transition-colors [&>svg]:shrink-0 ${
                             isOther
                               ? "text-gray-500 cursor-default"
                               : "text-gray-700 hover:text-primary-600 hover:bg-primary-50"

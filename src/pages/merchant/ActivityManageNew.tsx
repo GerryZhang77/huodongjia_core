@@ -153,7 +153,7 @@ export const ActivityManageNew: FC = () => {
               {isCompleted && (
                 <button
                   onClick={() => navigate(`/dashboard/activity/${id}/recap/edit`)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-200 bg-primary-50 text-sm text-primary-600 hover:bg-primary-100 transition-colors"
+          className="inline-flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-lg border border-primary-200 bg-primary-50 px-3 py-1.5 text-sm text-primary-600 transition-colors hover:bg-primary-100 [&>svg]:shrink-0"
                 >
                   <Images size={14} />
                   管理回顾
@@ -163,7 +163,7 @@ export const ActivityManageNew: FC = () => {
                 <button
                   onClick={handleFinish}
                   disabled={finishing}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex flex-nowrap items-center gap-1.5 whitespace-nowrap rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 [&>svg]:shrink-0"
                 >
                   {finishing ? (
                     <Loader2 size={14} className="animate-spin" />

@@ -87,7 +87,7 @@ export const MerchantTopBar: FC<MerchantTopBarProps> = ({
                     className="text-gray-600 dark:text-gray-300"
                   />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-error-500 rounded-full">
+            <span className="absolute right-1 top-1 flex h-[16px] min-w-[16px] items-center justify-center whitespace-nowrap rounded-full bg-error-500 px-1 text-[10px] font-bold tabular-nums text-white">
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                   )}

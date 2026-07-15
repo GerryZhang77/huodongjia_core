@@ -538,7 +538,7 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 bg-gray-50">
           {exportSuccess ? (
             <button
-              className="px-6 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors inline-flex items-center gap-2"
+              className="inline-flex flex-nowrap items-center gap-2 whitespace-nowrap rounded-lg bg-green-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600 [&>svg]:shrink-0"
               onClick={handleClose}
             >
               <CheckCircle2 size={16} />
@@ -554,7 +554,7 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
                 取消
               </button>
               <button
-                className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+              className="inline-flex flex-nowrap items-center gap-2 whitespace-nowrap rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50 [&>svg]:shrink-0"
                 onClick={handleExport}
                 disabled={
                   isExporting ||

@@ -503,7 +503,7 @@ const UserEditProfile: FC = () => {
                 {formData.interests.map((interest) => (
                   <span
                     key={interest}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400 text-xs font-medium rounded-full"
+                  className="inline-flex max-w-full flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-500 dark:bg-primary-900/30 dark:text-primary-400"
                   >
                     {interest}
                     <button

@@ -178,7 +178,7 @@ const UserDiscoverPeople: React.FC = () => {
                       {u.name}
                     </span>
                     {!!u.sharedTagCount && u.sharedTagCount > 0 && (
-                      <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                  <span className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] text-amber-600">
                         <Sparkles size={10} />
                         {u.sharedTagCount} 个共同兴趣
                       </span>

@@ -695,7 +695,7 @@ export const ActivityFormWithPreview: React.FC<
           label={
             <div className="flex items-center gap-2">
               <span>NFC 碰一碰</span>
-              <span className="px-1.5 py-0.5 bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 text-xs rounded-full font-medium">
+                  <span className="whitespace-nowrap rounded-full bg-accent-100 px-1.5 py-0.5 text-xs font-medium text-accent-600 dark:bg-accent-900/30 dark:text-accent-400">
                 推荐
               </span>
             </div>
@@ -726,7 +726,7 @@ export const ActivityFormWithPreview: React.FC<
                 <button
                   type="button"
                   onClick={() => setTplPickerType("requirements")}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-primary-600 hover:bg-primary-50 transition-colors"
+                  className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg px-2 py-0.5 text-primary-600 transition-colors hover:bg-primary-50 [&>svg]:shrink-0"
                   title="从已保存的模板中导入"
                 >
                   <FileText size={12} />
@@ -735,7 +735,7 @@ export const ActivityFormWithPreview: React.FC<
                 <button
                   type="button"
                   onClick={() => setTplSaveType("requirements")}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                  className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg px-2 py-0.5 text-gray-600 transition-colors hover:bg-gray-100 [&>svg]:shrink-0"
                   title="把当前内容保存为可复用的模板"
                 >
                   <Save size={12} />
@@ -833,7 +833,7 @@ export const ActivityFormWithPreview: React.FC<
                   <div className="flex items-center bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
                     <button
                       onClick={() => setPreviewMode("mobile")}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`flex flex-nowrap items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-md text-xs font-medium transition-all [&>svg]:shrink-0 ${
                         previewMode === "mobile"
                           ? "bg-primary-500 text-white shadow-sm"
                           : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -844,7 +844,7 @@ export const ActivityFormWithPreview: React.FC<
                     </button>
                     <button
                       onClick={() => setPreviewMode("desktop")}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    className={`flex flex-nowrap items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 rounded-md text-xs font-medium transition-all [&>svg]:shrink-0 ${
                         previewMode === "desktop"
                           ? "bg-primary-500 text-white shadow-sm"
                           : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -857,7 +857,7 @@ export const ActivityFormWithPreview: React.FC<
                   {/* 隐藏预览按钮 */}
                   <button
                     onClick={() => setShowPreview(false)}
-                    className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1 px-2 py-1.5"
+                  className="flex flex-nowrap items-center gap-1 whitespace-nowrap px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 [&>svg]:shrink-0"
                   >
                     <EyeOff size={14} />
                     隐藏
@@ -890,7 +890,7 @@ export const ActivityFormWithPreview: React.FC<
       {isDesktopViewport && !showPreview && (
         <button
           onClick={() => setShowPreview(true)}
-          className="fixed right-6 top-1/2 -translate-y-1/2 z-40 flex items-center gap-2 px-4 py-3 bg-primary-500 text-white rounded-l-xl shadow-lg hover:bg-primary-600 transition-colors"
+          className="fixed right-6 top-1/2 z-40 flex -translate-y-1/2 flex-nowrap items-center gap-2 whitespace-nowrap rounded-l-xl bg-primary-500 px-4 py-3 text-white shadow-lg transition-colors hover:bg-primary-600 [&>svg]:shrink-0"
         >
           <Eye size={18} />
           <span className="text-sm font-medium">显示预览</span>
@@ -935,7 +935,7 @@ export const ActivityFormWithPreview: React.FC<
               <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
                 <button
                   onClick={() => setPreviewMode("mobile")}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                    className={`flex flex-nowrap items-center gap-1 whitespace-nowrap px-2 py-1 rounded-md text-xs font-medium transition-all [&>svg]:shrink-0 ${
                     previewMode === "mobile"
                       ? "bg-white dark:bg-gray-600 text-primary-500 shadow-sm"
                       : "text-gray-500"
@@ -946,7 +946,7 @@ export const ActivityFormWithPreview: React.FC<
                 </button>
                 <button
                   onClick={() => setPreviewMode("desktop")}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                    className={`flex flex-nowrap items-center gap-1 whitespace-nowrap px-2 py-1 rounded-md text-xs font-medium transition-all [&>svg]:shrink-0 ${
                     previewMode === "desktop"
                       ? "bg-white dark:bg-gray-600 text-primary-500 shadow-sm"
                       : "text-gray-500"

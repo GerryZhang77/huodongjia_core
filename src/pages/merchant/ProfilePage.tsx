@@ -50,6 +50,7 @@ import { useThemeStore } from "@/store/themeStore";
 import { ThemeSelector } from "@/components/ui/ThemeSelector";
 import { useSocialStats } from "@/features/social";
 import { useImageUpload } from "@/features/uploads";
+import { useLogout } from "@/features/auth/hooks";
 
 /**
  * 菜单项组件
@@ -67,7 +68,7 @@ interface MenuItemProps {
 
 const PublicBadge: React.FC<{ isPublic: boolean }> = ({ isPublic }) => (
   <span
-    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+      className={`inline-flex flex-nowrap items-center gap-0.5 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
       isPublic
         ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
         : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
@@ -130,7 +131,8 @@ const MenuItem: React.FC<MenuItemProps> = ({
  */
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const { logout } = useStore();
+  const { logout: clearLegacySession } = useStore();
+  const logout = useLogout();
   const { mode } = useThemeStore();
   const [showThemePopup, setShowThemePopup] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -249,9 +251,9 @@ const ProfilePage: React.FC = () => {
       confirmText: "退出",
       cancelText: "取消",
       onConfirm: () => {
+        clearLegacySession();
         logout();
         Toast.show({ content: "已退出登录" });
-        navigate("/login");
       },
     });
   };
@@ -329,7 +331,7 @@ const ProfilePage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => navigate("/dashboard/profile/edit")}
-                        className="text-xs text-white/70 hover:text-white inline-flex items-center gap-0.5 transition-colors"
+            className="inline-flex flex-nowrap items-center gap-0.5 whitespace-nowrap text-xs text-white/70 transition-colors hover:text-white [&>svg]:shrink-0"
                       >
                         完善资料让参与者更了解你
                         <ChevronRight size={12} />

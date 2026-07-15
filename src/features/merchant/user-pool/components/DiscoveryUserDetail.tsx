@@ -129,12 +129,12 @@ const DiscoveryUserDetail: React.FC<DiscoveryUserDetailProps> = ({
               {user.gender && <span>{GENDER_LABELS[user.gender]}</span>}
               {user.ageGroup && <span>{user.ageGroup}岁</span>}
               {user.isUnlocked ? (
-                <span className="flex items-center gap-0.5 text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+                <span className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap rounded-full bg-green-50 px-1.5 py-0.5 text-xs text-green-600">
                   <Unlock size={10} />
                   已解锁
                 </span>
               ) : (
-                <span className="flex items-center gap-0.5 text-xs text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
+                <span className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap rounded-full bg-gray-50 px-1.5 py-0.5 text-xs text-gray-400">
                   <Lock size={10} />
                   未解锁
                 </span>
@@ -143,7 +143,7 @@ const DiscoveryUserDetail: React.FC<DiscoveryUserDetailProps> = ({
 
             {/* 匹配度圆环 */}
             <div
-              className={`flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${getMatchScoreColor(user.matchScore)} text-white text-sm font-medium`}
+              className={`flex flex-nowrap items-center gap-2 whitespace-nowrap rounded-full bg-gradient-to-r px-4 py-2 text-sm font-medium text-white ${getMatchScoreColor(user.matchScore)}`}
             >
               <Sparkles size={14} />
               匹配度 {user.matchScore}分
@@ -254,7 +254,7 @@ const DiscoveryUserDetail: React.FC<DiscoveryUserDetailProps> = ({
                 {user.interests.map((interest) => (
                   <span
                     key={interest}
-                    className="px-2.5 py-1 text-xs bg-primary-50 text-primary-600 rounded-full"
+                    className="max-w-full truncate whitespace-nowrap rounded-full bg-primary-50 px-2.5 py-1 text-xs text-primary-600"
                   >
                     {interest}
                   </span>
@@ -273,7 +273,7 @@ const DiscoveryUserDetail: React.FC<DiscoveryUserDetailProps> = ({
                 {user.activityPreferences.map((pref) => (
                   <span
                     key={pref}
-                    className="px-2.5 py-1 text-xs bg-orange-50 text-orange-600 rounded-full"
+                    className="max-w-full truncate whitespace-nowrap rounded-full bg-orange-50 px-2.5 py-1 text-xs text-orange-600"
                   >
                     {pref}
                   </span>
@@ -292,7 +292,7 @@ const DiscoveryUserDetail: React.FC<DiscoveryUserDetailProps> = ({
                 {user.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="px-2.5 py-1 text-xs bg-accent-50 text-accent-600 rounded-full"
+                    className="max-w-full truncate whitespace-nowrap rounded-full bg-accent-50 px-2.5 py-1 text-xs text-accent-600"
                   >
                     {skill}
                   </span>
@@ -305,7 +305,7 @@ const DiscoveryUserDetail: React.FC<DiscoveryUserDetailProps> = ({
           <div className="flex gap-3 pt-2">
             {!user.isUnlocked && (
               <button
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium bg-gradient-to-br from-accent-400 to-accent-500 text-white rounded-[22px] shadow-sm hover:shadow-md transition-all"
+          className="flex flex-1 flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-accent-400 to-accent-500 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
                 onClick={() => onUnlock(user.id)}
               >
                 <Unlock size={14} />
@@ -313,7 +313,7 @@ const DiscoveryUserDetail: React.FC<DiscoveryUserDetailProps> = ({
               </button>
             )}
             <button
-              className={`${user.isUnlocked ? "flex-1" : ""} flex items-center justify-center gap-1.5 py-2.5 px-5 text-sm font-medium bg-gradient-to-br from-primary-400 to-primary-500 text-white rounded-[22px] shadow-sm hover:shadow-md transition-all`}
+          className={`${user.isUnlocked ? "flex-1" : ""} flex flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0`}
               onClick={() => onInvite(user.id)}
             >
               <Send size={14} />

@@ -356,7 +356,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
           {activity.tags.slice(0, 2).map((tag, i) => (
             <span
               key={i}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  className={`max-w-full truncate whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                 i === 0
                   ? "bg-blue-50 dark:bg-primary-900/30 text-primary-500"
                   : "bg-purple-50 dark:bg-accent-900/30 text-accent-500"

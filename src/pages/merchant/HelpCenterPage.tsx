@@ -464,7 +464,7 @@ const HelpCenterPage: React.FC = () => {
 
             <button
               onClick={() => Toast.show({ content: "在线客服功能开发中" })}
-              className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+              className="flex w-full flex-nowrap items-center gap-3 whitespace-nowrap rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 [&>svg]:shrink-0"
             >
               <div className="w-10 h-10 rounded-full bg-accent-50 dark:bg-accent-900/30 flex items-center justify-center">
                 <MessageCircle

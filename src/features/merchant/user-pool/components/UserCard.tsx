@@ -148,7 +148,7 @@ const UserCard: React.FC<UserCardProps> = ({
                 {user.name}
               </span>
               <span
-                className={`px-2 py-0.5 text-xs rounded-full ${ACTIVITY_LEVEL_COLORS[user.activityLevel]}`}
+            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${ACTIVITY_LEVEL_COLORS[user.activityLevel]}`}
               >
                 {ACTIVITY_LEVEL_LABELS[user.activityLevel]}
               </span>
@@ -209,7 +209,7 @@ const UserCard: React.FC<UserCardProps> = ({
               {visibleMerchantTags.map((tag) => (
                 <span
                   key={tag}
-                  className={`px-2 py-0.5 text-xs rounded-full font-medium max-w-[120px] truncate ${getCustomTagClassName(
+              className={`max-w-[120px] truncate whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${getCustomTagClassName(
                     customTagColorMap.get(tag),
                   )}`}
                   title={tag}

@@ -408,7 +408,7 @@ const UserActivityDetail: FC = () => {
       {/* 页面内容 */}
       <div className="md:py-6 lg:py-8">
         {/* 响应式容器 - 桌面版增加上下边距和圆角 */}
-        <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white dark:bg-gray-800 min-h-screen md:min-h-0 pb-32 md:pb-24 shadow-sm md:shadow-xl md:rounded-2xl md:mb-6 relative">
+        <div className="relative mx-auto flex min-h-screen max-w-lg flex-col bg-white shadow-sm dark:bg-gray-800 md:mb-6 md:min-h-[calc(100dvh-8rem)] md:max-w-2xl md:rounded-2xl md:shadow-xl lg:max-w-4xl">
           {/* 桌面端左右切换按钮 - 相对于卡片定位 */}
           {prevActivity && (
             <button
@@ -446,7 +446,7 @@ const UserActivityDetail: FC = () => {
           )}
 
           {/* 封面区域 - 图片轮播（与移动端切换按钮共用相对容器，确保按钮垂直居中） */}
-          <div className="relative">
+          <div className="relative shrink-0">
             {prevActivity && (
               <button
                 onClick={goToPrevious}
@@ -472,13 +472,15 @@ const UserActivityDetail: FC = () => {
               </button>
             )}
             <ImageCarousel
-            images={
-              activity.images?.length ? activity.images : [activity.coverImage]
-            }
-            heightClass="aspect-[4/3] lg:aspect-[21/9]"
-            className="md:rounded-t-2xl"
-            renderOverlay={() => (
-              <>
+              images={
+                activity.images?.length
+                  ? activity.images
+                  : [activity.coverImage]
+              }
+              variant="detail"
+              className="md:rounded-t-2xl"
+              renderOverlay={() => (
+                <>
                 {/* 顶部导航 - 增加顶部安全区域 */}
                 <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-20">
                   <button
@@ -512,7 +514,7 @@ const UserActivityDetail: FC = () => {
 
                 {/* 状态标签 - 移动到右下角，避免与返回按钮重叠 */}
                 <div
-                  className={`absolute bottom-3 right-4 px-3 py-1 rounded-full text-xs font-medium text-white z-20 ${statusDisplayConfig.color}`}
+                  className={`absolute bottom-3 right-4 z-20 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium text-white ${statusDisplayConfig.color}`}
                 >
                   {statusDisplayConfig.label}
                 </div>
@@ -520,26 +522,26 @@ const UserActivityDetail: FC = () => {
                 {/* 底部标签 */}
                 <div className="absolute bottom-3 left-4 flex gap-1.5 z-20">
                   {activity.category && (
-                    <span className="px-2 py-0.5 bg-white/95 backdrop-blur-sm text-primary-700 text-[10px] font-medium rounded-full">
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-medium text-primary-700 backdrop-blur-sm">
                       {getCategoryLabel(activity.category)}
                     </span>
                   )}
                   {activity.tags.slice(0, activity.category ? 2 : 3).map((tag, i) => (
                     <span
                       key={i}
-                      className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
+                      className="shrink-0 whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-gray-700 backdrop-blur-sm"
                     >
                       {getTagLabel(tag)}
                     </span>
                   ))}
                 </div>
-              </>
-            )}
-          />
+                </>
+              )}
+            />
           </div>
 
           {/* 内容区 */}
-          <div className="px-4 py-5 md:px-6 lg:px-8">
+          <div className="flex-1 px-4 py-5 md:px-6 lg:px-8">
             {/* 标题 */}
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
               {activity.title}
@@ -762,8 +764,8 @@ const UserActivityDetail: FC = () => {
               )}
           </div>
 
-          {/* 底部操作栏 - 相对于卡片容器定位 */}
-          <div className="absolute bottom-0 left-0 right-0 z-50 md:rounded-b-2xl overflow-hidden">
+          {/* 底部操作栏 - 短内容时贴底，长内容时跟随文档流 */}
+          <div className="mt-auto shrink-0 overflow-hidden md:rounded-b-2xl">
             <div className="bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-4 lg:pb-6">
               <div className="flex items-center gap-3">
                 {!isBusinessUser && (

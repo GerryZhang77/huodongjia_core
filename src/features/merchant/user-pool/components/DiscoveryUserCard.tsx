@@ -118,7 +118,7 @@ const DiscoveryUserCard: React.FC<DiscoveryUserCardProps> = ({
           </div>
           {/* 匹配度徽章 */}
           <div
-            className={`absolute -bottom-1 -right-1 text-[10px] font-bold px-1 py-0.5 rounded-full border ${getMatchScoreColor(user.matchScore)}`}
+            className={`absolute -bottom-1 -right-1 whitespace-nowrap rounded-full border px-1 py-0.5 text-[10px] font-bold tabular-nums ${getMatchScoreColor(user.matchScore)}`}
           >
             {user.matchScore}
           </div>
@@ -132,12 +132,12 @@ const DiscoveryUserCard: React.FC<DiscoveryUserCardProps> = ({
               {displayName}
             </span>
             {user.isUnlocked ? (
-              <span className="flex items-center gap-0.5 text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+              <span className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] text-green-600">
                 <Unlock size={10} />
                 已解锁
               </span>
             ) : (
-              <span className="flex items-center gap-0.5 text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
+              <span className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap rounded-full bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-400">
                 <Lock size={10} />
                 未解锁
               </span>
@@ -192,13 +192,13 @@ const DiscoveryUserCard: React.FC<DiscoveryUserCardProps> = ({
             {user.interests.slice(0, 4).map((interest) => (
               <span
                 key={interest}
-                className={`text-[10px] px-1.5 py-0.5 rounded-full ${getInterestColor(interest)}`}
+                className={`max-w-full truncate whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] ${getInterestColor(interest)}`}
               >
                 {interest}
               </span>
             ))}
             {user.interests.length > 4 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+              <span className="whitespace-nowrap rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
                 +{user.interests.length - 4}
               </span>
             )}
@@ -223,7 +223,7 @@ const DiscoveryUserCard: React.FC<DiscoveryUserCardProps> = ({
             <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
               {!user.isUnlocked && onUnlock && (
                 <button
-                  className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-accent-600 bg-accent-50 rounded-full hover:bg-accent-100 transition-colors"
+          className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-accent-50 px-2 py-1 text-[11px] font-medium text-accent-600 transition-colors hover:bg-accent-100 [&>svg]:shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
                     onUnlock(user.id);
@@ -234,7 +234,7 @@ const DiscoveryUserCard: React.FC<DiscoveryUserCardProps> = ({
                 </button>
               )}
               <button
-                className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-primary-600 bg-primary-50 rounded-full hover:bg-primary-100 transition-colors"
+          className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-primary-50 px-2 py-1 text-[11px] font-medium text-primary-600 transition-colors hover:bg-primary-100 [&>svg]:shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   onInvite(user.id);

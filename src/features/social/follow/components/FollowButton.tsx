@@ -78,7 +78,7 @@ export const FollowButton: FC<FollowButtonProps> = ({
       disabled={loading}
       className={clsx(
         baseStyle,
-        "inline-flex items-center justify-center gap-1 rounded-full font-medium transition-colors",
+        "inline-flex flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-full font-medium transition-colors [&>svg]:shrink-0",
         "disabled:opacity-60 disabled:cursor-not-allowed",
         isFollowing
           ? "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"

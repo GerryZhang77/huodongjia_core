@@ -289,7 +289,7 @@ const UserRow: FC<UserRowProps> = ({
           <button
             onClick={onUnfollow}
             disabled={busy}
-            className="px-3 py-1.5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 bg-slate-50 dark:bg-gray-700 border border-slate-200 dark:border-gray-600 hover:bg-slate-100 dark:hover:bg-gray-600 disabled:opacity-50 inline-flex items-center gap-1"
+            className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-slate-100 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 [&>svg]:shrink-0"
             title="取消关注"
           >
             <UserMinus size={12} />
@@ -300,7 +300,7 @@ const UserRow: FC<UserRowProps> = ({
           <button
             onClick={onFollowBack}
             disabled={busy}
-            className="px-3 py-1.5 rounded-full text-xs font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:opacity-50 inline-flex items-center gap-1"
+            className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-primary-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-600 disabled:opacity-50 [&>svg]:shrink-0"
             title="关注"
           >
             <UserPlus2 size={12} />

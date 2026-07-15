@@ -61,7 +61,7 @@ export const ActivityDetailTemp: FC = () => {
           left={
             <button
               onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-1 text-gray-700 hover:text-gray-900 transition-colors"
+          className="flex flex-nowrap items-center gap-1 whitespace-nowrap text-gray-700 transition-colors hover:text-gray-900 [&>svg]:shrink-0"
             >
               <LeftOutline className="text-xl" />
               <span className="text-sm font-medium">返回</span>

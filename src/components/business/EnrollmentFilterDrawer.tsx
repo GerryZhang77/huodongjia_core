@@ -107,7 +107,7 @@ export const EnrollmentFilterDrawer: React.FC<EnrollmentFilterDrawerProps> = ({
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold text-gray-900">筛选条件</h3>
             {activeCount > 0 && (
-              <span className="px-2 py-0.5 bg-primary-500 text-white text-xs rounded-full">
+            <span className="whitespace-nowrap rounded-full bg-primary-500 px-2 py-0.5 text-xs tabular-nums text-white">
                 {activeCount}
               </span>
             )}

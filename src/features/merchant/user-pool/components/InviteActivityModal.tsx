@@ -184,7 +184,7 @@ const InviteActivityModal: React.FC<InviteActivityModalProps> = ({
                 .join(" · ")}
             </div>
           </div>
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary-50 text-primary-600 text-xs font-medium flex-shrink-0">
+            <div className="flex flex-shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-primary-50 px-2 py-1 text-xs font-medium tabular-nums text-primary-600">
             <Sparkles size={10} />
             {user.matchScore}分
           </div>
@@ -238,7 +238,7 @@ const InviteActivityModal: React.FC<InviteActivityModalProps> = ({
                             {activity.title}
                           </span>
                           {isFull && (
-                            <span className="text-xs text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                  <span className="flex-shrink-0 whitespace-nowrap rounded-full bg-red-50 px-1.5 py-0.5 text-xs tabular-nums text-red-500">
                               已满
                             </span>
                           )}
@@ -310,7 +310,7 @@ const InviteActivityModal: React.FC<InviteActivityModalProps> = ({
           取消
         </button>
         <button
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[22px] font-medium text-sm transition-all ${
+          className={`flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] py-3 text-sm font-medium transition-all [&>svg]:shrink-0 ${
             selectedActivityId
               ? "bg-gradient-to-br from-primary-400 to-primary-500 text-white shadow-sm hover:shadow-md"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"

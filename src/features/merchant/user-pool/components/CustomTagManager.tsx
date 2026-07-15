@@ -164,7 +164,7 @@ const CustomTagManager: React.FC<CustomTagManagerProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">预览:</span>
               <span
-                className={`px-2.5 py-1 text-xs rounded-full ${getColorOption(newTagColor).bgClass} ${getColorOption(newTagColor).textClass}`}
+            className={`max-w-full truncate whitespace-nowrap rounded-full px-2.5 py-1 text-xs ${getColorOption(newTagColor).bgClass} ${getColorOption(newTagColor).textClass}`}
               >
                 {newTagName.trim()}
               </span>
@@ -173,7 +173,7 @@ const CustomTagManager: React.FC<CustomTagManagerProps> = ({
 
           {/* 创建按钮 */}
           <button
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-[22px] bg-gradient-to-br from-accent-400 to-accent-500 text-white text-sm font-medium shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex w-full flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-accent-400 to-accent-500 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 [&>svg]:shrink-0"
             onClick={handleCreate}
             disabled={!newTagName.trim()}
           >
@@ -199,7 +199,7 @@ const CustomTagManager: React.FC<CustomTagManagerProps> = ({
                   >
                     <div className="flex items-center gap-3">
                       <span
-                        className={`px-2.5 py-1 text-xs rounded-full ${colorOption.bgClass} ${colorOption.textClass}`}
+                  className={`max-w-full truncate whitespace-nowrap rounded-full px-2.5 py-1 text-xs ${colorOption.bgClass} ${colorOption.textClass}`}
                       >
                         {tag.name}
                       </span>

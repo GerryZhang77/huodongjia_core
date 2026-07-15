@@ -60,13 +60,13 @@ const HotActivitySlide: FC<HotActivitySlideProps> = ({ activity, onClick }) => {
       <div className="absolute top-3 sm:top-4 lg:top-5 left-3 sm:left-4 lg:left-6 right-3 sm:right-4 lg:right-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {isAlmostFull && (
-            <span className="px-2.5 py-1 lg:px-3 lg:py-1.5 bg-secondary-500/90 backdrop-blur-sm rounded-full text-[11px] lg:text-xs font-semibold text-white flex items-center gap-1 shadow-sm">
+            <span className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-secondary-500/90 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm lg:px-3 lg:py-1.5 lg:text-xs">
               <Flame size={12} className="lg:w-3.5 lg:h-3.5" />
               即将满员
             </span>
           )}
           {activity.tags[0] && (
-            <span className="px-2.5 py-1 lg:px-3 lg:py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-[11px] lg:text-xs font-medium text-gray-700 shadow-sm">
+            <span className="whitespace-nowrap rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-medium text-gray-700 shadow-sm backdrop-blur-sm lg:px-3 lg:py-1.5 lg:text-xs">
               #{activity.tags[0]}
             </span>
           )}

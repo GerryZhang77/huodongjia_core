@@ -368,7 +368,7 @@ export const ForgotPasswordForm: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors mb-6"
+          className="mb-6 flex flex-nowrap items-center gap-2 whitespace-nowrap text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 [&>svg]:shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="text-sm">返回登录</span>

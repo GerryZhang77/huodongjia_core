@@ -366,7 +366,7 @@ const PushActivityModal: React.FC<PushActivityModalProps> = ({
           取消
         </button>
         <button
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[22px] font-medium text-sm transition-all ${
+          className={`flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] py-3 text-sm font-medium transition-all [&>svg]:shrink-0 ${
             selectedActivityId
               ? "bg-gradient-to-br from-primary-400 to-primary-500 text-white shadow-sm hover:shadow-md"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"

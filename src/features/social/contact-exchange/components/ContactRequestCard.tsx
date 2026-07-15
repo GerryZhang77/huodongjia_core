@@ -187,7 +187,7 @@ export const ContactRequestCard: FC<ContactRequestCardProps> = ({
                 {fields.map((f) => (
                   <span
                     key={f}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/70 dark:bg-gray-800/40 rounded-full text-[11px] text-gray-700 dark:text-gray-200"
+                    className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-gray-700 dark:bg-gray-800/40 dark:text-gray-200"
                   >
                     {fieldLabel[f as keyof Contacts] ?? f}
                   </span>
@@ -202,7 +202,7 @@ export const ContactRequestCard: FC<ContactRequestCardProps> = ({
                   type="button"
                   onClick={() => setPickerOpen(true)}
                   disabled={accept.isPending}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors disabled:opacity-60"
+                  className="flex flex-1 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-primary-500 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-primary-600 disabled:opacity-60 [&>svg]:shrink-0"
                 >
                   <Check size={13} />
                   接受并分享

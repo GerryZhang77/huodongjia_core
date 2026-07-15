@@ -256,7 +256,7 @@ const UserNotifications: FC = () => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs text-primary-600 dark:text-primary-400 font-medium rounded-full bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+            className="flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-full bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-600 transition-colors hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 [&>svg]:shrink-0"
             >
               <CheckCheck size={14} />
               全部已读

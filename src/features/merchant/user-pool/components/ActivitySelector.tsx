@@ -209,7 +209,7 @@ const ActivitySelector: React.FC<ActivitySelectorProps> = ({
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span
-                            className={`px-1.5 py-0.5 text-[10px] rounded-full ${badge.className}`}
+                          className={`shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] ${badge.className}`}
                           >
                             {badge.label}
                           </span>

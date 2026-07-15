@@ -410,7 +410,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                     {recipients.slice(0, 8).map((r) => (
                       <span
                         key={r.id}
-                        className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                    className="max-w-full truncate whitespace-nowrap rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700"
                       >
                         {r.name}
                       </span>
@@ -432,7 +432,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
           {sendResult?.success ? (
             // 发送成功后显示完成按钮
             <button
-              className="px-6 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors inline-flex items-center gap-2"
+              className="inline-flex flex-nowrap items-center gap-2 whitespace-nowrap rounded-lg bg-green-500 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600 [&>svg]:shrink-0"
               onClick={onClose}
             >
               <CheckCircle2 size={16} />
@@ -449,7 +449,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                 取消
               </button>
               <button
-                className="px-4 py-2 bg-primary-400 text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+              className="inline-flex flex-nowrap items-center gap-2 whitespace-nowrap rounded-lg bg-primary-400 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-500 disabled:opacity-50 [&>svg]:shrink-0"
                 onClick={handleSend}
                 disabled={isSending || recipients.length === 0}
               >

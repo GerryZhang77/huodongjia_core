@@ -79,6 +79,7 @@ export const Card: FC<CardProps> = ({
   hoverable = false,
   radius = "xl",
   className,
+  bodyClassName,
   onClick,
   ...rest
 }) => {
@@ -119,7 +120,12 @@ export const Card: FC<CardProps> = ({
       {...rest}
     >
       {hasHeader && <CardHeader title={title} extra={extra} />}
-      <CardBody padding={hasHeader ? "medium" : padding}>{children}</CardBody>
+      <CardBody
+        padding={hasHeader ? "medium" : padding}
+        className={bodyClassName}
+      >
+        {children}
+      </CardBody>
     </div>
   );
 };

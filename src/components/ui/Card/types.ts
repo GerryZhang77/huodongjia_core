@@ -43,6 +43,9 @@ export interface CardProps
   /** 自定义类名 */
   className?: string;
 
+  /** 内容区域自定义类名 */
+  bodyClassName?: string;
+
   /** 点击事件（当需要卡片可点击时） */
   onClick?: () => void;
 }
