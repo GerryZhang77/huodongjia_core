@@ -4,8 +4,7 @@
  */
 
 import { FC, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Calendar,
   MapPin,
@@ -37,8 +36,8 @@ import {
 } from "@/mocks/data/merchant";
 import { useMerchantActivities } from "@/features/merchant/activity-manage/hooks/useMerchantActivities";
 import { useDeleteActivity } from "@/features/merchant/activity-manage/hooks/useDeleteActivity";
-import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import type { Activity } from "@/services/activityApi";
+import { usePrefetchMerchantActivity } from "@/hooks/usePrefetchMerchantActivity";
 
 /**
  * 统计卡片组件
@@ -115,6 +114,9 @@ interface ActivityCardProps {
   onManage: () => void;
   onMatch: () => void;
   onDelete: () => void;
+  onViewPreload?: () => void;
+  onManagePreload?: () => void;
+  onMatchPreload?: () => void;
 }
 
 const ActivityCard: FC<ActivityCardProps> = ({
@@ -125,6 +127,9 @@ const ActivityCard: FC<ActivityCardProps> = ({
   onManage,
   onMatch,
   onDelete,
+  onViewPreload,
+  onManagePreload,
+  onMatchPreload,
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const statusText = getActivityStatusText(activity.status);
@@ -164,8 +169,10 @@ const ActivityCard: FC<ActivityCardProps> = ({
 
   return (
     <div
-      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+      className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer"
       onClick={onView}
+      onPointerEnter={onViewPreload}
+      onFocus={onViewPreload}
     >
       {/* 封面图 */}
       <div className="relative h-36 bg-gradient-to-br from-primary-50 to-purple-50">
@@ -186,7 +193,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
         {/* 状态标签 */}
         <div className="absolute top-3 left-3">
           <span
-            className={`px-2.5 py-1 text-xs font-medium rounded-full ${statusStyles[statusColor]}`}
+            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${statusStyles[statusColor]}`}
           >
             {statusText}
           </span>
@@ -213,7 +220,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
               />
               <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 min-w-[120px] z-20">
                 <button
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  className="flex w-full flex-nowrap items-center gap-2 whitespace-nowrap px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 [&>svg]:shrink-0"
                   onClick={() => {
                     onView();
                     setShowMenu(false);
@@ -223,7 +230,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
                   查看详情
                 </button>
                 <button
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  className="flex w-full flex-nowrap items-center gap-2 whitespace-nowrap px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 [&>svg]:shrink-0"
                   onMouseEnter={onEditPreload}
                   onFocus={onEditPreload}
                   onClick={() => {
@@ -236,7 +243,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
                   编辑活动
                 </button>
                 <button
-                  className="w-full px-3 py-2 text-left text-sm text-error-500 hover:bg-error-50 flex items-center gap-2"
+                  className="flex w-full flex-nowrap items-center gap-2 whitespace-nowrap px-3 py-2 text-left text-sm text-error-500 hover:bg-error-50 [&>svg]:shrink-0"
                   onClick={() => {
                     onDelete();
                     setShowMenu(false);
@@ -252,7 +259,7 @@ const ActivityCard: FC<ActivityCardProps> = ({
       </div>
 
       {/* 内容区 */}
-      <div className="p-4">
+      <div className="flex flex-1 flex-col p-4">
         {/* 标题 */}
         <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-1">
           {activity.title}
@@ -295,37 +302,46 @@ const ActivityCard: FC<ActivityCardProps> = ({
         </div>
 
         {/* 快捷操作 */}
-        <div className="flex gap-2">
+        <div className="mt-auto flex gap-2">
           <button
-            className="flex-1 min-w-0 h-9 px-2 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors flex items-center justify-center gap-1"
+            className="flex h-9 min-w-0 flex-1 flex-nowrap items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-primary-50 px-2 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-100"
             onClick={(e) => {
               e.stopPropagation();
               onManage();
             }}
+            onPointerEnter={onManagePreload}
+            onFocus={onManagePreload}
           >
             <Users size={14} className="flex-shrink-0" />
             <span className="truncate">管理报名</span>
             {activity.pendingCount > 0 && (
-              <span className="flex-shrink-0 ml-0.5 min-w-[20px] h-5 px-1 bg-error-500 text-white text-xs rounded-full flex items-center justify-center">
+              <span className="ml-0.5 flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-error-500 px-1 text-xs tabular-nums text-white">
                 {activity.pendingCount > 99 ? "99+" : activity.pendingCount}
               </span>
             )}
           </button>
           {activity.hasMatchResult ? (
             <button
-              className="flex-shrink-0 h-9 px-3 bg-accent-50 text-accent-600 rounded-lg text-sm font-medium hover:bg-accent-100 transition-colors flex items-center gap-1"
-              onClick={(e) => e.stopPropagation()}
+              className="flex h-9 flex-shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg bg-accent-50 px-3 text-sm font-medium text-accent-600 transition-colors hover:bg-accent-100 [&>svg]:shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMatch();
+              }}
+              onPointerEnter={onMatchPreload}
+              onFocus={onMatchPreload}
             >
               <CheckCircle size={14} />
               已匹配
             </button>
           ) : activity.status === "recruiting" || activity.status === "full" ? (
             <button
-              className="flex-shrink-0 h-9 px-3 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
+              className="flex h-9 flex-shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg bg-gray-100 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
               onClick={(e) => {
                 e.stopPropagation();
                 onMatch();
               }}
+              onPointerEnter={onMatchPreload}
+              onFocus={onMatchPreload}
             >
               智能匹配
             </button>
@@ -343,7 +359,7 @@ const preloadActivityEdit = () => {
 // 将后端 Activity 转换为 MerchantActivity 格式
 function toMerchantActivity(a: Activity): MerchantActivity {
   // 后端返回的是 camelCase 格式，需要转换
-  const backendData = a as any;
+  const backendData = a;
 
   // 状态映射：后端 -> 前端
   let status: MerchantActivity["status"] = "draft";
@@ -378,9 +394,9 @@ function toMerchantActivity(a: Activity): MerchantActivity {
     maxParticipants: backendData.capacity ?? a.max_participants ?? 0,
     // 后端返回 camelCase: enrolledCount
     currentParticipants: backendData.enrolledCount ?? 0,
-    pendingCount: 0,
-    approvedCount: 0,
-    hasMatchResult: false,
+    pendingCount: backendData.pendingCount ?? 0,
+    approvedCount: backendData.approvedCount ?? 0,
+    hasMatchResult: backendData.hasMatchResult ?? false,
     createdAt: a.created_at ?? backendData.createdAt ?? "",
     updatedAt: a.updated_at ?? backendData.updatedAt ?? "",
   };
@@ -391,6 +407,9 @@ function toMerchantActivity(a: Activity): MerchantActivity {
  */
 export const DashboardNew: FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { prefetchDetail, prefetchEnrollment, prefetchMatching } =
+    usePrefetchMerchantActivity();
   const { data, isLoading, isError, refetch } = useMerchantActivities();
   const deleteMutation = useDeleteActivity();
 
@@ -399,42 +418,7 @@ export const DashboardNew: FC = () => {
     [data]
   );
 
-  const activityIds = useMemo(
-    () => activities.map((activity) => activity.id).sort(),
-    [activities]
-  );
-
-  const { data: enrollmentCounts = {} } = useQuery<Record<string, number>>({
-    queryKey: ["merchant", "enrollment-counts", activityIds],
-    queryFn: async () => {
-      const countEntries = await Promise.all(
-        activityIds.map(async (activityId) => {
-          try {
-            const result = await getEnrollmentsDetailed(activityId, {
-              page: 1,
-              pageSize: 1,
-            });
-            return [activityId, result.total ?? 0] as const;
-          } catch (error) {
-            console.error(`Failed to load enrollment count for ${activityId}:`, error);
-            throw error;
-          }
-        })
-      );
-
-      return Object.fromEntries(countEntries);
-    },
-    enabled: activityIds.length > 0,
-    staleTime: 0,
-    gcTime: 10 * 60 * 1000,
-    retry: 1,
-  });
-
-  // 合并报名人数到活动数据
-  const activitiesWithCounts = activities.map(activity => ({
-    ...activity,
-    currentParticipants: enrollmentCounts[activity.id] ?? activity.currentParticipants,
-  }));
+  const activitiesWithCounts = activities;
 
   const stats = {
     totalActivities: activitiesWithCounts.length,
@@ -444,7 +428,7 @@ export const DashboardNew: FC = () => {
   };
 
   // 筛选活动状态
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const statusFilter = searchParams.get("status") || "all";
 
   // 筛选后的活动列表
   const filteredActivities =
@@ -598,7 +582,7 @@ export const DashboardNew: FC = () => {
               </span>
             </h3>
             <button
-              className="text-sm text-primary-500 flex items-center gap-1 hover:text-primary-600"
+              className="flex flex-nowrap items-center gap-1 whitespace-nowrap text-sm text-primary-500 hover:text-primary-600 [&>svg]:shrink-0"
               onClick={() => navigate("/dashboard/activities")}
             >
               查看全部 <ChevronRight size={16} />
@@ -622,7 +606,12 @@ export const DashboardNew: FC = () => {
                     ? "bg-primary-400 text-white"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
-                onClick={() => setStatusFilter(item.key)}
+                onClick={() =>
+                  setSearchParams(
+                    item.key === "all" ? {} : { status: item.key },
+                    { replace: true },
+                  )
+                }
               >
                 {item.label}
               </button>
@@ -649,6 +638,7 @@ export const DashboardNew: FC = () => {
                   onView={() =>
                     navigate(`/dashboard/activity/${activity.id}/detail`)
                   }
+                  onViewPreload={() => prefetchDetail(activity.id)}
                   onEdit={() => {
                     preloadActivityEdit();
                     navigate(`/dashboard/activity/${activity.id}/edit`);
@@ -659,11 +649,13 @@ export const DashboardNew: FC = () => {
                       state: { returnTo: "/dashboard" },
                     })
                   }
+                  onManagePreload={() => prefetchEnrollment(activity.id)}
                   onMatch={() =>
                     navigate(`/dashboard/activity/${activity.id}/matching`, {
                       state: { returnTo: "/dashboard" },
                     })
                   }
+                  onMatchPreload={() => prefetchMatching(activity.id)}
                   onDelete={() => {
                     Dialog.confirm({
                       content: `确定要删除活动「${activity.title}」吗？`,

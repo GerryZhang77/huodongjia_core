@@ -10,6 +10,7 @@ import { updateActivity } from "../services";
 import { useActivityStore } from "../stores";
 import { isOnlineOnlyActivity } from "../utils";
 import type { ActivityFormData } from "../types";
+import { merchantQueryKeys } from "@/features/merchant/queryKeys";
 
 export const useEditActivity = (activityId: string) => {
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,10 @@ export const useEditActivity = (activityId: string) => {
     const options = { refetchType: "none" as const };
 
     queryClient.invalidateQueries({ queryKey: ["activities"], ...options });
-    queryClient.invalidateQueries({ queryKey: ["merchant", "activities"], ...options });
+    queryClient.invalidateQueries({ queryKey: merchantQueryKeys.activities(), ...options });
+    queryClient.invalidateQueries({ queryKey: merchantQueryKeys.activity(id), ...options });
+    queryClient.invalidateQueries({ queryKey: merchantQueryKeys.matchingCatalog(id), ...options });
+    queryClient.invalidateQueries({ queryKey: merchantQueryKeys.matchingParticipants(id), ...options });
     queryClient.invalidateQueries({ queryKey: ["public", "activity", id], ...options });
     queryClient.invalidateQueries({ queryKey: ["user", "activity", id], ...options });
     queryClient.invalidateQueries({ queryKey: ["user", "activities"], ...options });
@@ -68,6 +72,10 @@ export const useEditActivity = (activityId: string) => {
       }
 
       const activity = await updateActivity(activityId, requestData);
+      queryClient.setQueryData(
+        merchantQueryKeys.activity(activityId),
+        activity,
+      );
 
       Toast.clear();
       Toast.show({

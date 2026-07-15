@@ -1,322 +1,265 @@
-/**
- * 商家端活动详情页
- * 现代化设计，与用户端风格一致
- * 保留商家特有功能：编辑、报名管理、匹配配置、参与者管理
- */
-
-import { FC, useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
-  MoreHorizontal,
-  Edit3,
-  Users,
-  Settings,
-  Calendar,
-  MapPin,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import {
   AlertCircle,
-  Clock,
+  Calendar,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Edit3,
+  MapPin,
+  MoreHorizontal,
   QrCode,
+  Settings,
+  Users,
 } from "lucide-react";
-import {
-  Dialog,
-  ActionSheet,
-} from "antd-mobile";
-import { Toast } from "@/components/ui/Toast";
-import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
-import { RegistrationQrModal } from "@/components/enrollment";
+import { ActionSheet, Dialog } from "antd-mobile";
+import dayjs from "dayjs";
+import { MerchantLayout } from "@/components/layout";
 import { Button } from "@/components/ui";
+import { Toast } from "@/components/ui/Toast";
 import {
   ParticipantAvatar,
   type ParticipantInfo,
 } from "@/components/business/ParticipantAvatar";
 import { ImageCarousel } from "@/components/business/ImageCarousel";
-import {
-  cancelActivity as cancelOrganizerActivity,
-} from "@/services/activityApi";
-import { getActivityById as fetchOrganizerActivityDetail } from "@/features/activities/services/api";
-import { getCategoryLabel, getTagLabel } from "@/features/activities/utils/constants";
+import { RegistrationQrModal } from "@/components/enrollment";
+import { useActivityDetail } from "@/features/activities/hooks/useActivityDetail";
 import { parseRequirements } from "@/features/activities/components/ActivityForm/RequirementListEditor";
-import type { ActivityRegistrationType } from "@/features/activities/types";
-import dayjs from "dayjs";
+import {
+  getCategoryLabel,
+  getTagLabel,
+} from "@/features/activities/utils/constants";
+import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
+import {
+  merchantCacheTimes,
+  merchantQueryKeys,
+} from "@/features/merchant/queryKeys";
+import { cancelActivity as cancelOrganizerActivity } from "@/services/activityApi";
 
-// 活动接口定义 (与后端 camelCase 格式匹配)
-interface Activity {
-  id: string;
-  title: string;
-  description: string;
-  activityStart: string;
-  activityEnd: string;
-  registrationStart?: string;
-  registrationEnd?: string;
-  location: string;
-  capacity: number;
-  enrolledCount: number;
-  status: ActivityStatus;
-  coverImage?: string | null;
-  images?: string[];
-  category?: string;
-  tags?: string[];
-  requirements?: string;
-  contactInfo?: string;
-  fee?: number;
-  isPublic?: boolean;
-  allowWaitlist?: boolean;
-  registrationTypes?: ActivityRegistrationType[];
-  organizer?: {
-    id: string;
-    name: string;
-    avatar?: string | null;
-  };
-  createdAt: string;
-  updatedAt?: string;
-}
+type DetailTab = "info" | "participants";
+const PAGE_SIZE = 10;
 
-// 活动状态类型 (与 Mock 数据匹配)
-type ActivityStatus =
-  | "draft"
-  | "published"
-  | "recruiting"
-  | "recruiting_ended"
-  | "full"
-  | "ongoing"
-  | "ended"
-  | "completed"
-  | "cancelled";
+const normalizeUtc = (value: string) =>
+  value.includes("+") || value.endsWith("Z") ? value : `${value}Z`;
+const formatDate = (value?: string) =>
+  value ? dayjs(normalizeUtc(value)).format("M月D日 HH:mm") : "待定";
+const formatDateTime = (value?: string) =>
+  value ? dayjs(normalizeUtc(value)).format("YYYY年M月D日 HH:mm") : "—";
 
-// 状态配置
-const statusConfig: Record<
-  ActivityStatus,
-  { label: string; color: string; bgColor: string }
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; className: string }
 > = {
-  draft: {
-    label: "草稿",
-    color: "text-gray-600",
-    bgColor: "bg-gray-100",
-  },
-  published: {
-    label: "已发布",
-    color: "text-primary-600",
-    bgColor: "bg-primary-50",
-  },
-  recruiting: {
-    label: "报名中",
-    color: "text-success-600",
-    bgColor: "bg-success-50",
-  },
-  recruiting_ended: {
-    label: "报名结束",
-    color: "text-warning-600",
-    bgColor: "bg-warning-50",
-  },
-  full: {
-    label: "已满员",
-    color: "text-warning-600",
-    bgColor: "bg-warning-50",
-  },
-  ongoing: {
-    label: "进行中",
-    color: "text-primary-600",
-    bgColor: "bg-primary-50",
-  },
-  completed: {
-    label: "已结束",
-    color: "text-gray-500",
-    bgColor: "bg-gray-100",
-  },
-  ended: {
-    label: "已结束",
-    color: "text-gray-500",
-    bgColor: "bg-gray-100",
-  },
-  cancelled: {
-    label: "已取消",
-    color: "text-error-600",
-    bgColor: "bg-error-50",
-  },
+  draft: { label: "草稿", className: "bg-gray-100 text-gray-600" },
+  published: { label: "已发布", className: "bg-blue-50 text-blue-700" },
+  recruiting: { label: "报名中", className: "bg-emerald-50 text-emerald-700" },
+  recruiting_ended: { label: "报名结束", className: "bg-amber-50 text-amber-700" },
+  full: { label: "已满员", className: "bg-amber-50 text-amber-700" },
+  ongoing: { label: "进行中", className: "bg-blue-50 text-blue-700" },
+  ended: { label: "已结束", className: "bg-gray-100 text-gray-600" },
+  completed: { label: "已结束", className: "bg-gray-100 text-gray-600" },
+  cancelled: { label: "已取消", className: "bg-red-50 text-red-700" },
 };
 
-const normalizeUtc = (s: string) => s.includes('+') || s.endsWith('Z') ? s : s + 'Z';
-const formatDate = (dateStr: string): string => dayjs(normalizeUtc(dateStr)).format("M月D日 HH:mm");
-const formatDateTime = (dateStr: string): string => dayjs(normalizeUtc(dateStr)).format("YYYY年M月D日 HH:mm");
+const preloadEnrollmentRoute = () =>
+  import("@/pages/merchant/EnrollmentManagementNew");
+const preloadMatchingRoute = () => import("@/pages/merchant/MatchingConfig");
+const preloadEditRoute = () => import("@/pages/merchant/ActivityEditNew");
 
-const ActivityDetail: FC = () => {
+const ActivityDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  const [activity, setActivity] = useState<Activity | null>(null);
-  const [participants, setParticipants] = useState<ParticipantInfo[]>([]);
-  const [participantsTotal, setParticipantsTotal] = useState(0);
-  const [participantPage, setParticipantPage] = useState(1);
-  const [participantStatus, setParticipantStatus] = useState<string | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"info" | "participants">("info");
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { activity, loading, error } = useActivityDetail(id);
   const [showQrModal, setShowQrModal] = useState(false);
-  const PAGE_SIZE = 10;
   const participantListRef = useRef<HTMLDivElement>(null);
 
-  // 获取活动详情
-  const fetchActivityDetail = useCallback(async () => {
-    try {
-      const data = await fetchOrganizerActivityDetail(id!);
-      setActivity(data);
-    } catch (error) {
-      console.error("Fetch activity detail error:", error);
-      Toast.show("网络错误，请重试");
-      navigate("/dashboard");
-    }
-  }, [id, navigate]);
+  const activeTab: DetailTab =
+    searchParams.get("tab") === "participants" ? "participants" : "info";
+  const participantStatus = searchParams.get("status") || undefined;
+  const parsedPage = Number(searchParams.get("page"));
+  const participantPage =
+    Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
-  // 加载参与者（支持分页和状态筛选）
-  const loadParticipants = useCallback(async (page: number, status: string | undefined) => {
-    try {
-      const res = await getEnrollmentsDetailed(id!, { page, pageSize: PAGE_SIZE, status });
-      setParticipants(res.enrollments.map((e) => ({
-        user_id: e.userId || e.id,
-        name: e.name,
-        avatar: undefined,
-        gender: e.gender,
-        age: e.age,
-        occupation: e.occupation,
-        company: e.company,
-        city: e.city,
-        interests: e.tags,
-        status: (e.status === "approved" ? "confirmed" : e.status) as ParticipantInfo["status"],
-        registration_time: e.enrolledAt,
-      })));
-      setParticipantsTotal(res.total);
-    } catch (error) {
-      console.error("Fetch participants error:", error);
-    }
-  }, [id]);
+  const participantsQuery = useQuery({
+    queryKey: [
+      ...merchantQueryKeys.enrollmentList(id),
+      "detail-preview",
+      participantStatus || "all",
+      participantPage,
+    ],
+    queryFn: () =>
+      getEnrollmentsDetailed(id!, {
+        page: participantPage,
+        pageSize: PAGE_SIZE,
+        status: participantStatus,
+      }),
+    enabled: Boolean(id && activeTab === "participants"),
+    staleTime: merchantCacheTimes.enrollmentStale,
+    gcTime: merchantCacheTimes.enrollmentGc,
+    placeholderData: (previous) => previous,
+  });
 
-  // 切换状态筛选
-  const handleStatusFilter = (status: string | undefined) => {
-    setParticipantStatus(status);
-    setParticipantPage(1);
-    loadParticipants(1, status);
+  const participants = useMemo<ParticipantInfo[]>(
+    () =>
+      (participantsQuery.data?.enrollments || []).map((enrollment) => ({
+        user_id: enrollment.userId || enrollment.id,
+        name: enrollment.name,
+        avatar: enrollment.avatar || undefined,
+        gender: enrollment.gender,
+        age: enrollment.age,
+        occupation: enrollment.occupation,
+        company: enrollment.company,
+        city: enrollment.city,
+        interests: enrollment.tags,
+        status: (enrollment.status === "approved"
+          ? "confirmed"
+          : enrollment.status) as ParticipantInfo["status"],
+        registration_time: enrollment.enrolledAt,
+      })),
+    [participantsQuery.data],
+  );
+  const participantsTotal =
+    participantsQuery.data?.total ?? activity?.enrolledCount ?? 0;
+  const status = activity
+    ? STATUS_CONFIG[activity.status] || STATUS_CONFIG.draft
+    : STATUS_CONFIG.draft;
+
+  const updateView = (patch: {
+    tab?: DetailTab;
+    status?: string;
+    page?: number;
+  }) => {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (patch.tab) {
+          if (patch.tab === "info") next.delete("tab");
+          else next.set("tab", patch.tab);
+        }
+        if (Object.prototype.hasOwnProperty.call(patch, "status")) {
+          if (patch.status) next.set("status", patch.status);
+          else next.delete("status");
+        }
+        if (Object.prototype.hasOwnProperty.call(patch, "page")) {
+          if ((patch.page || 1) > 1) next.set("page", String(patch.page));
+          else next.delete("page");
+        }
+        return next;
+      },
+      { replace: true },
+    );
   };
 
-  // 翻页
-  const handlePageChange = (page: number) => {
-    setParticipantPage(page);
-    loadParticipants(page, participantStatus);
-    participantListRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  const prefetchEnrollmentData = () => {
+    if (!id) return;
+    void preloadEnrollmentRoute();
+    void queryClient.prefetchQuery({
+      queryKey: merchantQueryKeys.enrollmentList(id),
+      queryFn: () => getEnrollmentsDetailed(id, { page: 1, pageSize: 1000 }),
+      staleTime: merchantCacheTimes.enrollmentStale,
+      gcTime: merchantCacheTimes.enrollmentGc,
+    });
   };
 
-  useEffect(() => {
-    if (id) {
-      Promise.all([fetchActivityDetail(), loadParticipants(1, undefined)]).finally(() =>
-        setLoading(false),
-      );
-    }
-  }, [id, fetchActivityDetail, loadParticipants]);
-
-  // 更多操作
   const handleMoreActions = () => {
     ActionSheet.show({
       actions: [
         {
           text: "发送通知",
           key: "notify",
-          onClick: () => Toast.show("功能开发中"),
-        },
-        {
-          text: "复制活动",
-          key: "copy",
-          onClick: () => Toast.show("功能开发中"),
+          onClick: () =>
+            navigate(`/dashboard/activity/${id}/enrollment`, {
+              state: { returnTo: `/dashboard/activity/${id}/detail` },
+            }),
         },
         {
           text: "取消活动",
           key: "cancel",
           danger: true,
-          onClick: () => handleCancelActivity(),
+          onClick: () => void handleCancelActivity(),
         },
       ],
-      cancelText: "取消",
+      cancelText: "关闭",
     });
   };
 
-  // 取消活动
-  const handleCancelActivity = () => {
-    Dialog.confirm({
-      content: "确定要取消这个活动吗？取消后无法恢复。",
-      confirmText: "确定取消",
-      cancelText: "再想想",
-      onConfirm: async () => {
-        try {
-          const data = await cancelOrganizerActivity(id!);
-
-          if (data.success) {
-            Toast.show("活动已取消");
-            navigate("/dashboard");
-          } else {
-            Toast.show(data.message || "取消失败");
-          }
-        } catch (error) {
-          console.error("Cancel activity error:", error);
-          Toast.show("网络错误，请重试");
-        }
-      },
+  const handleCancelActivity = async () => {
+    const confirmed = await Dialog.confirm({
+      title: "取消活动？",
+      content: "取消后参与者将无法继续报名，此操作不可恢复。",
+      confirmText: "确认取消",
+      cancelText: "暂不取消",
     });
+    if (!confirmed || !id) return;
+    try {
+      const response = await cancelOrganizerActivity(id);
+      if (!response.success) throw new Error(response.message || "取消失败");
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: merchantQueryKeys.activity(id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: merchantQueryKeys.activities(),
+        }),
+      ]);
+      Toast.show({ icon: "success", content: "活动已取消" });
+    } catch (cancelError) {
+      Toast.show({
+        icon: "fail",
+        content:
+          cancelError instanceof Error ? cancelError.message : "取消活动失败",
+      });
+    }
   };
 
-  // 计算参与率
-  const getParticipationRate = () => {
-    const max = activity?.capacity || 0;
-    if (!max) return 0;
-    return Math.round((participantsTotal / max) * 100);
-  };
-
-  // 获取状态徽章样式
-  const getStatusBadge = (status: ActivityStatus) => {
-    const config = statusConfig[status] || statusConfig.draft;
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-medium ${config.color} ${config.bgColor}`}
-      >
-        {config.label}
-      </span>
-    );
-  };
-
-  // 加载中状态
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-primary-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-          <p className="text-gray-500 text-sm">加载中...</p>
+      <MerchantLayout title="活动详情" showBack onBack={() => navigate("/dashboard")}>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary-400 border-t-transparent" />
+            <p className="text-sm text-gray-500">正在加载活动详情...</p>
+          </div>
         </div>
-      </div>
+      </MerchantLayout>
     );
   }
 
-  // 活动不存在
-  if (!activity) {
+  if (!activity || error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <AlertCircle size={40} className="text-gray-300 mb-3" />
-        <p className="text-gray-500 text-sm mb-4">活动不存在</p>
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="px-4 py-2 bg-primary-400 text-white text-sm rounded-lg"
-        >
-          返回管理后台
-        </button>
-      </div>
+      <MerchantLayout title="活动详情" showBack onBack={() => navigate("/dashboard")}>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center">
+          <AlertCircle size={40} className="mb-3 text-gray-300" />
+          <p className="mb-4 text-sm text-gray-500">活动不存在或暂时无法读取</p>
+          <Button onClick={() => navigate("/dashboard")}>返回活动列表</Button>
+        </div>
+      </MerchantLayout>
     );
   }
+
+  const participationRate = activity.capacity
+    ? Math.round((participantsTotal / activity.capacity) * 100)
+    : 0;
+  const requirements = parseRequirements(activity.requirements || "");
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* 页面内容 */}
-      <div className="md:py-6 lg:py-8">
-        {/* 响应式容器 */}
-        <div className="max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto bg-white min-h-screen md:min-h-0 pb-52 md:pb-48 shadow-sm md:shadow-xl md:rounded-2xl md:mb-6 relative">
-          {/* 封面区域 - 图片轮播 */}
+    <MerchantLayout
+      title="活动详情"
+      showBack
+      onBack={() => navigate("/dashboard")}
+      fullWidth
+      contentClassName="pb-24 lg:pb-8"
+    >
+      <main className="mx-auto max-w-6xl space-y-5 px-1 py-3 md:px-5 md:py-6">
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm lg:grid lg:h-[480px] lg:grid-cols-[minmax(0,1.3fr)_minmax(360px,0.7fr)]">
           <ImageCarousel
             images={
               activity.images?.length
@@ -325,422 +268,165 @@ const ActivityDetail: FC = () => {
                   ? [activity.coverImage]
                   : []
             }
-            heightClass="aspect-[4/3] lg:aspect-[21/9]"
-            className="md:rounded-t-2xl"
+            variant="organizer-detail"
             renderOverlay={() => (
-              <>
-                {/* 顶部导航 */}
-                <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-20">
-                  <button
-                    onClick={() => navigate("/dashboard")}
-                    className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
-                  >
-                    <ArrowLeft size={20} className="text-white" />
-                  </button>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowQrModal(true)}
-                      className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
-                      title="活动二维码"
-                    >
-                      <QrCode size={20} className="text-white" />
-                    </button>
-                    <button
-                      onClick={() => navigate(`/dashboard/activity/${id}/edit`)}
-                      className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
-                    >
-                      <Edit3 size={20} className="text-white" />
-                    </button>
-                    <button
-                      onClick={handleMoreActions}
-                      className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
-                    >
-                      <MoreHorizontal size={20} className="text-white" />
-                    </button>
-                  </div>
+              <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {activity.category && (
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-white/95 px-2.5 py-1 text-xs font-medium text-primary-700 backdrop-blur-sm">
+                      {getCategoryLabel(activity.category)}
+                    </span>
+                  )}
+                  {(activity.tags || []).slice(0, 3).map((tag) => (
+                    <span key={tag} className="shrink-0 whitespace-nowrap rounded-full bg-white/90 px-2.5 py-1 text-xs text-gray-700 backdrop-blur-sm">
+                      {getTagLabel(tag)}
+                    </span>
+                  ))}
                 </div>
-
-                {/* 状态标签 */}
-                <div className="absolute bottom-3 right-4 z-20">
-                  {getStatusBadge(activity.status)}
-                </div>
-
-                {/* 底部标签 */}
-                {((activity.category) || (activity.tags && activity.tags.length > 0)) && (
-                  <div className="absolute bottom-3 left-4 flex gap-1.5 z-20">
-                    {activity.category && (
-                      <span className="px-2 py-0.5 bg-white/95 backdrop-blur-sm text-primary-700 text-[10px] font-medium rounded-full">
-                        {getCategoryLabel(activity.category)}
-                      </span>
-                    )}
-                    {activity.tags.slice(0, activity.category ? 2 : 3).map((tag, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-0.5 bg-white/90 backdrop-blur-sm text-gray-700 text-[10px] font-medium rounded-full"
-                      >
-                        {getTagLabel(tag)}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </>
+                <span className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${status.className}`}>
+                  {status.label}
+                </span>
+              </div>
             )}
           />
-
-          {/* 内容区 */}
-          <div className="px-4 py-5 md:px-6 lg:px-8">
-            {/* 标题 */}
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
-              {activity.title}
-            </h1>
-
-            {/* 数据统计卡片 */}
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="bg-primary-50 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-primary-500">
-                  {participantsTotal}
+          <div className="flex min-w-0 flex-col p-5 md:p-6 lg:h-full lg:min-h-0 lg:overflow-hidden">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h1
+                  title={activity.title}
+                  className="line-clamp-2 text-2xl font-bold leading-tight text-gray-900 md:text-3xl"
+                >
+                  {activity.title}
+                </h1>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-500">
+                  {activity.description || "暂无活动简介"}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">已报名</p>
               </div>
-              <div className="bg-success-50 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-success-500">
-                  {activity.capacity}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">名额上限</p>
-              </div>
-              <div className="bg-secondary-50 rounded-xl p-3 text-center">
-                <p className="text-2xl font-bold text-secondary-500">
-                  {getParticipationRate()}%
-                </p>
-                <p className="text-xs text-gray-500 mt-1">报名进度</p>
-              </div>
-            </div>
-
-            {/* 信息卡片 - 网格布局 */}
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-              {/* 时间 */}
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
-                  <Calendar size={16} className="text-primary-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">活动时间</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {formatDate(activity.activityStart)} - {formatDate(activity.activityEnd)}
-                  </p>
-                </div>
-              </div>
-
-              {/* 报名时间 */}
-              {(activity.registrationStart || activity.registrationEnd) && (
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-warning-50 flex items-center justify-center flex-shrink-0">
-                    <Clock size={16} className="text-warning-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">报名时间</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {activity.registrationStart ? formatDate(activity.registrationStart) : "即时开放"}
-                      {" - "}
-                      {activity.registrationEnd ? formatDate(activity.registrationEnd) : "截止未设置"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* 地点 */}
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-success-50 flex items-center justify-center flex-shrink-0">
-                  <MapPin size={16} className="text-success-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">活动地点</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {activity.location}
-                  </p>
-                </div>
-              </div>
-
-              {/* 分类 */}
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-secondary-50 flex items-center justify-center flex-shrink-0">
-                  <Settings size={16} className="text-secondary-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">活动分类</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {getCategoryLabel(activity.category)}
-                  </p>
-                </div>
-              </div>
-
-              {/* 创建时间 */}
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <Clock size={16} className="text-gray-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">创建时间</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {formatDateTime(activity.createdAt)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 分隔线 */}
-            <div className="h-px bg-gray-100 my-5" />
-
-            {/* Tab 切换 */}
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-              <button
-                onClick={() => setActiveTab("info")}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === "info"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500"
-                }`}
-              >
-                详细信息
-              </button>
-              <button
-                onClick={() => setActiveTab("participants")}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === "participants"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500"
-                }`}
-              >
-                参与者 ({participantsTotal})
+              <button type="button" aria-label="更多活动操作" onClick={handleMoreActions} className="shrink-0 rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50">
+                <MoreHorizontal size={19} />
               </button>
             </div>
 
-            {/* Tab 内容 */}
-            <div className="mt-4">
-              {activeTab === "info" && (
-                <div className="space-y-4">
-                  {/* 活动简介 */}
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                      活动简介
-                    </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
-                      {activity.description || "暂无活动简介"}
-                    </p>
-                  </div>
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              <div className="min-w-0 rounded-xl bg-primary-50 p-3 text-center">
+                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-primary-600">{participantsTotal}</p>
+                <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">已报名</p>
+              </div>
+              <div className="min-w-0 rounded-xl bg-emerald-50 p-3 text-center">
+                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-emerald-600">{activity.capacity}</p>
+                <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">名额上限</p>
+              </div>
+              <div className="min-w-0 rounded-xl bg-orange-50 p-3 text-center">
+                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-orange-600">{participationRate}%</p>
+                <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">报名进度</p>
+              </div>
+            </div>
 
-                  {/* 参与要求 */}
-                  {activity.requirements && (() => {
-                    const items = parseRequirements(activity.requirements);
-                    if (items.length === 0) return null;
-                    return (
-                      <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/10 dark:to-amber-900/10 rounded-xl p-4 border border-orange-100 dark:border-orange-800/30">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                          <span className="w-1 h-4 bg-orange-400 rounded-full" />
-                          参与要求
-                        </h3>
-                        <ul className="space-y-2">
-                          {items.map((item, idx) => (
-                            <li key={idx} className="flex items-start gap-2.5 text-sm text-gray-600 dark:text-gray-400">
-                              <span className="w-5 h-5 flex items-center justify-center text-xs font-medium text-orange-500 bg-orange-100 dark:bg-orange-900/30 rounded-full flex-shrink-0 mt-0.5">
-                                {idx + 1}
-                              </span>
-                              <span className="leading-relaxed">{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  })()}
+            <dl className="mt-5 min-w-0 space-y-3 text-sm">
+              <div className="flex min-w-0 gap-3">
+                <Calendar size={17} className="mt-0.5 shrink-0 text-primary-500" />
+                <div className="min-w-0 flex-1"><dt className="font-medium text-gray-900">活动时间</dt><dd className="mt-0.5 text-gray-500 lg:truncate">{formatDate(activity.activityStart)} – {formatDate(activity.activityEnd)}</dd></div>
+              </div>
+              <div className="flex min-w-0 gap-3">
+                <Clock size={17} className="mt-0.5 shrink-0 text-amber-500" />
+                <div className="min-w-0 flex-1"><dt className="font-medium text-gray-900">报名时间</dt><dd className="mt-0.5 text-gray-500 lg:truncate">{formatDate(activity.registrationStart)} – {formatDate(activity.registrationEnd)}</dd></div>
+              </div>
+              <div className="flex min-w-0 gap-3">
+                <MapPin size={17} className="mt-0.5 shrink-0 text-emerald-500" />
+                <div className="min-w-0 flex-1"><dt className="font-medium text-gray-900">活动地点</dt><dd className="mt-0.5 text-gray-500 lg:truncate" title={activity.location || "待定"}>{activity.location || "待定"}</dd></div>
+              </div>
+            </dl>
+          </div>
+        </section>
 
-                  {/* 联系方式 */}
-                  {activity.contactInfo && (
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                        联系方式
-                      </h3>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {activity.contactInfo}
-                      </p>
-                    </div>
-                  )}
+        <section className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <button type="button" onPointerEnter={() => void preloadEditRoute()} onFocus={() => void preloadEditRoute()} onClick={() => navigate(`/dashboard/activity/${id}/edit`)} className="flex min-w-0 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gray-50 px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"><Edit3 size={17} className="shrink-0 text-primary-500" />编辑活动</button>
+            <button type="button" onPointerEnter={prefetchEnrollmentData} onFocus={prefetchEnrollmentData} onClick={() => navigate(`/dashboard/activity/${id}/enrollment`, { state: { returnTo: `/dashboard/activity/${id}/detail` } })} className="flex min-w-0 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gray-50 px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"><Users size={17} className="shrink-0 text-emerald-500" />报名管理</button>
+            <button type="button" onPointerEnter={() => void preloadMatchingRoute()} onFocus={() => void preloadMatchingRoute()} onClick={() => navigate(`/dashboard/activity/${id}/matching`, { state: { returnTo: `/dashboard/activity/${id}/detail` } })} className="flex min-w-0 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gray-50 px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"><Settings size={17} className="shrink-0 text-orange-500" />匹配配置</button>
+            <button type="button" onClick={() => setShowQrModal(true)} className="flex min-w-0 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gray-50 px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100"><QrCode size={17} className="shrink-0 text-purple-500" />活动二维码</button>
+          </div>
+        </section>
 
-                  {/* 活动ID */}
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                      活动ID
-                    </h3>
-                    <p className="text-xs font-mono text-gray-500">
-                      {activity.id}
-                    </p>
-                  </div>
-                </div>
-              )}
+        <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm md:p-6">
+          <div className="flex gap-1 rounded-xl bg-gray-100 p-1" role="tablist" aria-label="活动详情内容">
+            <button type="button" role="tab" aria-selected={activeTab === "info"} onClick={() => updateView({ tab: "info" })} className={`flex-1 whitespace-nowrap rounded-lg py-2 text-sm font-medium ${activeTab === "info" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>详细信息</button>
+            <button type="button" role="tab" aria-selected={activeTab === "participants"} onClick={() => updateView({ tab: "participants" })} className={`flex-1 whitespace-nowrap rounded-lg py-2 text-sm font-medium ${activeTab === "participants" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>参与者 ({activity.enrolledCount})</button>
+          </div>
 
-              {activeTab === "participants" && (
-                <div>
-                  {/* 状态筛选 */}
-                  <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
-                    {[
-                      { label: "全部", value: undefined },
-                      { label: "已确认", value: "approved" },
-                      { label: "待审核", value: "pending" },
-                      { label: "候补", value: "waitlist" },
-                    ].map((item) => (
-                      <button
-                        key={item.label}
-                        onClick={() => handleStatusFilter(item.value)}
-                        className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                          participantStatus === item.value
-                            ? "bg-primary-400 text-white"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {item.label}
-                      </button>
+          {activeTab === "info" ? (
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-xl bg-gray-50 p-4 lg:col-span-2">
+                <h2 className="text-sm font-semibold text-gray-900">活动简介</h2>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-gray-600">{activity.description || "暂无活动简介"}</p>
+              </div>
+              {requirements.length > 0 && (
+                <div className="rounded-xl border border-orange-100 bg-orange-50 p-4">
+                  <h2 className="text-sm font-semibold text-gray-900">参与要求</h2>
+                  <ol className="mt-3 space-y-2">
+                    {requirements.map((requirement, index) => (
+                      <li key={`${requirement}-${index}`} className="flex gap-2 text-sm text-gray-600"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs text-orange-600">{index + 1}</span>{requirement}</li>
                     ))}
-                    <span className="flex-shrink-0 text-xs text-gray-400 self-center ml-auto">
-                      共 {participantsTotal} 人
-                    </span>
-                  </div>
-
-                  {participants.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Users size={40} className="mx-auto text-gray-300 mb-3" />
-                      <p className="text-gray-500 text-sm">暂无参与者</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div ref={participantListRef} className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-                        {participants.map((participant, idx) => (
-                          <div
-                            key={`${participant.user_id}-${idx}`}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                          >
-                            <ParticipantAvatar
-                              participant={participant}
-                              size="medium"
-                              showName
-                              showStatus
-                              className="flex-1"
-                            />
-                            {participant.registration_time && (
-                              <span className="text-[10px] text-gray-400 flex-shrink-0">
-                                {formatDateTime(participant.registration_time)}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* 分页 - 固定在列表外部，始终可见 */}
-                      {participantsTotal > PAGE_SIZE && (
-                        <div className="flex items-center justify-center gap-3 pt-3">
-                          <button
-                            onClick={() => handlePageChange(participantPage - 1)}
-                            disabled={participantPage === 1}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 disabled:opacity-30"
-                          >
-                            <ChevronLeft size={16} />
-                          </button>
-                          <span className="text-xs text-gray-500">
-                            {participantPage} / {Math.ceil(participantsTotal / PAGE_SIZE)}
-                          </span>
-                          <button
-                            onClick={() => handlePageChange(participantPage + 1)}
-                            disabled={participantPage >= Math.ceil(participantsTotal / PAGE_SIZE)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 disabled:opacity-30"
-                          >
-                            <ChevronRight size={16} />
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
+                  </ol>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* 底部操作栏 */}
-          <div className="absolute bottom-0 left-0 right-0 z-50 md:rounded-b-2xl overflow-hidden">
-            <div className="bg-white border-t border-gray-100 px-4 pt-3 pb-4 lg:pb-6">
-              {/* 快捷操作按钮 */}
-              <div className="grid grid-cols-4 gap-3 mb-3">
-                <button
-                  onClick={() => navigate(`/dashboard/activity/${id}/edit`)}
-                  className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <Edit3 size={20} className="text-primary-500" />
-                  <span className="text-xs text-gray-600">编辑活动</span>
-                </button>
-                <button
-                  onClick={() =>
-                    navigate(`/dashboard/activity/${id}/enrollment`, {
-                      state: { returnTo: `/dashboard/activity/${id}/detail` },
-                    })
-                  }
-                  className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <Users size={20} className="text-success-500" />
-                  <span className="text-xs text-gray-600">报名管理</span>
-                </button>
-                <button
-                  onClick={() => setShowQrModal(true)}
-                  className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <QrCode size={20} className="text-primary-500" />
-                  <span className="text-xs text-gray-600">活动二维码</span>
-                </button>
-                <button
-                  onClick={() =>
-                    navigate(`/dashboard/activity/${id}/matching`, {
-                      state: { returnTo: `/dashboard/activity/${id}/detail` },
-                    })
-                  }
-                  className="flex flex-col items-center gap-1 py-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <Settings size={20} className="text-secondary-500" />
-                  <span className="text-xs text-gray-600">匹配配置</span>
-                </button>
+              <div className="rounded-xl bg-gray-50 p-4">
+                <h2 className="text-sm font-semibold text-gray-900">管理信息</h2>
+                <dl className="mt-3 space-y-2 text-sm text-gray-600">
+                  <div className="flex justify-between gap-3"><dt>创建时间</dt><dd>{formatDateTime(activity.createdAt)}</dd></div>
+                  <div className="flex justify-between gap-3"><dt>报名类型</dt><dd>{activity.registrationTypes?.length || 1} 个</dd></div>
+                  <div className="flex justify-between gap-3"><dt>活动 ID</dt><dd className="max-w-[65%] truncate font-mono text-xs">{activity.id}</dd></div>
+                </dl>
               </div>
-
-              {/* 主操作按钮 */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleMoreActions}
-                  className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                >
-                  <MoreHorizontal size={22} className="text-gray-400" />
-                </button>
-                <Button
-                  variant="primary"
-                  onClick={() =>
-                    navigate(`/dashboard/activity/${id}/enrollment`, {
-                      state: { returnTo: `/dashboard/activity/${id}/detail` },
-                    })
-                  }
-                  className="flex-1 h-12"
-                >
-                  管理报名
-                </Button>
-              </div>
-
-              {/* 移动端底部安全区域 */}
-              <div className="h-4 lg:hidden" />
             </div>
-          </div>
+          ) : (
+            <div className="mt-5">
+              <div className="mb-3 flex items-center gap-2 overflow-x-auto pb-1">
+                {[
+                  { label: "全部", value: undefined },
+                  { label: "已通过", value: "approved" },
+                  { label: "待审核", value: "pending" },
+                  { label: "已拒绝", value: "rejected" },
+                ].map((item) => (
+                  <button key={item.label} type="button" onClick={() => updateView({ status: item.value, page: 1 })} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ${participantStatus === item.value ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-600"}`}>{item.label}</button>
+                ))}
+              </div>
+              {participantsQuery.isPending ? (
+                <div className="py-12 text-center text-sm text-gray-500">正在加载参与者...</div>
+              ) : participants.length === 0 ? (
+                <div className="py-12 text-center"><Users size={38} className="mx-auto mb-2 text-gray-300" /><p className="text-sm text-gray-500">当前筛选下暂无参与者</p></div>
+              ) : (
+                <>
+                  <div ref={participantListRef} className="grid gap-2 md:grid-cols-2">
+                    {participants.map((participant) => (
+                      <div key={participant.user_id} className="flex items-center gap-3 rounded-xl bg-gray-50 p-3">
+                        <ParticipantAvatar participant={participant} size="medium" showName showStatus className="min-w-0 flex-1" />
+                        {participant.registration_time && <span className="shrink-0 text-[10px] text-gray-400">{formatDateTime(participant.registration_time)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                  {participantsTotal > PAGE_SIZE && (
+                    <div className="mt-4 flex items-center justify-center gap-3">
+                      <button type="button" aria-label="上一页" disabled={participantPage === 1} onClick={() => updateView({ page: participantPage - 1 })} className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 disabled:opacity-30"><ChevronLeft size={16} /></button>
+                      <span className="text-xs text-gray-500">{participantPage} / {Math.ceil(participantsTotal / PAGE_SIZE)}</span>
+                      <button type="button" aria-label="下一页" disabled={participantPage >= Math.ceil(participantsTotal / PAGE_SIZE)} onClick={() => updateView({ page: participantPage + 1 })} className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 disabled:opacity-30"><ChevronRight size={16} /></button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </section>
+      </main>
 
-          <RegistrationQrModal
-            visible={showQrModal}
-            activityId={id || ""}
-            activityTitle={activity.title}
-            registrationTypes={activity.registrationTypes}
-            onClose={() => setShowQrModal(false)}
-          />
-        </div>
-      </div>
-    </div>
+      <RegistrationQrModal
+        visible={showQrModal}
+        activityId={id || ""}
+        activityTitle={activity.title}
+        registrationTypes={activity.registrationTypes}
+        onClose={() => setShowQrModal(false)}
+      />
+    </MerchantLayout>
   );
 };
 

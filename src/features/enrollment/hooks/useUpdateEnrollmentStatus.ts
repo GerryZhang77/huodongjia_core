@@ -6,9 +6,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Toast } from "@/components/ui/Toast";
 import { updateEnrollmentStatus as updateStatusApi } from "../services";
 import type { EnrollmentStatus } from "../types";
+import { merchantQueryKeys } from "@/features/merchant/queryKeys";
 
 type EnrollmentListData = {
   data?: { enrollments?: Array<{ id: string; status?: EnrollmentStatus }> };
+  enrollments?: Array<{ id: string; status?: EnrollmentStatus }>;
 } | undefined;
 
 export const useUpdateEnrollmentStatus = (activityId: string) => {
@@ -23,7 +25,7 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
       status: EnrollmentStatus;
     }) => updateStatusApi({ activityId, enrollmentIds, status }),
     onMutate: async ({ enrollmentIds, status }) => {
-      const listKey = ["merchant", "enrollment", "list", activityId];
+      const listKey = merchantQueryKeys.enrollmentList(activityId);
       await queryClient.cancelQueries({ queryKey: listKey });
       const queries = queryClient.getQueriesData<EnrollmentListData>({
         queryKey: listKey,
@@ -32,16 +34,24 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
       const idSet = new Set(enrollmentIds);
       for (const [key, value] of queries) {
         snapshots.push([key as unknown[], value]);
-        if (!value?.data?.enrollments) continue;
-        queryClient.setQueryData(key as unknown[], {
-          ...value,
-          data: {
-            ...value.data,
-            enrollments: value.data.enrollments.map((e) =>
+        if (value?.enrollments) {
+          queryClient.setQueryData(key as unknown[], {
+            ...value,
+            enrollments: value.enrollments.map((e) =>
               idSet.has(e.id) ? { ...e, status } : e,
             ),
-          },
-        });
+          });
+        } else if (value?.data?.enrollments) {
+          queryClient.setQueryData(key as unknown[], {
+            ...value,
+            data: {
+              ...value.data,
+              enrollments: value.data.enrollments.map((e) =>
+                idSet.has(e.id) ? { ...e, status } : e,
+              ),
+            },
+          });
+        }
       }
       return { snapshots };
     },
@@ -65,10 +75,13 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: ["merchant", "enrollment", "list", activityId],
+        queryKey: merchantQueryKeys.enrollmentList(activityId),
       });
-      queryClient.invalidateQueries({ queryKey: ["activity", "detail", activityId] });
-      queryClient.invalidateQueries({ queryKey: ["merchant", "activities"] });
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.activity(activityId) });
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.activities() });
+      queryClient.invalidateQueries({
+        queryKey: merchantQueryKeys.matchingParticipants(activityId),
+      });
     },
   });
 

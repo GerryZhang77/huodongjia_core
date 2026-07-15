@@ -2,8 +2,8 @@
  * 消息通知页面 (商家端)
  */
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
@@ -119,7 +119,8 @@ const NotificationCard: React.FC<NotificationCardProps> = ({ notification, onRea
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeFilter = searchParams.get("filter") || "all";
 
   const { data, isLoading } = useMerchantNotifications();
 
@@ -178,14 +179,14 @@ const NotificationsPage: React.FC = () => {
               <Bell size={20} className="text-primary-500" />
               <span className="font-medium text-gray-900">全部消息</span>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 bg-error-100 text-error-500 text-xs rounded-full">
+            <span className="whitespace-nowrap rounded-full bg-error-100 px-2 py-0.5 text-xs tabular-nums text-error-500">
                   {unreadCount} 未读
                 </span>
               )}
             </div>
             {unreadCount > 0 && (
               <button
-                className="text-sm text-primary-500 flex items-center gap-1 hover:underline"
+            className="flex flex-nowrap items-center gap-1 whitespace-nowrap text-sm text-primary-500 hover:underline [&>svg]:shrink-0"
                 onClick={() => readAllMutation.mutate()}
               >
                 <CheckCheck size={14} />
@@ -209,7 +210,12 @@ const NotificationsPage: React.FC = () => {
                     ? "bg-primary-400 text-white"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
-                onClick={() => setActiveFilter(item.key)}
+                onClick={() =>
+                  setSearchParams(
+                    item.key === "all" ? {} : { filter: item.key },
+                    { replace: true },
+                  )
+                }
               >
                 {item.label}
               </button>

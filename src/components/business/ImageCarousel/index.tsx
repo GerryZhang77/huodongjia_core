@@ -4,14 +4,42 @@
  * 支持手势滑动、指示点、左右箭头
  */
 
-import { FC, useState, useRef, useEffect, useCallback } from "react";
+import {
+  FC,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { cn } from "../../../utils/cn";
+
+export type ImageCarouselVariant =
+  | "default"
+  | "detail"
+  | "detail-mobile"
+  | "detail-desktop"
+  | "organizer-detail"
+  | "recap";
+
+const variantClasses: Record<ImageCarouselVariant, string> = {
+  default: "h-56 md:h-72 lg:h-80",
+  detail: "aspect-[3/2] lg:aspect-[21/9]",
+  "detail-mobile": "aspect-[3/2]",
+  "detail-desktop": "aspect-[21/9]",
+  "organizer-detail":
+    "aspect-[3/2] min-h-0 min-w-0 w-full lg:h-full lg:aspect-auto",
+  recap: "aspect-[4/3]",
+};
 
 export interface ImageCarouselProps {
   /** 图片数组 */
   images: string[];
   /** 高度类名 (默认 h-56 md:h-72 lg:h-80) */
   heightClass?: string;
+  /** 预设展示比例；heightClass 可在特殊场景中覆盖该预设 */
+  variant?: ImageCarouselVariant;
   /** 是否显示指示点 (默认 true) */
   showIndicators?: boolean;
   /** 是否显示箭头 (默认 true，PC 端 hover 时显示) */
@@ -30,7 +58,8 @@ export interface ImageCarouselProps {
 
 export const ImageCarousel: FC<ImageCarouselProps> = ({
   images,
-  heightClass = "h-56 md:h-72 lg:h-80",
+  heightClass,
+  variant = "default",
   showIndicators = true,
   showArrows = true,
   autoPlayInterval = 0,
@@ -40,28 +69,62 @@ export const ImageCarousel: FC<ImageCarouselProps> = ({
   renderOverlay,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [failedImages, setFailedImages] = useState<Set<string>>(
+    () => new Set()
+  );
   const [isHovering, setIsHovering] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 有效图片数组（过滤空值）
-  const validImages = images.filter((img) => img && img.trim() !== "");
+  const resolvedHeightClass = heightClass || variantClasses[variant];
+
+  // 过滤空值和重复地址，避免无效图片破坏轮播宽度与索引。
+  const sourceImages = useMemo(
+    () =>
+      Array.from(
+        new Set(images.map((image) => image?.trim()).filter(Boolean) as string[])
+      ),
+    [images]
+  );
+  const sourceKey = sourceImages.join("\u001f");
+  const validImages = sourceImages.filter((image) => !failedImages.has(image));
   const hasMultipleImages = validImages.length > 1;
+
+  // 切换活动时回到首图，并允许新活动重新加载之前失败过的同名地址。
+  useEffect(() => {
+    setCurrentIndex(0);
+    setFailedImages(new Set());
+  }, [sourceKey]);
 
   // 切换到上一张
   const goToPrevious = useCallback(() => {
-    setCurrentIndex((prev) => (prev === 0 ? validImages.length - 1 : prev - 1));
+    setCurrentIndex((prev) => {
+      if (validImages.length === 0) return 0;
+      return prev === 0 ? validImages.length - 1 : prev - 1;
+    });
   }, [validImages.length]);
 
   // 切换到下一张
   const goToNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev === validImages.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) => {
+      if (validImages.length === 0) return 0;
+      return prev === validImages.length - 1 ? 0 : prev + 1;
+    });
   }, [validImages.length]);
 
   // 切换到指定索引
   const goToIndex = (index: number) => {
     setCurrentIndex(index);
+  };
+
+  const handleImageError = (image: string) => {
+    setFailedImages((previous) => {
+      const next = new Set(previous);
+      next.add(image);
+      return next;
+    });
+    setCurrentIndex(0);
   };
 
   // 自动播放
@@ -121,7 +184,11 @@ export const ImageCarousel: FC<ImageCarouselProps> = ({
   if (validImages.length === 0) {
     return (
       <div
-        className={`relative ${heightClass} bg-gradient-to-br from-primary-400 to-primary-600 ${className}`}
+        className={cn(
+          "relative bg-gradient-to-br from-primary-400 to-primary-600",
+          resolvedHeightClass,
+          className
+        )}
       >
         <div className="w-full h-full flex items-center justify-center">
           {placeholder || <Calendar size={48} className="text-white/50" />}
@@ -134,7 +201,7 @@ export const ImageCarousel: FC<ImageCarouselProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative ${heightClass} overflow-hidden ${className}`}
+      className={cn("relative overflow-hidden", resolvedHeightClass, className)}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onTouchStart={onTouchStart}
@@ -147,20 +214,22 @@ export const ImageCarousel: FC<ImageCarouselProps> = ({
     >
       {/* 图片容器 */}
       <div
-        className="flex h-full transition-transform duration-300 ease-out"
+        className="flex h-full min-h-0 min-w-0 transition-transform duration-300 ease-out"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {validImages.map((image, index) => (
           <div
-            key={index}
-            className="w-full h-full flex-shrink-0"
+            key={image}
+            className="h-full min-h-0 w-full min-w-0 flex-shrink-0"
             onClick={() => onImageClick?.(index)}
           >
             <img
               src={image}
               alt={`图片 ${index + 1}`}
-              className="w-full h-full object-cover"
+              className="block h-full min-h-0 w-full min-w-0 object-cover"
               draggable={false}
+              loading={index === 0 ? "eager" : "lazy"}
+              onError={() => handleImageError(image)}
             />
           </div>
         ))}
@@ -173,6 +242,7 @@ export const ImageCarousel: FC<ImageCarouselProps> = ({
       {showArrows && hasMultipleImages && (
         <>
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               goToPrevious();
@@ -185,6 +255,7 @@ export const ImageCarousel: FC<ImageCarouselProps> = ({
             <ChevronLeft size={20} />
           </button>
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               goToNext();
@@ -204,7 +275,8 @@ export const ImageCarousel: FC<ImageCarouselProps> = ({
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
           {validImages.map((_, index) => (
             <button
-              key={index}
+              key={validImages[index]}
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 goToIndex(index);
@@ -223,7 +295,7 @@ export const ImageCarousel: FC<ImageCarouselProps> = ({
 
       {/* 图片计数 (移动端显示) */}
       {hasMultipleImages && (
-        <div className="absolute bottom-3 right-3 px-2 py-0.5 bg-black/40 backdrop-blur-sm rounded-full text-white text-xs md:hidden">
+        <div className="absolute bottom-3 right-3 whitespace-nowrap rounded-full bg-black/40 px-2 py-0.5 text-xs tabular-nums text-white backdrop-blur-sm md:hidden">
           {currentIndex + 1} / {validImages.length}
         </div>
       )}

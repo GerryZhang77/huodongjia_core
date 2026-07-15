@@ -44,5 +44,7 @@ export function useMerchantNotifications() {
       api.get<MerchantNotificationsResponse>(
         "/api/merchant/received-notifications",
       ),
+    staleTime: 30 * 1000,
+    gcTime: 15 * 60 * 1000,
   });
 }

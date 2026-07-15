@@ -13,6 +13,8 @@ export function useMerchantActivities() {
   return useQuery<ActivityListResponse, Error>({
     queryKey: ["merchant", "activities"],
     queryFn: () => getMerchantActivities(),
-    staleTime: 2 * 60 * 1000, // 2分钟
+    // 报名人数和活动状态会变化：短缓存秒开，并允许 30 秒后后台刷新。
+    staleTime: 30 * 1000,
+    gcTime: 20 * 60 * 1000,
   });
 }

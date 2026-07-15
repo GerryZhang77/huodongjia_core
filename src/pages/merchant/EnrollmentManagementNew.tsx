@@ -8,8 +8,20 @@
  * 4. 筛选面板：PC端右侧面板，移动端底部抽屉
  */
 
-import React, { useState, useMemo, useCallback, useRef } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Users,
   Upload,
@@ -28,6 +40,7 @@ import {
   RotateCcw,
   QrCode,
   Settings,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
@@ -39,8 +52,11 @@ import {
   FilterDrawer,
   EnrollmentDetailDrawer,
 } from "@/components/enrollment";
+import {
+  prefetchEnrollmentImages,
+  useUpdateEnrollmentStatus,
+} from "@/features/enrollment/hooks";
 import { useAuthStore } from "@/features/auth/stores";
-import { useUpdateEnrollmentStatus } from "@/features/enrollment/hooks";
 import type {
   Enrollment,
   FilterCriteria,
@@ -52,8 +68,12 @@ import {
   applyFilters,
   getActiveFilterCount,
 } from "@/utils/enrollmentFilters";
-import { isDemoActivity } from "@/mocks/demo-activity";
 import { useActivityDetail } from "@/features/activities/hooks/useActivityDetail";
+import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
+import {
+  merchantCacheTimes,
+  merchantQueryKeys,
+} from "@/features/merchant/queryKeys";
 
 /**
  * 状态标签颜色映射
@@ -80,6 +100,8 @@ interface EnrollmentCardProps {
   onViewDetail: () => void;
   /** 长按进入选择模式 */
   onLongPress: () => void;
+  /** 有私有图片时，在打开详情前预取。 */
+  onPrefetchImages?: () => void;
 }
 
 const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
@@ -89,6 +111,7 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
   onSelect,
   onViewDetail,
   onLongPress,
+  onPrefetchImages,
 }) => {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressing = useRef(false);
@@ -131,6 +154,16 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
+      onPointerEnter={onPrefetchImages}
+      onFocus={onPrefetchImages}
+      tabIndex={0}
+      role="button"
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleClick();
+        }
+      }}
     >
       {/* 选中角标 */}
       {(selectionMode || selected) && (
@@ -171,8 +204,14 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
                 {enrollment.registrationTypeName}
               </span>
             )}
+            {!!enrollment.imageCount && (
+              <span className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded bg-purple-50 px-1.5 py-0.5 text-xs tabular-nums text-purple-600">
+                <ImageIcon size={11} />
+                {enrollment.imageCount}
+              </span>
+            )}
             <span
-              className={`px-2 py-0.5 text-xs rounded-full ${statusColors[enrollment.status] || "bg-gray-100 text-gray-500"}`}
+              className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs ${statusColors[enrollment.status] || "bg-gray-100 text-gray-500"}`}
             >
               {STATUS_LABELS[enrollment.status] || enrollment.status}
             </span>
@@ -195,7 +234,7 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
               {enrollment.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full"
+                  className="max-w-full truncate whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
                 >
                   {tag}
                 </span>
@@ -438,7 +477,7 @@ const PCFilterPanel: React.FC<PCFilterPanelProps> = ({
       {/* 底部操作 */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
         <button
-          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+          className="flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs text-gray-500 transition-colors hover:text-gray-700 [&>svg]:shrink-0"
           onClick={onReset}
         >
           <RotateCcw size={12} />
@@ -462,7 +501,9 @@ const EnrollmentManagementNew: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
-  const { token } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sessionScope = useAuthStore((state) => state.user?.id || "anonymous");
+  const queryClient = useQueryClient();
   const { updateStatus } = useUpdateEnrollmentStatus(id || "");
   const { activity } = useActivityDetail(id);
   const returnTo =
@@ -470,20 +511,66 @@ const EnrollmentManagementNew: React.FC = () => {
     (id ? `/dashboard/activity/${id}/detail` : "/dashboard");
   const enrollmentPath = id ? `/dashboard/activity/${id}/enrollment` : "/dashboard";
 
-  // 报名数据
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const enrollmentQuery = useQuery({
+    queryKey: merchantQueryKeys.enrollmentList(id),
+    queryFn: () => getEnrollmentsDetailed(id!, { page: 1, pageSize: 1000 }),
+    enabled: Boolean(id),
+    staleTime: merchantCacheTimes.enrollmentStale,
+    gcTime: merchantCacheTimes.enrollmentGc,
+  });
+  const enrollments = useMemo(
+    () => (enrollmentQuery.data?.enrollments ?? []) as Enrollment[],
+    [enrollmentQuery.data?.enrollments],
+  );
+  const loading = enrollmentQuery.isPending;
 
   // 筛选
-  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(
-    DEFAULT_FILTER_CRITERIA,
+  const filterStorageKey = `merchant-enrollment-filters:${id || "unknown"}`;
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(() => {
+    try {
+      const saved = sessionStorage.getItem(filterStorageKey);
+      return saved ? JSON.parse(saved) : DEFAULT_FILTER_CRITERIA;
+    } catch {
+      return DEFAULT_FILTER_CRITERIA;
+    }
+  });
+  const [searchKeyword, setSearchKeyword] = useState(
+    () => searchParams.get("q") || "",
   );
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState(
+    () => searchParams.get("status") || "all",
+  );
 
   // 分页
   const PAGE_SIZE = 20;
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const parsed = Number(searchParams.get("page"));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem(filterStorageKey, JSON.stringify(filterCriteria));
+  }, [filterCriteria, filterStorageKey]);
+
+  useEffect(() => {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (searchKeyword) next.set("q", searchKeyword);
+        else next.delete("q");
+        if (activeTab !== "all") next.set("status", activeTab);
+        else next.delete("status");
+        if (currentPage > 1) next.set("page", String(currentPage));
+        else next.delete("page");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [activeTab, currentPage, searchKeyword, setSearchParams]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, filterCriteria, searchKeyword]);
 
   // 选择模式
   const [selectionMode, setSelectionMode] = useState(false);
@@ -509,7 +596,6 @@ const EnrollmentManagementNew: React.FC = () => {
 
   // 应用筛选
   const filteredEnrollments = useMemo(() => {
-    setCurrentPage(1);
     let filtered = applyFilters(enrollments, filterCriteria);
 
     if (activeTab !== "all") {
@@ -532,69 +618,6 @@ const EnrollmentManagementNew: React.FC = () => {
   const activeFilterCount = useMemo(() => {
     return getActiveFilterCount(filterCriteria);
   }, [filterCriteria]);
-
-  // 获取报名列表
-  const fetchEnrollments = async () => {
-    try {
-      const requestId = isDemoActivity(id)
-        ? "00000000-0000-0000-0000-000000000000"
-        : id;
-
-      const response = await fetch(`/api/enrollments/${requestId}?pageSize=1000`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        if (isDemoActivity(id) && response.status === 404) {
-          setEnrollments([]);
-          return;
-        }
-        throw new Error("请求失败");
-      }
-
-      const data = await response.json();
-      console.log("[EnrollmentManagement] API 返回数据:", data);
-      const raw = data.data?.enrollments || data.data || [];
-      setEnrollments(raw.map((e: Record<string, unknown>) => {
-        const registrationTypeName =
-          (e.registrationTypeName as string | undefined) ||
-          (e.registration_type_name_snapshot as string | undefined) ||
-          "未命名报名类型";
-        const formData =
-          e.formData && typeof e.formData === "object"
-            ? (e.formData as Record<string, unknown>)
-            : {};
-        return {
-          ...e,
-          isExternal: e.is_external,
-          userId: e.user_id,
-          activityId: e.event_id,
-          enrolledAt: e.created_at,
-          registrationTypeId: e.registrationTypeId || e.registration_type_id,
-          registrationTypeName,
-          registrationTypeMatchEnabled:
-            e.registrationTypeMatchEnabled ?? e.registration_type_match_enabled,
-          customFields: {
-            ...formData,
-            报名类型: registrationTypeName,
-          },
-        };
-      }));
-    } catch (error) {
-      console.error("获取报名列表失败:", error);
-      Toast.show({ content: "获取报名列表失败" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    fetchEnrollments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
 
   // ====== 选择操作 ======
 
@@ -641,14 +664,12 @@ const EnrollmentManagementNew: React.FC = () => {
   const handleApprove = (enrollmentId: string) => {
     updateStatus([enrollmentId], "approved", () => {
       setShowDetailDrawer(false);
-      setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, status: "approved" } : e));
     });
   };
 
   const handleReject = (enrollmentId: string) => {
     updateStatus([enrollmentId], "rejected", () => {
       setShowDetailDrawer(false);
-      setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, status: "rejected" } : e));
     });
   };
 
@@ -656,7 +677,6 @@ const EnrollmentManagementNew: React.FC = () => {
     const ids = [...selectedIds];
     updateStatus(ids, "approved", () => {
       exitSelectionMode();
-      setEnrollments(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: "approved" } : e));
     });
   };
 
@@ -664,14 +684,13 @@ const EnrollmentManagementNew: React.FC = () => {
     const ids = [...selectedIds];
     updateStatus(ids, "rejected", () => {
       exitSelectionMode();
-      setEnrollments(prev => prev.map(e => ids.includes(e.id) ? { ...e, status: "rejected" } : e));
     });
   };
 
   // ====== 导入导出 ======
 
   const handleImportSuccess = (count: number) => {
-    fetchEnrollments();
+    void enrollmentQuery.refetch();
     Toast.show({ content: `成功导入 ${count} 条数据` });
   };
 
@@ -758,13 +777,13 @@ const EnrollmentManagementNew: React.FC = () => {
 
               {/* 筛选按钮 */}
               <button
-                className="h-9 md:h-10 px-3 md:px-4 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1 transition-colors"
+              className="flex h-9 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 px-3 text-sm text-gray-600 transition-colors hover:bg-gray-50 md:h-10 md:px-4 [&>svg]:shrink-0"
                 onClick={() => setShowFilterDrawer(!showFilterDrawer)}
               >
                 <Filter size={14} />
                 <span className="hidden sm:inline">筛选</span>
                 {activeFilterCount > 0 && (
-                  <span className="w-4 h-4 bg-primary-400 text-white text-xs rounded-full flex items-center justify-center">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-primary-400 text-xs tabular-nums text-white">
                     {activeFilterCount}
                   </span>
                 )}
@@ -772,7 +791,7 @@ const EnrollmentManagementNew: React.FC = () => {
 
               {/* 选择模式切换 */}
               <button
-                className={`h-9 md:h-10 px-3 md:px-4 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors ${
+              className={`flex h-9 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition-colors md:h-10 md:px-4 [&>svg]:shrink-0 ${
                   selectionMode
                     ? "bg-primary-400 text-white"
                     : "border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -791,35 +810,35 @@ const EnrollmentManagementNew: React.FC = () => {
             {/* 功能按钮行 */}
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-primary-50 text-primary-600 text-sm font-medium hover:bg-primary-100 flex items-center gap-1 transition-colors"
+                className="flex h-8 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg bg-primary-50 px-3 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-100 md:h-9 md:px-4 [&>svg]:shrink-0"
                 onClick={() => setShowImportModal(true)}
               >
                 <Upload size={14} />
                 导入
               </button>
               <button
-                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 flex items-center gap-1 transition-colors"
+                className="flex h-8 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg bg-gray-100 px-3 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200 md:h-9 md:px-4 [&>svg]:shrink-0"
                 onClick={() => setShowExportModal(true)}
               >
                 <Download size={14} />
                 导出
               </button>
               <button
-                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-blue-50 text-blue-600 text-sm font-medium hover:bg-blue-100 flex items-center gap-1 transition-colors"
+                className="flex h-8 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg bg-blue-50 px-3 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-100 md:h-9 md:px-4 [&>svg]:shrink-0"
                 onClick={() => setShowQrModal(true)}
               >
                 <QrCode size={14} />
                 活动二维码
               </button>
               <button
-                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-secondary-50 text-secondary-600 text-sm font-medium hover:bg-secondary-100 flex items-center gap-1 transition-colors"
+                className="flex h-8 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg bg-secondary-50 px-3 text-sm font-medium text-secondary-600 transition-colors hover:bg-secondary-100 md:h-9 md:px-4 [&>svg]:shrink-0"
                 onClick={handleGoMatching}
               >
                 <Settings size={14} />
                 匹配配置
               </button>
               <button
-                className="h-8 md:h-9 px-3 md:px-4 rounded-lg bg-accent-50 text-accent-600 text-sm font-medium hover:bg-accent-100 flex items-center gap-1 transition-colors"
+                className="flex h-8 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg bg-accent-50 px-3 text-sm font-medium text-accent-600 transition-colors hover:bg-accent-100 md:h-9 md:px-4 [&>svg]:shrink-0"
                 onClick={handleSendNotification}
               >
                 <Send size={14} />
@@ -871,7 +890,7 @@ const EnrollmentManagementNew: React.FC = () => {
                     全选
                   </button>
                   <button
-                    className="text-xs text-primary-500 hover:underline flex items-center gap-0.5"
+                className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap text-xs text-primary-500 hover:underline [&>svg]:shrink-0"
                     onClick={() => {
                       const invertedIds = filteredEnrollments
                         .filter((e) => !selectedIds.includes(e.id))
@@ -883,7 +902,7 @@ const EnrollmentManagementNew: React.FC = () => {
                     反选
                   </button>
                   <button
-                    className="text-xs text-gray-500 hover:underline flex items-center gap-0.5"
+                className="flex flex-nowrap items-center gap-0.5 whitespace-nowrap text-xs text-gray-500 hover:underline [&>svg]:shrink-0"
                     onClick={exitSelectionMode}
                   >
                     <X size={10} />
@@ -945,6 +964,18 @@ const EnrollmentManagementNew: React.FC = () => {
                   onSelect={() => toggleSelect(enrollment.id)}
                   onViewDetail={() => handleViewDetail(enrollment)}
                   onLongPress={() => enterSelectionMode(enrollment.id)}
+                  onPrefetchImages={
+                    enrollment.imageCount
+                      ? () => {
+                          void prefetchEnrollmentImages(
+                            queryClient,
+                            sessionScope,
+                            id || "",
+                            enrollment.id,
+                          );
+                        }
+                      : undefined
+                  }
                 />
               ))}
             </div>

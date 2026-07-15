@@ -37,6 +37,19 @@ export interface Activity {
   status: ActivityStatus;
   created_at?: string;
   updated_at?: string;
+  /** 商家列表聚合字段，避免前端按活动发起 N+1 请求。 */
+  enrolledCount?: number;
+  pendingCount?: number;
+  approvedCount?: number;
+  hasMatchResult?: boolean;
+  registrationStart?: string;
+  registrationEnd?: string;
+  activityStart?: string;
+  activityEnd?: string;
+  coverImage?: string | null;
+  capacity?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ActivityListResponse {

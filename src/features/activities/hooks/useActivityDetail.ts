@@ -2,58 +2,46 @@
  * 获取活动详情 Hook
  */
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Toast } from "@/components/ui/Toast";
 import { getActivityById } from "../services";
 import { useActivityStore } from "../stores";
-import type { Activity } from "../types";
 import { demoActivity, isDemoActivity } from "@/mocks/demo-activity";
+import {
+  merchantCacheTimes,
+  merchantQueryKeys,
+} from "@/features/merchant/queryKeys";
 
 export const useActivityDetail = (activityId: string | undefined) => {
-  const [loading, setLoading] = useState(Boolean(activityId));
-  const [activity, setActivity] = useState<Activity | null>(null);
   const { setCurrentActivity } = useActivityStore();
 
+  const query = useQuery({
+    queryKey: merchantQueryKeys.activity(activityId),
+    queryFn: () =>
+      isDemoActivity(activityId!)
+        ? Promise.resolve(demoActivity)
+        : getActivityById(activityId!),
+    enabled: Boolean(activityId),
+    staleTime: merchantCacheTimes.activityStale,
+    gcTime: merchantCacheTimes.activityGc,
+  });
+
   useEffect(() => {
-    if (!activityId) {
-      setActivity(null);
-      setLoading(false);
-      return;
-    }
+    setCurrentActivity(query.data ?? null);
+  }, [query.data, setCurrentActivity]);
 
-    const fetchActivity = async () => {
-      setLoading(true);
-      setActivity(null);
+  useEffect(() => {
+    if (!query.error) return;
+    console.error("获取活动详情失败:", query.error);
+    Toast.show({ icon: "fail", content: "获取活动详情失败" });
+  }, [query.error]);
 
-      // 【Mock 环境】如果是演示活动，直接返回静态数据
-      if (isDemoActivity(activityId)) {
-        console.log("✅ useActivityDetail - 检测到演示活动 ID，使用静态数据");
-        setActivity(demoActivity);
-        setCurrentActivity(demoActivity);
-        setLoading(false);
-        return;
-      }
-
-      // 【正常流程】从后端获取活动详情
-      try {
-        const activity = await getActivityById(activityId);
-        console.log("✅ useActivityDetail - 从后端获取活动详情成功");
-        setActivity(activity);
-        setCurrentActivity(activity);
-      } catch (error) {
-        console.error("获取活动详情失败:", error);
-        setActivity(null);
-        Toast.show({
-          icon: "fail",
-          content: "获取活动详情失败",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchActivity();
-  }, [activityId, setCurrentActivity]);
-
-  return { activity, loading };
+  return {
+    activity: query.data ?? null,
+    loading: query.isPending,
+    isFetching: query.isFetching,
+    error: query.error,
+    refetch: query.refetch,
+  };
 };

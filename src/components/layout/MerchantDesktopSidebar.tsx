@@ -16,6 +16,7 @@ import {
   UserSearch,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/stores";
+import { useLogout } from "@/features/auth/hooks";
 import { useQuery } from "@tanstack/react-query";
 import { useMerchantNotifications } from "@/features/merchant/notifications";
 import { merchantApi } from "@/services";
@@ -40,7 +41,7 @@ export const MerchantDesktopSidebar: FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const logout = useLogout();
   const prefetchProfile = usePrefetchMerchantProfile();
   const prefetchUserPool = usePrefetchMerchantUserPool();
   const prefetchForKey = (key: string) => {
@@ -111,8 +112,7 @@ export const MerchantDesktopSidebar: FC = () => {
   const activeKey = getActiveItem();
 
   const handleLogout = () => {
-    clearAuth();
-    navigate("/login");
+    logout();
   };
 
   return (
@@ -121,7 +121,7 @@ export const MerchantDesktopSidebar: FC = () => {
       <div className="p-6 border-b border-gray-100 dark:border-gray-700">
         <button
           onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-3 mb-4 group transition-transform duration-150 active:scale-95"
+        className="group mb-4 flex flex-nowrap items-center gap-3 whitespace-nowrap transition-transform duration-150 active:scale-95 [&>svg]:shrink-0"
           aria-label="返回首页"
         >
           <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center group-hover:shadow-lg group-hover:shadow-primary-400/30 transition-shadow duration-200">
@@ -175,8 +175,8 @@ export const MerchantDesktopSidebar: FC = () => {
                 onPointerEnter={() => prefetchForKey(item.key)}
                 onFocus={() => prefetchForKey(item.key)}
                 title={item.tooltip}
-                className={`
-                  w-full flex items-center gap-3 px-4 py-3 rounded-xl
+              className={`
+                w-full flex flex-nowrap items-center gap-3 whitespace-nowrap px-4 py-3 rounded-xl [&>svg]:shrink-0
                   transition-all duration-200
                   ${
                     isActive
@@ -192,14 +192,14 @@ export const MerchantDesktopSidebar: FC = () => {
                     className="transition-colors"
                   />
                   {!!item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center text-[9px] font-bold text-white bg-error-500 rounded-full">
+                  <span className="absolute -right-1 -top-1 flex h-[16px] min-w-[16px] items-center justify-center whitespace-nowrap rounded-full bg-error-500 px-1 text-[9px] font-bold tabular-nums text-white">
                       {item.badge > 99 ? "99+" : item.badge}
                     </span>
                   )}
                 </div>
                 <span className="text-sm font-medium">{item.label}</span>
                 {item.isNew && (
-                  <span className="px-1.5 py-0.5 bg-accent-100 text-accent-600 text-[10px] font-bold rounded-full">
+                  <span className="whitespace-nowrap rounded-full bg-accent-100 px-1.5 py-0.5 text-[10px] font-bold text-accent-600">
                     NEW
                   </span>
                 )}
@@ -216,14 +216,14 @@ export const MerchantDesktopSidebar: FC = () => {
       <div className="p-4 border-t border-gray-100 dark:border-gray-700">
         <button
           onClick={() => navigate("/dashboard/settings")}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors mb-2"
+          className="mb-2 flex w-full flex-nowrap items-center gap-3 whitespace-nowrap rounded-xl px-4 py-3 text-gray-600 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50 [&>svg]:shrink-0"
         >
           <Settings size={20} />
           <span className="text-sm font-medium">设置</span>
         </button>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-900/20 transition-colors"
+          className="flex w-full flex-nowrap items-center gap-3 whitespace-nowrap rounded-xl px-4 py-3 text-error-600 transition-colors hover:bg-error-50 dark:text-error-400 dark:hover:bg-error-900/20 [&>svg]:shrink-0"
         >
           <LogOut size={20} />
           <span className="text-sm font-medium">退出登录</span>

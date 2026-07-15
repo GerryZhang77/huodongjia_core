@@ -4,6 +4,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { importEnrollments } from "../services/enrollmentManageApi";
+import { merchantQueryKeys } from "@/features/merchant/queryKeys";
 
 /**
  * 批量导入报名 Hook
@@ -19,10 +20,13 @@ export function useImportEnrollments(activityId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["merchant", "enrollment", "list", activityId],
+        queryKey: merchantQueryKeys.enrollmentList(activityId),
       });
-      queryClient.invalidateQueries({ queryKey: ["activity", "detail", activityId] });
-      queryClient.invalidateQueries({ queryKey: ["merchant", "activities"] });
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.activity(activityId) });
+      queryClient.invalidateQueries({ queryKey: merchantQueryKeys.activities() });
+      queryClient.invalidateQueries({
+        queryKey: merchantQueryKeys.matchingParticipants(activityId),
+      });
     },
   });
 }
