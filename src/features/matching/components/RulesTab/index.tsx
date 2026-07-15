@@ -42,6 +42,8 @@ interface RulesTabProps {
   fieldCatalog?: MatchFieldCatalogItem[];
   preflightResult?: MatchPreflightResult | null;
   schemaLoading?: boolean;
+  /** 分步页面由父级统一提供导航操作时隐藏组件自身操作栏。 */
+  showFooterActions?: boolean;
 }
 
 const OPERATORS: Array<{ value: MatchOperator; label: string }> = [
@@ -112,6 +114,8 @@ const normalizeWeight = (value: number) => {
 const RulesTab: React.FC<RulesTabProps> = ({
   rules,
   onRulesChange,
+  constraints,
+  onConstraintsChange,
   onSaveRules,
   onStartMatching,
   isMatching,
@@ -124,6 +128,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
   fieldCatalog = [],
   preflightResult,
   schemaLoading = false,
+  showFooterActions = true,
 }) => {
   const [fieldPicker, setFieldPicker] = useState<{
     ruleId: string;
@@ -133,6 +138,23 @@ const RulesTab: React.FC<RulesTabProps> = ({
   const [expandedWeightRuleIds, setExpandedWeightRuleIds] = useState<string[]>(
     [],
   );
+  const ageHardRule = constraints.hardRules.find(
+    (rule) => rule.field === "age" && rule.enabled,
+  );
+  const genderHardRule = constraints.hardRules.find(
+    (rule) => rule.field === "gender" && rule.enabled,
+  );
+
+  const replaceHardRule = (
+    field: "age" | "gender",
+    nextRule: MatchConstraints["hardRules"][number] | null,
+  ) => {
+    const remaining = constraints.hardRules.filter((rule) => rule.field !== field);
+    onConstraintsChange({
+      ...constraints,
+      hardRules: nextRule ? [...remaining, nextRule] : remaining,
+    });
+  };
 
   const schemaLabelMap = useMemo(() => {
     return new Map(
@@ -164,7 +186,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
   }));
   const schemaFieldOptions = visibleSchemaGroups.flatMap((group, groupIndex) =>
     group.fields
-      .filter((field) => field.key)
+      .filter((field) => field.key && field.type !== "image")
       .map((field): RuleFieldOption => ({
         key: field.key,
         label: getStandardFieldLabel(field.key, field.label || field.key),
@@ -431,6 +453,186 @@ const RulesTab: React.FC<RulesTabProps> = ({
           </div>
 
           <div className="space-y-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+            <section className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-900">硬性约束</h4>
+                <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                  先剔除不符合条件的候选人，再按下方软规则计算分数。硬规则可能导致部分用户人数不足。
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-white bg-white p-3">
+                  <label className="mb-2 block text-xs font-medium text-gray-600">每人匹配数量</label>
+                  <select
+                    value={constraints.countMode}
+                    disabled={isRulesLocked}
+                    onChange={(event) => {
+                      const countMode = event.target.value as MatchConstraints["countMode"];
+                      onConstraintsChange({
+                        ...constraints,
+                        countMode,
+                        minMatches:
+                          countMode === "fixed"
+                            ? constraints.maxMatches
+                            : countMode === "max"
+                              ? 0
+                              : Math.max(1, Math.min(constraints.minMatches, constraints.maxMatches)),
+                      });
+                    }}
+                    className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                  >
+                    <option value="fixed">固定人数</option>
+                    <option value="range">人数范围（推荐）</option>
+                    <option value="max">仅限制最多</option>
+                  </select>
+                  <div className="mt-2 flex items-center gap-2">
+                    {constraints.countMode === "range" && (
+                      <>
+                        <span className="text-xs text-gray-500">最少</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={constraints.maxMatches}
+                          value={constraints.minMatches}
+                          disabled={isRulesLocked}
+                          onChange={(event) =>
+                            onConstraintsChange({
+                              ...constraints,
+                              minMatches: Math.max(1, Math.min(constraints.maxMatches, Number(event.target.value) || 1)),
+                            })
+                          }
+                          className="h-9 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm"
+                        />
+                      </>
+                    )}
+                    <span className="text-xs text-gray-500">
+                      {constraints.countMode === "fixed" ? "固定" : "最多"}
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={constraints.maxMatches}
+                      disabled={isRulesLocked}
+                      onChange={(event) => {
+                        const maxMatches = Math.max(1, Math.min(20, Number(event.target.value) || 1));
+                        onConstraintsChange({
+                          ...constraints,
+                          maxMatches,
+                          minMatches:
+                            constraints.countMode === "fixed"
+                              ? maxMatches
+                              : Math.min(constraints.minMatches, maxMatches),
+                        });
+                      }}
+                      className="h-9 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm"
+                    />
+                    <span className="text-xs text-gray-500">人</span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-white bg-white p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-medium text-gray-600">年龄差限制</div>
+                      <div className="mt-1 text-[11px] text-gray-400">年龄缺失者默认不进入候选池</div>
+                    </div>
+                    <Switch
+                      checked={Boolean(ageHardRule)}
+                      disabled={isRulesLocked}
+                      onChange={(enabled) =>
+                        replaceHardRule(
+                          "age",
+                          enabled
+                            ? {
+                                id: "hard-age-difference",
+                                field: "age",
+                                operator: "difference_lte",
+                                value: 5,
+                                missingPolicy: "exclude",
+                                enabled: true,
+                              }
+                            : null,
+                        )
+                      }
+                    />
+                  </div>
+                  {ageHardRule && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                      年龄差不超过
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={ageHardRule.value ?? 5}
+                        disabled={isRulesLocked}
+                        onChange={(event) =>
+                          replaceHardRule("age", {
+                            ...ageHardRule,
+                            value: Math.max(0, Math.min(100, Number(event.target.value) || 0)),
+                          })
+                        }
+                        className="h-9 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm"
+                      />
+                      岁
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-white bg-white p-3">
+                  <label className="mb-2 block text-xs font-medium text-gray-600">性别要求</label>
+                  <select
+                    value={genderHardRule?.operator || "none"}
+                    disabled={isRulesLocked}
+                    onChange={(event) => {
+                      const operator = event.target.value;
+                      replaceHardRule(
+                        "gender",
+                        operator === "none"
+                          ? null
+                          : {
+                              id: "hard-gender",
+                              field: "gender",
+                              operator: operator as "same" | "different",
+                              missingPolicy: "exclude",
+                              enabled: true,
+                            },
+                      );
+                    }}
+                    className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                  >
+                    <option value="none">不限</option>
+                    <option value="same">仅同性</option>
+                    <option value="different">仅异性</option>
+                  </select>
+                </div>
+
+                <div className="rounded-xl border border-white bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-medium text-gray-600">允许人工例外</div>
+                      <div className="mt-1 text-[11px] leading-relaxed text-gray-400">开启后，违反硬规则的调整必须填写原因并留痕。</div>
+                    </div>
+                    <Switch
+                      checked={constraints.allowManualOverride}
+                      disabled={isRulesLocked}
+                      onChange={(allowManualOverride) =>
+                        onConstraintsChange({ ...constraints, allowManualOverride })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {!!preflightResult?.insufficientParticipants && (
+                <div className="mt-3 flex items-start gap-2 rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">
+                  <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                  硬规则生效后有 {preflightResult.insufficientParticipants} 位用户无法满足最低匹配人数，请放宽条件后再执行。
+                </div>
+              )}
+            </section>
+
             {visibleRules.map((rule, index) => (
               <div
                 key={rule.id || index}
@@ -596,7 +798,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
               type="button"
               onClick={handleAddRule}
               disabled={isRulesLocked}
-              className="w-full inline-flex items-center justify-center gap-2 px-3 py-3 text-sm font-medium rounded-xl border border-dashed border-gray-300 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50/40 disabled:opacity-50"
+              className="inline-flex w-full flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-dashed border-gray-300 px-3 py-3 text-sm font-medium hover:border-primary-300 hover:bg-primary-50/40 hover:text-primary-600 disabled:opacity-50 [&>svg]:shrink-0"
             >
               <Plus size={16} />
               新增规则
@@ -726,6 +928,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
         </div>
       )}
 
+      {showFooterActions && (
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-20">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-3">
           <div className="flex items-center justify-center gap-4 mb-2 text-sm">
@@ -751,26 +954,23 @@ const RulesTab: React.FC<RulesTabProps> = ({
                 )
               }
               className="flex-1"
+              icon={<Save size={18} />}
             >
-              <span className="flex items-center gap-2">
-                <Save size={18} />
-                保存规则
-              </span>
+              保存规则
             </Button>
             <Button
               size="large"
               onClick={handleStart}
               disabled={isMatching || participantCount === 0}
               className="flex-1"
+              icon={<Play size={18} />}
             >
-              <span className="flex items-center gap-2">
-                <Play size={18} />
-                {isMatching ? "匹配中..." : "开始匹配"}
-              </span>
+              {isMatching ? "匹配中..." : "开始匹配"}
             </Button>
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

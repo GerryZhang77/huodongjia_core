@@ -1,6 +1,6 @@
 /**
  * MatchingHistoryPanel - 匹配历史记录面板
- * 显示历史匹配结果列表，支持查看和恢复
+ * 显示历史匹配版本；只有接口返回完整结果快照时才允许查看详情。
  */
 
 import React, { useState } from "react";
@@ -12,16 +12,13 @@ import {
   Users,
   CheckCircle,
   Eye,
-  RotateCcw,
 } from "lucide-react";
-import { Button } from "@/components/ui";
 import type { MatchingHistory } from "../../types";
 
 export interface MatchingHistoryPanelProps {
   history: MatchingHistory[];
   currentHistoryId?: string;
-  onViewHistory: (historyItem: MatchingHistory) => void;
-  onRestoreHistory?: (historyItem: MatchingHistory) => void;
+  onViewHistory?: (historyItem: MatchingHistory) => void;
   isLoading?: boolean;
 }
 
@@ -32,8 +29,7 @@ interface HistoryCardProps {
   item: MatchingHistory;
   index: number;
   isCurrent: boolean;
-  onView: () => void;
-  onRestore?: () => void;
+  onView?: () => void;
 }
 
 const HistoryCard: React.FC<HistoryCardProps> = ({
@@ -41,7 +37,6 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
   index,
   isCurrent,
   onView,
-  onRestore,
 }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -88,16 +83,21 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-gray-900">
-                第 {index + 1} 次匹配
+                第 {item.version ?? index + 1} 版
               </span>
-              {item.isPublished && (
-                <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-600 rounded-full">
+              {(item.resultState === "published" || item.isPublished) && (
+          <span className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-600">
                   已发布
                 </span>
               )}
-              {isCurrent && !item.isPublished && (
-                <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-600 rounded-full">
-                  当前
+              {item.resultState === "draft" && (
+          <span className="whitespace-nowrap rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-600">
+                  草稿
+                </span>
+              )}
+              {item.resultState === "superseded" && (
+          <span className="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                  已归档
                 </span>
               )}
             </div>
@@ -110,19 +110,25 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
       </div>
 
       {/* 统计信息 */}
-      <div className="flex items-center gap-4 mb-3 text-sm">
-        <div className="flex items-center gap-1 text-gray-600">
-          <Users size={14} />
-          <span>{item.statistics.totalGroups} 组</span>
+      {item.groups.length > 0 ? (
+        <div className="flex items-center gap-4 mb-3 text-sm">
+          <div className="flex items-center gap-1 text-gray-600">
+            <Users size={14} />
+            <span>{item.statistics.totalGroups} 组</span>
+          </div>
+          <div className="flex items-center gap-1 text-gray-600">
+            <CheckCircle size={14} />
+            <span>平均 {item.statistics.avgScore.toFixed(0)} 分</span>
+          </div>
+          <div className="text-xs text-gray-400">
+            {item.statistics.totalParticipants} 人参与
+          </div>
         </div>
-        <div className="flex items-center gap-1 text-gray-600">
-          <CheckCircle size={14} />
-          <span>平均 {item.statistics.avgScore.toFixed(0)} 分</span>
+      ) : (
+        <div className="mb-3 text-xs leading-5 text-gray-500">
+          当前接口仅保留此版本的状态与规则快照，未返回可浏览的结果快照。
         </div>
-        <div className="text-xs text-gray-400">
-          {item.statistics.totalParticipants} 人参与
-        </div>
-      </div>
+      )}
 
       {/* 使用的规则标签 */}
       {item.rules && item.rules.length > 0 && (
@@ -133,13 +139,13 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
             .map((rule, idx) => (
               <span
                 key={idx}
-                className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full"
+                className="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
               >
                 {rule.name}
               </span>
             ))}
           {item.rules.filter((r) => r.enabled).length > 3 && (
-            <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded-full">
+            <span className="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs tabular-nums text-gray-500">
               +{item.rules.filter((r) => r.enabled).length - 3}
             </span>
           )}
@@ -147,24 +153,17 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
       )}
 
       {/* 操作按钮 */}
-      <div className="flex gap-2">
-        <button
-          onClick={onView}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
-        >
-          <Eye size={14} />
-          查看详情
-        </button>
-        {onRestore && !isCurrent && (
+      {onView && item.groups.length > 0 && (
+        <div className="flex gap-2">
           <button
-            onClick={onRestore}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={onView}
+            className="flex flex-1 flex-nowrap items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary-50 py-2 text-sm font-medium text-primary-600 transition-colors hover:bg-primary-100 [&>svg]:shrink-0"
           >
-            <RotateCcw size={14} />
-            恢复
+            <Eye size={14} />
+            查看详情
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -176,7 +175,6 @@ export const MatchingHistoryPanel: React.FC<MatchingHistoryPanelProps> = ({
   history,
   currentHistoryId,
   onViewHistory,
-  onRestoreHistory,
   isLoading = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -204,7 +202,7 @@ export const MatchingHistoryPanel: React.FC<MatchingHistoryPanelProps> = ({
                 历史匹配记录
               </h3>
               <p className="text-xs text-gray-500">
-                共 {history.length} 次匹配
+                共 {history.length} 个版本
               </p>
             </div>
           </div>
@@ -225,10 +223,7 @@ export const MatchingHistoryPanel: React.FC<MatchingHistoryPanelProps> = ({
                 item={item}
                 index={history.length - 1 - index} // 倒序显示序号
                 isCurrent={item.id === currentHistoryId}
-                onView={() => onViewHistory(item)}
-                onRestore={
-                  onRestoreHistory ? () => onRestoreHistory(item) : undefined
-                }
+                onView={onViewHistory ? () => onViewHistory(item) : undefined}
               />
             ))}
 
@@ -236,7 +231,7 @@ export const MatchingHistoryPanel: React.FC<MatchingHistoryPanelProps> = ({
             {hasMore && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full py-2 flex items-center justify-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex w-full flex-nowrap items-center justify-center gap-1 whitespace-nowrap py-2 text-sm text-gray-500 transition-colors hover:text-gray-700 [&>svg]:shrink-0"
               >
                 {isExpanded ? (
                   <>

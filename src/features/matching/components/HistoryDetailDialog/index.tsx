@@ -341,7 +341,7 @@ export const HistoryDetailDialog: React.FC<HistoryDetailDialogProps> = ({
                   第 {historyIndex + 1} 次匹配结果
                 </h3>
                 {isPublished && (
-                  <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-600 rounded-full">
+                  <span className="whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-600">
                     已发布
                   </span>
                 )}
@@ -411,7 +411,7 @@ export const HistoryDetailDialog: React.FC<HistoryDetailDialogProps> = ({
                 {enabledRules.map((rule, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-0.5 text-xs bg-white text-gray-600 rounded-full border border-gray-200"
+                          className="whitespace-nowrap rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs text-gray-600"
                   >
                     {rule.name} ({rule.weight}%)
                   </span>

@@ -13,6 +13,10 @@ import type {
   ExecuteMatchResponse,
   MatchFieldCatalogResponse,
   MatchPreflightResult,
+  MatchConstraints,
+  MatchValidationResult,
+  MatchResultState,
+  MatchingHistory,
 } from "../types";
 
 // 兼容别名
@@ -24,15 +28,57 @@ type MatchCandidateScore = {
   fields?: Array<Record<string, unknown>>;
 };
 
+type MatchResultRecord = {
+  id?: string;
+  user_id: string;
+  match_id?: string;
+  best_match_users?: unknown;
+  scores?: unknown;
+  created_at?: string;
+  is_locked?: boolean;
+};
+
+type MatchStatsRecord = {
+  averageScore?: unknown;
+  average_score?: unknown;
+  minScore?: unknown;
+  min_score?: unknown;
+  maxScore?: unknown;
+  max_score?: unknown;
+  totalParticipants?: unknown;
+  total_participants?: unknown;
+  topK?: unknown;
+  top_k?: unknown;
+};
+
+type MatchResultsApiResponse = {
+  success: boolean;
+  message?: string;
+  groups?: MatchResultRecord[];
+  stats?: MatchStatsRecord;
+  resultState?: MatchResultState;
+  matchStatusId?: string;
+  version?: number;
+  revision?: number;
+  sourceMatchStatusId?: string | null;
+  data?: Omit<MatchResultsApiResponse, "data">;
+};
+
 export class MatchingApiError extends Error {
   code?: string;
   diagnostics?: MatchPreflightResult;
+  validation?: MatchValidationResult;
 
-  constructor(message: string, options?: { code?: string; diagnostics?: MatchPreflightResult }) {
+  constructor(message: string, options?: {
+    code?: string;
+    diagnostics?: MatchPreflightResult;
+    validation?: MatchValidationResult;
+  }) {
     super(message);
     this.name = "MatchingApiError";
     this.code = options?.code;
     this.diagnostics = options?.diagnostics;
+    this.validation = options?.validation;
   }
 }
 
@@ -102,84 +148,9 @@ const mapSchemaFieldsToRules = (
     ),
   );
 
-interface EnrollmentParticipant {
-  id?: string;
-  userId?: string;
-  name?: string;
-  registrationTypeId?: string | null;
-  registrationTypeName?: string;
-  status?: string;
-  industry?: string;
-  interests?: string | string[];
-  tags?: string[];
-  department?: string;
-  skills?: string;
-  expertise?: string;
-  formData?: Record<string, unknown>;
-}
-
-type MatchingParticipant = Participant & {
-  enrollmentId?: string;
-  company?: string;
-  department?: string;
-  skills?: string;
-  expertise?: string;
-  status?: string;
-  registrationTypeId?: string | null;
-  registrationTypeName?: string;
-  formData?: Record<string, unknown>;
-};
-
-const asString = (value: unknown): string | undefined => {
-  if (typeof value === "string" && value.trim()) return value;
-  if (typeof value === "number") return String(value);
-  return undefined;
-};
-
-const asNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return undefined;
-};
-
-const asGender = (
-  value: unknown,
-): MatchingParticipant["gender"] | undefined => {
-  return value === "male" || value === "female" || value === "other"
-    ? value
-    : undefined;
-};
-
-const asStringArray = (value: unknown): string[] => {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => asString(item))
-      .filter((item): item is string => Boolean(item));
-  }
-  const single = asString(value);
-  if (!single) return [];
-  return single
-    .split(/[,，、;；]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
-
-const mergeStringArrays = (...values: unknown[]): string[] =>
-  Array.from(
-    new Set(
-      values
-        .flatMap((value) => asStringArray(value))
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-  );
-
 const parseMatchCandidateScores = (
   rawScores: unknown,
-): MatchCandidateScore[] | null => {
+): Array<MatchCandidateScore | null> | null => {
   if (!rawScores) return null;
 
   const parsed =
@@ -197,8 +168,7 @@ const parseMatchCandidateScores = (
     return null;
   }
 
-  const normalized = parsed
-    .map((item) => {
+  const normalized = parsed.map((item) => {
       if (!item || typeof item !== "object") {
         return null;
       }
@@ -217,50 +187,9 @@ const parseMatchCandidateScores = (
           ? (item as MatchCandidateScore).fields
           : [],
       };
-    })
-    .filter((item) => item !== null);
+    });
 
-  return normalized as MatchCandidateScore[];
-};
-
-const mapEnrollmentToParticipant = (
-  e: EnrollmentParticipant,
-): MatchingParticipant => {
-  const f = e.formData || {};
-  return {
-    id: e.userId,
-    enrollmentId: e.id,
-    name: asString(e.name) || asString(f["姓名"]) || asString(f.name) || "未知用户",
-    registrationTypeId: e.registrationTypeId ?? null,
-    registrationTypeName: e.registrationTypeName,
-    phone: asString(f["手机号"]) || asString(f.phone),
-    gender: asGender(f["性别"]) || asGender(f.gender),
-    age: asNumber(f["年龄"]) ?? asNumber(f.age),
-    occupation: asString(f["职业"]) || asString(f.occupation),
-    company: asString(f["公司"]) || asString(f.company),
-    industry:
-      asString(e.industry) ||
-      asString(f["行业"]) ||
-      asString(f["关注/从事的行业方向"]),
-    city: asString(f["城市"]) || asString(f.city),
-    bio: asString(f["个人简介"]) || asString(f.bio),
-    interests: asStringArray(e.interests).length
-      ? asStringArray(e.interests)
-      : asStringArray(f["兴趣爱好"]),
-    department: asString(e.department) || asString(f["所在职能部门"]),
-    skills: asString(e.skills) || asString(f["软件技能"]),
-    expertise: asString(e.expertise) || asString(f["擅长领域"]),
-    tags: mergeStringArrays(
-      e.tags,
-      e.interests,
-      f["标签"],
-      f.tags,
-      f["兴趣爱好"],
-      f.interests,
-    ),
-    status: e.status,
-    formData: f,
-  };
+  return normalized;
 };
 
 /**
@@ -375,9 +304,37 @@ export const getMatchFieldCatalog = async (
   };
 };
 
+export const getMatchConfig = async (
+  activityId: string,
+): Promise<MatchConstraints> => {
+  const token = getToken();
+  const response = await fetch(`/api/match/${activityId}/config`, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "获取匹配约束失败");
+  return data.data as MatchConstraints;
+};
+
+export const saveMatchConfig = async (
+  activityId: string,
+  config: MatchConstraints,
+): Promise<MatchConstraints> => {
+  const token = getToken();
+  const response = await fetch(`/api/match/${activityId}/config`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "保存匹配约束失败");
+  return data.data as MatchConstraints;
+};
+
 export const preflightMatching = async (
   activityId: string,
   rules: MatchRule[],
+  config?: MatchConstraints,
 ): Promise<MatchPreflightResult> => {
   const token = getToken();
   const payloadRules = serializeRulesForBackend(rules);
@@ -388,7 +345,7 @@ export const preflightMatching = async (
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ rules: payloadRules }),
+    body: JSON.stringify({ rules: payloadRules, config }),
   });
 
   const data = await response.json();
@@ -494,7 +451,7 @@ export const executeMatching = async (
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ rules: payloadRules }),
+    body: JSON.stringify({ rules: payloadRules, config: request.config }),
   });
 
   if (!response.ok) {
@@ -536,8 +493,8 @@ export const executeMatching = async (
  * 后端返回：
  *   { success, message, groups: [{ id, event_id, user_id, match_id, best_match_users: [uuid×5], created_at }],
  *     stats?: { totalParticipants, averageScore, minScore, maxScore, topK } }
- * 每条 group 记录代表"某个参与者的 top5 匹配"。同时并行拉取 /api/enrollments/:eventId
- * 获取所有参与者的详情用于渲染。stats 为可选字段，老版本后端可能不返回。
+ * 每条 group 记录代表"某个参与者的 top5 匹配"。参与者详情由 participants
+ * 查询统一提供，避免结果请求再次拉取整份报名列表。
  */
 export interface MatchStatsResponse {
   /** 参与者（= 收到推荐的独立用户）数量 */
@@ -554,81 +511,39 @@ export const getMatchGroups = async (
   activityId: string,
 ): Promise<{
   results: ParticipantMatchResult[];
-  participants: any[];
   stats: MatchStatsResponse | null;
+  resultState?: MatchResultState;
+  matchStatusId?: string;
+  version?: number;
+  revision?: number;
+  sourceMatchStatusId?: string | null;
 }> => {
   const token = getToken();
 
-  const [resultsResp, enrollResp] = await Promise.all([
-    fetch(`/api/match/${activityId}/results`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    }),
-    fetch(`/api/enrollments/${activityId}?page=1&pageSize=1000`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    }),
-  ]);
+  const resultsResp = await fetch(`/api/match/${activityId}/results`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
 
-  const data = await resultsResp.json();
+  const data = (await resultsResp.json()) as MatchResultsApiResponse;
   if (!data.success) {
     throw new Error(data.message || "获取匹配结果失败");
   }
 
   // 后端新 shape：data.groups 是 per-user top5 数组
-  const rawRecords: any[] = data.groups || data.data?.groups || [];
+  const rawRecords = data.groups || data.data?.groups || [];
 
-  const results: ParticipantMatchResult[] = rawRecords.map((r: any) => ({
+  const results: ParticipantMatchResult[] = rawRecords.map((r) => ({
     id: r.id,
     userId: r.user_id,
     matchId: r.match_id,
     bestMatchUserIds: Array.isArray(r.best_match_users) ? r.best_match_users : [],
     scores: parseMatchCandidateScores(r.scores),
     createdAt: r.created_at,
+    isLocked: r.is_locked === true,
   }));
-
-  // 并行拉参与者详情
-  let participants: any[] = [];
-  if (enrollResp.ok) {
-    const enrollData = await enrollResp.json();
-    const enrollments: any[] = enrollData?.data?.enrollments || [];
-    participants = enrollments.map((e: any) => {
-      const f = e.formData || {};
-      return {
-        id: e.userId,
-        enrollmentId: e.id,
-        name: e.name || f["姓名"] || f.name || "未知用户",
-        phone: f["手机号"] || f.phone,
-        gender: f["性别"] || f.gender,
-        age: f["年龄"] ?? f.age,
-        occupation: f["职业"] || f.occupation,
-        company: f["公司"] || f.company,
-        industry: e.industry || f["行业"] || f["关注/从事的行业方向"],
-        city: f["城市"] || f.city,
-        bio: f["个人简介"] || f.bio,
-        interests: e.interests || f["兴趣爱好"],
-        department: e.department || f["所在职能部门"],
-        skills: e.skills || f["软件技能"],
-        expertise: e.expertise || f["擅长领域"],
-        tags: mergeStringArrays(
-          e.tags,
-          e.interests,
-          f["标签"],
-          f.tags,
-          f["兴趣爱好"],
-          f.interests,
-        ),
-        status: e.status,
-        registrationTypeId: e.registrationTypeId ?? null,
-        registrationTypeName: e.registrationTypeName,
-        formData: f,
-      };
-    });
-  }
 
   // 解析后端返回的 stats（可选字段，老版本后端不返回时为 null）
   let stats: MatchStatsResponse | null = null;
@@ -653,7 +568,16 @@ export const getMatchGroups = async (
     }
   }
 
-  return { results, participants, stats };
+  return {
+    results,
+    stats,
+    resultState: data.resultState || data.data?.resultState,
+    matchStatusId: data.matchStatusId || data.data?.matchStatusId,
+    version: Number(data.version || data.data?.version) || undefined,
+    revision: Number(data.revision || data.data?.revision) || undefined,
+    sourceMatchStatusId:
+      data.sourceMatchStatusId ?? data.data?.sourceMatchStatusId ?? null,
+  };
 };
 
 /**
@@ -684,7 +608,9 @@ export const toggleGroupLock = async (
 /**
  * 获取活动参与者列表 (从报名数据)
  */
-export const getParticipants = async (activityId: string): Promise<any[]> => {
+export const getParticipants = async (
+  activityId: string,
+): Promise<Participant[]> => {
   const token = getToken();
 
   const response = await fetch(`/api/enrollments/${activityId}/participants`, {
@@ -694,7 +620,11 @@ export const getParticipants = async (activityId: string): Promise<any[]> => {
     },
   });
 
-  const data = await response.json();
+  const data = (await response.json()) as {
+    success: boolean;
+    message?: string;
+    data?: { participants?: Participant[] };
+  };
 
   if (!data.success) {
     throw new Error(data.message || "获取参与者列表失败");
@@ -708,7 +638,7 @@ export const getParticipants = async (activityId: string): Promise<any[]> => {
  */
 export const getMatchingHistory = async (
   activityId: string,
-): Promise<any[]> => {
+): Promise<MatchingHistory[]> => {
   const token = getToken();
 
   const response = await fetch(`/api/match/${activityId}/history`, {
@@ -718,7 +648,11 @@ export const getMatchingHistory = async (
     },
   });
 
-  const data = await response.json();
+  const data = (await response.json()) as {
+    success: boolean;
+    message?: string;
+    data?: { history?: MatchingHistory[] };
+  };
 
   if (!data.success) {
     throw new Error(data.message || "获取历史记录失败");
@@ -732,8 +666,8 @@ export const getMatchingHistory = async (
  */
 export const publishMatchingResult = async (
   activityId: string,
-  historyId: string,
-): Promise<void> => {
+  historyId?: string,
+): Promise<{ matchStatusId: string; enrollmentIds: string[] }> => {
   const token = getToken();
 
   const response = await fetch(`/api/match/${activityId}/publish`, {
@@ -742,14 +676,146 @@ export const publishMatchingResult = async (
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ historyId }),
+    body: JSON.stringify(historyId ? { historyId } : {}),
   });
 
   const data = await response.json();
 
   if (!data.success) {
-    throw new Error(data.message || "发布失败");
+    throw new MatchingApiError(data.message || "发布失败", {
+      code: data.code,
+      validation: data.data,
+    });
   }
+  return data.data;
+};
+
+export interface MatchCandidate {
+  id: string;
+  enrollmentId: string;
+  name: string;
+  account?: string;
+  phone?: string;
+  avatar?: string | null;
+  gender?: string | null;
+  age?: number | null;
+  occupation?: string;
+  industry?: string;
+  city?: string;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string;
+  hardRulePassed: boolean;
+  hardRuleViolations: string[];
+  selected: boolean;
+}
+
+export const searchMatchCandidates = async (
+  activityId: string,
+  sourceUserId: string,
+  filters: {
+    q?: string;
+    gender?: string;
+    minAge?: number;
+    maxAge?: number;
+    registrationTypeId?: string;
+    page?: number;
+    pageSize?: number;
+  } = {},
+): Promise<{
+  candidates: MatchCandidate[];
+  total: number;
+  selectedIds: string[];
+  isLocked: boolean;
+  config?: MatchConstraints;
+}> => {
+  const token = getToken();
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  });
+  const response = await fetch(
+    `/api/match/${activityId}/results/${sourceUserId}/candidates?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
+  );
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "搜索候选人失败");
+  return data.data;
+};
+
+export const updateParticipantMatches = async (
+  activityId: string,
+  sourceUserId: string,
+  candidateUserIds: string[],
+  override?: { allowOverride: boolean; reason: string },
+): Promise<{ warning?: string | null }> => {
+  const token = getToken();
+  const response = await fetch(`/api/match/${activityId}/results/${sourceUserId}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ candidateUserIds, ...override }),
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "保存人工调整失败");
+  return data.data || {};
+};
+
+export const setParticipantMatchesLock = async (
+  activityId: string,
+  sourceUserId: string,
+  isLocked: boolean,
+): Promise<{ isLocked: boolean }> => {
+  const token = getToken();
+  const response = await fetch(
+    `/api/match/${activityId}/results/${sourceUserId}/lock`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ isLocked }),
+    },
+  );
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "锁定状态更新失败");
+  return data.data;
+};
+
+export const validateMatchResults = async (
+  activityId: string,
+): Promise<MatchValidationResult> => {
+  const token = getToken();
+  const response = await fetch(`/api/match/${activityId}/validation`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "校验匹配结果失败");
+  return data.data;
+};
+
+export const createMatchAdjustmentDraft = async (
+  activityId: string,
+): Promise<{
+  matchStatusId: string;
+  sourceMatchStatusId: string;
+  version: number;
+  revision: number;
+  reused?: boolean;
+}> => {
+  const token = getToken();
+  const response = await fetch(`/api/match/${activityId}/adjustment-drafts`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await response.json();
+  if (!data.success) throw new Error(data.message || "创建调整草稿失败");
+  return data.data;
 };
 
 /**
@@ -759,8 +825,9 @@ export const publishMatchingResult = async (
 export const submitMatchingTask = async (
   activityId: string,
   rules: MatchingRule[],
+  config?: MatchConstraints,
 ): Promise<{ taskId: string }> => {
-  await executeMatching({ activityId, rules });
+  await executeMatching({ activityId, rules, config });
   // 后端立即返回 success，异步执行匹配；用 activityId 作为轮询 key
   return { taskId: activityId };
 };

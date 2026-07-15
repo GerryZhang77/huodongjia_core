@@ -90,7 +90,7 @@ export const RestoreHistoryDialog: React.FC<RestoreHistoryDialogProps> = ({
                   第 {historyIndex + 1} 次匹配
                 </span>
                 {historyItem.isPublished && (
-                  <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-600 rounded-full">
+              <span className="ml-2 whitespace-nowrap rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-600">
                     已发布
                   </span>
                 )}

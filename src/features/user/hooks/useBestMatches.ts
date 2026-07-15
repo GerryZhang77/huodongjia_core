@@ -5,13 +5,26 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getBestMatches,
-  getParticipants,
   type MatchScorePayload,
 } from "../services/matchApi";
 
 export interface BestMatchUser {
   user_id: string;
   scores: MatchScorePayload | null;
+  participant?: {
+    id: string;
+    userId: string;
+    name?: string;
+    avatar?: string | null;
+    age?: number | null;
+    occupation?: string;
+    company?: string;
+    industry?: string;
+    city?: string;
+    tags?: string[];
+    formData?: Record<string, unknown>;
+    status?: string;
+  } | null;
 }
 
 export interface Participant {
@@ -34,6 +47,7 @@ export interface EnrichedBestMatchUser extends Participant {
   matchScore: number;
   rank: number;
   scoreDetail?: MatchScorePayload | null;
+  isManualRecommendation: boolean;
 }
 
 const parseMatchScorePayload = (
@@ -109,34 +123,9 @@ export async function fetchBestMatchesWithParticipants(
     return [];
   }
 
-  const participantsResponse = await getParticipants(eventId);
-  if (!participantsResponse.success) {
-    throw new Error("获取参与者信息失败");
-  }
-
-  const enrollments: Array<{
-    id: string;
-    userId: string;
-    name?: string;
-    formData?: Record<string, unknown>;
-    interests?: string;
-    industry?: string;
-    department?: string;
-    skills?: string;
-    expertise?: string;
-    status?: string;
-  }> = participantsResponse.data?.enrollments || [];
-
-  const enrollmentMap = new Map<string, (typeof enrollments)[0]>();
-  enrollments.forEach((enrollment) => {
-    if (enrollment.userId) {
-      enrollmentMap.set(enrollment.userId, enrollment);
-    }
-  });
-
   return bestMatchUsers
     .map((match) => {
-      const enrollment = enrollmentMap.get(match.user_id);
+      const enrollment = match.participant;
       if (!enrollment) {
         return null;
       }
@@ -149,11 +138,12 @@ export async function fetchBestMatchesWithParticipants(
 
       const formData = enrollment.formData || {};
       const interestsRaw =
-        enrollment.interests ||
         pickFieldValue(formData, ["兴趣爱好", "interests"]);
-      const tags = interestsRaw
-        ? String(interestsRaw).split(/[,，、\s]+/).filter(Boolean)
-        : [];
+      const tags = enrollment.tags?.length
+        ? enrollment.tags
+        : interestsRaw
+          ? String(interestsRaw).split(/[,，、\s]+/).filter(Boolean)
+          : [];
 
       const ageRaw = pickFieldValue(formData, ["年龄", "age"]);
       const ageNum = ageRaw ? Number(ageRaw) : undefined;
@@ -166,26 +156,37 @@ export async function fetchBestMatchesWithParticipants(
           pickFieldValue(formData, ["姓名", "name"]) ||
           "未知用户",
         gender: pickFieldValue(formData, ["性别", "gender"]),
-        age: ageNum && !Number.isNaN(ageNum) ? ageNum : undefined,
+        age:
+          enrollment.age !== null && enrollment.age !== undefined
+            ? enrollment.age
+            : ageNum && !Number.isNaN(ageNum)
+              ? ageNum
+              : undefined,
         phone: pickFieldValue(formData, ["手机号", "手机", "电话", "phone"]),
         email: pickFieldValue(formData, ["邮箱", "email"]),
-        occupation: pickFieldValue(formData, ["职业", "职位", "occupation"]),
+        occupation:
+          enrollment.occupation ||
+          pickFieldValue(formData, ["职业", "职位", "occupation"]),
         company:
-          enrollment.department ||
+          enrollment.company ||
           pickFieldValue(formData, ["公司", "所在单位", "学校", "company"]),
         industry:
           enrollment.industry ||
           pickFieldValue(formData, ["行业", "关注/从事的行业方向", "industry"]),
-        city: pickFieldValue(formData, ["城市", "所在城市", "city"]),
+        city:
+          enrollment.city ||
+          pickFieldValue(formData, ["城市", "所在城市", "city"]),
         tags,
-        avatar: pickFieldValue(formData, ["头像", "avatar"]),
+        avatar:
+          enrollment.avatar ||
+          pickFieldValue(formData, ["头像", "avatar"]),
         matchScore,
         rank: 0,
         scoreDetail,
+        isManualRecommendation: !scoreDetail,
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null)
-    .sort((a, b) => b.matchScore - a.matchScore)
     .map((item, index) => ({ ...item, rank: index + 1 }));
 }
 

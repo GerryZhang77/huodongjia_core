@@ -10,6 +10,7 @@ export type MatchOperator =
   | "similarity"
   | "complement"
   | "exact"
+  | "opposite"
   | "distance_decay";
 
 // 兼容旧页面保留的规则类型别名
@@ -104,11 +105,33 @@ export interface MatchPreflightResult {
   eligibleParticipants: number;
   ruleDiagnostics: MatchRuleDiagnostic[];
   fieldDiagnostics: MatchFieldDiagnostic[];
+  hardRuleDiagnostics?: Array<{
+    userId: string;
+    availableCandidates: number;
+    requiredCandidates: number;
+    canMeetMinimum: boolean;
+  }>;
+  insufficientParticipants?: number;
   message: string;
 }
 
-// 边界条件/约束
+export type MatchCountMode = "fixed" | "range" | "max";
+export interface MatchHardRule {
+  id: string;
+  field: "age" | "gender";
+  operator: "difference_lte" | "same" | "different";
+  value?: number;
+  missingPolicy: "exclude" | "allow";
+  enabled: boolean;
+}
+
+// 硬约束；旧分组字段保留为可选以兼容未迁移页面。
 export interface MatchConstraints {
+  countMode: MatchCountMode;
+  minMatches: number;
+  maxMatches: number;
+  hardRules: MatchHardRule[];
+  allowManualOverride: boolean;
   minGroupSize?: number;
   maxGroupSize?: number;
   genderRatioMin?: number; // 性别比例最小值 (%)
@@ -121,6 +144,8 @@ export interface MatchConstraints {
 // 参与者信息
 export interface Participant {
   id: string;
+  enrollmentId?: string;
+  imageCount?: number;
   name: string;
   registrationTypeId?: string | null;
   registrationTypeName?: string;
@@ -137,7 +162,7 @@ export interface Participant {
   matchingNeeds?: string;
   email?: string;
   phone?: string;
-  customFields?: Record<string, any>;
+  customFields?: Record<string, unknown>;
 }
 
 // 匹配分组（旧模型保留给历史数据/兼容）
@@ -169,9 +194,34 @@ export interface ParticipantMatchResult {
     total_score: number;
     total_score_percent?: number;
     fields?: Array<Record<string, unknown>>;
-  }> | null;
+  } | null> | null;
   /** 记录创建时间 */
   createdAt: string;
+  /** 锁定后，人工调整与再次保存都会被后端拒绝。 */
+  isLocked?: boolean;
+}
+
+export type MatchResultState = "draft" | "published" | "superseded";
+
+export interface MatchValidationIssue {
+  code: string;
+  userId?: string;
+  candidateUserId?: string;
+  message: string;
+}
+
+export interface MatchValidationResult {
+  valid: boolean;
+  resultState: MatchResultState;
+  matchStatusId: string;
+  version: number;
+  revision: number;
+  issues: MatchValidationIssue[];
+  summary: {
+    eligibleParticipants: number;
+    resultRows: number;
+    issueCount: number;
+  };
 }
 
 // 匹配结果
@@ -271,6 +321,10 @@ export interface MatchingHistory {
   createdBy?: string;
   /** 备注 */
   note?: string;
+  resultState?: MatchResultState;
+  version?: number;
+  revision?: number;
+  sourceMatchStatusId?: string | null;
 }
 
 /**
@@ -313,6 +367,7 @@ export interface GenerateRulesResponse {
 export interface ExecuteMatchRequest {
   activityId: string;
   rules: MatchingRule[];
+  config?: MatchConstraints;
 }
 
 /**

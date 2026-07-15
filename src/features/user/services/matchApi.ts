@@ -62,6 +62,7 @@ export interface MatchDetailResponse {
     targetUserEnrollment: MatchEnrollmentDetail;
     rules: MatchRuleDetail[];
     score: MatchScorePayload;
+    isManualRecommendation: boolean;
   };
   message?: string;
 }

@@ -11,13 +11,18 @@ import {
   Users,
   RefreshCw,
   Send,
-  Loader2,
   BarChart3,
   Info,
   History,
   Search,
   AlertCircle,
   Sparkles,
+  Pencil,
+  LockKeyhole,
+  ShieldCheck,
+  FilePenLine,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
@@ -30,12 +35,16 @@ import {
   type MatchGroupStats,
 } from "../PublishResultDialog";
 import { MatchingHistoryPanel } from "../MatchingHistoryPanel";
-import { RestoreHistoryDialog } from "../RestoreHistoryDialog";
 import { HistoryDetailDialog } from "../HistoryDetailDialog";
+import ManualMatchEditor from "../ManualMatchEditor";
+import PrivateEnrollmentImageGallery from "@/components/enrollment/PrivateEnrollmentImageGallery";
 import type {
+  MatchConstraints,
   MatchingRule,
   MatchingHistory,
   ParticipantMatchResult,
+  MatchResultState,
+  MatchValidationResult,
 } from "../../types";
 
 type MatchRule = MatchingRule;
@@ -44,6 +53,7 @@ type MatchRule = MatchingRule;
 interface Participant {
   id: string;
   enrollmentId?: string;
+  imageCount?: number;
   name: string;
   registrationTypeId?: string | null;
   registrationTypeName?: string;
@@ -66,6 +76,7 @@ interface Participant {
 }
 
 interface ResultsTabProps {
+  activityId: string;
   /** per-user top5 记录 */
   matchResults: ParticipantMatchResult[];
   /** 参与者完整列表（用于渲染本人和 top5 候选的详细信息） */
@@ -86,8 +97,16 @@ interface ResultsTabProps {
   };
   history?: MatchingHistory[];
   currentHistoryId?: string | null;
-  onViewHistory?: (history: MatchingHistory) => void;
-  onRestoreHistory?: (history: MatchingHistory) => void;
+  constraints: MatchConstraints;
+  onResultsChanged: () => Promise<void> | void;
+  readOnly?: boolean;
+  resultState?: MatchResultState;
+  resultVersion?: number;
+  validationResult?: MatchValidationResult | null;
+  isValidating?: boolean;
+  isCreatingAdjustmentDraft?: boolean;
+  onValidate?: () => Promise<MatchValidationResult | void>;
+  onCreateAdjustmentDraft?: () => Promise<unknown>;
 }
 
 /** 把 Participant 映射成 UserHoverCard 需要的 UserBrief */
@@ -174,7 +193,7 @@ const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }>
 
 const HIGH_MATCH_THRESHOLD = 60;
 const LOW_MATCH_THRESHOLD = 40;
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 25;
 
 type MatchPairRow = {
   id: string;
@@ -208,6 +227,7 @@ const toScorePercent = (
 };
 
 const ResultsTab: React.FC<ResultsTabProps> = ({
+  activityId,
   matchResults,
   participants,
   isPublishing,
@@ -217,19 +237,26 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   matchingStats,
   history = [],
   currentHistoryId = null,
-  onViewHistory,
-  onRestoreHistory,
+  constraints,
+  onResultsChanged,
+  readOnly = false,
+  resultState,
+  resultVersion,
+  validationResult,
+  isValidating = false,
+  isCreatingAdjustmentDraft = false,
+  onValidate,
+  onCreateAdjustmentDraft,
 }) => {
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
-  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [showHistoryDetailDialog, setShowHistoryDetailDialog] = useState(false);
-  const [pendingRestoreHistory, setPendingRestoreHistory] =
-    useState<MatchingHistory | null>(null);
   const [viewingHistory, setViewingHistory] = useState<MatchingHistory | null>(null);
+  const [editingOwnerId, setEditingOwnerId] = useState<string | null>(null);
+  const [imageViewer, setImageViewer] = useState<Participant | null>(null);
   const [feedback, setFeedback] = useState<{
     visible: boolean;
     success: boolean;
@@ -242,6 +269,26 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     for (const p of participants) m.set(p.id, p);
     return m;
   }, [participants]);
+
+  const validationIssuesByUser = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { userId: string; participant?: Participant; messages: string[] }
+    >();
+    for (const issue of validationResult?.issues || []) {
+      if (!issue.userId) continue;
+      const current = grouped.get(issue.userId) || {
+        userId: issue.userId,
+        participant: participantMap.get(issue.userId),
+        messages: [],
+      };
+      if (!current.messages.includes(issue.message)) {
+        current.messages.push(issue.message);
+      }
+      grouped.set(issue.userId, current);
+    }
+    return Array.from(grouped.values());
+  }, [participantMap, validationResult?.issues]);
 
   // 过滤后的结果
   const filteredResults = useMemo(() => {
@@ -310,6 +357,13 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
       }),
     [allPairRows],
   );
+  const firstRowIdByOwner = useMemo(() => {
+    const result = new Map<string, string>();
+    for (const row of sortedPairRows) {
+      if (!result.has(row.ownerId)) result.set(row.ownerId, row.id);
+    }
+    return result;
+  }, [sortedPairRows]);
 
   const totalPages = Math.max(1, Math.ceil(sortedPairRows.length / PAGE_SIZE));
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -502,14 +556,105 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2">
           <Info size={16} className="text-amber-600 flex-shrink-0" />
           <p className="text-sm text-amber-700 flex-1">
-            当前浏览的是历史记录，若需启用请点击"恢复此记录"
+            当前仅浏览历史版本。历史版本不会在前端直接“恢复”为当前结果。
           </p>
         </div>
       )}
 
+      {!currentHistoryId && (
+        <div
+          className={`mb-4 rounded-xl border p-3 md:flex md:items-center md:justify-between ${
+            resultState === "published"
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-blue-200 bg-blue-50"
+          }`}
+        >
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              {resultState === "published" ? (
+                <ShieldCheck size={17} className="text-emerald-600" />
+              ) : (
+                <FilePenLine size={17} className="text-blue-600" />
+              )}
+              第 {resultVersion || 1} 版 · {resultState === "published" ? "已发布" : "调整草稿"}
+            </div>
+            <p className="mt-1 text-xs text-gray-600">
+              {resultState === "published"
+                ? "参与者正在看到这一版本；如需修改，先基于它创建新的调整草稿。"
+                : "匹配完成后默认保存在草稿中，可直接人工调整、校验，再确认发布。"}
+            </p>
+          </div>
+          {validationResult && resultState !== "published" && (
+            <span
+              className={`mt-2 inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium tabular-nums md:mt-0 ${
+                validationResult.valid
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {validationResult.valid
+                ? "校验通过"
+                : `${validationResult.summary.issueCount} 个冲突待处理`}
+            </span>
+          )}
+        </div>
+      )}
+
+      {!currentHistoryId &&
+        resultState !== "published" &&
+        validationResult &&
+        !validationResult.valid && (
+          <section className="mb-4 rounded-2xl border border-red-200 bg-red-50/70 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-red-800">
+                  发布前还需处理 {validationResult.summary.issueCount} 个冲突
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-red-700">
+                  冲突已按参与者归组；缺少结果的参与者也可以直接进入调整并补充名单。
+                </p>
+              </div>
+              <span className="shrink-0 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-xs tabular-nums text-red-700">
+                {validationIssuesByUser.length} 名参与者
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {validationIssuesByUser.slice(0, 12).map((item) => (
+                <div
+                  key={item.userId}
+                  className="flex items-center gap-3 rounded-xl border border-red-100 bg-white p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-900">
+                      {item.participant?.name || item.userId.slice(0, 8)}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-red-700">
+                      {item.messages.slice(0, 2).join("；")}
+                    </p>
+                  </div>
+                  {item.participant && !readOnly && (
+                    <Button
+                      variant="outline"
+                      size="small"
+                      onClick={() => setEditingOwnerId(item.userId)}
+                    >
+                      调整
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {validationIssuesByUser.length > 12 && (
+              <p className="mt-2 text-xs text-red-700">
+                先处理以上参与者并重新校验，列表会根据最新结果自动收敛。
+              </p>
+            )}
+          </section>
+        )}
+
       {/* 搜索 + 历史按钮 */}
       <div className="bg-white rounded-xl border border-gray-100 p-3 mb-4 flex items-center gap-2">
-        <div className="flex-1 relative">
+        <div className="relative min-w-0 flex-1">
           <Search
             size={16}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -527,10 +672,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         </div>
         {history.length > 0 && (
           <button
+            type="button"
             onClick={() => setShowHistoryPanel(true)}
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+            className="flex shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-primary-50 hover:text-primary-600"
           >
-            <History size={16} />
+            <History size={16} className="shrink-0" />
             历史
           </button>
         )}
@@ -555,6 +701,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     <th className="px-4 py-3 font-medium">用户 A</th>
                     <th className="px-4 py-3 font-medium">用户 B</th>
                     <th className="px-4 py-3 font-medium">全局匹配度</th>
+                    <th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -577,6 +724,15 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                                 {getParticipantMeta(row.owner)}
                               </p>
                             )}
+                            {!!row.owner?.imageCount && row.owner.enrollmentId && (
+                              <button
+                                type="button"
+                                onClick={() => setImageViewer(row.owner!)}
+                                className="mt-1 inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs text-purple-600"
+                              >
+                                <ImageIcon size={12} className="shrink-0" />查看报名图片（{row.owner.imageCount}）
+                              </button>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -598,6 +754,15 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                                   {getParticipantMeta(row.candidate)}
                                 </p>
                               )}
+                              {!!row.candidate?.imageCount && row.candidate.enrollmentId && (
+                                <button
+                                  type="button"
+                                  onClick={() => setImageViewer(row.candidate!)}
+                                  className="mt-1 inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs text-purple-600"
+                                >
+                                  <ImageIcon size={12} className="shrink-0" />查看报名图片（{row.candidate.imageCount}）
+                                </button>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -606,7 +771,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                          className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium tabular-nums ${
                             row.scorePercent != null && row.scorePercent >= HIGH_MATCH_THRESHOLD
                               ? "bg-emerald-50 text-emerald-600"
                               : row.scorePercent != null && row.scorePercent < LOW_MATCH_THRESHOLD
@@ -616,6 +781,24 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                         >
                           {row.scorePercent != null ? `${row.scorePercent}%` : "—"}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {!readOnly && firstRowIdByOwner.get(row.ownerId) === row.id && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingOwnerId(row.ownerId)}
+                            className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 hover:border-primary-300 hover:text-primary-600"
+                          >
+                            {matchResults.find((item) => item.userId === row.ownerId)?.isLocked ? (
+                              <LockKeyhole size={13} className="shrink-0" />
+                            ) : (
+                              <Pencil size={13} className="shrink-0" />
+                            )}
+                            {matchResults.find((item) => item.userId === row.ownerId)?.isLocked
+                              ? "已锁定"
+                              : "调整"}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -685,7 +868,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 按最高匹配度从低到高排序，点击姓名查看主页。
               </p>
             </div>
-            <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-600">
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium tabular-nums text-orange-600">
               {lowMatchRows.length} 人
             </span>
           </div>
@@ -726,7 +909,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           <span
-                            className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                            className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium tabular-nums ${
                               row.bestScore != null
                                 ? "bg-orange-50 text-orange-600"
                                 : "bg-gray-100 text-gray-500"
@@ -771,46 +954,53 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         </div>
       </section>
 
-      {/* 底部操作栏 */}
+      {/* 当前版本操作：属于内容流，不覆盖商家底部导航。 */}
       {!currentHistoryId && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-20">
-          <div className="max-w-4xl mx-auto px-4 md:px-6 py-3 flex gap-3">
+        <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
-              size="large"
               onClick={() => onRematch()}
-              disabled={isRematching}
-              className="flex-1"
+              loading={isRematching}
+              icon={<RefreshCw size={18} />}
+              className="sm:min-w-36"
             >
-              <span className="flex items-center gap-2">
-                {isRematching ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <RefreshCw size={18} />
-                )}
-                重新匹配
-              </span>
+              重新匹配
             </Button>
-            <Button
-              size="large"
-              onClick={() => setShowPublishDialog(true)}
-              disabled={isPublishing || matchResults.length === 0}
-              className="flex-1"
-            >
-              {isPublishing ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 size={18} className="animate-spin" />
-                  发布中...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Send size={18} />
+            {resultState === "published" ? (
+              <Button
+                onClick={() => void onCreateAdjustmentDraft?.()}
+                loading={isCreatingAdjustmentDraft}
+                icon={<FilePenLine size={18} />}
+                className="sm:min-w-48"
+              >
+                创建调整草稿
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => void onValidate?.()}
+                  disabled={matchResults.length === 0}
+                  loading={isValidating}
+                  icon={<ShieldCheck size={18} />}
+                  className="sm:min-w-36"
+                >
+                  校验草稿
+                </Button>
+                <Button
+                  onClick={() => setShowPublishDialog(true)}
+                  disabled={matchResults.length === 0}
+                  loading={isPublishing}
+                  icon={<Send size={18} />}
+                  className="sm:min-w-36"
+                >
                   发布结果
-                </span>
-              )}
-            </Button>
+                </Button>
+              </>
+            )}
           </div>
-        </div>
+        </section>
       )}
 
       {/* 历史面板（内嵌，非模态） */}
@@ -838,10 +1028,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                   setViewingHistory(h);
                   setShowHistoryDetailDialog(true);
                 }}
-                onRestoreHistory={(h) => {
-                  setPendingRestoreHistory(h);
-                  setShowRestoreDialog(true);
-                }}
               />
             </div>
           </div>
@@ -866,29 +1052,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
             occupation: p.occupation,
           }))}
           onClose={() => setShowHistoryDetailDialog(false)}
-          onRestore={(h) => {
-            setPendingRestoreHistory(h);
-            setShowHistoryDetailDialog(false);
-            setShowRestoreDialog(true);
-          }}
-        />
-      )}
-
-      {/* 恢复确认 */}
-      {showRestoreDialog && pendingRestoreHistory && (
-        <RestoreHistoryDialog
-          visible={showRestoreDialog}
-          historyItem={pendingRestoreHistory}
-          onConfirm={() => {
-            onRestoreHistory?.(pendingRestoreHistory);
-            onViewHistory?.(pendingRestoreHistory);
-            setShowRestoreDialog(false);
-            setPendingRestoreHistory(null);
-          }}
-          onCancel={() => {
-            setShowRestoreDialog(false);
-            setPendingRestoreHistory(null);
-          }}
         />
       )}
 
@@ -903,6 +1066,37 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         onCancel={() => setShowPublishDialog(false)}
         isLoading={isPublishing}
       />
+
+      {editingOwnerId && participantMap.get(editingOwnerId) && (
+        <ManualMatchEditor
+          open
+          activityId={activityId}
+          source={participantMap.get(editingOwnerId)!}
+          initialCandidateIds={
+            matchResults.find((result) => result.userId === editingOwnerId)
+              ?.bestMatchUserIds || []
+          }
+          participants={participants}
+          constraints={constraints}
+          onClose={() => setEditingOwnerId(null)}
+          onSaved={onResultsChanged}
+        />
+      )}
+
+      {imageViewer?.enrollmentId && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-4" onClick={() => setImageViewer(null)}>
+          <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">{imageViewer.name} 的报名图片</h3>
+                <p className="mt-1 text-xs text-gray-500">仅本活动商家可见</p>
+              </div>
+              <button type="button" onClick={() => setImageViewer(null)} className="rounded-full p-2 text-gray-500 hover:bg-gray-100"><X size={18} /></button>
+            </div>
+            <PrivateEnrollmentImageGallery activityId={activityId} participantId={imageViewer.enrollmentId} />
+          </div>
+        </div>
+      )}
 
       {/* 发布反馈 */}
       {feedback && (

@@ -9,14 +9,15 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Toast } from "@/components/ui/Toast";
 import { getActivityById } from "@/features/activities/services/api";
+import type { Activity } from "@/features/activities/types";
 
 // API 服务函数
 import {
   getMatchRules,
   saveMatchRules,
-  executeMatching,
   getMatchGroups,
   getParticipants,
   getMatchingHistory,
@@ -24,8 +25,14 @@ import {
   getMatchingTaskStatus,
   getMatchFieldCatalog,
   preflightMatching,
+  getMatchConfig,
+  saveMatchConfig,
+  publishMatchingResult,
+  createMatchAdjustmentDraft,
+  validateMatchResults,
   MatchingApiError,
 } from "../services/matchingApi";
+import { sendNotification as sendEnrollmentNotification } from "@/services/enrollmentApi";
 
 // 使用重构版类型定义
 import type {
@@ -38,33 +45,12 @@ import type {
   MatchingSchemaGroup,
   MatchFieldCatalogItem,
   MatchPreflightResult,
+  MatchValidationResult,
 } from "../types";
-
-// === 模块级缓存（stale-while-revalidate） ===
-// 在 SPA tab 生命周期内存活；组件卸载重挂载时命中缓存秒开，后台静默刷新
-// 注意：浏览器硬刷新（F5）会清空缓存，回到正常加载流程
-interface MatchingCacheEntry {
-  rules: MatchRule[];
-  participants: Participant[];
-  registrationSchema: MatchingSchemaField[];
-  registrationSchemaGroups: MatchingSchemaGroup[];
-  fieldCatalog: MatchFieldCatalogItem[];
-  eligibleParticipantCount: number;
-  history: MatchingHistory[];
-  matchResults: ParticipantMatchResult[];
-  stage: MatchingStage;
-  activeTab: TabKey;
-  matchingStats: MatchingStats | null;
-  savedAt: number;
-}
-const matchingCache = new Map<string, MatchingCacheEntry>();
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-/** 外部可显式失效某活动的缓存（例如切换账号或明显的数据变更后） */
-export function invalidateMatchingCache(activityId?: string) {
-  if (activityId) matchingCache.delete(activityId);
-  else matchingCache.clear();
-}
+import {
+  merchantCacheTimes,
+  merchantQueryKeys,
+} from "@/features/merchant/queryKeys";
 
 // === 本地类型定义 ===
 export type MatchingStage =
@@ -88,6 +74,10 @@ export interface Participant {
   avatar?: string;
   tags?: string[];
   bio?: string;
+  enrollmentId?: string;
+  imageCount?: number;
+  registrationTypeId?: string | null;
+  registrationTypeName?: string;
 }
 
 export interface MatchingStats {
@@ -149,14 +139,14 @@ const formatPreflightFailureMessage = (result: MatchPreflightResult): string => 
   return "当前规则字段覆盖不足，无法开始匹配";
 };
 
-const buildRegistrationSchemaGroups = (activityData: any): MatchingSchemaGroup[] => {
-  const registrationTypes = Array.isArray(activityData?.registrationTypes)
-    ? activityData.registrationTypes
-    : [];
+const buildRegistrationSchemaGroups = (
+  activityData: Activity | undefined,
+): MatchingSchemaGroup[] => {
+  const registrationTypes = activityData?.registrationTypes ?? [];
 
   if (registrationTypes.length > 0) {
     return registrationTypes
-      .map((type: any, index: number) => ({
+      .map((type, index) => ({
         id: type?.id ? String(type.id) : `${DEFAULT_SCHEMA_GROUP_ID}-${index}`,
         name: String(type?.name || `报名表 ${index + 1}`),
         fields: Array.isArray(type?.formSchema) ? type.formSchema : [],
@@ -191,6 +181,59 @@ const flattenRegistrationSchemaGroups = (
 export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const FOREGROUND_POLL_INTERVAL_MS = 3000;
   const BACKGROUND_POLL_INTERVAL_MS = 5000;
+  const queryClient = useQueryClient();
+  const queryEnabled = Boolean(activityId);
+
+  const rulesQuery = useQuery({
+    queryKey: merchantQueryKeys.matchingRules(activityId),
+    queryFn: () => getMatchRules(activityId),
+    enabled: queryEnabled,
+    staleTime: merchantCacheTimes.matchingRulesStale,
+    gcTime: merchantCacheTimes.matchingGc,
+  });
+  const participantsQuery = useQuery({
+    queryKey: merchantQueryKeys.matchingParticipants(activityId),
+    queryFn: () => getParticipants(activityId),
+    enabled: queryEnabled,
+    staleTime: merchantCacheTimes.matchingParticipantsStale,
+    gcTime: merchantCacheTimes.matchingGc,
+  });
+  const historyQuery = useQuery({
+    queryKey: merchantQueryKeys.matchingHistory(activityId),
+    queryFn: () => getMatchingHistory(activityId),
+    enabled: queryEnabled,
+    staleTime: 60 * 1000,
+    gcTime: merchantCacheTimes.matchingGc,
+  });
+  const activityQuery = useQuery({
+    queryKey: merchantQueryKeys.activity(activityId),
+    queryFn: () => getActivityById(activityId),
+    enabled: queryEnabled,
+    staleTime: merchantCacheTimes.activityStale,
+    gcTime: merchantCacheTimes.activityGc,
+  });
+  const catalogQuery = useQuery({
+    queryKey: merchantQueryKeys.matchingCatalog(activityId),
+    queryFn: () => getMatchFieldCatalog(activityId),
+    enabled: queryEnabled,
+    staleTime: 5 * 60 * 1000,
+    gcTime: merchantCacheTimes.matchingGc,
+  });
+  const configQuery = useQuery({
+    queryKey: merchantQueryKeys.matchingConfig(activityId),
+    queryFn: () => getMatchConfig(activityId),
+    enabled: queryEnabled,
+    staleTime: merchantCacheTimes.matchingRulesStale,
+    gcTime: merchantCacheTimes.matchingGc,
+  });
+  const resultsQuery = useQuery({
+    queryKey: merchantQueryKeys.matchingResults(activityId),
+    queryFn: () => getMatchGroups(activityId),
+    enabled: queryEnabled,
+    staleTime: merchantCacheTimes.matchingResultStale,
+    gcTime: merchantCacheTimes.matchingGc,
+    retry: 1,
+  });
 
   // === 状态定义 ===
   const [stage, setStage] = useState<MatchingStage>("idle");
@@ -199,11 +242,11 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   // 规则相关
   const [rules, setRules] = useState<MatchRule[]>([]);
   const [constraints, setConstraints] = useState<MatchConstraints>({
-    minGroupSize: 3,
-    maxGroupSize: 8,
-    genderRatioMin: 40,
-    genderRatioMax: 60,
-    sameIndustryMax: 2,
+    countMode: "range",
+    minMatches: 1,
+    maxMatches: 3,
+    hardRules: [],
+    allowManualOverride: false,
   });
 
   // 数据
@@ -225,11 +268,26 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const [history, setHistory] = useState<MatchingHistory[]>([]);
 
   // 加载状态
-  const [isLoading, setIsLoading] = useState(true);
+  const isLoading = [
+    rulesQuery,
+    participantsQuery,
+    historyQuery,
+    activityQuery,
+    catalogQuery,
+    configQuery,
+    resultsQuery,
+  ].some((query) => query.isPending);
   const [isMatching, setIsMatching] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isCreatingAdjustmentDraft, setIsCreatingAdjustmentDraft] =
+    useState(false);
+  const [isPreflighting, setIsPreflighting] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [matchingProgress, setMatchingProgress] = useState(0);
   const [matchingMessage, setMatchingMessage] = useState<string>("");
+  const [lastValidationResult, setLastValidationResult] =
+    useState<MatchValidationResult | null>(null);
 
   // 规则锁定状态 - 匹配进行中时锁定规则编辑
   const [isRulesLocked, setIsRulesLocked] = useState(false);
@@ -253,6 +311,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   // 任务轮询
   const taskPollingRef = useRef<NodeJS.Timeout | null>(null);
   const currentTaskIdRef = useRef<string | null>(null);
+  const preflightFingerprintRef = useRef<string | null>(null);
 
   // 统计
   const [matchingStats, setMatchingStats] = useState<MatchingStats | null>(
@@ -269,170 +328,75 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   // === 清理轮询 ===
   useEffect(() => clearTaskPolling, [clearTaskPolling]);
 
-  // === 初始化加载（stale-while-revalidate） ===
+  // React Query 负责跨路由缓存；本地状态只承载尚未保存的编辑值和执行进度。
   useEffect(() => {
-    if (!activityId) return;
+    if (!rulesQuery.isFetched) return;
+    const rulesData = rulesQuery.data || [];
+    setRules(
+      rulesData.length > 0
+        ? rulesData.map((rule, index) => normalizeRuleForUi(rule, index))
+        : [createEmptyRule()],
+    );
+  }, [rulesQuery.data, rulesQuery.isFetched]);
 
-    // 用 ref 把本次挂载与之前的请求隔离，避免卸载后的 setState
-    let aborted = false;
+  useEffect(() => {
+    if (!participantsQuery.isFetched) return;
+    setParticipants((participantsQuery.data || []) as Participant[]);
+  }, [participantsQuery.data, participantsQuery.isFetched]);
 
-    /** 真正的拉取逻辑，复用给首次加载和后台静默刷新 */
-    const fetchAll = async (silent: boolean) => {
-      if (!silent) setIsLoading(true);
-      try {
-        const [rulesData, participantsData, historyData, activityData, catalogData] =
-          await Promise.all([
-            getMatchRules(activityId).catch(() => [] as MatchRule[]),
-            getParticipants(activityId).catch(() => [] as Participant[]),
-            getMatchingHistory(activityId).catch(() => [] as MatchingHistory[]),
-            getActivityById(activityId).catch(() => null),
-            getMatchFieldCatalog(activityId).catch(() => ({
-              fields: [] as MatchFieldCatalogItem[],
-              totalEligibleParticipants: 0,
-            })),
-          ]);
-        if (aborted) return;
+  useEffect(() => {
+    if (!historyQuery.isFetched) return;
+    setHistory((historyQuery.data || []) as MatchingHistory[]);
+  }, [historyQuery.data, historyQuery.isFetched]);
 
-        if (rulesData && rulesData.length > 0) {
-          setRules(rulesData.map((rule, index) => normalizeRuleForUi(rule, index)));
-          setStage((prev) => (prev === "idle" ? "configuring" : prev));
-        } else {
-          setRules([createEmptyRule()]);
-          setStage((prev) => (prev === "idle" ? "configuring" : prev));
-        }
-        if (participantsData && participantsData.length > 0) {
-          setParticipants(participantsData);
-        }
-        const schemaGroups = buildRegistrationSchemaGroups(activityData);
-        setRegistrationSchemaGroups(schemaGroups);
-        setRegistrationSchema(flattenRegistrationSchemaGroups(schemaGroups));
-        setFieldCatalog(catalogData.fields);
-        setEligibleParticipantCount(catalogData.totalEligibleParticipants);
+  useEffect(() => {
+    const schemaGroups = buildRegistrationSchemaGroups(activityQuery.data);
+    setRegistrationSchemaGroups(schemaGroups);
+    setRegistrationSchema(flattenRegistrationSchemaGroups(schemaGroups));
+  }, [activityQuery.data]);
 
-        let publishedResolved = false;
-        if (historyData && historyData.length > 0) {
-          setHistory(historyData);
-          const publishedHistory = historyData.find((h) => h.isPublished);
-          if (publishedHistory && publishedHistory.groups.length > 0) {
-            const convertedGroups = convertHistoryGroups(publishedHistory.groups);
-            setGroups(convertedGroups);
-            setStage("published");
-            setActiveTab("results");
-            setMatchingStats({
-              avgScore: publishedHistory.statistics.avgScore,
-              minScore: publishedHistory.statistics.minScore,
-              maxScore: publishedHistory.statistics.maxScore,
-              totalGroups: publishedHistory.statistics.totalGroups,
-              totalParticipants: publishedHistory.statistics.totalParticipants,
-            });
-            publishedResolved = true;
-          }
-        }
+  useEffect(() => {
+    setFieldCatalog(catalogQuery.data?.fields || []);
+    setEligibleParticipantCount(
+      catalogQuery.data?.totalEligibleParticipants || 0,
+    );
+  }, [catalogQuery.data]);
 
-        if (!publishedResolved) {
-          const matchResult = await getMatchGroups(activityId).catch(() => ({
-            results: [] as ParticipantMatchResult[],
-            participants: [] as any[],
-            stats: null,
-          }));
-          if (aborted) return;
-          if (matchResult.results.length > 0) {
-            setMatchResults(matchResult.results);
-            if (matchResult.participants.length > 0) {
-              setParticipants(matchResult.participants);
+  useEffect(() => {
+    if (configQuery.data) setConstraints(configQuery.data);
+  }, [configQuery.data]);
+
+  useEffect(() => {
+    if (!resultsQuery.isFetched) return;
+    const matchData = resultsQuery.data;
+    const nextResults = matchData?.results || [];
+    setMatchResults(nextResults);
+    if (nextResults.length > 0) {
+      setStage(
+        matchData?.resultState === "published" ? "published" : "completed",
+      );
+      setActiveTab("results");
+      setMatchingStats(
+        matchData?.stats
+          ? {
+              avgScore: matchData.stats.averageScore,
+              minScore: matchData.stats.minScore,
+              maxScore: matchData.stats.maxScore,
+              totalGroups: nextResults.length,
+              totalParticipants:
+                matchData.stats.totalParticipants ||
+                (participantsQuery.data || []).length,
             }
-            setStage("completed");
-            setActiveTab("results");
-            // 后端返回了 stats 才写入真实分数；没有则留 null，UI 会显示 "—"
-            if (matchResult.stats) {
-              setMatchingStats({
-                avgScore: matchResult.stats.averageScore,
-                minScore: matchResult.stats.minScore,
-                maxScore: matchResult.stats.maxScore,
-                totalGroups: matchResult.results.length,
-                totalParticipants:
-                  matchResult.stats.totalParticipants ||
-                  matchResult.participants.length,
-              });
-            } else {
-              setMatchingStats(null);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load initial data:", error);
-        if (!silent) Toast.show({ content: "加载数据失败", icon: "fail" });
-      } finally {
-        if (!aborted && !silent) setIsLoading(false);
-      }
-    };
-
-    // SWR: 命中缓存则立即 hydrate 状态并跳过 loading，再后台静默刷新
-    const cached = matchingCache.get(activityId);
-    const fresh = cached && Date.now() - cached.savedAt < CACHE_TTL_MS;
-    if (cached) {
-      setRules(cached.rules);
-      setParticipants(cached.participants);
-      setRegistrationSchema(cached.registrationSchema);
-      setRegistrationSchemaGroups(cached.registrationSchemaGroups);
-      setFieldCatalog(cached.fieldCatalog);
-      setEligibleParticipantCount(cached.eligibleParticipantCount);
-      setHistory(cached.history);
-      setMatchResults(cached.matchResults);
-      setStage(cached.stage);
-      setActiveTab(cached.activeTab);
-      setMatchingStats(cached.matchingStats);
-      setIsLoading(false);
-      if (!fresh) fetchAll(true);
+          : null,
+      );
     } else {
-      fetchAll(false);
+      setStage("configuring");
+      setMatchingStats(null);
     }
-
-    return () => {
-      aborted = true;
-    };
-  }, [activityId]);
-
-  // === 状态同步到缓存（只在加载完成且拿到数据时写入） ===
-  useEffect(() => {
-    if (!activityId || isLoading) return;
-    // 空数据时不要覆盖掉可能尚未返回的真实数据
-    if (
-      rules.length === 0 &&
-      participants.length === 0 &&
-      matchResults.length === 0 &&
-      history.length === 0
-    ) {
-      return;
-    }
-    matchingCache.set(activityId, {
-      rules,
-      participants,
-      registrationSchema,
-      registrationSchemaGroups,
-      fieldCatalog,
-      eligibleParticipantCount,
-      history,
-      matchResults,
-      stage,
-      activeTab,
-      matchingStats,
-      savedAt: Date.now(),
-    });
   }, [
-    activityId,
-    isLoading,
-    rules,
-    participants,
-    registrationSchema,
-    registrationSchemaGroups,
-    fieldCatalog,
-    eligibleParticipantCount,
-    history,
-    matchResults,
-    stage,
-    activeTab,
-    matchingStats,
+    participantsQuery.data,
+    resultsQuery.data,
+    resultsQuery.isFetched,
   ]);
 
   // === 保存所有规则配置到后端 ===
@@ -442,7 +406,18 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         const normalizedRules = rules.map((rule, index) =>
           normalizeRuleForUi(rule, index),
         );
-        await saveMatchRules(activityId, normalizedRules);
+        await Promise.all([
+          saveMatchRules(activityId, normalizedRules),
+          saveMatchConfig(activityId, constraints),
+        ]);
+        queryClient.setQueryData(
+          merchantQueryKeys.matchingRules(activityId),
+          normalizedRules,
+        );
+        queryClient.setQueryData(
+          merchantQueryKeys.matchingConfig(activityId),
+          constraints,
+        );
 
         const newConfig = {
           id: `config_${Date.now()}`,
@@ -459,7 +434,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         throw error;
       }
     },
-    [activityId, rules],
+    [activityId, constraints, queryClient, rules],
   );
 
   // === 加载已保存的配置 ===
@@ -503,17 +478,14 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
           const [matchData, historyData] = await Promise.all([
             getMatchGroups(activityId).catch(() => ({
               results: [] as ParticipantMatchResult[],
-              participants: [] as any[],
               stats: null,
+              resultState: undefined,
             })),
             getMatchingHistory(activityId).catch(() => [] as MatchingHistory[]),
           ]);
 
           if (matchData.results.length > 0) {
             setMatchResults(matchData.results);
-            if (matchData.participants.length > 0) {
-              setParticipants(matchData.participants);
-            }
             setStage("completed");
             setActiveTab("results");
             if (matchData.stats) {
@@ -524,7 +496,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
                 totalGroups: matchData.results.length,
                 totalParticipants:
                   matchData.stats.totalParticipants ||
-                  matchData.participants.length ||
                   participants.length,
               });
             } else {
@@ -535,6 +506,17 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
           if (historyData) {
             setHistory(historyData);
           }
+          queryClient.setQueryData(
+            merchantQueryKeys.matchingResults(activityId),
+            matchData,
+          );
+          queryClient.setQueryData(
+            merchantQueryKeys.matchingHistory(activityId),
+            historyData,
+          );
+          void queryClient.invalidateQueries({
+            queryKey: merchantQueryKeys.activities(),
+          });
 
           setIsMatching(false);
           setIsRulesLocked(false);
@@ -562,6 +544,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       clearTaskPolling,
       isBackgroundMatching,
       participants.length,
+      queryClient,
     ],
   );
 
@@ -578,8 +561,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     return clearTaskPolling;
   }, [clearTaskPolling, isBackgroundMatching, isMatching, pollTaskStatus]);
 
-  // === 开始匹配 (异步任务) ===
-  const handleStartMatching = useCallback(async () => {
+  const handleRunPreflight = useCallback(async () => {
     const normalizedRules = rules.map((rule, index) =>
       normalizeRuleForUi(rule, index),
     );
@@ -592,30 +574,70 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     );
     if (enabledRules.length === 0) {
       Toast.show({ content: "请至少启用一条匹配规则", icon: "fail" });
-      return;
+      return null;
     }
 
     if (eligibleParticipantCount === 0) {
       Toast.show({ content: "暂无审核通过且参与匹配的用户", icon: "fail" });
-      return;
+      return null;
     }
 
-    let preflightResult: MatchPreflightResult;
+    setIsPreflighting(true);
     try {
-      preflightResult = await preflightMatching(activityId, enabledRules);
+      const preflightResult = await preflightMatching(
+        activityId,
+        enabledRules,
+        constraints,
+      );
       setLastPreflightResult(preflightResult);
       if (!preflightResult.canExecute) {
         Toast.show({
           content: formatPreflightFailureMessage(preflightResult),
           icon: "fail",
         });
-        return;
+        return null;
       }
+      preflightFingerprintRef.current = JSON.stringify({
+        rules: normalizedRules,
+        constraints,
+      });
+      return { normalizedRules, enabledRules, preflightResult };
     } catch (error) {
       console.error("Matching preflight failed:", error);
       Toast.show({ content: "匹配预检失败", icon: "fail" });
-      return;
+      return null;
+    } finally {
+      setIsPreflighting(false);
     }
+  }, [activityId, constraints, eligibleParticipantCount, rules]);
+
+  // === 开始匹配 (异步任务) ===
+  const handleStartMatching = useCallback(async () => {
+    const currentNormalizedRules = rules.map((rule, index) =>
+      normalizeRuleForUi(rule, index),
+    );
+    const fingerprint = JSON.stringify({
+      rules: currentNormalizedRules,
+      constraints,
+    });
+    const cachedPreflightIsCurrent =
+      lastPreflightResult?.canExecute === true &&
+      preflightFingerprintRef.current === fingerprint;
+    const preflight = cachedPreflightIsCurrent
+      ? {
+          normalizedRules: currentNormalizedRules,
+          enabledRules: currentNormalizedRules.filter(
+            (rule) =>
+              rule.enabled &&
+              rule.source_field &&
+              rule.target_field &&
+              rule.operator,
+          ),
+          preflightResult: lastPreflightResult,
+        }
+      : await handleRunPreflight();
+    if (!preflight) return;
+    const { normalizedRules, enabledRules } = preflight;
 
     setIsMatching(true);
     setMatchingProgress(0);
@@ -625,7 +647,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
     try {
       setRules(normalizedRules);
-      const { taskId } = await submitMatchingTask(activityId, enabledRules);
+      // 开始匹配即固化本次硬约束，确保刷新页面、人工调整与运行快照保持一致。
+      await saveMatchConfig(activityId, constraints);
+      const { taskId } = await submitMatchingTask(activityId, enabledRules, constraints);
       currentTaskIdRef.current = taskId;
       clearTaskPolling();
       void pollTaskStatus(activityId);
@@ -647,9 +671,11 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   }, [
     activityId,
     clearTaskPolling,
-    rules,
-    eligibleParticipantCount,
+    constraints,
+    handleRunPreflight,
+    lastPreflightResult,
     pollTaskStatus,
+    rules,
   ]);
 
   // === 最小化匹配进度到后台 ===
@@ -671,76 +697,133 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
   // === 发布结果 ===
   const handlePublish = useCallback(
-    async (historyId?: string) => {
-      if (matchResults.length === 0 && !historyId) {
+    async (sendResultNotification = true) => {
+      if (matchResults.length === 0) {
         Toast.show({ content: "暂无匹配结果", icon: "fail" });
         return;
       }
 
       setIsPublishing(true);
       try {
-        // 所有已匹配参与者的 userId（即 best_matches 表中 user_id 的去重集合）
-        const allMemberIds = Array.from(
-          new Set(matchResults.map((r) => r.userId).filter(Boolean)),
-        );
-
-        if (allMemberIds.length === 0) {
-          Toast.show({ content: "没有可通知的参与者", icon: "fail" });
-          return;
-        }
-
-        // 调用通知接口发送匹配结果通知
-        const token = (() => {
+        const published = await publishMatchingResult(activityId);
+        let notificationFailed = false;
+        if (sendResultNotification && published.enrollmentIds.length > 0) {
           try {
-            const raw = localStorage.getItem("auth-storage");
-            return raw ? JSON.parse(raw)?.state?.token ?? null : null;
-          } catch { return null; }
-        })();
-
-        const response = await fetch(`/api/notification/notify`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            type: 'enrollment',
-            message: '您的匹配结果已出炉，快来查看您的分组信息吧！',
-            enrollment_ids: allMemberIds,
-            title: '匹配结果通知',
-            event_id: activityId,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          setStage("published");
-          Toast.show({
-            content: `结果发布成功，已通知 ${allMemberIds.length} 位参与者`,
-            icon: "success"
-          });
-
-          // 刷新历史记录
-          const historyData = await getMatchingHistory(activityId).catch(
-            () => [],
-          );
-          setHistory(historyData);
-        } else {
-          throw new Error(data.message || "发布失败");
+            await sendEnrollmentNotification(activityId, {
+              enrollmentIds: published.enrollmentIds,
+              message: "您的匹配结果已出炉，快来查看匹配信息吧！",
+            });
+          } catch (notificationError) {
+            notificationFailed = true;
+            console.error("Match result published but notification failed:", notificationError);
+          }
         }
+        setStage("published");
+        if (resultsQuery.data) {
+          queryClient.setQueryData(
+            merchantQueryKeys.matchingResults(activityId),
+            { ...resultsQuery.data, resultState: "published" as const },
+          );
+        }
+        Toast.show({
+          content: notificationFailed
+            ? "结果已发布，但通知发送失败，可在报名管理中重新通知"
+            : sendResultNotification
+            ? `结果发布成功，已通知 ${published.enrollmentIds.length} 位参与者`
+            : "结果发布成功",
+          icon: "success",
+        });
+        const historyData = await getMatchingHistory(activityId).catch(() => []);
+        setHistory(historyData);
+        queryClient.setQueryData(
+          merchantQueryKeys.matchingHistory(activityId),
+          historyData,
+        );
+        void queryClient.invalidateQueries({
+          queryKey: merchantQueryKeys.activities(),
+        });
       } catch (error) {
         console.error("Publish failed:", error);
+        if (error instanceof MatchingApiError && error.validation) {
+          setLastValidationResult(error.validation);
+        }
         Toast.show({
           content: error instanceof Error ? error.message : "发布失败，请重试",
           icon: "fail"
         });
+        throw error;
       } finally {
         setIsPublishing(false);
       }
     },
-    [groups, activityId],
+    [activityId, matchResults.length, queryClient, resultsQuery.data],
   );
+
+  const handleValidateResults = useCallback(async () => {
+    setIsValidating(true);
+    try {
+      const validation = await validateMatchResults(activityId);
+      setLastValidationResult(validation);
+      queryClient.setQueryData(
+        merchantQueryKeys.matchingValidation(activityId),
+        validation,
+      );
+      Toast.show({
+        content: validation.valid
+          ? "校验通过，可以发布"
+          : validation.issues[0]?.message || "结果仍有冲突",
+        icon: validation.valid ? "success" : "fail",
+      });
+      return validation;
+    } catch (error) {
+      Toast.show({
+        content: error instanceof Error ? error.message : "校验失败",
+        icon: "fail",
+      });
+      throw error;
+    } finally {
+      setIsValidating(false);
+    }
+  }, [activityId, queryClient]);
+
+  const handleCreateAdjustmentDraft = useCallback(async () => {
+    setIsCreatingAdjustmentDraft(true);
+    try {
+      const draft = await createMatchAdjustmentDraft(activityId);
+      const [matchData, historyData] = await Promise.all([
+        getMatchGroups(activityId),
+        getMatchingHistory(activityId),
+      ]);
+      queryClient.setQueryData(
+        merchantQueryKeys.matchingResults(activityId),
+        matchData,
+      );
+      queryClient.setQueryData(
+        merchantQueryKeys.matchingHistory(activityId),
+        historyData,
+      );
+      setMatchResults(matchData.results);
+      setHistory(historyData);
+      setStage("completed");
+      setActiveTab("results");
+      setLastValidationResult(null);
+      Toast.show({
+        content: draft.reused
+          ? `已进入未发布的第 ${draft.version} 版调整草稿`
+          : `已从已发布结果创建第 ${draft.version} 版调整草稿`,
+        icon: "success",
+      });
+      return draft;
+    } catch (error) {
+      Toast.show({
+        content: error instanceof Error ? error.message : "创建调整草稿失败",
+        icon: "fail",
+      });
+      throw error;
+    } finally {
+      setIsCreatingAdjustmentDraft(false);
+    }
+  }, [activityId, queryClient]);
 
   // === 查看历史记录 ===
   const handleViewHistory = useCallback((historyItem: MatchingHistory) => {
@@ -771,33 +854,67 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
   // === 刷新数据 ===
   const handleRefresh = useCallback(async () => {
-    setIsLoading(true);
+    setIsRefreshing(true);
     try {
-      const [participantsData, historyData, catalogData] = await Promise.all([
+      const [participantsData, historyData, catalogData, matchData] = await Promise.all([
         getParticipants(activityId).catch(() => []),
         getMatchingHistory(activityId).catch(() => []),
         getMatchFieldCatalog(activityId).catch(() => ({
           fields: [] as MatchFieldCatalogItem[],
           totalEligibleParticipants: 0,
         })),
+        getMatchGroups(activityId).catch(() => ({
+          results: [] as ParticipantMatchResult[],
+          stats: null,
+          resultState: undefined,
+        })),
       ]);
 
-      if (participantsData.length > 0) {
-        setParticipants(participantsData);
-      }
-      if (historyData.length > 0) {
-        setHistory(historyData);
-      }
+      setParticipants(participantsData as Participant[]);
+      setHistory(historyData);
       setFieldCatalog(catalogData.fields);
       setEligibleParticipantCount(catalogData.totalEligibleParticipants);
+      setMatchResults(matchData.results);
+      if (matchData.results.length > 0) {
+        setStage(matchData.resultState === "published" ? "published" : "completed");
+      }
+      if (matchData.stats) {
+        setMatchingStats({
+          avgScore: matchData.stats.averageScore,
+          minScore: matchData.stats.minScore,
+          maxScore: matchData.stats.maxScore,
+          totalGroups: matchData.results.length,
+          totalParticipants: matchData.stats.totalParticipants,
+        });
+      } else {
+        setMatchingStats(null);
+      }
+
+      queryClient.setQueryData(
+        merchantQueryKeys.matchingParticipants(activityId),
+        participantsData,
+      );
+      queryClient.setQueryData(
+        merchantQueryKeys.matchingHistory(activityId),
+        historyData,
+      );
+      queryClient.setQueryData(
+        merchantQueryKeys.matchingCatalog(activityId),
+        catalogData,
+      );
+      queryClient.setQueryData(
+        merchantQueryKeys.matchingResults(activityId),
+        matchData,
+      );
 
       Toast.show({ content: "数据已刷新", icon: "success" });
     } catch (error) {
       console.error("Refresh failed:", error);
+      Toast.show({ content: "刷新失败", icon: "fail" });
     } finally {
-      setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [activityId]);
+  }, [activityId, queryClient]);
 
   // === 返回状态和方法 ===
   return {
@@ -807,6 +924,10 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     isLoading,
     isMatching,
     isPublishing,
+    isCreatingAdjustmentDraft,
+    isPreflighting,
+    isValidating,
+    isRefreshing,
     isRulesLocked,
     matchingProgress,
     matchingMessage,
@@ -828,6 +949,10 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     fieldCatalog,
     eligibleParticipantCount,
     lastPreflightResult,
+    lastValidationResult,
+    resultState: resultsQuery.data?.resultState,
+    resultVersion: resultsQuery.data?.version,
+    resultRevision: resultsQuery.data?.revision,
 
     // 设置方法
     setActiveTab,
@@ -842,7 +967,10 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
     // 匹配操作
     handleStartMatching,
+    handleRunPreflight,
     handlePublish,
+    handleValidateResults,
+    handleCreateAdjustmentDraft,
     handleViewHistory,
     handleRestoreHistory,
     handleRefresh,
@@ -857,15 +985,38 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 }
 
 // === 辅助函数：转换历史记录中的分组格式 ===
-function convertHistoryGroups(historyGroups: any[]): MatchGroup[] {
-  return historyGroups.map((g, index) => ({
-    id: g.group_id || g.id || `group_${index}`,
-    name: g.group_name || g.name || `第${index + 1}组`,
-    members: (g.members || []).map((m: any) => m.user_id || m.id),
-    score: Math.round((g.similarity_score || g.score || 0) * 100),
-    reasons: g.match_reasons || g.reasons || [],
-    isLocked: g.is_locked || g.isLocked || false,
-  }));
+function convertHistoryGroups(historyGroups: unknown[]): MatchGroup[] {
+  return historyGroups.map((rawGroup, index) => {
+    const group =
+      rawGroup && typeof rawGroup === "object"
+        ? (rawGroup as Record<string, unknown>)
+        : {};
+    const rawMembers = Array.isArray(group.members) ? group.members : [];
+    const rawReasons = Array.isArray(group.match_reasons)
+      ? group.match_reasons
+      : Array.isArray(group.reasons)
+        ? group.reasons
+        : [];
+    const rawScore = Number(group.similarity_score ?? group.score ?? 0);
+
+    return {
+      id: String(group.group_id || group.id || `group_${index}`),
+      name: String(group.group_name || group.name || `第${index + 1}组`),
+      members: rawMembers
+        .map((rawMember) => {
+          if (typeof rawMember === "string") return rawMember;
+          if (!rawMember || typeof rawMember !== "object") return "";
+          const member = rawMember as Record<string, unknown>;
+          return String(member.user_id || member.id || "");
+        })
+        .filter(Boolean),
+      score: Math.round((Number.isFinite(rawScore) ? rawScore : 0) * 100),
+      reasons: rawReasons.filter(
+        (reason): reason is string => typeof reason === "string",
+      ),
+      isLocked: Boolean(group.is_locked ?? group.isLocked),
+    };
+  });
 }
 
 export default useMatchingLogic;

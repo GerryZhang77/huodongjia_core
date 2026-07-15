@@ -159,7 +159,7 @@ const RuleScoreCard: FC<{
           </p>
         </div>
         <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${operatorTone[rule.operator] || "bg-gray-100 text-gray-600"}`}
+              className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${operatorTone[rule.operator] || "bg-gray-100 text-gray-600"}`}
         >
           {percent}分
         </span>
@@ -329,7 +329,7 @@ const UserMatchDetail: FC = () => {
         <div className="bg-gradient-to-br from-primary-400 to-accent-500 px-4 pt-12 pb-8">
           <button
             onClick={() => navigate(-1)}
-            className="mb-5 inline-flex items-center gap-1 text-sm text-white/90"
+          className="mb-5 inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-sm text-white/90 [&>svg]:shrink-0"
           >
             <ArrowLeft size={16} />
             返回匹配列表
@@ -340,7 +340,9 @@ const UserMatchDetail: FC = () => {
               {detail.targetUserEnrollment.name || "未命名用户"}
             </h1>
             <p className="text-sm text-white/85">
-              总匹配度 {detail.score.total_score_percent ?? Math.round(detail.score.total_score * 100)} 分
+              {detail.isManualRecommendation
+                ? "该对象由活动主办方推荐"
+                : `总匹配度 ${detail.score.total_score_percent ?? Math.round(detail.score.total_score * 100)} 分`}
             </p>
           </div>
         </div>
@@ -366,7 +368,11 @@ const UserMatchDetail: FC = () => {
               </h3>
             </div>
 
-            {detail.rules.length > 0 ? (
+            {detail.isManualRecommendation ? (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-sm text-gray-600">
+                这是主办方人工推荐的匹配对象，因此不展示算法匹配分数。
+              </div>
+            ) : detail.rules.length > 0 ? (
               detail.rules.map((rule) => {
                 const scoreField = ruleScoreMap.get(
                   `${rule.source_field}::${rule.target_field}::${rule.operator}`,

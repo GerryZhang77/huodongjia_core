@@ -6,7 +6,7 @@
  * 说明：后端不再区分"分组"与"最佳匹配"—— 每个用户的"小组"就是其 top5 匹配。
  */
 
-import { FC, useEffect, useMemo, useRef, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
@@ -50,6 +50,7 @@ interface TopMatchUser {
   bio?: string;
   tags?: string[];
   matchScore: number;
+  isManualRecommendation: boolean;
   rank: number;
   commonTags: string[];
   scoreHighlights: MatchScoreFieldDetail[];
@@ -160,7 +161,7 @@ const MatchUniverseCard: FC<{
   const isGeneratingOther = Boolean(generatingUserId && generatingUserId !== user.id);
 
   const badgeLabels = [
-    "高度匹配",
+    user.isManualRecommendation ? "主办方推荐" : "高度匹配",
     ...scoreHighlights
       .map((field) =>
         getStandardFieldLabel(
@@ -201,8 +202,8 @@ const MatchUniverseCard: FC<{
             </div>
           </div>
         </div>
-        <div className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700">
-          契合度 {user.matchScore}%
+            <div className="whitespace-nowrap rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-gray-700">
+          {user.isManualRecommendation ? "主办方推荐" : `契合度 ${user.matchScore}%`}
         </div>
       </div>
 
@@ -264,7 +265,7 @@ const MatchUniverseCard: FC<{
         </button>
         <button
           onClick={() => onViewDetail(user.id)}
-          className="inline-flex items-center gap-1 text-sm font-medium text-accent-500 hover:text-accent-600"
+        className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-sm font-medium text-accent-500 hover:text-accent-600 [&>svg]:shrink-0"
         >
           进入详情
           <ChevronRight size={16} />
@@ -287,7 +288,7 @@ const MatchUniverseCard: FC<{
                         field.source_label || field.target_label || field.source_field,
                       )}
                     </p>
-                    <span className="rounded-full bg-accent-50 px-2 py-1 text-xs font-medium text-accent-600">
+          <span className="whitespace-nowrap rounded-full bg-accent-50 px-2 py-1 text-xs font-medium text-accent-600">
                       {field.score_percent ?? Math.round(field.score * 100)}分
                     </span>
                   </div>
@@ -381,6 +382,7 @@ const UserMatchResult: FC = () => {
         bio: userRecord.bio,
         tags: user.tags || [],
         matchScore: user.matchScore,
+        isManualRecommendation: user.isManualRecommendation,
         rank: user.rank,
         commonTags: [],
         scoreHighlights,
@@ -609,7 +611,7 @@ const UserMatchResult: FC = () => {
             {supportsNFC && (
               <button
                 onClick={() => setShowNFCModal(true)}
-                className="h-12 px-4 rounded-[22px] bg-gradient-to-r from-primary-400 to-primary-500 text-white font-semibold text-sm shadow-lg shadow-primary-400/30 hover:shadow-xl active:scale-[0.98] transition-all flex items-center gap-2"
+          className="flex h-12 flex-nowrap items-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-r from-primary-400 to-primary-500 px-4 text-sm font-semibold text-white shadow-lg shadow-primary-400/30 transition-all hover:shadow-xl active:scale-[0.98] [&>svg]:shrink-0"
               >
                 <Smartphone size={18} />
                 NFC 碰一碰
