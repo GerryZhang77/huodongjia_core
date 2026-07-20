@@ -514,6 +514,7 @@ const MatchingConfigPage: React.FC = () => {
             activityId={activityId}
             matchResults={matchResults}
             participants={participants}
+            registrationSchemaGroups={registrationSchemaGroups}
             rules={rules}
             isPublishing={isPublishing}
             onPublish={publishAdapter}

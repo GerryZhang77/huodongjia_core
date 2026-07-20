@@ -38,6 +38,7 @@ import MatchAdjustmentWorkbench from "../MatchAdjustmentWorkbench";
 import PrivateEnrollmentImageGallery from "@/components/enrollment/PrivateEnrollmentImageGallery";
 import type {
   MatchConstraints,
+  MatchingSchemaGroup,
   MatchingRule,
   MatchingHistory,
   ParticipantMatchResult,
@@ -71,6 +72,7 @@ interface Participant {
   phone?: string;
   email?: string;
   status?: string;
+  formData?: Record<string, unknown>;
 }
 
 interface ResultsTabProps {
@@ -79,6 +81,7 @@ interface ResultsTabProps {
   matchResults: ParticipantMatchResult[];
   /** 参与者完整列表（用于渲染本人和 top5 候选的详细信息） */
   participants: Participant[];
+  registrationSchemaGroups: MatchingSchemaGroup[];
   rules: MatchRule[];
   isPublishing: boolean;
   onPublish: (
@@ -228,6 +231,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   activityId,
   matchResults,
   participants,
+  registrationSchemaGroups,
   isPublishing,
   onPublish,
   onRematch,
@@ -594,6 +598,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           activityId={activityId}
           matchResults={matchResults}
           participants={participants}
+          registrationSchemaGroups={registrationSchemaGroups}
           constraints={constraints}
           onResultsChanged={onResultsChanged}
         />

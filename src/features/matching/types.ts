@@ -163,6 +163,7 @@ export interface Participant {
   email?: string;
   phone?: string;
   customFields?: Record<string, unknown>;
+  formData?: Record<string, unknown>;
 }
 
 // 匹配分组（旧模型保留给历史数据/兼容）

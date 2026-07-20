@@ -78,6 +78,7 @@ export interface Participant {
   imageCount?: number;
   registrationTypeId?: string | null;
   registrationTypeName?: string;
+  formData?: Record<string, unknown>;
 }
 
 export interface MatchingStats {
