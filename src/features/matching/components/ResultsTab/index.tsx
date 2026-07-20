@@ -17,8 +17,6 @@ import {
   Search,
   AlertCircle,
   Sparkles,
-  Pencil,
-  LockKeyhole,
   ShieldCheck,
   FilePenLine,
   Image as ImageIcon,
@@ -36,7 +34,7 @@ import {
 } from "../PublishResultDialog";
 import { MatchingHistoryPanel } from "../MatchingHistoryPanel";
 import { HistoryDetailDialog } from "../HistoryDetailDialog";
-import ManualMatchEditor from "../ManualMatchEditor";
+import MatchAdjustmentWorkbench from "../MatchAdjustmentWorkbench";
 import PrivateEnrollmentImageGallery from "@/components/enrollment/PrivateEnrollmentImageGallery";
 import type {
   MatchConstraints,
@@ -239,7 +237,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   currentHistoryId = null,
   constraints,
   onResultsChanged,
-  readOnly = false,
   resultState,
   resultVersion,
   validationResult,
@@ -255,7 +252,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [showHistoryDetailDialog, setShowHistoryDetailDialog] = useState(false);
   const [viewingHistory, setViewingHistory] = useState<MatchingHistory | null>(null);
-  const [editingOwnerId, setEditingOwnerId] = useState<string | null>(null);
   const [imageViewer, setImageViewer] = useState<Participant | null>(null);
   const [feedback, setFeedback] = useState<{
     visible: boolean;
@@ -357,13 +353,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
       }),
     [allPairRows],
   );
-  const firstRowIdByOwner = useMemo(() => {
-    const result = new Map<string, string>();
-    for (const row of sortedPairRows) {
-      if (!result.has(row.ownerId)) result.set(row.ownerId, row.id);
-    }
-    return result;
-  }, [sortedPairRows]);
 
   const totalPages = Math.max(1, Math.ceil(sortedPairRows.length / PAGE_SIZE));
   const currentPageSafe = Math.min(currentPage, totalPages);
@@ -600,10 +589,18 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         </div>
       )}
 
+      {!currentHistoryId && resultState !== "published" && (
+        <MatchAdjustmentWorkbench
+          activityId={activityId}
+          matchResults={matchResults}
+          participants={participants}
+          constraints={constraints}
+          onResultsChanged={onResultsChanged}
+        />
+      )}
+
       {!currentHistoryId &&
-        resultState !== "published" &&
-        validationResult &&
-        !validationResult.valid && (
+        resultState !== "published" && validationResult && !validationResult.valid && (
           <section className="mb-4 rounded-2xl border border-red-200 bg-red-50/70 p-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -632,15 +629,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                       {item.messages.slice(0, 2).join("；")}
                     </p>
                   </div>
-                  {item.participant && !readOnly && (
-                    <Button
-                      variant="outline"
-                      size="small"
-                      onClick={() => setEditingOwnerId(item.userId)}
-                    >
-                      调整
-                    </Button>
-                  )}
                 </div>
               ))}
             </div>
@@ -652,6 +640,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           </section>
         )}
 
+      {(currentHistoryId || resultState === "published") && (
+        <>
       {/* 搜索 + 历史按钮 */}
       <div className="bg-white rounded-xl border border-gray-100 p-3 mb-4 flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
@@ -701,7 +691,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     <th className="px-4 py-3 font-medium">用户 A</th>
                     <th className="px-4 py-3 font-medium">用户 B</th>
                     <th className="px-4 py-3 font-medium">全局匹配度</th>
-                    <th className="px-4 py-3 text-right font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -781,24 +770,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                         >
                           {row.scorePercent != null ? `${row.scorePercent}%` : "—"}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {!readOnly && firstRowIdByOwner.get(row.ownerId) === row.id && (
-                          <button
-                            type="button"
-                            onClick={() => setEditingOwnerId(row.ownerId)}
-                            className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 hover:border-primary-300 hover:text-primary-600"
-                          >
-                            {matchResults.find((item) => item.userId === row.ownerId)?.isLocked ? (
-                              <LockKeyhole size={13} className="shrink-0" />
-                            ) : (
-                              <Pencil size={13} className="shrink-0" />
-                            )}
-                            {matchResults.find((item) => item.userId === row.ownerId)?.isLocked
-                              ? "已锁定"
-                              : "调整"}
-                          </button>
-                        )}
                       </td>
                     </tr>
                   ))}
@@ -953,6 +924,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           </div>
         </div>
       </section>
+        </>
+      )}
 
       {/* 当前版本操作：属于内容流，不覆盖商家底部导航。 */}
       {!currentHistoryId && (
@@ -1066,22 +1039,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         onCancel={() => setShowPublishDialog(false)}
         isLoading={isPublishing}
       />
-
-      {editingOwnerId && participantMap.get(editingOwnerId) && (
-        <ManualMatchEditor
-          open
-          activityId={activityId}
-          source={participantMap.get(editingOwnerId)!}
-          initialCandidateIds={
-            matchResults.find((result) => result.userId === editingOwnerId)
-              ?.bestMatchUserIds || []
-          }
-          participants={participants}
-          constraints={constraints}
-          onClose={() => setEditingOwnerId(null)}
-          onSaved={onResultsChanged}
-        />
-      )}
 
       {imageViewer?.enrollmentId && (
         <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-4" onClick={() => setImageViewer(null)}>

@@ -491,9 +491,9 @@ export const executeMatching = async (
  * 获取匹配结果（商家视图）
  *
  * 后端返回：
- *   { success, message, groups: [{ id, event_id, user_id, match_id, best_match_users: [uuid×5], created_at }],
+ *   { success, message, groups: [{ id, event_id, user_id, match_id, best_match_users, scores }],
  *     stats?: { totalParticipants, averageScore, minScore, maxScore, topK } }
- * 每条 group 记录代表"某个参与者的 top5 匹配"。参与者详情由 participants
+ * 后端从有向推荐边聚合为每个参与者的 Top-K 结果。参与者详情由 participants
  * 查询统一提供，避免结果请求再次拉取整份报名列表。
  */
 export interface MatchStatsResponse {
@@ -532,7 +532,7 @@ export const getMatchGroups = async (
     throw new Error(data.message || "获取匹配结果失败");
   }
 
-  // 后端新 shape：data.groups 是 per-user top5 数组
+  // 后端将有向推荐边按 source_user_id 聚合成兼容的 per-user top5 数组。
   const rawRecords = data.groups || data.data?.groups || [];
 
   const results: ParticipantMatchResult[] = rawRecords.map((r) => ({
