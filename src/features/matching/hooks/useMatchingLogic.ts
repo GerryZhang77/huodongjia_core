@@ -661,7 +661,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       Toast.show({
         content: diagnostics
           ? formatPreflightFailureMessage(diagnostics)
-          : "提交匹配任务失败",
+          : error instanceof Error
+            ? error.message
+            : "提交匹配任务失败",
         icon: "fail",
       });
       setIsMatching(false);

@@ -21,6 +21,10 @@ import MerchantLayout from "@/components/layout/MerchantLayout";
 import { Button } from "@/components/ui";
 import { RulesTab, ResultsTab } from "@/features/matching/components";
 import {
+  findDuplicateRuleIndexes,
+  hasIncompleteEnabledRules,
+} from "@/features/matching/components/RulesTab/rulePresentation";
+import {
   MatchingProgressBanner,
   MatchingProgressOverlay,
 } from "@/features/matching/components/MatchingProgressOverlay";
@@ -159,6 +163,10 @@ const MatchingConfigPage: React.FC = () => {
       ),
     [rules],
   );
+  const rulesReadyToContinue =
+    enabledRules.length > 0 &&
+    !hasIncompleteEnabledRules(rules) &&
+    findDuplicateRuleIndexes(rules).size === 0;
   const currentStepIndex = WIZARD_STEPS.findIndex(
     (step) => step.key === wizardStep,
   );
@@ -180,6 +188,7 @@ const MatchingConfigPage: React.FC = () => {
   };
 
   const saveRulesAndContinue = async () => {
+    if (!rulesReadyToContinue) return;
     setIsSavingRules(true);
     try {
       await handleSaveRules("默认配置");
@@ -241,64 +250,85 @@ const MatchingConfigPage: React.FC = () => {
       />
 
       <div className="mx-auto max-w-6xl space-y-5 px-1 py-3 md:px-5 md:py-6">
-        <header>
-          <h1 className="text-xl font-bold text-gray-900 md:text-2xl">智能匹配</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            按顺序完成参与人确认、规则设置、校验、执行和发布。
-          </p>
-        </header>
-
-        <nav aria-label="匹配配置步骤">
-          <ol className="flex min-w-0 items-center rounded-2xl border border-gray-100 bg-white p-2 shadow-sm md:min-w-[650px]">
-            {WIZARD_STEPS.map((step, index) => {
-              const Icon = step.icon;
-              const active = step.key === wizardStep;
-              const complete = index < currentStepIndex;
-              const reachable =
-                index <= currentStepIndex ||
-                (step.key === "results" && matchResults.length > 0);
-              return (
-                <React.Fragment key={step.key}>
-                  <li className="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      disabled={!reachable}
-                      onClick={() => setWizardStep(step.key)}
-                      aria-current={active ? "step" : undefined}
-                      className={`flex w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 md:flex-row md:gap-2 md:px-2 md:py-2.5 md:text-sm ${
-                        active
-                          ? "bg-primary-50 text-primary-700"
-                          : complete
-                            ? "text-emerald-600 hover:bg-emerald-50"
-                            : "text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+        {wizardStep === "results" && matchResults.length > 0 ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm md:px-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <Check size={15} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-gray-800">
+                  五步匹配流程已完成
+                </span>
+                <span className="hidden text-xs text-gray-500 sm:block">
+                  参与人、规则、校验、执行、结果
+                </span>
+              </span>
+            </div>
+            <Button
+              size="small"
+              variant="light"
+              onClick={() => {
+                handleEnterRematchMode();
+                setWizardStep("rules");
+              }}
+            >
+              修改匹配设置
+            </Button>
+          </div>
+        ) : (
+          <nav aria-label="匹配配置步骤">
+            <ol className="flex min-w-0 items-center rounded-2xl border border-gray-100 bg-white p-2 shadow-sm md:min-w-[650px]">
+              {WIZARD_STEPS.map((step, index) => {
+                const Icon = step.icon;
+                const active = step.key === wizardStep;
+                const complete = index < currentStepIndex;
+                const reachable =
+                  index <= currentStepIndex ||
+                  (step.key === "results" && matchResults.length > 0);
+                return (
+                  <React.Fragment key={step.key}>
+                    <li className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        disabled={!reachable}
+                        onClick={() => setWizardStep(step.key)}
+                        aria-current={active ? "step" : undefined}
+                        className={`flex w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 md:flex-row md:gap-2 md:px-2 md:py-2.5 md:text-sm ${
                           active
-                            ? "bg-primary-500 text-white"
+                            ? "bg-primary-50 text-primary-700"
                             : complete
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-gray-100 text-gray-500"
+                              ? "text-emerald-600 hover:bg-emerald-50"
+                              : "text-gray-500 hover:bg-gray-50"
                         }`}
                       >
-                        {complete ? <Check size={14} /> : <Icon size={14} />}
-                      </span>
-                      <span className="hidden lg:inline">{step.label}</span>
-                      <span className="lg:hidden">{step.shortLabel}</span>
-                    </button>
-                  </li>
-                  {index < WIZARD_STEPS.length - 1 && (
-                    <ChevronRight
-                      size={15}
-                      className="hidden shrink-0 text-gray-300 sm:block"
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </ol>
-        </nav>
+                        <span
+                          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                            active
+                              ? "bg-primary-500 text-white"
+                              : complete
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {complete ? <Check size={14} /> : <Icon size={14} />}
+                        </span>
+                        <span className="hidden lg:inline">{step.label}</span>
+                        <span className="lg:hidden">{step.shortLabel}</span>
+                      </button>
+                    </li>
+                    {index < WIZARD_STEPS.length - 1 && (
+                      <ChevronRight
+                        size={15}
+                        className="hidden shrink-0 text-gray-300 sm:block"
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </ol>
+          </nav>
+        )}
 
         {wizardStep === "participants" && (
           <section className="space-y-4">
@@ -385,7 +415,7 @@ const MatchingConfigPage: React.FC = () => {
               </Button>
               <Button
                 loading={isSavingRules}
-                disabled={enabledRules.length === 0}
+                disabled={!rulesReadyToContinue}
                 onClick={() => void saveRulesAndContinue()}
                 iconRight={<ChevronRight size={16} />}
               >
@@ -515,6 +545,7 @@ const MatchingConfigPage: React.FC = () => {
             matchResults={matchResults}
             participants={participants}
             registrationSchemaGroups={registrationSchemaGroups}
+            eligibleParticipantCount={eligibleParticipantCount}
             rules={rules}
             isPublishing={isPublishing}
             onPublish={publishAdapter}
