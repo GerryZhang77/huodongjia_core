@@ -1,29 +1,35 @@
 import React, { useMemo, useState } from "react";
-import { Popup } from "antd-mobile";
-import { Toast } from "@/components/ui/Toast";
 import {
   AlertCircle,
-  Check,
   ChevronDown,
   ChevronUp,
   ListChecks,
+  LockKeyhole,
   Plus,
   Play,
   Save,
-  Trash2,
-  X,
 } from "lucide-react";
 import { Button, Switch } from "@/components/ui";
+import { Toast } from "@/components/ui/Toast";
 import { getStandardFieldLabel } from "@/utils/fieldLabels";
 import type {
   MatchConstraints,
-  MatchingRule,
-  MatchingSchemaGroup,
-  MatchingSchemaField,
-  MatchOperator,
   MatchFieldCatalogItem,
+  MatchingRule,
+  MatchingSchemaField,
+  MatchingSchemaGroup,
   MatchPreflightResult,
 } from "../../types";
+import RuleEditorDrawer from "./RuleEditorDrawer";
+import { RuleSummaryRow } from "./RuleSummaryRow";
+import {
+  DEFAULT_MATCH_OPERATOR,
+  findDuplicateRuleIndexes,
+  groupRulesByEnabled,
+  hasIncompleteEnabledRules,
+  normalizeRuleWeight,
+  type RuleFieldOption,
+} from "./rulePresentation";
 
 interface RulesTabProps {
   rules: MatchingRule[];
@@ -46,71 +52,16 @@ interface RulesTabProps {
   showFooterActions?: boolean;
 }
 
-const OPERATORS: Array<{ value: MatchOperator; label: string }> = [
-  { value: "similarity", label: "相似度匹配" },
-  { value: "complement", label: "互补匹配" },
-  { value: "exact", label: "精确匹配" },
-  { value: "opposite", label: "相反匹配" },
-  { value: "distance_decay", label: "数值距离匹配" },
-];
-
-const DEFAULT_OPERATOR: MatchOperator = "similarity";
-type RuleFieldSlot = "source_field" | "target_field";
-type RuleFieldOption = {
-  key: string;
-  label: string;
-  registrationTypeId?: string | null;
-  groupName: string;
-  coverage?: number;
-  totalEligibleParticipants?: number;
-  canMatch?: boolean;
-  source?: string;
-};
-
-const FIELD_SLOT_CONFIG: Record<
-  RuleFieldSlot,
-  {
-    label: string;
-    emptyText: string;
-    helperText: string;
-    registrationTypeKey:
-      | "source_registration_type_id"
-      | "target_registration_type_id";
-  }
-> = {
-  source_field: {
-    label: "参与者字段",
-    emptyText: "请选择参与者字段",
-    helperText: "当前参与者用于计算的报名信息",
-    registrationTypeKey: "source_registration_type_id",
-  },
-  target_field: {
-    label: "匹配对象字段",
-    emptyText: "请选择匹配对象字段",
-    helperText: "候选匹配对象用于对比的报名信息",
-    registrationTypeKey: "target_registration_type_id",
-  },
-};
-
 const createRule = (): MatchingRule => ({
   id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  name: "未配置规则",
+  name: "新规则",
   source_field: "",
   target_field: "",
-  operator: DEFAULT_OPERATOR,
-  type: DEFAULT_OPERATOR,
+  operator: DEFAULT_MATCH_OPERATOR,
+  type: DEFAULT_MATCH_OPERATOR,
   weight: 1,
   enabled: true,
 });
-
-const formatRuleName = (index: number) => {
-  return `规则 ${index + 1}`;
-};
-
-const normalizeWeight = (value: number) => {
-  if (!Number.isFinite(value)) return 1;
-  return Math.min(1, Math.max(0.1, value));
-};
 
 const RulesTab: React.FC<RulesTabProps> = ({
   rules,
@@ -131,14 +82,11 @@ const RulesTab: React.FC<RulesTabProps> = ({
   schemaLoading = false,
   showFooterActions = true,
 }) => {
-  const [fieldPicker, setFieldPicker] = useState<{
-    ruleId: string;
-    slot: RuleFieldSlot;
-  } | null>(null);
+  const [constraintsExpanded, setConstraintsExpanded] = useState(false);
+  const [disabledRulesExpanded, setDisabledRulesExpanded] = useState(false);
+  const [activeRuleIndex, setActiveRuleIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [expandedWeightRuleIds, setExpandedWeightRuleIds] = useState<string[]>(
-    [],
-  );
+
   const ageHardRule = constraints.hardRules.find(
     (rule) => rule.field === "age" && rule.enabled,
   );
@@ -146,182 +94,135 @@ const RulesTab: React.FC<RulesTabProps> = ({
     (rule) => rule.field === "gender" && rule.enabled,
   );
 
+  const fieldOptions = useMemo(() => {
+    const catalogOptions = fieldCatalog.map(
+      (field): RuleFieldOption => ({
+        key: field.key,
+        label: getStandardFieldLabel(field.key, field.label || field.key),
+        registrationTypeId: field.registrationTypeId,
+        groupName:
+          field.registrationTypeName ||
+          (field.source === "import_extra" ? "导入额外字段" : "可匹配字段"),
+        coverage: field.coverage,
+        totalEligibleParticipants: field.totalEligibleParticipants,
+        canMatch: field.canMatch,
+        source: field.source,
+      }),
+    );
+    const visibleSchemaGroups =
+      schemaGroups.length > 0
+        ? schemaGroups
+        : schemaFields.length > 0
+          ? [{ name: "默认报名表", fields: schemaFields }]
+          : [];
+    const schemaOptions = visibleSchemaGroups.flatMap((group, groupIndex) =>
+      group.fields
+        .filter((field) => field.key && field.type !== "image")
+        .map(
+          (field): RuleFieldOption => ({
+            key: field.key,
+            label: getStandardFieldLabel(field.key, field.label || field.key),
+            registrationTypeId: group.id,
+            groupName: group.name || `报名表 ${groupIndex + 1}`,
+          }),
+        ),
+    );
+
+    const optionByIdentity = new Map<string, RuleFieldOption>();
+    [...schemaOptions, ...catalogOptions].forEach((option) => {
+      optionByIdentity.set(
+        `${option.registrationTypeId || ""}\u0001${option.key}`,
+        option,
+      );
+    });
+    return Array.from(optionByIdentity.values());
+  }, [fieldCatalog, schemaFields, schemaGroups]);
+
+  const duplicateRuleIndexes = useMemo(
+    () => findDuplicateRuleIndexes(rules),
+    [rules],
+  );
+  const groupedRules = useMemo(() => groupRulesByEnabled(rules), [rules]);
+  const enabledRules = groupedRules.enabled.map(({ rule }) => rule);
+  const hasIncompleteRules = hasIncompleteEnabledRules(rules);
+  const hasDuplicateRules = duplicateRuleIndexes.size > 0;
+  const canSubmitRules =
+    enabledRules.length > 0 && !hasIncompleteRules && !hasDuplicateRules;
+
   const replaceHardRule = (
     field: "age" | "gender",
     nextRule: MatchConstraints["hardRules"][number] | null,
   ) => {
-    const remaining = constraints.hardRules.filter((rule) => rule.field !== field);
+    const remaining = constraints.hardRules.filter(
+      (rule) => rule.field !== field,
+    );
     onConstraintsChange({
       ...constraints,
       hardRules: nextRule ? [...remaining, nextRule] : remaining,
     });
   };
 
-  const schemaLabelMap = useMemo(() => {
-    return new Map(
-      schemaFields.map((field) => [
-        field.key,
-        getStandardFieldLabel(field.key, field.label),
-      ]),
-    );
-  }, [schemaFields]);
-
-  const visibleRules = rules.length > 0 ? rules : [createRule()];
-  const enabledRules = visibleRules.filter((rule) => rule.enabled);
-  const visibleSchemaGroups = schemaGroups.length > 0
-    ? schemaGroups
-    : schemaFields.length > 0
-      ? [{ name: "默认报名表", fields: schemaFields }]
-      : [];
-  const catalogFieldOptions = fieldCatalog.map((field): RuleFieldOption => ({
-    key: field.key,
-    label: getStandardFieldLabel(field.key, field.label || field.key),
-    registrationTypeId: field.registrationTypeId,
-    groupName:
-      field.registrationTypeName ||
-      (field.source === "import_extra" ? "导入额外字段" : "可匹配字段"),
-    coverage: field.coverage,
-    totalEligibleParticipants: field.totalEligibleParticipants,
-    canMatch: field.canMatch,
-    source: field.source,
-  }));
-  const schemaFieldOptions = visibleSchemaGroups.flatMap((group, groupIndex) =>
-    group.fields
-      .filter((field) => field.key && field.type !== "image")
-      .map((field): RuleFieldOption => ({
-        key: field.key,
-        label: getStandardFieldLabel(field.key, field.label || field.key),
-        registrationTypeId: group.id,
-        groupName: group.name || `报名表 ${groupIndex + 1}`,
-      })),
-  );
-  const fieldOptions = catalogFieldOptions.length > 0
-    ? catalogFieldOptions
-    : schemaFieldOptions;
-  const fieldGroups = Array.from(
-    fieldOptions.reduce<Map<string, RuleFieldOption[]>>((groups, field) => {
-      const groupName = field.groupName || "可匹配字段";
-      groups.set(groupName, [...(groups.get(groupName) || []), field]);
-      return groups;
-    }, new Map()),
-  ).map(([name, fields]) => ({ name, fields }));
-  const failedFieldKeys = new Set(
-    preflightResult?.fieldDiagnostics
-      ?.filter((field) => !field.canMatch)
-      .map((field) => `${field.registrationTypeId || ""}::${field.key}`) || [],
-  );
-
-  const getFieldOption = (
-    fieldKey?: string,
-    registrationTypeId?: string | null,
-  ) => {
-    if (!fieldKey) return null;
-    return (
-      fieldOptions.find(
-        (field) =>
-          field.key === fieldKey &&
-          (!registrationTypeId ||
-            field.registrationTypeId === registrationTypeId),
-      ) ||
-      fieldOptions.find((field) => field.key === fieldKey) ||
-      null
-    );
-  };
-
-  const getFieldLabel = (
-    fieldKey?: string,
-    registrationTypeId?: string | null,
-  ) => {
-    if (!fieldKey) return "";
-    return (
-      getFieldOption(fieldKey, registrationTypeId)?.label ||
-      schemaLabelMap.get(fieldKey) ||
-      getStandardFieldLabel(fieldKey)
-    );
-  };
-
   const updateRules = (nextRules: MatchingRule[]) => {
     onRulesChange(
       nextRules.map((rule, index) => ({
         ...rule,
-        name: formatRuleName(index),
-        type: rule.operator || DEFAULT_OPERATOR,
-        operator: rule.operator || DEFAULT_OPERATOR,
-        weight: normalizeWeight(rule.weight),
+        name: `规则 ${index + 1}`,
+        type: rule.operator || DEFAULT_MATCH_OPERATOR,
+        operator: rule.operator || DEFAULT_MATCH_OPERATOR,
+        weight: normalizeRuleWeight(rule.weight),
       })),
     );
   };
 
-  const handleRuleChange = (
-    ruleId: string,
-    patch: Partial<MatchingRule>,
+  const updateRuleAtIndex = (
+    index: number,
+    nextRule: MatchingRule,
   ) => {
     updateRules(
-      visibleRules.map((rule) =>
-        rule.id === ruleId ? { ...rule, ...patch } : rule,
+      rules.map((rule, ruleIndex) =>
+        ruleIndex === index ? nextRule : rule,
       ),
     );
   };
 
-  const handleOpenFieldPicker = (
-    ruleId: string | undefined,
-    slot: RuleFieldSlot,
+  const handleRuleEnabledChange = (
+    index: number,
+    rule: MatchingRule,
+    enabled: boolean,
   ) => {
-    if (!ruleId || isRulesLocked || fieldOptions.length === 0) return;
-    setFieldPicker({ ruleId, slot });
+    updateRuleAtIndex(index, { ...rule, enabled });
+    if (!enabled) setDisabledRulesExpanded(true);
   };
 
-  const handleSelectField = (
-    ruleId: string,
-    slot: RuleFieldSlot,
-    field: {
-      key: string;
-      registrationTypeId?: string | null;
-    },
-  ) => {
-    const registrationTypeKey = FIELD_SLOT_CONFIG[slot].registrationTypeKey;
-    handleRuleChange(ruleId, {
-      [slot]: field.key,
-      [registrationTypeKey]: field.registrationTypeId,
-    } as Partial<MatchingRule>);
-    setFieldPicker(null);
+  const deleteRuleAtIndex = (index: number) => {
+    updateRules(rules.filter((_, ruleIndex) => ruleIndex !== index));
   };
 
-  const handleAddRule = () => {
-    updateRules([...visibleRules, createRule()]);
+  const addRule = () => {
+    if (isRulesLocked) return;
+    const nextRules = [...rules, createRule()];
+    updateRules(nextRules);
+    setActiveRuleIndex(nextRules.length - 1);
   };
 
-  const handleDeleteRule = (ruleId?: string) => {
-    const nextRules = visibleRules.filter((rule) => rule.id !== ruleId);
-    updateRules(nextRules.length > 0 ? nextRules : [createRule()]);
+  const validateRules = () => {
+    if (enabledRules.length === 0) {
+      Toast.show({ content: "请至少启用一条匹配规则", icon: "fail" });
+      return false;
+    }
+    if (hasIncompleteRules) {
+      Toast.show({ content: "请先补全未完成的匹配规则", icon: "fail" });
+      return false;
+    }
+    if (hasDuplicateRules) {
+      Toast.show({ content: "请先合并或修改重复规则", icon: "fail" });
+      return false;
+    }
+    return true;
   };
 
   const handleSave = async () => {
-    const hasIncompleteRule = visibleRules.some(
-      (rule) => !rule.source_field || !rule.target_field,
-    );
-
-    if (hasIncompleteRule) {
-      Toast.show({
-        content: "请先选择参与者字段和匹配对象字段",
-        icon: "fail",
-      });
-      return;
-    }
-
-    const validRules = visibleRules.filter(
-      (rule) =>
-        rule.enabled &&
-        rule.source_field &&
-        rule.target_field &&
-        rule.operator,
-    );
-
-    if (validRules.length === 0) {
-      Toast.show({ content: "请先至少配置一条完整匹配规则", icon: "fail" });
-      return;
-    }
-
+    if (!validateRules()) return;
     setIsSaving(true);
     try {
       await onSaveRules("默认配置");
@@ -331,217 +232,181 @@ const RulesTab: React.FC<RulesTabProps> = ({
   };
 
   const handleStart = async () => {
-    const validRules = visibleRules.filter(
-      (rule) =>
-        rule.enabled &&
-        rule.source_field &&
-        rule.target_field &&
-        rule.operator,
-    );
-
-    if (validRules.length === 0) {
-      Toast.show({ content: "请先至少配置一条完整匹配规则", icon: "fail" });
-      return;
-    }
-
+    if (!validateRules()) return;
     if (participantCount === 0) {
       Toast.show({ content: "暂无审核通过且参与匹配的用户", icon: "fail" });
       return;
     }
-
     await onStartMatching();
   };
 
-  const toggleWeightPanel = (ruleId?: string) => {
-    if (!ruleId) return;
-    setExpandedWeightRuleIds((current) =>
-      current.includes(ruleId)
-        ? current.filter((id) => id !== ruleId)
-        : [...current, ruleId],
-    );
-  };
-
-  const activePickerRule = fieldPicker
-    ? visibleRules.find((rule) => rule.id === fieldPicker.ruleId)
-    : undefined;
-  const activePickerSlot = fieldPicker?.slot;
-  const activePickerConfig = activePickerSlot
-    ? FIELD_SLOT_CONFIG[activePickerSlot]
-    : undefined;
-  const activePickerFieldKey =
-    activePickerRule && activePickerSlot
-      ? activePickerRule[activePickerSlot]
-      : undefined;
-  const activePickerRegistrationTypeId =
-    activePickerRule && activePickerSlot
-      ? activePickerRule[FIELD_SLOT_CONFIG[activePickerSlot].registrationTypeKey]
-      : undefined;
-  const activePickerSelectedOption = activePickerSlot
-    ? getFieldOption(activePickerFieldKey, activePickerRegistrationTypeId)
-    : null;
+  const countSummary =
+    constraints.countMode === "fixed"
+      ? `每人 ${constraints.maxMatches} 位`
+      : constraints.countMode === "range"
+        ? `每人 ${constraints.minMatches}–${constraints.maxMatches} 位`
+        : `每人最多 ${constraints.maxMatches} 位`;
+  const hardRuleCount = [ageHardRule, genderHardRule].filter(Boolean).length;
+  const constraintSummary =
+    hardRuleCount > 0
+      ? `${hardRuleCount} 项限制已启用`
+      : "年龄、性别不限";
 
   return (
-    <div className="pb-32">
-      <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-13rem)] lg:min-h-[520px] lg:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-5 lg:h-full lg:overflow-hidden lg:flex lg:flex-col">
-          <div className="flex items-center gap-2 mb-3 flex-shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
-              <ListChecks size={16} className="text-primary-500" />
-            </div>
+    <div className={showFooterActions ? "pb-28" : ""}>
+      <div className="space-y-4">
+        <section className="rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4 md:px-5">
             <div>
-              <h3 className="text-base font-semibold text-gray-900">可用报名字段</h3>
-              <p className="text-xs text-gray-500">选择器中按报名表分组展示</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-gray-900">
+                  匹配偏好
+                </h2>
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                  {enabledRules.length} 条启用
+                </span>
+                {isRulesLocked && (
+                  <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                    <LockKeyhole size={13} />
+                    只读
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                设置推荐人数，再按重要程度排列匹配偏好。
+              </p>
             </div>
           </div>
 
-          <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
-            {schemaLoading ? (
-              <div className="text-sm text-gray-500 py-8 text-center">字段加载中...</div>
-            ) : fieldGroups.length === 0 ? (
-              <div className="text-sm text-gray-500 py-8 text-center">
-                当前活动还没有可匹配字段
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {fieldGroups.map((group, groupIndex) => (
-                  <div key={`${group.name}-${groupIndex}`}>
-                    {groupIndex > 0 && <div className="border-t border-gray-200 mb-3" />}
-                    <div className="text-xs text-gray-400 mb-2 truncate">
-                      {group.name}
-                    </div>
-                    <div className="space-y-2">
-                      {group.fields.map((field) => (
-                        <div
-                          key={`${groupIndex}-${field.key}`}
-                          className={`w-full p-3 rounded-xl border bg-white ${
-                            field.canMatch === false
-                              ? "border-orange-200"
-                              : "border-gray-200"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="font-medium text-gray-900 truncate">
-                              {field.label}
-                            </div>
-                            {typeof field.coverage === "number" && (
-                              <span
-                                className={`text-xs flex-shrink-0 ${
-                                  field.canMatch === false
-                                    ? "text-orange-500"
-                                    : "text-gray-400"
-                                }`}
-                              >
-                                {field.coverage}/{field.totalEligibleParticipants || 0}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+          <div className="border-t border-gray-100 px-4 py-3 md:px-5">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="mr-1 font-medium text-gray-700">推荐数量</span>
+              <select
+                value={constraints.countMode}
+                disabled={isRulesLocked}
+                aria-label="推荐数量模式"
+                onChange={(event) => {
+                  const countMode = event.target
+                    .value as MatchConstraints["countMode"];
+                  onConstraintsChange({
+                    ...constraints,
+                    countMode,
+                    minMatches:
+                      countMode === "fixed"
+                        ? constraints.maxMatches
+                        : countMode === "max"
+                          ? 0
+                          : Math.max(
+                              1,
+                              Math.min(
+                                constraints.minMatches,
+                                constraints.maxMatches,
+                              ),
+                            ),
+                  });
+                }}
+                className="h-9 rounded-lg border border-gray-200 bg-white px-2.5 text-sm outline-none focus:border-primary-400"
+              >
+                <option value="fixed">固定人数</option>
+                <option value="range">人数范围</option>
+                <option value="max">仅限制最多</option>
+              </select>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 md:p-6 lg:h-full lg:overflow-hidden lg:flex lg:flex-col">
-          <div className="mb-4 flex-shrink-0">
-            <h3 className="text-base font-semibold text-gray-900">规则设置器</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              每条规则选择参与者字段和匹配对象字段，系统按匹配方式和权重计算推荐关系。
-            </p>
-          </div>
-
-          <div className="space-y-3 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
-            <section className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4">
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-900">硬性约束</h4>
-                <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                  先剔除不符合条件的候选人，再按下方软规则计算分数。硬规则可能导致部分用户人数不足。
-                </p>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-white bg-white p-3">
-                  <label className="mb-2 block text-xs font-medium text-gray-600">每人匹配数量</label>
-                  <select
-                    value={constraints.countMode}
+              {constraints.countMode === "range" && (
+                <>
+                  <span className="text-gray-500">最少</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={constraints.maxMatches}
+                    value={constraints.minMatches}
                     disabled={isRulesLocked}
-                    onChange={(event) => {
-                      const countMode = event.target.value as MatchConstraints["countMode"];
+                    aria-label="最少匹配人数"
+                    onChange={(event) =>
                       onConstraintsChange({
                         ...constraints,
-                        countMode,
-                        minMatches:
-                          countMode === "fixed"
-                            ? constraints.maxMatches
-                            : countMode === "max"
-                              ? 0
-                              : Math.max(1, Math.min(constraints.minMatches, constraints.maxMatches)),
-                      });
-                    }}
-                    className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                  >
-                    <option value="fixed">固定人数</option>
-                    <option value="range">人数范围（推荐）</option>
-                    <option value="max">仅限制最多</option>
-                  </select>
-                  <div className="mt-2 flex items-center gap-2">
-                    {constraints.countMode === "range" && (
-                      <>
-                        <span className="text-xs text-gray-500">最少</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={constraints.maxMatches}
-                          value={constraints.minMatches}
-                          disabled={isRulesLocked}
-                          onChange={(event) =>
-                            onConstraintsChange({
-                              ...constraints,
-                              minMatches: Math.max(1, Math.min(constraints.maxMatches, Number(event.target.value) || 1)),
-                            })
-                          }
-                          className="h-9 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm"
-                        />
-                      </>
-                    )}
-                    <span className="text-xs text-gray-500">
-                      {constraints.countMode === "fixed" ? "固定" : "最多"}
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={20}
-                      value={constraints.maxMatches}
-                      disabled={isRulesLocked}
-                      onChange={(event) => {
-                        const maxMatches = Math.max(1, Math.min(20, Number(event.target.value) || 1));
-                        onConstraintsChange({
-                          ...constraints,
-                          maxMatches,
-                          minMatches:
-                            constraints.countMode === "fixed"
-                              ? maxMatches
-                              : Math.min(constraints.minMatches, maxMatches),
-                        });
-                      }}
-                      className="h-9 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm"
-                    />
-                    <span className="text-xs text-gray-500">人</span>
-                  </div>
-                </div>
+                        minMatches: Math.max(
+                          1,
+                          Math.min(
+                            constraints.maxMatches,
+                            Number(event.target.value) || 1,
+                          ),
+                        ),
+                      })
+                    }
+                    className="h-9 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm outline-none focus:border-primary-400"
+                  />
+                </>
+              )}
+              <span className="text-gray-500">
+                {constraints.countMode === "fixed" ? "每人" : "最多"}
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={constraints.maxMatches}
+                disabled={isRulesLocked}
+                aria-label="最多匹配人数"
+                onChange={(event) => {
+                  const maxMatches = Math.max(
+                    1,
+                    Math.min(20, Number(event.target.value) || 1),
+                  );
+                  onConstraintsChange({
+                    ...constraints,
+                    maxMatches,
+                    minMatches:
+                      constraints.countMode === "fixed"
+                        ? maxMatches
+                        : Math.min(constraints.minMatches, maxMatches),
+                  });
+                }}
+                className="h-9 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm outline-none focus:border-primary-400"
+              />
+              <span className="text-gray-500">位</span>
+            </div>
+          </div>
 
-                <div className="rounded-xl border border-white bg-white p-3">
-                  <div className="flex items-center justify-between">
+          <div className="border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setConstraintsExpanded((current) => !current)}
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left md:px-5"
+              aria-expanded={constraintsExpanded}
+            >
+              <span className="min-w-0">
+                <span className="text-sm font-medium text-gray-700">
+                  限制条件
+                </span>
+                <span className="ml-2 text-xs text-gray-500">
+                  {constraintSummary}
+                </span>
+              </span>
+              {constraintsExpanded ? (
+                <ChevronUp size={17} className="shrink-0 text-gray-400" />
+              ) : (
+                <ChevronDown size={17} className="shrink-0 text-gray-400" />
+              )}
+            </button>
+
+            {constraintsExpanded && (
+              <div className="grid gap-3 border-t border-gray-100 bg-gray-50/60 px-4 py-4 md:grid-cols-3 md:px-5">
+                <div className="rounded-xl border border-gray-200 bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-xs font-medium text-gray-600">年龄差限制</div>
-                      <div className="mt-1 text-[11px] text-gray-400">年龄缺失者默认不进入候选池</div>
+                      <div className="text-sm font-medium text-gray-800">
+                        年龄差
+                      </div>
+                      <div className="mt-0.5 text-xs text-gray-500">
+                        缺失年龄者不参与
+                      </div>
                     </div>
                     <Switch
                       checked={Boolean(ageHardRule)}
                       disabled={isRulesLocked}
+                      size="small"
+                      aria-label="启用年龄差限制"
                       onChange={(enabled) =>
                         replaceHardRule(
                           "age",
@@ -560,32 +425,42 @@ const RulesTab: React.FC<RulesTabProps> = ({
                     />
                   </div>
                   {ageHardRule && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                      年龄差不超过
+                    <label className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                      不超过
                       <input
                         type="number"
                         min={0}
                         max={100}
                         value={ageHardRule.value ?? 5}
                         disabled={isRulesLocked}
+                        aria-label="最大年龄差"
                         onChange={(event) =>
                           replaceHardRule("age", {
                             ...ageHardRule,
-                            value: Math.max(0, Math.min(100, Number(event.target.value) || 0)),
+                            value: Math.max(
+                              0,
+                              Math.min(
+                                100,
+                                Number(event.target.value) || 0,
+                              ),
+                            ),
                           })
                         }
-                        className="h-9 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm"
+                        className="h-8 w-16 rounded-lg border border-gray-200 px-2 text-center text-sm"
                       />
                       岁
-                    </div>
+                    </label>
                   )}
                 </div>
 
-                <div className="rounded-xl border border-white bg-white p-3">
-                  <label className="mb-2 block text-xs font-medium text-gray-600">性别要求</label>
+                <label className="rounded-xl border border-gray-200 bg-white p-3">
+                  <span className="text-sm font-medium text-gray-800">
+                    性别要求
+                  </span>
                   <select
                     value={genderHardRule?.operator || "none"}
                     disabled={isRulesLocked}
+                    aria-label="性别要求"
                     onChange={(event) => {
                       const operator = event.target.value;
                       replaceHardRule(
@@ -601,376 +476,270 @@ const RulesTab: React.FC<RulesTabProps> = ({
                             },
                       );
                     }}
-                    className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                    className="mt-3 h-9 w-full rounded-lg border border-gray-200 bg-white px-2.5 text-sm"
                   >
                     <option value="none">不限</option>
                     <option value="same">仅同性</option>
                     <option value="different">仅异性</option>
                   </select>
-                </div>
+                </label>
 
-                <div className="rounded-xl border border-white bg-white p-3">
+                <div className="rounded-xl border border-gray-200 bg-white p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-xs font-medium text-gray-600">允许人工例外</div>
-                      <div className="mt-1 text-[11px] leading-relaxed text-gray-400">开启后，违反硬规则的调整必须填写原因并留痕。</div>
+                      <div className="text-sm font-medium text-gray-800">
+                        允许人工例外
+                      </div>
+                      <div className="mt-0.5 text-xs text-gray-500">
+                        例外调整需填写原因
+                      </div>
                     </div>
                     <Switch
                       checked={constraints.allowManualOverride}
                       disabled={isRulesLocked}
+                      size="small"
+                      aria-label="允许人工例外"
                       onChange={(allowManualOverride) =>
-                        onConstraintsChange({ ...constraints, allowManualOverride })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {!!preflightResult?.insufficientParticipants && (
-                <div className="mt-3 flex items-start gap-2 rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">
-                  <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
-                  硬规则生效后有 {preflightResult.insufficientParticipants} 位用户无法满足最低匹配人数，请放宽条件后再执行。
-                </div>
-              )}
-            </section>
-
-            {visibleRules.map((rule, index) => (
-              <div
-                key={rule.id || index}
-                className="rounded-2xl border border-gray-200 p-4 bg-gray-50/70"
-              >
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-7 h-7 rounded-full bg-primary-100 text-primary-600 text-sm font-semibold flex items-center justify-center">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatRuleName(index)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      checked={rule.enabled}
-                      onChange={() =>
-                        handleRuleChange(rule.id || "", { enabled: !rule.enabled })
-                      }
-                      disabled={isRulesLocked}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRule(rule.id)}
-                      disabled={isRulesLocked}
-                      className="p-2 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.2fr_1.2fr_0.9fr]">
-                  {(["source_field", "target_field"] as const).map((slot) => {
-                    const fieldKey = rule[slot];
-                    const slotConfig = FIELD_SLOT_CONFIG[slot];
-                    const registrationTypeId =
-                      rule[slotConfig.registrationTypeKey];
-                    const fieldOption = getFieldOption(fieldKey, registrationTypeId);
-                    const fieldLabel = getFieldLabel(fieldKey, registrationTypeId);
-                    const fieldWarning =
-                      fieldOption?.canMatch === false ||
-                      failedFieldKeys.has(`${registrationTypeId || ""}::${fieldKey || ""}`);
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => handleOpenFieldPicker(rule.id, slot)}
-                        disabled={isRulesLocked || fieldOptions.length === 0}
-                        className={`min-h-[76px] rounded-2xl border px-4 py-3 text-left transition-colors disabled:opacity-60 ${
-                          fieldWarning
-                            ? "border-orange-300 bg-orange-50/80"
-                            : fieldKey
-                            ? "border-primary-300 bg-primary-50/60"
-                            : "border-gray-200 bg-white"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2 text-xs text-gray-500 mb-2">
-                          <span>{slotConfig.label}</span>
-                          <ChevronDown size={15} className="text-gray-400" />
-                        </div>
-                        {fieldKey ? (
-                          <div>
-                            <div className="font-medium text-gray-900 truncate">
-                              {fieldLabel}
-                            </div>
-                            {fieldOption?.groupName && (
-                              <div className="mt-1 text-xs text-gray-500 truncate">
-                                {fieldOption.groupName}
-                              </div>
-                            )}
-                            {typeof fieldOption?.coverage === "number" && (
-                              <div
-                                className={`mt-1 text-xs ${
-                                  fieldWarning ? "text-orange-500" : "text-gray-500"
-                                }`}
-                              >
-                                覆盖 {fieldOption.coverage}/{fieldOption.totalEligibleParticipants || 0}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="text-sm font-medium text-gray-400">
-                              {slotConfig.emptyText}
-                            </div>
-                            <div className="mt-1 text-xs text-gray-400">
-                              {slotConfig.helperText}
-                            </div>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-
-                  <label className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
-                    <div className="text-xs text-gray-500 mb-2">匹配方式</div>
-                    <select
-                      value={rule.operator || DEFAULT_OPERATOR}
-                      onChange={(event) =>
-                        handleRuleChange(rule.id || "", {
-                          operator: event.target.value as MatchOperator,
-                          type: event.target.value as MatchOperator,
+                        onConstraintsChange({
+                          ...constraints,
+                          allowManualOverride,
                         })
                       }
-                      disabled={isRulesLocked}
-                      className="w-full bg-transparent outline-none text-sm font-medium text-gray-900"
-                    >
-                      {OPERATORS.map((operator) => (
-                        <option key={operator.value} value={operator.value}>
-                          {operator.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-
-                <div className="mt-3 rounded-2xl border border-gray-200 bg-white">
-                  <button
-                    type="button"
-                    onClick={() => toggleWeightPanel(rule.id)}
-                    disabled={isRulesLocked}
-                    className="w-full flex items-center justify-between px-4 py-3 text-sm disabled:opacity-50"
-                  >
-                      <span className="font-medium text-gray-700">权重</span>
-                    <span className="flex items-center gap-2 text-gray-500">
-                      <span>{rule.weight}</span>
-                      {rule.id && expandedWeightRuleIds.includes(rule.id) ? (
-                        <ChevronUp size={16} />
-                      ) : (
-                        <ChevronDown size={16} />
-                      )}
-                    </span>
-                  </button>
-                  {rule.id && expandedWeightRuleIds.includes(rule.id) && (
-                    <div className="px-4 pb-4">
-                      <input
-                        type="range"
-                        min={0.1}
-                        max={1}
-                        step={0.1}
-                        value={rule.weight}
-                        onChange={(event) =>
-                          handleRuleChange(rule.id || "", {
-                            weight: normalizeWeight(Number(event.target.value)),
-                          })
-                        }
-                        disabled={isRulesLocked}
-                        className="w-full accent-[var(--adm-color-primary)]"
-                      />
-                      <div className="flex justify-between mt-2 text-xs text-gray-400">
-                        <span>0.1</span>
-                        <span>0.5</span>
-                        <span>1</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={handleAddRule}
-              disabled={isRulesLocked}
-              className="inline-flex w-full flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-dashed border-gray-300 px-3 py-3 text-sm font-medium hover:border-primary-300 hover:bg-primary-50/40 hover:text-primary-600 disabled:opacity-50 [&>svg]:shrink-0"
-            >
-              <Plus size={16} />
-              新增规则
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <Popup
-        visible={Boolean(fieldPicker)}
-        position="bottom"
-        onMaskClick={() => setFieldPicker(null)}
-        destroyOnClose
-        bodyStyle={{
-          borderTopLeftRadius: 18,
-          borderTopRightRadius: 18,
-          maxHeight: "76vh",
-          overflow: "hidden",
-        }}
-      >
-        <div className="bg-white">
-          <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3 border-b border-gray-100">
-            <div className="min-w-0">
-              <div className="text-base font-semibold text-gray-900">
-                选择{activePickerConfig?.label || "字段"}
-              </div>
-              <div className="mt-1 text-xs text-gray-500 truncate">
-                {activePickerConfig?.helperText}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setFieldPicker(null)}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100"
-              aria-label="关闭字段选择"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className="max-h-[calc(76vh-73px)] overflow-y-auto px-4 py-3">
-            {fieldGroups.length === 0 ? (
-              <div className="py-10 text-center text-sm text-gray-500">
-                当前活动还没有可匹配字段
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {fieldGroups.map((group, groupIndex) => (
-                  <div key={`picker-${group.name}-${groupIndex}`}>
-                    <div className="mb-2 text-xs font-medium text-gray-500 truncate">
-                      {group.name || `字段分组 ${groupIndex + 1}`}
-                    </div>
-                    <div className="space-y-2">
-                      {group.fields.map((field) => {
-                        const isSelected =
-                          activePickerFieldKey === field.key &&
-                          (activePickerRegistrationTypeId
-                            ? activePickerRegistrationTypeId === field.registrationTypeId
-                            : activePickerSelectedOption?.registrationTypeId === field.registrationTypeId);
-                        return (
-                          <button
-                            key={`picker-${groupIndex}-${field.key}`}
-                            type="button"
-                            disabled={!fieldPicker || isRulesLocked}
-                            onClick={() => {
-                              if (!fieldPicker) return;
-                              handleSelectField(fieldPicker.ruleId, fieldPicker.slot, {
-                                key: field.key,
-                                registrationTypeId: field.registrationTypeId,
-                              });
-                            }}
-                            className={`w-full min-h-[48px] rounded-xl border px-3 py-3 text-left flex items-center justify-between gap-3 transition-colors ${
-                              isSelected
-                                ? "border-primary-300 bg-primary-50 text-primary-600"
-                                : field.canMatch === false
-                                  ? "border-orange-200 bg-orange-50 text-gray-900"
-                                  : "border-gray-200 bg-white text-gray-900"
-                            }`}
-                          >
-                            <span className="min-w-0">
-                              <span className="block font-medium truncate">
-                                {field.label || field.key}
-                              </span>
-                              {typeof field.coverage === "number" && (
-                                <span
-                                  className={`block mt-1 text-xs ${
-                                    field.canMatch === false
-                                      ? "text-orange-500"
-                                      : "text-gray-400"
-                                  }`}
-                                >
-                                  覆盖 {field.coverage}/{field.totalEligibleParticipants || 0}
-                                </span>
-                              )}
-                            </span>
-                            {isSelected ? (
-                              <Check size={18} className="flex-shrink-0" />
-                            ) : field.canMatch === false ? (
-                              <AlertCircle size={17} className="flex-shrink-0 text-orange-500" />
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    />
                   </div>
-                ))}
+                </div>
               </div>
             )}
           </div>
-        </div>
-      </Popup>
+        </section>
 
-      {isMatching && (
-        <div className="bg-white rounded-2xl border border-primary-200 shadow-sm p-4 md:p-6 mb-4">
-          <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary-400 to-primary-500 rounded-full transition-all duration-300"
-              style={{ width: `${matchingProgress}%` }}
-            />
-          </div>
-          <div className="flex justify-between mt-2 text-sm">
-            <span className="text-gray-500">
-              {matchingMessage || "正在生成匹配结果..."}
+        {!!preflightResult?.insufficientParticipants && (
+          <div className="flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm text-orange-700">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <span>
+              当前限制会让 {preflightResult.insufficientParticipants}{" "}
+              位参与者无法获得最低推荐人数。
             </span>
-            <span className="font-medium text-primary-500">{matchingProgress}%</span>
           </div>
-        </div>
-      )}
+        )}
+
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="flex items-center justify-between gap-3 px-4 py-3.5 md:px-5">
+            <div className="flex items-center gap-2">
+              <ListChecks size={17} className="text-primary-500" />
+              <h3 className="text-sm font-semibold text-gray-900">偏好规则</h3>
+            </div>
+            <span className="text-xs text-gray-500">
+              点击规则可编辑
+            </span>
+          </div>
+
+          {schemaLoading && fieldOptions.length === 0 ? (
+            <div className="border-t border-gray-100 px-4 py-10 text-center text-sm text-gray-500">
+              正在加载报名字段…
+            </div>
+          ) : rules.length === 0 ? (
+            <div className="border-t border-gray-100 px-4 py-10 text-center">
+              <p className="text-sm font-medium text-gray-700">
+                还没有匹配偏好
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                添加一条规则，告诉系统什么样的人更适合彼此。
+              </p>
+              <Button
+                size="small"
+                className="mt-4"
+                icon={<Plus size={15} />}
+                disabled={isRulesLocked || fieldOptions.length === 0}
+                onClick={addRule}
+              >
+                添加规则
+              </Button>
+            </div>
+          ) : (
+            <div className="border-t border-gray-100">
+              {groupedRules.enabled.length > 0 ? (
+                <div className="divide-y divide-gray-100">
+                  {groupedRules.enabled.map(({ rule, index }) => (
+                    <RuleSummaryRow
+                      key={rule.id || `${rule.source_field}-${index}`}
+                      rule={rule}
+                      rules={rules}
+                      fieldOptions={fieldOptions}
+                      duplicate={duplicateRuleIndexes.has(index)}
+                      locked={isRulesLocked}
+                      onOpen={() => setActiveRuleIndex(index)}
+                      onEnabledChange={(enabled) =>
+                        handleRuleEnabledChange(index, rule, enabled)
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-gray-700">
+                    当前没有启用规则
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    可从下方已停用规则中重新启用。
+                  </p>
+                </div>
+              )}
+
+              {groupedRules.disabled.length > 0 && (
+                <div className="border-t border-gray-100 bg-gray-50/50">
+                  <button
+                    type="button"
+                    aria-expanded={disabledRulesExpanded}
+                    aria-controls="disabled-matching-rules"
+                    onClick={() =>
+                      setDisabledRulesExpanded((current) => !current)
+                    }
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-gray-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-600">
+                        已停用规则
+                      </span>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs tabular-nums text-gray-500">
+                        {groupedRules.disabled.length}
+                      </span>
+                    </span>
+                    {disabledRulesExpanded ? (
+                      <ChevronUp size={17} className="text-gray-400" />
+                    ) : (
+                      <ChevronDown size={17} className="text-gray-400" />
+                    )}
+                  </button>
+
+                  {disabledRulesExpanded && (
+                    <div
+                      id="disabled-matching-rules"
+                      className="divide-y divide-gray-100 border-t border-gray-100"
+                    >
+                      {groupedRules.disabled.map(({ rule, index }) => (
+                        <RuleSummaryRow
+                          key={rule.id || `${rule.source_field}-${index}`}
+                          rule={rule}
+                          rules={rules}
+                          fieldOptions={fieldOptions}
+                          duplicate={duplicateRuleIndexes.has(index)}
+                          locked={isRulesLocked}
+                          onOpen={() => setActiveRuleIndex(index)}
+                          onEnabledChange={(enabled) =>
+                            handleRuleEnabledChange(index, rule, enabled)
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {rules.length > 0 && (
+            <div className="border-t border-gray-100 p-3 md:px-4">
+              <button
+                type="button"
+                onClick={addRule}
+                disabled={isRulesLocked || fieldOptions.length === 0}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-primary-600 transition hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus size={16} />
+                添加规则
+              </button>
+            </div>
+          )}
+        </section>
+
+        {(hasIncompleteRules || hasDuplicateRules) && (
+          <div className="flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm text-orange-700">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <span>
+              {hasDuplicateRules
+                ? "存在重复规则，请打开标记项修改或删除后继续。"
+                : "存在未完成的规则，请补全后继续。"}
+            </span>
+          </div>
+        )}
+
+        {isMatching && (
+          <div className="rounded-2xl border border-primary-200 bg-white p-4 shadow-sm md:p-5">
+            <div className="relative h-2.5 overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-primary-400 to-primary-500 transition-all duration-300"
+                style={{ width: `${matchingProgress}%` }}
+              />
+            </div>
+            <div className="mt-2 flex justify-between text-sm">
+              <span className="text-gray-500">
+                {matchingMessage || "正在生成匹配结果…"}
+              </span>
+              <span className="font-medium text-primary-500">
+                {matchingProgress}%
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <RuleEditorDrawer
+        open={
+          activeRuleIndex !== null &&
+          Boolean(rules[activeRuleIndex])
+        }
+        rule={activeRuleIndex !== null ? rules[activeRuleIndex] || null : null}
+        ruleIndex={activeRuleIndex ?? -1}
+        rules={rules}
+        fieldOptions={fieldOptions}
+        locked={isRulesLocked}
+        onClose={() => setActiveRuleIndex(null)}
+        onSave={(nextRule) => {
+          if (activeRuleIndex === null) return;
+          updateRuleAtIndex(activeRuleIndex, nextRule);
+        }}
+        onDelete={() => {
+          if (activeRuleIndex === null) return;
+          deleteRuleAtIndex(activeRuleIndex);
+        }}
+      />
 
       {showFooterActions && (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-20">
-        <div className="max-w-4xl mx-auto px-4 md:px-6 py-3">
-          <div className="flex items-center justify-center gap-4 mb-2 text-sm">
-            <span className="text-gray-500">
-              可匹配人数: <span className="font-semibold text-primary-500">{participantCount} 人</span>
-            </span>
-            <span className="text-gray-300">|</span>
-            <span className="text-gray-500">
-              启用规则: <span className="font-semibold text-primary-500">{enabledRules.length} 条</span>
-            </span>
-          </div>
-
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              size="large"
-              onClick={handleSave}
-              disabled={
-                isSaving ||
-                isMatching ||
-                visibleRules.some(
-                  (rule) => !rule.source_field || !rule.target_field,
-                )
-              }
-              className="flex-1"
-              icon={<Save size={18} />}
-            >
-              保存规则
-            </Button>
-            <Button
-              size="large"
-              onClick={handleStart}
-              disabled={isMatching || participantCount === 0}
-              className="flex-1"
-              icon={<Play size={18} />}
-            >
-              {isMatching ? "匹配中..." : "开始匹配"}
-            </Button>
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-100 bg-white shadow-lg">
+          <div className="mx-auto max-w-4xl px-4 py-3 md:px-6">
+            <div className="mb-2 flex items-center justify-center gap-3 text-xs text-gray-500">
+              <span>{participantCount} 位参与者</span>
+              <span className="text-gray-300">·</span>
+              <span>{countSummary}</span>
+              <span className="text-gray-300">·</span>
+              <span>{enabledRules.length} 条偏好</span>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="large"
+                onClick={handleSave}
+                disabled={isSaving || isMatching || !canSubmitRules}
+                className="flex-1"
+                icon={<Save size={18} />}
+              >
+                保存规则
+              </Button>
+              <Button
+                size="large"
+                onClick={handleStart}
+                disabled={
+                  isMatching || participantCount === 0 || !canSubmitRules
+                }
+                className="flex-1"
+                icon={<Play size={18} />}
+              >
+                {isMatching ? "匹配中…" : "开始匹配"}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
       )}
     </div>
   );
