@@ -8,21 +8,23 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Users,
-  RefreshCw,
   Send,
-  BarChart3,
   Info,
   History,
+  HelpCircle,
   Search,
   AlertCircle,
-  Sparkles,
+  Pencil,
+  LockKeyhole,
   ShieldCheck,
   FilePenLine,
   Image as ImageIcon,
   X,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, Modal } from "@/components/ui";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
 import type { UserBrief } from "@/components/business/UserHoverCard";
 import {
@@ -35,6 +37,7 @@ import {
 import { MatchingHistoryPanel } from "../MatchingHistoryPanel";
 import { HistoryDetailDialog } from "../HistoryDetailDialog";
 import MatchAdjustmentWorkbench from "../MatchAdjustmentWorkbench";
+import ManualMatchEditor from "../ManualMatchEditor";
 import PrivateEnrollmentImageGallery from "@/components/enrollment/PrivateEnrollmentImageGallery";
 import type {
   MatchConstraints,
@@ -45,35 +48,18 @@ import type {
   MatchResultState,
   MatchValidationResult,
 } from "../../types";
+import {
+  buildParticipantResultRows,
+  getCollapsedMatchPreview,
+  shouldShowMatchListToggle,
+} from "./resultViewModel";
+import type {
+  ParticipantResultView,
+  ResultParticipant,
+} from "./resultViewModel";
 
 type MatchRule = MatchingRule;
-
-/** 参与者信息（来自 /api/enrollments/:eventId 映射后的结构） */
-interface Participant {
-  id: string;
-  enrollmentId?: string;
-  imageCount?: number;
-  name: string;
-  registrationTypeId?: string | null;
-  registrationTypeName?: string;
-  avatar?: string;
-  gender?: string;
-  age?: number;
-  occupation?: string;
-  company?: string;
-  industry?: string;
-  city?: string;
-  bio?: string;
-  interests?: string | string[];
-  department?: string;
-  skills?: string;
-  expertise?: string;
-  tags?: string[];
-  phone?: string;
-  email?: string;
-  status?: string;
-  formData?: Record<string, unknown>;
-}
+type Participant = ResultParticipant;
 
 interface ResultsTabProps {
   activityId: string;
@@ -81,7 +67,10 @@ interface ResultsTabProps {
   matchResults: ParticipantMatchResult[];
   /** 参与者完整列表（用于渲染本人和 top5 候选的详细信息） */
   participants: Participant[];
+  /** 当前活动的报名字段结构，供草稿调整工作台展示报名资料。 */
   registrationSchemaGroups: MatchingSchemaGroup[];
+  /** 当前规则下实际参与匹配的人数，用于展示结果覆盖率 */
+  eligibleParticipantCount?: number;
   rules: MatchRule[];
   isPublishing: boolean;
   onPublish: (
@@ -111,9 +100,12 @@ interface ResultsTabProps {
 }
 
 /** 把 Participant 映射成 UserHoverCard 需要的 UserBrief */
-const toUserBrief = (p: Participant | undefined): UserBrief => ({
-  id: p?.id || "",
-  name: p?.name || "未知用户",
+const toUserBrief = (
+  p: Participant | undefined,
+  fallbackId = "",
+): UserBrief => ({
+  id: p?.id || fallbackId,
+  name: p?.name || fallbackId.slice(0, 8) || "未知用户",
   avatar: p?.avatar,
   role: p?.occupation,
   occupation: p?.occupation,
@@ -194,53 +186,53 @@ const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }>
 
 const HIGH_MATCH_THRESHOLD = 60;
 const LOW_MATCH_THRESHOLD = 40;
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 15;
 
-type MatchPairRow = {
-  id: string;
-  ownerId: string;
-  owner?: Participant;
-  candidateId?: string;
-  candidate?: Participant;
-  scorePercent: number | null;
+type ResultFilter =
+  | "all"
+  | "attention"
+  | "low"
+  | "conflict"
+  | "empty"
+  | "locked";
+
+type ResultSort = "attention" | "score-asc" | "score-desc" | "name";
+
+const getScoreTone = (score: number | null): string => {
+  if (score == null) return "bg-gray-100 text-gray-500";
+  if (score >= HIGH_MATCH_THRESHOLD) return "bg-emerald-50 text-emerald-700";
+  if (score < LOW_MATCH_THRESHOLD) return "bg-orange-50 text-orange-700";
+  return "bg-blue-50 text-blue-700";
 };
 
-const toScorePercent = (
-  score?: {
-    total_score?: number;
-    total_score_percent?: number;
-  } | null,
-): number | null => {
-  if (!score) return null;
-
-  const percent = Number(score.total_score_percent);
-  if (Number.isFinite(percent)) {
-    return Math.max(0, Math.min(100, percent));
-  }
-
-  const totalScore = Number(score.total_score);
-  if (!Number.isFinite(totalScore)) {
-    return null;
-  }
-
-  const normalized = totalScore <= 1 ? totalScore * 100 : totalScore;
-  return Math.max(0, Math.min(100, Math.round(normalized)));
-};
+const getParticipantSearchText = (participant?: Participant): string =>
+  [
+    participant?.name,
+    participant?.occupation,
+    participant?.industry,
+    participant?.company,
+    participant?.city,
+    participant?.registrationTypeName,
+    ...(participant?.tags || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 
 const ResultsTab: React.FC<ResultsTabProps> = ({
   activityId,
   matchResults,
   participants,
   registrationSchemaGroups,
+  eligibleParticipantCount,
   isPublishing,
   onPublish,
-  onRematch,
-  isRematching,
   matchingStats,
   history = [],
   currentHistoryId = null,
   constraints,
   onResultsChanged,
+  readOnly = false,
   resultState,
   resultVersion,
   validationResult,
@@ -251,11 +243,16 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 }) => {
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
+  const [resultSort, setResultSort] = useState<ResultSort>("attention");
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedOwnerId, setExpandedOwnerId] = useState<string | null>(null);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [showHistoryDetailDialog, setShowHistoryDetailDialog] = useState(false);
   const [viewingHistory, setViewingHistory] = useState<MatchingHistory | null>(null);
+  const [editingOwnerId, setEditingOwnerId] = useState<string | null>(null);
   const [imageViewer, setImageViewer] = useState<Participant | null>(null);
   const [feedback, setFeedback] = useState<{
     visible: boolean;
@@ -270,172 +267,149 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     return m;
   }, [participants]);
 
-  const validationIssuesByUser = useMemo(() => {
-    const grouped = new Map<
-      string,
-      { userId: string; participant?: Participant; messages: string[] }
-    >();
+  const resultRecordMap = useMemo(
+    () => new Map(matchResults.map((record) => [record.userId, record])),
+    [matchResults],
+  );
+
+  const validationIssueMap = useMemo(() => {
+    const grouped = new Map<string, string[]>();
     for (const issue of validationResult?.issues || []) {
       if (!issue.userId) continue;
-      const current = grouped.get(issue.userId) || {
-        userId: issue.userId,
-        participant: participantMap.get(issue.userId),
-        messages: [],
-      };
-      if (!current.messages.includes(issue.message)) {
-        current.messages.push(issue.message);
+      const messages = grouped.get(issue.userId) || [];
+      if (!messages.includes(issue.message)) {
+        messages.push(issue.message);
       }
-      grouped.set(issue.userId, current);
+      grouped.set(issue.userId, messages);
     }
-    return Array.from(grouped.values());
-  }, [participantMap, validationResult?.issues]);
+    return grouped;
+  }, [validationResult?.issues]);
 
-  // 过滤后的结果
-  const filteredResults = useMemo(() => {
-    const kw = searchKeyword.trim().toLowerCase();
-    if (!kw) return matchResults;
-    return matchResults.filter((r) => {
-      const p = participantMap.get(r.userId);
-      if (!p) return false;
-      return (
-        p.name.toLowerCase().includes(kw) ||
-        (p.occupation || "").toLowerCase().includes(kw) ||
-        (p.industry || "").toLowerCase().includes(kw) ||
-        (p.company || "").toLowerCase().includes(kw)
-      );
-    });
-  }, [matchResults, participantMap, searchKeyword]);
-
-  const allPairRows = useMemo<MatchPairRow[]>(
+  const participantResultRows = useMemo(
     () =>
-      filteredResults.flatMap((record) => {
-        const owner = participantMap.get(record.userId);
-        if (record.bestMatchUserIds.length === 0) {
-          return [
-            {
-              id: `${record.id}-empty`,
-              ownerId: record.userId,
-              owner,
-              candidateId: undefined,
-              candidate: undefined,
-              scorePercent: null,
-            },
-          ];
-        }
-
-        return record.bestMatchUserIds.map((candidateId, index) => {
-          const candidate = candidateId
-            ? participantMap.get(candidateId)
-            : undefined;
-          const scorePercent = toScorePercent(record.scores?.[index] || null);
-
-          return {
-            id: `${record.id}-${candidateId || index}`,
-            ownerId: record.userId,
-            owner,
-            candidateId,
-            candidate,
-            scorePercent,
-          };
-        });
+      buildParticipantResultRows({
+        matchResults,
+        participantMap,
+        validationIssueMap,
+        lowMatchThreshold: LOW_MATCH_THRESHOLD,
       }),
-    [filteredResults, participantMap],
+    [matchResults, participantMap, validationIssueMap],
   );
 
-  const sortedPairRows = useMemo(
-    () =>
-      [...allPairRows].sort((a, b) => {
-        const aScore = a.scorePercent ?? -1;
-        const bScore = b.scorePercent ?? -1;
-        if (bScore !== aScore) {
-          return bScore - aScore;
-        }
-        return (a.owner?.name || a.ownerId).localeCompare(
-          b.owner?.name || b.ownerId,
-          "zh-CN",
+  const resultCounts = useMemo(() => {
+    const attentionCount = participantResultRows.filter(
+      (row) => row.hasConflict || row.hasNoMatches || row.isLowMatch,
+    ).length;
+    return {
+      attentionCount,
+      lowCount: participantResultRows.filter((row) => row.isLowMatch).length,
+      conflictCount: participantResultRows.filter((row) => row.hasConflict).length,
+      emptyCount: participantResultRows.filter((row) => row.hasNoMatches).length,
+      lockedCount: participantResultRows.filter((row) => row.isLocked).length,
+    };
+  }, [participantResultRows]);
+
+  const filteredAndSortedRows = useMemo(() => {
+    const keyword = searchKeyword.trim().toLowerCase();
+    const filtered = participantResultRows.filter((row) => {
+      const matchesKeyword =
+        !keyword ||
+        getParticipantSearchText(row.owner).includes(keyword) ||
+        row.matches.some((match) =>
+          getParticipantSearchText(match.candidate).includes(keyword),
         );
-      }),
-    [allPairRows],
-  );
+      if (!matchesKeyword) return false;
 
-  const totalPages = Math.max(1, Math.ceil(sortedPairRows.length / PAGE_SIZE));
+      switch (resultFilter) {
+        case "attention":
+          return row.hasConflict || row.hasNoMatches || row.isLowMatch;
+        case "low":
+          return row.isLowMatch;
+        case "conflict":
+          return row.hasConflict;
+        case "empty":
+          return row.hasNoMatches;
+        case "locked":
+          return row.isLocked;
+        default:
+          return true;
+      }
+    });
+
+    return [...filtered].sort((a, b) => {
+      const nameCompare = (a.owner?.name || a.ownerId).localeCompare(
+        b.owner?.name || b.ownerId,
+        "zh-CN",
+      );
+      if (resultSort === "name") return nameCompare;
+
+      const aScore = a.bestScore ?? -1;
+      const bScore = b.bestScore ?? -1;
+      if (resultSort === "score-asc") return aScore - bScore || nameCompare;
+      if (resultSort === "score-desc") return bScore - aScore || nameCompare;
+
+      const attentionRank = (row: ParticipantResultView) => {
+        if (row.hasConflict) return 0;
+        if (row.hasNoMatches) return 1;
+        if (row.isLowMatch) return 2;
+        return 3;
+      };
+      return attentionRank(a) - attentionRank(b) || aScore - bScore || nameCompare;
+    });
+  }, [participantResultRows, resultFilter, resultSort, searchKeyword]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAndSortedRows.length / PAGE_SIZE),
+  );
   const currentPageSafe = Math.min(currentPage, totalPages);
-  const pagedPairRows = useMemo(
+  const pagedParticipantRows = useMemo(
     () =>
-      sortedPairRows.slice(
+      filteredAndSortedRows.slice(
         (currentPageSafe - 1) * PAGE_SIZE,
         currentPageSafe * PAGE_SIZE,
       ),
-    [currentPageSafe, sortedPairRows],
+    [currentPageSafe, filteredAndSortedRows],
   );
 
-  const overallAverageScore = useMemo(() => {
-    const validScores = allPairRows
-      .map((row) => row.scorePercent)
-      .filter((score): score is number => typeof score === "number");
-    if (validScores.length > 0) {
-      return Math.round(
-        validScores.reduce((sum, score) => sum + score, 0) / validScores.length,
-      );
-    }
+  const coverageTotal = Math.max(
+    resultRecordMap.size,
+    eligibleParticipantCount ??
+      validationResult?.summary.eligibleParticipants ??
+      resultRecordMap.size,
+  );
 
-    if (matchingStats?.avgScore && matchingStats.avgScore > 0) {
-      return Math.round(
-        matchingStats.avgScore <= 1
-          ? matchingStats.avgScore * 100
-          : matchingStats.avgScore,
-      );
-    }
-
-    return 0;
-  }, [allPairRows, matchingStats?.avgScore]);
-
-  const highMatchCount = useMemo(
+  const visibleRecommendationCount = useMemo(
     () =>
-      allPairRows.filter(
-        (row) =>
-          typeof row.scorePercent === "number" &&
-          row.scorePercent >= HIGH_MATCH_THRESHOLD,
-      ).length,
-    [allPairRows],
+      filteredAndSortedRows.reduce(
+        (count, row) => count + row.matches.length,
+        0,
+      ),
+    [filteredAndSortedRows],
   );
 
-  const lowMatchRows = useMemo(
-    () => {
-      const grouped = new Map<
-        string,
-        {
-          ownerId: string;
-          owner?: Participant;
-          bestScore: number | null;
-        }
-      >();
-
-      for (const row of allPairRows) {
-        const current = grouped.get(row.ownerId);
-        const nextBestScore =
-          current?.bestScore == null
-            ? row.scorePercent
-            : row.scorePercent == null
-              ? current.bestScore
-              : Math.max(current.bestScore, row.scorePercent);
-
-        grouped.set(row.ownerId, {
-          ownerId: row.ownerId,
-          owner: row.owner,
-          bestScore: nextBestScore ?? null,
-        });
-      }
-
-      return Array.from(grouped.values())
-        .filter(
-          (row) =>
-            row.bestScore == null || row.bestScore < LOW_MATCH_THRESHOLD,
-        )
-        .sort((a, b) => (a.bestScore ?? -1) - (b.bestScore ?? -1));
-    },
-    [allPairRows],
+  const filterOptions: Array<{
+    value: ResultFilter;
+    label: string;
+    count: number;
+  }> = [
+    { value: "all", label: "全部", count: participantResultRows.length },
+    { value: "attention", label: "待处理", count: resultCounts.attentionCount },
+    { value: "low", label: "低匹配", count: resultCounts.lowCount },
+    { value: "conflict", label: "有冲突", count: resultCounts.conflictCount },
+    { value: "empty", label: "无结果", count: resultCounts.emptyCount },
+    { value: "locked", label: "已锁定", count: resultCounts.lockedCount },
+  ];
+  const visibleFilterOptions = filterOptions.filter(
+    (option) =>
+      option.value === "all" ||
+      option.count > 0 ||
+      option.value === resultFilter,
   );
+
+  const toggleOwnerDetails = (ownerId: string) => {
+    setExpandedOwnerId((current) => (current === ownerId ? null : ownerId));
+  };
 
   // 跳转到用户主页：同标签跳，保证返回按钮可用
   const handleViewProfile = (userId: string) => {
@@ -462,6 +436,49 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     } else {
       setShowPublishDialog(false);
       setFeedback({ visible: true, success: true });
+    }
+  };
+
+  const focusIssueRows = () => {
+    if (!currentHistoryId && resultState !== "published") {
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById("matching-adjustment-workbench")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+
+    setResultFilter(resultCounts.conflictCount > 0 ? "conflict" : "attention");
+    setCurrentPage(1);
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById("matching-result-list")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const handlePrimaryAction = async () => {
+    if (resultState === "published") {
+      await onCreateAdjustmentDraft?.();
+      return;
+    }
+
+    if (validationResult?.valid) {
+      setShowPublishDialog(true);
+      return;
+    }
+
+    if (validationResult && !validationResult.valid) {
+      focusIssueRows();
+      return;
+    }
+
+    const validation = await onValidate?.();
+    if (validation && validation.valid) {
+      setShowPublishDialog(true);
+    } else if (validation) {
+      focusIssueRows();
     }
   };
 
@@ -509,477 +526,604 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   }
 
   return (
-    <div className="pb-32">
-      {/* 顶部统计 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 text-center">
-          <Users size={18} className="mx-auto mb-1 text-primary-500" />
-          <p className="text-lg md:text-xl font-bold text-gray-900">
-            {participants.length}
-          </p>
-          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">
-            参与人数
-          </p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 text-center">
-          <BarChart3 size={18} className="mx-auto mb-1 text-accent-500" />
-          <p className="text-lg md:text-xl font-bold text-gray-900">
-            {matchResults.length}
-          </p>
-          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">匹配人数</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 text-center">
-          <Sparkles size={18} className="mx-auto mb-1 text-secondary-500" />
-          <p className="text-lg md:text-xl font-bold text-gray-900">
-            {highMatchCount}
-          </p>
-          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">高匹配对数</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 text-center">
-          <History size={18} className="mx-auto mb-1 text-secondary-500" />
-          <p className="text-lg md:text-xl font-bold text-gray-900">
-            {overallAverageScore}%
-          </p>
-          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5">平均匹配度</p>
-        </div>
-      </div>
-
-      {/* 只读浏览历史记录提示 */}
-      {currentHistoryId && (
-        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2">
-          <Info size={16} className="text-amber-600 flex-shrink-0" />
-          <p className="text-sm text-amber-700 flex-1">
-            当前仅浏览历史版本。历史版本不会在前端直接“恢复”为当前结果。
-          </p>
-        </div>
-      )}
-
-      {!currentHistoryId && (
-        <div
-          className={`mb-4 rounded-xl border p-3 md:flex md:items-center md:justify-between ${
-            resultState === "published"
-              ? "border-emerald-200 bg-emerald-50"
-              : "border-blue-200 bg-blue-50"
-          }`}
-        >
-          <div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              {resultState === "published" ? (
-                <ShieldCheck size={17} className="text-emerald-600" />
-              ) : (
-                <FilePenLine size={17} className="text-blue-600" />
-              )}
-              第 {resultVersion || 1} 版 · {resultState === "published" ? "已发布" : "调整草稿"}
+    <div className="space-y-3">
+      <section className="rounded-2xl border border-gray-100 bg-white px-4 py-3.5 shadow-sm md:px-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold text-gray-900">
+                匹配结果
+              </h2>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  currentHistoryId
+                    ? "bg-amber-50 text-amber-700"
+                    : resultState === "published"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-blue-50 text-blue-700"
+                }`}
+              >
+                {currentHistoryId
+                  ? `历史版本 v${resultVersion || 1}`
+                  : resultState === "published"
+                    ? `已发布 v${resultVersion || 1}`
+                    : `草稿 v${resultVersion || 1}`}
+              </span>
+              {validationResult?.valid &&
+                resultState !== "published" &&
+                !currentHistoryId && (
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                    校验通过
+                  </span>
+                )}
             </div>
-            <p className="mt-1 text-xs text-gray-600">
-              {resultState === "published"
-                ? "参与者正在看到这一版本；如需修改，先基于它创建新的调整草稿。"
-                : "匹配完成后默认保存在草稿中，可直接人工调整、校验，再确认发布。"}
-            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+              <span>
+                覆盖 {resultRecordMap.size}/{coverageTotal} 位参与者
+              </span>
+              {resultCounts.attentionCount > 0 && (
+                <span className="font-medium text-orange-600">
+                  {resultCounts.attentionCount} 位需关注
+                </span>
+              )}
+            </div>
           </div>
-          {validationResult && resultState !== "published" && (
-            <span
-              className={`mt-2 inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium tabular-nums md:mt-0 ${
-                validationResult.valid
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-red-100 text-red-700"
-              }`}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowHelp(true)}
+              aria-label="查看匹配结果说明"
+              title="结果说明"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
             >
-              {validationResult.valid
-                ? "校验通过"
-                : `${validationResult.summary.issueCount} 个冲突待处理`}
-            </span>
-          )}
+              <HelpCircle size={18} />
+            </button>
+            {history.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowHistoryPanel(true)}
+                aria-label="查看历史匹配记录"
+                title="历史记录"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+              >
+                <History size={18} />
+              </button>
+            )}
+            {!currentHistoryId && (
+              <Button
+                size="small"
+                onClick={() => void handlePrimaryAction()}
+                loading={
+                  resultState === "published"
+                    ? isCreatingAdjustmentDraft
+                    : isValidating || isPublishing
+                }
+                icon={
+                  resultState === "published" ? (
+                    <FilePenLine size={16} />
+                  ) : validationResult?.valid ? (
+                    <Send size={16} />
+                  ) : validationResult ? (
+                    <AlertCircle size={16} />
+                  ) : (
+                    <ShieldCheck size={16} />
+                  )
+                }
+                className="min-w-32 flex-1 sm:flex-none"
+              >
+                {resultState === "published"
+                  ? "创建调整草稿"
+                  : validationResult?.valid
+                    ? "发布结果"
+                    : validationResult
+                      ? `处理 ${validationResult.summary.issueCount} 个问题`
+                      : "校验并发布"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {currentHistoryId && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          <Info size={16} className="shrink-0" />
+          <span>当前为只读历史版本。</span>
         </div>
       )}
 
       {!currentHistoryId && resultState !== "published" && (
-        <MatchAdjustmentWorkbench
-          activityId={activityId}
-          matchResults={matchResults}
-          participants={participants}
-          registrationSchemaGroups={registrationSchemaGroups}
-          constraints={constraints}
-          onResultsChanged={onResultsChanged}
-        />
+        <div id="matching-adjustment-workbench" className="scroll-mt-4">
+          <MatchAdjustmentWorkbench
+            activityId={activityId}
+            matchResults={matchResults}
+            participants={participants}
+            registrationSchemaGroups={registrationSchemaGroups}
+            constraints={constraints}
+            onResultsChanged={onResultsChanged}
+          />
+        </div>
       )}
 
       {!currentHistoryId &&
-        resultState !== "published" && validationResult && !validationResult.valid && (
-          <section className="mb-4 rounded-2xl border border-red-200 bg-red-50/70 p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-red-800">
-                  发布前还需处理 {validationResult.summary.issueCount} 个冲突
-                </h3>
-                <p className="mt-1 text-xs leading-5 text-red-700">
-                  冲突已按参与者归组；缺少结果的参与者也可以直接进入调整并补充名单。
-                </p>
-              </div>
-              <span className="shrink-0 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-xs tabular-nums text-red-700">
-                {validationIssuesByUser.length} 名参与者
-              </span>
-            </div>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              {validationIssuesByUser.slice(0, 12).map((item) => (
-                <div
-                  key={item.userId}
-                  className="flex items-center gap-3 rounded-xl border border-red-100 bg-white p-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-gray-900">
-                      {item.participant?.name || item.userId.slice(0, 8)}
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-red-700">
-                      {item.messages.slice(0, 2).join("；")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {validationIssuesByUser.length > 12 && (
-              <p className="mt-2 text-xs text-red-700">
-                先处理以上参与者并重新校验，列表会根据最新结果自动收敛。
-              </p>
-            )}
-          </section>
+        resultState !== "published" &&
+        validationResult &&
+        !validationResult.valid && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <span>
+              校验未通过：{validationResult.summary.issueCount} 个问题需要处理。
+            </span>
+            <button
+              type="button"
+              disabled={isValidating}
+              onClick={() => void onValidate?.()}
+              className="shrink-0 font-medium underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              {isValidating ? "校验中…" : "重新校验"}
+            </button>
+          </div>
         )}
 
       {(currentHistoryId || resultState === "published") && (
         <>
-      {/* 搜索 + 历史按钮 */}
-      <div className="bg-white rounded-xl border border-gray-100 p-3 mb-4 flex items-center gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            type="text"
-            value={searchKeyword}
-            onChange={(e) => {
-              setSearchKeyword(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="搜索参与者姓名/职业/行业"
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
-          />
+          {/* 搜索、筛选与排序 */}
+          <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="search"
+              value={searchKeyword}
+              onChange={(event) => {
+                setSearchKeyword(event.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="搜索参与者或推荐对象"
+              aria-label="搜索参与者或推荐对象"
+              className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/30"
+            />
+          </div>
         </div>
-        {history.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowHistoryPanel(true)}
-            className="flex shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-primary-50 hover:text-primary-600"
-          >
-            <History size={16} className="shrink-0" />
-            历史
-          </button>
-        )}
-      </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_320px]">
-        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">匹配结果明细</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                展示所有匹配结果，并按总匹配分数从高到低排序
-              </p>
-            </div>
+        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label="筛选匹配结果"
+          >
+            {visibleFilterOptions.map((option) => {
+              const active = option.value === resultFilter;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setResultFilter(option.value);
+                    setCurrentPage(1);
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-primary-200 bg-primary-50 text-primary-700"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  {option.label}
+                  <span className="tabular-nums text-[11px] opacity-70">
+                    {option.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {sortedPairRows.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left">
-                <thead className="bg-gray-50">
-                  <tr className="text-xs text-gray-500">
-                    <th className="px-4 py-3 font-medium">用户 A</th>
-                    <th className="px-4 py-3 font-medium">用户 B</th>
-                    <th className="px-4 py-3 font-medium">全局匹配度</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedPairRows.map((row) => (
-                    <tr key={row.id} className="border-t border-gray-100">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <UserHoverCard user={toUserBrief(row.owner)} onViewProfile={handleViewProfile}>
-                            <Avatar participant={row.owner} size="sm" />
-                          </UserHoverCard>
-                          <div className="min-w-0">
-                            <button
-                              onClick={() => handleViewProfile(row.ownerId)}
-                              className="text-sm font-medium text-gray-900 hover:text-primary-600"
-                            >
-                              {row.owner?.name || row.ownerId.slice(0, 6)}
-                            </button>
-                            {getParticipantMeta(row.owner) && (
-                              <p className="text-xs text-gray-500 truncate">
-                                {getParticipantMeta(row.owner)}
-                              </p>
-                            )}
-                            {!!row.owner?.imageCount && row.owner.enrollmentId && (
-                              <button
-                                type="button"
-                                onClick={() => setImageViewer(row.owner!)}
-                                className="mt-1 inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs text-purple-600"
-                              >
-                                <ImageIcon size={12} className="shrink-0" />查看报名图片（{row.owner.imageCount}）
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {row.candidateId ? (
-                          <div className="flex items-center gap-3">
-                            <UserHoverCard user={toUserBrief(row.candidate)} onViewProfile={handleViewProfile}>
-                              <Avatar participant={row.candidate} size="sm" />
-                            </UserHoverCard>
-                            <div className="min-w-0">
-                              <button
-                                onClick={() => handleViewProfile(row.candidateId!)}
-                                className="text-sm font-medium text-gray-900 hover:text-primary-600"
-                              >
-                                {row.candidate?.name || row.candidateId.slice(0, 6)}
-                              </button>
-                              {getParticipantMeta(row.candidate) && (
-                                <p className="text-xs text-gray-500 truncate">
-                                  {getParticipantMeta(row.candidate)}
-                                </p>
+          <label className="flex shrink-0 items-center gap-2 text-xs text-gray-500">
+            <ArrowUpDown size={15} />
+            <span>排序</span>
+            <select
+              value={resultSort}
+              onChange={(event) => {
+                setResultSort(event.target.value as ResultSort);
+                setCurrentPage(1);
+              }}
+              className="rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm text-gray-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/30"
+            >
+              <option value="attention">需处理优先</option>
+              <option value="score-asc">最高匹配度从低到高</option>
+              <option value="score-desc">最高匹配度从高到低</option>
+              <option value="name">按姓名排序</option>
+            </select>
+          </label>
+        </div>
+          </section>
+
+          <section
+            id="matching-result-list"
+            className="scroll-mt-4 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+          >
+        <h3 className="sr-only">参与者匹配名单</h3>
+        <div className="hidden grid-cols-[220px_minmax(0,1fr)_220px] gap-4 border-b border-gray-100 bg-gray-50 px-4 py-3 text-xs font-medium text-gray-500 lg:grid">
+          <span>参与者</span>
+          <span>优先推荐对象</span>
+          <span className="text-right">操作</span>
+        </div>
+
+        {pagedParticipantRows.length > 0 ? (
+          <ul className="divide-y divide-gray-100">
+            {pagedParticipantRows.map((row) => {
+              const canExpand = shouldShowMatchListToggle(row.matches.length);
+              const expanded = canExpand && expandedOwnerId === row.ownerId;
+              const previewMatches = getCollapsedMatchPreview(row.matches);
+              const hiddenMatchCount =
+                row.matches.length - previewMatches.length;
+              return (
+                <li
+                  key={row.id}
+                  className={`group/result-row relative transition-colors ${
+                    expanded ? "bg-primary-50/60" : "bg-white"
+                  }`}
+                >
+                  {expanded && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-0 left-0 z-10 w-1 bg-primary-500"
+                    />
+                  )}
+                  <div className="grid gap-4 px-4 py-4 lg:grid-cols-[220px_minmax(0,1fr)_220px] lg:items-center">
+                    <div className="min-w-0">
+                      <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-400 lg:hidden">
+                        参与者
+                      </p>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <UserHoverCard
+                          user={toUserBrief(row.owner)}
+                          onViewProfile={handleViewProfile}
+                        >
+                          <Avatar participant={row.owner} size="md" />
+                        </UserHoverCard>
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => handleViewProfile(row.ownerId)}
+                            className="block max-w-full truncate text-left text-sm font-semibold text-gray-900 hover:text-primary-600"
+                          >
+                            {row.owner?.name || row.ownerId.slice(0, 8)}
+                          </button>
+                          {getParticipantMeta(row.owner) && (
+                            <p className="mt-0.5 truncate text-xs text-gray-500">
+                              {getParticipantMeta(row.owner)}
+                            </p>
+                          )}
+                          {(row.hasConflict ||
+                            row.hasNoMatches ||
+                            row.isLowMatch) && (
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                              {row.hasConflict && (
+                                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                                  有冲突
+                                </span>
                               )}
-                              {!!row.candidate?.imageCount && row.candidate.enrollmentId && (
-                                <button
-                                  type="button"
-                                  onClick={() => setImageViewer(row.candidate!)}
-                                  className="mt-1 inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-xs text-purple-600"
-                                >
-                                  <ImageIcon size={12} className="shrink-0" />查看报名图片（{row.candidate.imageCount}）
-                                </button>
+                              {row.hasNoMatches && (
+                                <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                                  无结果
+                                </span>
+                              )}
+                              {row.isLowMatch && (
+                                <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                                  低匹配
+                                </span>
                               )}
                             </div>
+                          )}
+                          {!!row.owner?.imageCount && row.owner.enrollmentId && (
+                            <button
+                              type="button"
+                              onClick={() => setImageViewer(row.owner!)}
+                              className="mt-1 inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700"
+                            >
+                              <ImageIcon size={12} />
+                              报名图片 {row.owner.imageCount}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {!expanded && (
+                      <div className="min-w-0">
+                        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-400 lg:hidden">
+                          优先推荐对象
+                        </p>
+                        {row.matches.length > 0 ? (
+                          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                            {previewMatches.map((match) => (
+                              <UserHoverCard
+                                key={match.id}
+                                user={toUserBrief(
+                                  match.candidate,
+                                  match.candidateId,
+                                )}
+                                placement="bottom"
+                                focusable
+                                showProfileAction={false}
+                                triggerAriaLabel={`查看${
+                                  match.candidate?.name || "推荐对象"
+                                }的资料`}
+                                className="group w-full rounded-xl focus:outline-none"
+                              >
+                                <div className="flex min-h-14 min-w-0 items-center gap-2 rounded-xl border border-transparent bg-gray-50 px-2.5 py-2 transition-colors group-hover:border-primary-200 group-hover:bg-primary-50 group-focus-visible:border-primary-300 group-focus-visible:bg-primary-50 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
+                                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-primary-600 shadow-sm">
+                                    {match.rank}
+                                  </span>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-xs font-medium text-gray-800">
+                                      {match.candidate?.name ||
+                                        match.candidateId.slice(0, 8)}
+                                    </p>
+                                    <div className="mt-0.5 flex items-center gap-1.5 text-[11px]">
+                                      <span className="tabular-nums text-gray-500">
+                                        {match.scorePercent != null
+                                          ? `${match.scorePercent}%`
+                                          : "暂无得分"}
+                                      </span>
+                                      {match.reciprocalRank != null && (
+                                        <span
+                                          className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"
+                                          title="双方互荐"
+                                        >
+                                          <span className="sr-only">双方互荐</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </UserHoverCard>
+                            ))}
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-400">暂无匹配对象</span>
+                          <div className="rounded-xl border border-dashed border-orange-200 bg-orange-50 px-3 py-3 text-sm text-orange-700">
+                            暂无推荐对象，需要人工补充名单。
+                          </div>
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium tabular-nums ${
-                            row.scorePercent != null && row.scorePercent >= HIGH_MATCH_THRESHOLD
-                              ? "bg-emerald-50 text-emerald-600"
-                              : row.scorePercent != null && row.scorePercent < LOW_MATCH_THRESHOLD
-                                ? "bg-orange-50 text-orange-600"
-                                : "bg-gray-100 text-gray-600"
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-end gap-2 lg:col-start-3">
+                      {!readOnly && row.owner && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingOwnerId(row.ownerId)}
+                          className="inline-flex min-h-10 flex-1 items-center justify-center gap-1 rounded-lg border border-primary-200 px-2.5 py-2 text-xs font-medium text-primary-600 transition-all hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 lg:pointer-events-none lg:flex-none lg:translate-x-1 lg:opacity-0 lg:group-hover/result-row:pointer-events-auto lg:group-hover/result-row:translate-x-0 lg:group-hover/result-row:opacity-100 lg:focus-visible:pointer-events-auto lg:focus-visible:translate-x-0 lg:focus-visible:opacity-100"
+                        >
+                          {row.isLocked ? (
+                            <LockKeyhole size={13} />
+                          ) : (
+                            <Pencil size={13} />
+                          )}
+                          {row.isLocked
+                            ? "查看或解锁"
+                            : row.hasNoMatches
+                              ? "补充名单"
+                              : "调整名单"}
+                        </button>
+                      )}
+                      {canExpand && (
+                        <button
+                          type="button"
+                          aria-expanded={expanded}
+                          aria-controls={`match-details-${row.ownerId}`}
+                          aria-label={
+                            expanded
+                              ? `收起${
+                                  row.owner?.name || "该参与者"
+                                }的推荐名单`
+                              : `展开${
+                                  row.owner?.name || "该参与者"
+                                }其余 ${hiddenMatchCount} 位推荐对象`
+                          }
+                          title={
+                            expanded
+                              ? "收起名单"
+                              : `展开其余 ${hiddenMatchCount} 人`
+                          }
+                          onClick={() => toggleOwnerDetails(row.ownerId)}
+                          className={`inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 ${
+                            expanded
+                              ? "border-primary-200 bg-white text-primary-600 hover:bg-primary-50"
+                              : "border-gray-200 bg-white text-gray-600 hover:border-primary-300 hover:text-primary-600"
                           }`}
                         >
-                          {row.scorePercent != null ? `${row.scorePercent}%` : "—"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm">
-                <span className="text-gray-500">
-                  共 {sortedPairRows.length} 条匹配结果
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() =>
-                      setCurrentPage((page) => Math.max(1, page - 1))
-                    }
-                    disabled={currentPageSafe <= 1}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    上一页
-                  </button>
-                  <span className="text-gray-500">
-                    第 {currentPageSafe} / {totalPages} 页
-                  </span>
-                  <label className="flex items-center gap-2 text-gray-500">
-                    <span>跳转</span>
-                    <select
-                      value={currentPageSafe}
-                      onChange={(e) => setCurrentPage(Number(e.target.value))}
-                      className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-400/30 focus:border-primary-400"
-                    >
-                      {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                        (page) => (
-                          <option key={page} value={page}>
-                            第 {page} 页
-                          </option>
-                        ),
+                          {expanded ? (
+                            <>
+                              <span>收起名单</span>
+                              <ChevronUp size={16} aria-hidden="true" />
+                            </>
+                          ) : (
+                            <>
+                              <span>展开其余 {hiddenMatchCount} 人</span>
+                              <ChevronDown size={16} aria-hidden="true" />
+                            </>
+                          )}
+                        </button>
                       )}
-                    </select>
-                  </label>
-                  <button
-                    onClick={() =>
-                      setCurrentPage((page) => Math.min(totalPages, page + 1))
-                    }
-                    disabled={currentPageSafe >= totalPages}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    下一页
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="py-10 text-center text-gray-500 text-sm">
-              未找到匹配的参与者
-            </div>
-          )}
-        </section>
+                    </div>
+                  </div>
 
-        <aside className="bg-white rounded-2xl border border-gray-100 shadow-sm h-fit overflow-hidden lg:sticky lg:top-4">
-          <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-4 py-4">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <AlertCircle size={18} className="text-orange-500" />
-                <h3 className="text-base font-semibold text-gray-900">低匹配成员</h3>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                按最高匹配度从低到高排序，点击姓名查看主页。
-              </p>
-            </div>
-            <span className="shrink-0 whitespace-nowrap rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium tabular-nums text-orange-600">
-              {lowMatchRows.length} 人
-            </span>
-          </div>
-          <div>
-            {lowMatchRows.length > 0 ? (
-              <div className="max-h-[360px] overflow-y-auto">
-                <table className="min-w-full text-left">
-                  <thead className="sticky top-0 z-10 bg-gray-50 text-xs text-gray-500">
-                    <tr>
-                      <th className="px-4 py-2.5 font-medium">成员</th>
-                      <th className="px-4 py-2.5 text-right font-medium">最高匹配度</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {lowMatchRows.map((row) => (
-                      <tr
-                        key={`${row.ownerId}-low`}
-                        className="hover:bg-orange-50/40"
-                      >
-                        <td className="px-4 py-2.5">
-                          <div className="flex min-w-0 items-center gap-2.5">
-                            <Avatar participant={row.owner} size="sm" />
-                            <div className="min-w-0">
-                              <button
-                                onClick={() => handleViewProfile(row.ownerId)}
-                                className="block max-w-[150px] truncate text-sm font-medium text-gray-900 hover:text-primary-600"
-                                title={row.owner?.name || row.ownerId}
-                              >
-                                {row.owner?.name || row.ownerId.slice(0, 6)}
-                              </button>
-                              {getParticipantMeta(row.owner) && (
-                                <p className="max-w-[150px] truncate text-xs text-gray-500">
-                                  {getParticipantMeta(row.owner)}
-                                </p>
+                  {expanded && canExpand && (
+                    <div
+                      id={`match-details-${row.ownerId}`}
+                      role="region"
+                      aria-label={`${row.owner?.name || "该参与者"}的推荐对象`}
+                      className="border-t border-primary-100 bg-primary-50/60 px-4 pb-4 pt-3"
+                    >
+                      {row.issues.length > 0 && (
+                        <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2.5 text-xs leading-5 text-red-700">
+                          {row.issues.join("；")}
+                        </div>
+                      )}
+
+                      {row.matches.length > 0 ? (
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                          {row.matches.map((match) => (
+                            <UserHoverCard
+                              key={match.id}
+                              user={toUserBrief(
+                                match.candidate,
+                                match.candidateId,
                               )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <span
-                            className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium tabular-nums ${
-                              row.bestScore != null
-                                ? "bg-orange-50 text-orange-600"
-                                : "bg-gray-100 text-gray-500"
-                            }`}
-                          >
-                            {row.bestScore != null ? `${row.bestScore}%` : "暂无"}
-                          </span>
-                        </td>
-                      </tr>
+                              placement="bottom"
+                              focusable
+                              showProfileAction={false}
+                              triggerAriaLabel={`查看${
+                                match.candidate?.name || "推荐对象"
+                              }的资料`}
+                              className="group w-full rounded-xl focus:outline-none"
+                            >
+                              <article className="flex h-[76px] min-w-0 items-center gap-2.5 rounded-xl border border-primary-100 bg-white px-3 py-2.5 shadow-sm transition-all group-hover:-translate-y-0.5 group-hover:border-primary-300 group-hover:shadow-md group-focus-visible:border-primary-400 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-50 text-[11px] font-semibold text-primary-700">
+                                  {match.rank}
+                                </span>
+                                <Avatar participant={match.candidate} size="sm" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex min-w-0 items-center gap-1.5">
+                                    <p className="truncate text-sm font-semibold text-gray-900">
+                                      {match.candidate?.name ||
+                                        match.candidateId.slice(0, 8)}
+                                    </p>
+                                    {match.reciprocalRank != null && (
+                                      <span
+                                        className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                                        title={`双方互荐 · 对方第 ${match.reciprocalRank} 位`}
+                                      >
+                                        双方
+                                      </span>
+                                    )}
+                                  </div>
+                                  {getParticipantMeta(match.candidate) && (
+                                    <p
+                                      className="mt-0.5 truncate text-xs text-gray-500"
+                                      title={getParticipantMeta(match.candidate)}
+                                    >
+                                      {getParticipantMeta(match.candidate)}
+                                    </p>
+                                  )}
+                                </div>
+                                <span
+                                  className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold tabular-nums ${getScoreTone(match.scorePercent)}`}
+                                >
+                                  {match.scorePercent != null
+                                    ? `${match.scorePercent}%`
+                                    : "—"}
+                                </span>
+                              </article>
+                            </UserHoverCard>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-gray-200 bg-white py-8 text-center text-sm text-gray-500">
+                          暂无推荐对象，可通过“补充名单”手动添加。
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="py-12 text-center">
+            <Search size={22} className="mx-auto text-gray-300" />
+            <p className="mt-2 text-sm text-gray-500">没有符合当前条件的参与者</p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchKeyword("");
+                setResultFilter("all");
+                setCurrentPage(1);
+              }}
+              className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700"
+            >
+              清除筛选
+            </button>
+          </div>
+        )}
+
+        {filteredAndSortedRows.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-gray-500">
+              共 {filteredAndSortedRows.length} 名参与者 · {visibleRecommendationCount} 条推荐
+            </span>
+            {totalPages > 1 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={currentPageSafe <= 1}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  上一页
+                </button>
+                <span className="text-gray-500">
+                  第 {currentPageSafe} / {totalPages} 页
+                </span>
+                <label className="flex items-center gap-2 text-gray-500">
+                  <span className="sr-only">跳转页码</span>
+                  <select
+                    value={currentPageSafe}
+                    onChange={(event) => setCurrentPage(Number(event.target.value))}
+                    className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/30"
+                  >
+                    {Array.from(
+                      { length: totalPages },
+                      (_, index) => index + 1,
+                    ).map((page) => (
+                      <option key={page} value={page}>
+                        第 {page} 页
+                      </option>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="px-4 py-5 text-sm text-gray-500">
-                当前没有低匹配成员，整体结果较稳定。
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                  disabled={currentPageSafe >= totalPages}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  下一页
+                </button>
               </div>
             )}
           </div>
-          {lowMatchRows.length > 0 && (
-            <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 text-xs text-gray-500">
-              低匹配成员不代表不可交流，只表示当前规则下缺少强相关对象。
-            </div>
-          )}
-        </aside>
-      </div>
-
-      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">
-          匹配是怎么来的？
-        </h3>
-        <div className="grid gap-3 md:grid-cols-3 text-sm text-gray-600">
-          <div className="rounded-xl bg-gray-50 px-4 py-3">
-            系统会基于报名表里的字段规则计算每位参与者与候选对象的综合匹配度。
-          </div>
-          <div className="rounded-xl bg-gray-50 px-4 py-3">
-            商家侧看到的全局匹配度，是当前第一优先匹配对象的综合得分，用于快速判断结果质量。
-          </div>
-          <div className="rounded-xl bg-gray-50 px-4 py-3">
-            低匹配成员并不代表不可交流，只是当前规则下缺少强相关对象，建议人工查看后再判断。
-          </div>
-        </div>
-      </section>
+        )}
+          </section>
         </>
       )}
 
-      {/* 当前版本操作：属于内容流，不覆盖商家底部导航。 */}
-      {!currentHistoryId && (
-        <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onRematch()}
-              loading={isRematching}
-              icon={<RefreshCw size={18} />}
-              className="sm:min-w-36"
-            >
-              重新匹配
-            </Button>
-            {resultState === "published" ? (
-              <Button
-                onClick={() => void onCreateAdjustmentDraft?.()}
-                loading={isCreatingAdjustmentDraft}
-                icon={<FilePenLine size={18} />}
-                className="sm:min-w-48"
-              >
-                创建调整草稿
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => void onValidate?.()}
-                  disabled={matchResults.length === 0}
-                  loading={isValidating}
-                  icon={<ShieldCheck size={18} />}
-                  className="sm:min-w-36"
-                >
-                  校验草稿
-                </Button>
-                <Button
-                  onClick={() => setShowPublishDialog(true)}
-                  disabled={matchResults.length === 0}
-                  loading={isPublishing}
-                  icon={<Send size={18} />}
-                  className="sm:min-w-36"
-                >
-                  发布结果
-                </Button>
-              </>
-            )}
-          </div>
-        </section>
-      )}
+      <Modal
+        open={showHelp}
+        onClose={() => setShowHelp(false)}
+        title="匹配结果说明"
+        width="medium"
+      >
+        <div className="space-y-3 text-sm leading-6 text-gray-600">
+          <p>
+            系统会为每位参与者独立生成一份有序推荐名单，顺序与用户侧一致。
+          </p>
+          <p>
+            匹配度表示“参与者 → 推荐对象”这一方向的规则得分，不代表双方一定互荐。
+          </p>
+          <p>
+            “双方互荐”表示两人都进入了对方名单；单向推荐仍是有效结果。
+          </p>
+        </div>
+      </Modal>
 
       {/* 历史面板（内嵌，非模态） */}
       {showHistoryPanel && (
@@ -992,6 +1136,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <h3 className="text-base font-semibold">历史匹配记录</h3>
               <button
+                type="button"
                 onClick={() => setShowHistoryPanel(false)}
                 className="text-gray-400 hover:text-gray-600 text-sm"
               >
@@ -1044,6 +1189,22 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         onCancel={() => setShowPublishDialog(false)}
         isLoading={isPublishing}
       />
+
+      {editingOwnerId && participantMap.get(editingOwnerId) && (
+        <ManualMatchEditor
+          open
+          activityId={activityId}
+          source={participantMap.get(editingOwnerId)!}
+          initialCandidateIds={
+            matchResults.find((result) => result.userId === editingOwnerId)
+              ?.bestMatchUserIds || []
+          }
+          participants={participants}
+          constraints={constraints}
+          onClose={() => setEditingOwnerId(null)}
+          onSaved={onResultsChanged}
+        />
+      )}
 
       {imageViewer?.enrollmentId && (
         <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-4" onClick={() => setImageViewer(null)}>

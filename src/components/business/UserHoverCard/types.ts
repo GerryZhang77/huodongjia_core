@@ -39,6 +39,12 @@ export interface UserHoverCardProps {
   actionsSlot?: React.ReactNode;
   /** 额外的类名 */
   className?: string;
+  /** 是否允许通过键盘聚焦触发悬浮卡片 */
+  focusable?: boolean;
+  /** 可聚焦触发器的无障碍名称 */
+  triggerAriaLabel?: string;
+  /** 是否在悬浮卡片底部展示“查看个人主页”操作 */
+  showProfileAction?: boolean;
 }
 
 export interface UserCardContentProps {

@@ -39,6 +39,9 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
   onViewProfile,
   actionsSlot,
   className,
+  focusable = false,
+  triggerAriaLabel,
+  showProfileAction = true,
 }) => {
   const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(false);
@@ -193,8 +196,41 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
       <div
         ref={triggerRef}
         className={clsx("inline-block cursor-pointer", className)}
+        tabIndex={focusable && !disabled ? 0 : undefined}
+        role={focusable ? "button" : undefined}
+        aria-label={
+          focusable ? triggerAriaLabel || `查看${user.name}的资料` : undefined
+        }
+        aria-haspopup={focusable ? "dialog" : undefined}
+        aria-expanded={focusable ? isVisible : undefined}
         onMouseEnter={showCard}
         onMouseLeave={hideCard}
+        onFocus={focusable ? showCard : undefined}
+        onBlur={focusable ? hideCard : undefined}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            if (showTimeoutRef.current) {
+              clearTimeout(showTimeoutRef.current);
+              showTimeoutRef.current = null;
+            }
+            setIsVisible(false);
+            return;
+          }
+
+          if (focusable && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            if (showTimeoutRef.current) {
+              clearTimeout(showTimeoutRef.current);
+              showTimeoutRef.current = null;
+            }
+            if (isVisible) {
+              setIsVisible(false);
+            } else {
+              calculatePosition();
+              setIsVisible(true);
+            }
+          }
+        }}
         onClick={() => {
           // 移动端点击触发
           if (window.innerWidth < 768) {
@@ -215,6 +251,8 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
         createPortal(
           <div
             ref={cardRef}
+            role="dialog"
+            aria-label={`${user.name}的用户资料`}
             className={clsx(
               "fixed z-[1070]",
               "animate-fade-in",
@@ -230,7 +268,9 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
             <UserCardContent
               user={user}
               matchScore={matchScore}
-              onViewProfile={handleViewProfile}
+              onViewProfile={
+                showProfileAction ? handleViewProfile : undefined
+              }
               actionsSlot={actionsSlot}
             />
           </div>,
