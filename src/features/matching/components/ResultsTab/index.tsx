@@ -36,7 +36,6 @@ import {
 } from "../PublishResultDialog";
 import { MatchingHistoryPanel } from "../MatchingHistoryPanel";
 import { HistoryDetailDialog } from "../HistoryDetailDialog";
-import MatchAdjustmentWorkbench from "../MatchAdjustmentWorkbench";
 import ManualMatchEditor from "../ManualMatchEditor";
 import PrivateEnrollmentImageGallery from "@/components/enrollment/PrivateEnrollmentImageGallery";
 import type {
@@ -67,7 +66,7 @@ interface ResultsTabProps {
   matchResults: ParticipantMatchResult[];
   /** 参与者完整列表（用于渲染本人和 top5 候选的详细信息） */
   participants: Participant[];
-  /** 当前活动的报名字段结构，供草稿调整工作台展示报名资料。 */
+  /** 暂时保留调用契约，废弃工作台将在后续独立清理。 */
   registrationSchemaGroups: MatchingSchemaGroup[];
   /** 当前规则下实际参与匹配的人数，用于展示结果覆盖率 */
   eligibleParticipantCount?: number;
@@ -223,7 +222,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   activityId,
   matchResults,
   participants,
-  registrationSchemaGroups,
   eligibleParticipantCount,
   isPublishing,
   onPublish,
@@ -440,15 +438,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   };
 
   const focusIssueRows = () => {
-    if (!currentHistoryId && resultState !== "published") {
-      window.requestAnimationFrame(() => {
-        document
-          .getElementById("matching-adjustment-workbench")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-      return;
-    }
-
     setResultFilter(resultCounts.conflictCount > 0 ? "conflict" : "attention");
     setCurrentPage(1);
     window.requestAnimationFrame(() => {
@@ -632,19 +621,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         </div>
       )}
 
-      {!currentHistoryId && resultState !== "published" && (
-        <div id="matching-adjustment-workbench" className="scroll-mt-4">
-          <MatchAdjustmentWorkbench
-            activityId={activityId}
-            matchResults={matchResults}
-            participants={participants}
-            registrationSchemaGroups={registrationSchemaGroups}
-            constraints={constraints}
-            onResultsChanged={onResultsChanged}
-          />
-        </div>
-      )}
-
       {!currentHistoryId &&
         resultState !== "published" &&
         validationResult &&
@@ -664,10 +640,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           </div>
         )}
 
-      {(currentHistoryId || resultState === "published") && (
-        <>
-          {/* 搜索、筛选与排序 */}
-          <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+      {/* 搜索、筛选与排序 */}
+      <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search
@@ -892,7 +866,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                     )}
 
                     <div className="flex flex-wrap items-center justify-end gap-2 lg:col-start-3">
-                      {!readOnly && row.owner && (
+                      {!readOnly && !currentHistoryId && row.owner && (
                         <button
                           type="button"
                           onClick={() => setEditingOwnerId(row.ownerId)}
@@ -1102,9 +1076,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
             )}
           </div>
         )}
-          </section>
-        </>
-      )}
+      </section>
 
       <Modal
         open={showHelp}
@@ -1190,21 +1162,23 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         isLoading={isPublishing}
       />
 
-      {editingOwnerId && participantMap.get(editingOwnerId) && (
-        <ManualMatchEditor
-          open
-          activityId={activityId}
-          source={participantMap.get(editingOwnerId)!}
-          initialCandidateIds={
-            matchResults.find((result) => result.userId === editingOwnerId)
-              ?.bestMatchUserIds || []
-          }
-          participants={participants}
-          constraints={constraints}
-          onClose={() => setEditingOwnerId(null)}
-          onSaved={onResultsChanged}
-        />
-      )}
+      {!currentHistoryId &&
+        editingOwnerId &&
+        participantMap.get(editingOwnerId) && (
+          <ManualMatchEditor
+            open
+            activityId={activityId}
+            source={participantMap.get(editingOwnerId)!}
+            initialCandidateIds={
+              matchResults.find((result) => result.userId === editingOwnerId)
+                ?.bestMatchUserIds || []
+            }
+            participants={participants}
+            constraints={constraints}
+            onClose={() => setEditingOwnerId(null)}
+            onSaved={onResultsChanged}
+          />
+        )}
 
       {imageViewer?.enrollmentId && (
         <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-4" onClick={() => setImageViewer(null)}>
