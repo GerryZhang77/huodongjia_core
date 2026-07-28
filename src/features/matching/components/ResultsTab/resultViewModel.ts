@@ -60,6 +60,27 @@ export interface ParticipantResultView {
   isLocked: boolean;
 }
 
+export type ParticipantResultSort = "score-asc" | "score-desc" | "name";
+
+export const sortParticipantResultRows = (
+  rows: ParticipantResultView[],
+  sort: ParticipantResultSort,
+): ParticipantResultView[] => {
+  return [...rows].sort((a, b) => {
+    const nameCompare = (a.owner?.name || a.ownerId).localeCompare(
+      b.owner?.name || b.ownerId,
+      "zh-CN",
+    );
+    if (sort === "name") return nameCompare;
+
+    const aScore = a.bestScore ?? -1;
+    const bScore = b.bestScore ?? -1;
+    return sort === "score-asc"
+      ? aScore - bScore || nameCompare
+      : bScore - aScore || nameCompare;
+  });
+};
+
 export const toScorePercent = (
   score?: {
     total_score?: number;

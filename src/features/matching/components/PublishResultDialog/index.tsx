@@ -28,7 +28,6 @@ export interface MatchGroupStats {
   id: string;
   name?: string;
   members: string[];
-  score: number;
   isLocked: boolean;
   warnings?: string[];
 }
@@ -57,14 +56,6 @@ export interface PublishResultDialogProps {
   participantCount: number;
   /** 参与者预览列表 */
   participants?: ParticipantPreview[];
-  /** 匹配质量统计（来自后端；avgScore/minScore/maxScore 均为 0-1 的 cosine 相似度） */
-  matchingStats?: {
-    avgScore: number;
-    minScore: number;
-    maxScore: number;
-    /** 每人推荐候选数；缺省为 5 */
-    topK?: number;
-  };
   onConfirm: (
     sendNotification: boolean,
     notificationConfig?: NotificationConfig,
@@ -85,7 +76,6 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
   groups,
   participantCount,
   participants = [],
-  matchingStats,
   onConfirm,
   onCancel,
   isLoading = false,
@@ -102,38 +92,23 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
   // 人员预览展开状态
   const [showParticipantPreview, setShowParticipantPreview] = useState(false);
 
-  // 计算统计数据
-  // 当前匹配模型是 per-user top5：每个参与者一条记录，上层传入时会把每人 top5 合成一个"伪组"。
-  // 所以要对所有组的 members 去重后才是真实的独立参与者数。
+  // 当前匹配模型是 per-user topN：每个参与者一条记录，
+  // members 的首位是本人，其余为推荐对象。
   const stats = useMemo(() => {
-    const uniqueMemberIds = new Set<string>();
-    groups.forEach((g) => g.members.forEach((id) => uniqueMemberIds.add(id)));
-    const totalMembers = uniqueMemberIds.size;
-
-    const lockedCount = groups.filter((g) => g.isLocked).length;
     const warningCount = groups.filter(
       (g) => g.warnings && g.warnings.length > 0,
     ).length;
-
-    // 分数是否可用（后端有返回才展示；全为 0 视为无数据）
-    const hasScoreData = !!(
-      matchingStats &&
-      (matchingStats.avgScore > 0 ||
-        matchingStats.maxScore > 0 ||
-        matchingStats.minScore > 0)
+    const topK = groups.reduce(
+      (maxCount, group) =>
+        Math.max(maxCount, Math.max(group.members.length - 1, 0)),
+      0,
     );
 
     return {
-      totalMembers,
-      lockedCount,
       warningCount,
-      hasScoreData,
-      avgScore: matchingStats?.avgScore ?? 0,
-      minScore: matchingStats?.minScore ?? 0,
-      maxScore: matchingStats?.maxScore ?? 0,
-      topK: matchingStats?.topK ?? 5,
+      topK,
     };
-  }, [groups, matchingStats]);
+  }, [groups]);
 
   // 计算各渠道可通知人数
   const channelStats = useMemo(() => {
@@ -145,9 +120,6 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
       email: withEmail,
     };
   }, [participants, participantCount]);
-
-  // 0-1 的 cosine 相似度 → 0-100 百分比展示
-  const toPercent = (v: number) => Math.round(v * 100);
 
   // 切换通知渠道
   const toggleChannel = (channel: NotificationChannel) => {
@@ -219,21 +191,7 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
                 <p className="text-2xl font-bold text-green-600">
                   Top {stats.topK}
                 </p>
-                <p className="text-xs text-gray-500">每人推荐候选</p>
-              </div>
-              <div className="text-center p-2 bg-white rounded-lg">
-                <p className="text-2xl font-bold text-purple-600">
-                  {stats.hasScoreData ? `${toPercent(stats.avgScore)}%` : "—"}
-                </p>
-                <p className="text-xs text-gray-500">平均匹配分</p>
-              </div>
-              <div className="text-center p-2 bg-white rounded-lg">
-                <p className="text-lg font-bold text-gray-600">
-                  {stats.hasScoreData
-                    ? `${toPercent(stats.minScore)}%-${toPercent(stats.maxScore)}%`
-                    : "—"}
-                </p>
-                <p className="text-xs text-gray-500">得分范围</p>
+                <p className="text-xs text-gray-500">最多推荐候选</p>
               </div>
             </div>
           </div>

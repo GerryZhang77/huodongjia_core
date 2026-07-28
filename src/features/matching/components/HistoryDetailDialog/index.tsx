@@ -101,8 +101,6 @@ interface CompatibleGroup {
   name?: string;
   group_name?: string;
   members: (string | Record<string, unknown>)[];
-  score?: number;
-  similarity_score?: number;
   reasons?: string[];
   match_reasons?: string[];
   warnings?: string[];
@@ -173,22 +171,6 @@ const GroupCard: React.FC<GroupCardProps> = ({
     return { male, female, other: members.length - male - female };
   }, [members]);
 
-  // 获取分数 - 兼容两种格式 (0-1 小数 或 0-100 整数)
-  const rawScore = group.similarity_score ?? group.score ?? 0;
-  // 如果分数小于等于1，认为是小数，转换为百分制
-  const score =
-    rawScore <= 1 ? Math.round(rawScore * 100) : Math.round(rawScore);
-
-  // 评分颜色
-  const scoreColor =
-    score >= 80
-      ? "text-green-600 bg-green-50"
-      : score >= 60
-        ? "text-primary-600 bg-primary-50"
-        : score >= 40
-          ? "text-amber-600 bg-amber-50"
-          : "text-red-600 bg-red-50";
-
   return (
     <div className="border border-gray-100 rounded-xl overflow-hidden">
       {/* 头部 */}
@@ -219,15 +201,8 @@ const GroupCard: React.FC<GroupCardProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div
-            className={`px-2 py-1 rounded-lg text-xs font-semibold ${scoreColor}`}
-          >
-            {score} 分
-          </div>
-          <div className="text-gray-400">
-            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </div>
+        <div className="text-gray-400">
+          {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </div>
       </div>
 
@@ -366,7 +341,7 @@ export const HistoryDetailDialog: React.FC<HistoryDetailDialogProps> = ({
             <BarChart3 size={16} className="text-primary-500" />
             <span className="text-sm font-medium text-gray-700">统计概览</span>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="p-3 bg-white rounded-xl text-center">
               <p className="text-xl font-bold text-primary-600">
                 {statistics.totalGroups}
@@ -374,32 +349,10 @@ export const HistoryDetailDialog: React.FC<HistoryDetailDialogProps> = ({
               <p className="text-xs text-gray-500 mt-0.5">总分组</p>
             </div>
             <div className="p-3 bg-white rounded-xl text-center">
-              <p className="text-xl font-bold text-green-600">
-                {/* 兼容小数和整数格式 */}
-                {statistics.avgScore <= 1
-                  ? Math.round(statistics.avgScore * 100)
-                  : Math.round(statistics.avgScore)}
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5">平均分</p>
-            </div>
-            <div className="p-3 bg-white rounded-xl text-center">
               <p className="text-xl font-bold text-gray-600">
                 {statistics.totalParticipants}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">参与人数</p>
-            </div>
-            <div className="p-3 bg-white rounded-xl text-center">
-              <p className="text-xl font-bold text-amber-600">
-                {/* 兼容小数和整数格式 */}
-                {statistics.minScore <= 1
-                  ? Math.round(statistics.minScore * 100)
-                  : Math.round(statistics.minScore)}
-                -
-                {statistics.maxScore <= 1
-                  ? Math.round(statistics.maxScore * 100)
-                  : Math.round(statistics.maxScore)}
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5">分数范围</p>
             </div>
           </div>
 

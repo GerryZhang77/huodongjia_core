@@ -94,7 +94,6 @@ const MatchingConfigPage: React.FC = () => {
     participants,
     matchResults,
     history,
-    matchingStats,
     registrationSchema,
     registrationSchemaGroups,
     fieldCatalog,
@@ -250,33 +249,7 @@ const MatchingConfigPage: React.FC = () => {
       />
 
       <div className="mx-auto max-w-6xl space-y-5 px-1 py-3 md:px-5 md:py-6">
-        {wizardStep === "results" && matchResults.length > 0 ? (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2.5 shadow-sm md:px-4">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                <Check size={15} />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-gray-800">
-                  五步匹配流程已完成
-                </span>
-                <span className="hidden text-xs text-gray-500 sm:block">
-                  参与人、规则、校验、执行、结果
-                </span>
-              </span>
-            </div>
-            <Button
-              size="small"
-              variant="light"
-              onClick={() => {
-                handleEnterRematchMode();
-                setWizardStep("rules");
-              }}
-            >
-              修改匹配设置
-            </Button>
-          </div>
-        ) : (
+        {wizardStep !== "results" && (
           <nav aria-label="匹配配置步骤">
             <ol className="flex min-w-0 items-center rounded-2xl border border-gray-100 bg-white p-2 shadow-sm md:min-w-[650px]">
               {WIZARD_STEPS.map((step, index) => {
@@ -554,7 +527,6 @@ const MatchingConfigPage: React.FC = () => {
               setWizardStep("rules");
             }}
             isRematching={isMatching}
-            matchingStats={matchingStats || undefined}
             history={history}
             currentHistoryId={currentHistoryId}
             constraints={constraints}

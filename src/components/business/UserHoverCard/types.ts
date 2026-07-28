@@ -41,6 +41,8 @@ export interface UserHoverCardProps {
   className?: string;
   /** 是否允许通过键盘聚焦触发悬浮卡片 */
   focusable?: boolean;
+  /** 子元素获得键盘焦点时是否显示悬浮卡片，适用于触发区内保留独立按钮的场景 */
+  focusWithin?: boolean;
   /** 可聚焦触发器的无障碍名称 */
   triggerAriaLabel?: string;
   /** 是否在悬浮卡片底部展示“查看个人主页”操作 */

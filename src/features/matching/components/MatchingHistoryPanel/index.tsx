@@ -10,7 +10,6 @@ import {
   ChevronUp,
   Clock,
   Users,
-  CheckCircle,
   Eye,
 } from "lucide-react";
 import type { MatchingHistory } from "../../types";
@@ -115,10 +114,6 @@ const HistoryCard: React.FC<HistoryCardProps> = ({
           <div className="flex items-center gap-1 text-gray-600">
             <Users size={14} />
             <span>{item.statistics.totalGroups} 组</span>
-          </div>
-          <div className="flex items-center gap-1 text-gray-600">
-            <CheckCircle size={14} />
-            <span>平均 {item.statistics.avgScore.toFixed(0)} 分</span>
           </div>
           <div className="text-xs text-gray-400">
             {item.statistics.totalParticipants} 人参与

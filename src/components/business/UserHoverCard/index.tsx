@@ -40,6 +40,7 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
   actionsSlot,
   className,
   focusable = false,
+  focusWithin = false,
   triggerAriaLabel,
   showProfileAction = true,
 }) => {
@@ -136,6 +137,20 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
     }
   }, []);
 
+  const handleFocusWithinBlur = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const nextFocusedElement = event.relatedTarget;
+      if (
+        nextFocusedElement instanceof Node &&
+        triggerRef.current?.contains(nextFocusedElement)
+      ) {
+        return;
+      }
+      hideCard();
+    },
+    [hideCard],
+  );
+
   // 查看详情
   const handleViewProfile = useCallback(() => {
     setIsVisible(false);
@@ -207,6 +222,10 @@ export const UserHoverCard: FC<UserHoverCardProps> = ({
         onMouseLeave={hideCard}
         onFocus={focusable ? showCard : undefined}
         onBlur={focusable ? hideCard : undefined}
+        onFocusCapture={!focusable && focusWithin ? showCard : undefined}
+        onBlurCapture={
+          !focusable && focusWithin ? handleFocusWithinBlur : undefined
+        }
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             if (showTimeoutRef.current) {

@@ -4,6 +4,7 @@ import {
   buildParticipantResultRows,
   getCollapsedMatchPreview,
   shouldShowMatchListToggle,
+  sortParticipantResultRows,
   toScorePercent,
   type ResultParticipant,
 } from "./resultViewModel";
@@ -86,5 +87,42 @@ describe("collapsed recommendation preview", () => {
     expect(getCollapsedMatchPreview([1, 2, 3, 4, 5])).toEqual([1, 2, 3]);
     expect(shouldShowMatchListToggle(3)).toBe(false);
     expect(shouldShowMatchListToggle(4)).toBe(true);
+  });
+});
+
+describe("sortParticipantResultRows", () => {
+  it("sorts objectively by score or name and puts missing results first in ascending order", () => {
+    const participants: ResultParticipant[] = [
+      { id: "a", name: "A 用户" },
+      { id: "b", name: "B 用户" },
+      { id: "c", name: "C 用户" },
+      { id: "target", name: "推荐对象" },
+    ];
+    const rows = buildParticipantResultRows({
+      matchResults: [
+        makeRecord("a", ["target"], [
+          { total_score: 0.8, total_score_percent: 80 },
+        ]),
+        makeRecord("b", ["target"], [
+          { total_score: 0.3, total_score_percent: 30 },
+        ]),
+        makeRecord("c", [], []),
+      ],
+      participantMap: new Map(participants.map((item) => [item.id, item])),
+      validationIssueMap: new Map(),
+      lowMatchThreshold: 40,
+    });
+
+    expect(
+      sortParticipantResultRows(rows, "score-asc").map((row) => row.ownerId),
+    ).toEqual(["c", "b", "a"]);
+    expect(
+      sortParticipantResultRows(rows, "score-desc").map((row) => row.ownerId),
+    ).toEqual(["a", "b", "c"]);
+    expect(
+      sortParticipantResultRows([...rows].reverse(), "name").map(
+        (row) => row.ownerId,
+      ),
+    ).toEqual(["a", "b", "c"]);
   });
 });

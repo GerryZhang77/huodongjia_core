@@ -20,7 +20,6 @@ import {
   FilePenLine,
   Image as ImageIcon,
   X,
-  ArrowUpDown,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -51,9 +50,10 @@ import {
   buildParticipantResultRows,
   getCollapsedMatchPreview,
   shouldShowMatchListToggle,
+  sortParticipantResultRows,
 } from "./resultViewModel";
 import type {
-  ParticipantResultView,
+  ParticipantResultSort,
   ResultParticipant,
 } from "./resultViewModel";
 
@@ -79,11 +79,6 @@ interface ResultsTabProps {
   /** 切回规则 Tab 进行重新匹配 */
   onRematch: () => void | Promise<void>;
   isRematching: boolean;
-  matchingStats?: {
-    avgScore: number;
-    minScore: number;
-    maxScore: number;
-  };
   history?: MatchingHistory[];
   currentHistoryId?: string | null;
   constraints: MatchConstraints;
@@ -183,26 +178,8 @@ const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }>
   );
 };
 
-const HIGH_MATCH_THRESHOLD = 60;
 const LOW_MATCH_THRESHOLD = 40;
 const PAGE_SIZE = 15;
-
-type ResultFilter =
-  | "all"
-  | "attention"
-  | "low"
-  | "conflict"
-  | "empty"
-  | "locked";
-
-type ResultSort = "attention" | "score-asc" | "score-desc" | "name";
-
-const getScoreTone = (score: number | null): string => {
-  if (score == null) return "bg-gray-100 text-gray-500";
-  if (score >= HIGH_MATCH_THRESHOLD) return "bg-emerald-50 text-emerald-700";
-  if (score < LOW_MATCH_THRESHOLD) return "bg-orange-50 text-orange-700";
-  return "bg-blue-50 text-blue-700";
-};
 
 const getParticipantSearchText = (participant?: Participant): string =>
   [
@@ -225,7 +202,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   eligibleParticipantCount,
   isPublishing,
   onPublish,
-  matchingStats,
+  onRematch,
+  isRematching,
   history = [],
   currentHistoryId = null,
   constraints,
@@ -241,8 +219,8 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
 }) => {
   const navigate = useNavigate();
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
-  const [resultSort, setResultSort] = useState<ResultSort>("attention");
+  const [resultSort, setResultSort] =
+    useState<ParticipantResultSort>("score-desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedOwnerId, setExpandedOwnerId] = useState<string | null>(null);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
@@ -294,67 +272,28 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
     [matchResults, participantMap, validationIssueMap],
   );
 
-  const resultCounts = useMemo(() => {
-    const attentionCount = participantResultRows.filter(
-      (row) => row.hasConflict || row.hasNoMatches || row.isLowMatch,
-    ).length;
-    return {
-      attentionCount,
-      lowCount: participantResultRows.filter((row) => row.isLowMatch).length,
-      conflictCount: participantResultRows.filter((row) => row.hasConflict).length,
-      emptyCount: participantResultRows.filter((row) => row.hasNoMatches).length,
-      lockedCount: participantResultRows.filter((row) => row.isLocked).length,
-    };
-  }, [participantResultRows]);
+  const attentionCount = useMemo(
+    () =>
+      participantResultRows.filter(
+        (row) => row.hasConflict || row.hasNoMatches || row.isLowMatch,
+      ).length,
+    [participantResultRows],
+  );
 
   const filteredAndSortedRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
     const filtered = participantResultRows.filter((row) => {
-      const matchesKeyword =
+      return (
         !keyword ||
         getParticipantSearchText(row.owner).includes(keyword) ||
         row.matches.some((match) =>
           getParticipantSearchText(match.candidate).includes(keyword),
-        );
-      if (!matchesKeyword) return false;
-
-      switch (resultFilter) {
-        case "attention":
-          return row.hasConflict || row.hasNoMatches || row.isLowMatch;
-        case "low":
-          return row.isLowMatch;
-        case "conflict":
-          return row.hasConflict;
-        case "empty":
-          return row.hasNoMatches;
-        case "locked":
-          return row.isLocked;
-        default:
-          return true;
-      }
-    });
-
-    return [...filtered].sort((a, b) => {
-      const nameCompare = (a.owner?.name || a.ownerId).localeCompare(
-        b.owner?.name || b.ownerId,
-        "zh-CN",
+        )
       );
-      if (resultSort === "name") return nameCompare;
-
-      const aScore = a.bestScore ?? -1;
-      const bScore = b.bestScore ?? -1;
-      if (resultSort === "score-asc") return aScore - bScore || nameCompare;
-      if (resultSort === "score-desc") return bScore - aScore || nameCompare;
-
-      const attentionRank = (row: ParticipantResultView) => {
-        if (row.hasConflict) return 0;
-        if (row.hasNoMatches) return 1;
-        if (row.isLowMatch) return 2;
-        return 3;
-      };
-      return attentionRank(a) - attentionRank(b) || aScore - bScore || nameCompare;
     });
-  }, [participantResultRows, resultFilter, resultSort, searchKeyword]);
+
+    return sortParticipantResultRows(filtered, resultSort);
+  }, [participantResultRows, resultSort, searchKeyword]);
 
   const totalPages = Math.max(
     1,
@@ -384,25 +323,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         0,
       ),
     [filteredAndSortedRows],
-  );
-
-  const filterOptions: Array<{
-    value: ResultFilter;
-    label: string;
-    count: number;
-  }> = [
-    { value: "all", label: "全部", count: participantResultRows.length },
-    { value: "attention", label: "待处理", count: resultCounts.attentionCount },
-    { value: "low", label: "低匹配", count: resultCounts.lowCount },
-    { value: "conflict", label: "有冲突", count: resultCounts.conflictCount },
-    { value: "empty", label: "无结果", count: resultCounts.emptyCount },
-    { value: "locked", label: "已锁定", count: resultCounts.lockedCount },
-  ];
-  const visibleFilterOptions = filterOptions.filter(
-    (option) =>
-      option.value === "all" ||
-      option.count > 0 ||
-      option.value === resultFilter,
   );
 
   const toggleOwnerDetails = (ownerId: string) => {
@@ -438,12 +358,44 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   };
 
   const focusIssueRows = () => {
-    setResultFilter(resultCounts.conflictCount > 0 ? "conflict" : "attention");
-    setCurrentPage(1);
+    const sortedRows = sortParticipantResultRows(
+      participantResultRows,
+      resultSort,
+    );
+    const targetRow =
+      sortedRows.find((row) => row.hasConflict) ||
+      sortedRows.find((row) => row.hasNoMatches || row.isLowMatch);
+
+    setSearchKeyword("");
+
+    if (!targetRow) {
+      setCurrentPage(1);
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById("matching-result-list")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+
+    const targetIndex = sortedRows.findIndex(
+      (row) => row.ownerId === targetRow.ownerId,
+    );
+    setCurrentPage(Math.floor(targetIndex / PAGE_SIZE) + 1);
+    setExpandedOwnerId(
+      shouldShowMatchListToggle(targetRow.matches.length)
+        ? targetRow.ownerId
+        : null,
+    );
+
     window.requestAnimationFrame(() => {
-      document
-        .getElementById("matching-result-list")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.requestAnimationFrame(() => {
+        const targetElement = document.getElementById(
+          `matching-result-${targetRow.ownerId}`,
+        );
+        targetElement?.scrollIntoView({ behavior: "smooth", block: "center" });
+        targetElement?.focus({ preventScroll: true });
+      });
     });
   };
 
@@ -493,7 +445,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         id: r.id,
         name: participantMap.get(r.userId)?.name,
         members: [r.userId, ...r.bestMatchUserIds],
-        score: 0,
         isLocked: false,
       })),
     [matchResults, participantMap],
@@ -510,6 +461,14 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         <p className="text-sm text-gray-500 mb-4">
           请先在"规则设置"中配置规则并执行匹配
         </p>
+        <Button
+          size="small"
+          variant="light"
+          onClick={() => void onRematch()}
+          loading={isRematching}
+        >
+          修改匹配设置
+        </Button>
       </div>
     );
   }
@@ -550,9 +509,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
               <span>
                 覆盖 {resultRecordMap.size}/{coverageTotal} 位参与者
               </span>
-              {resultCounts.attentionCount > 0 && (
+              {attentionCount > 0 && (
                 <span className="font-medium text-orange-600">
-                  {resultCounts.attentionCount} 位需关注
+                  {attentionCount} 位需关注
                 </span>
               )}
             </div>
@@ -579,6 +538,15 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                 <History size={18} />
               </button>
             )}
+            <Button
+              size="small"
+              variant="light"
+              onClick={() => void onRematch()}
+              loading={isRematching}
+              className="flex-1 sm:flex-none"
+            >
+              修改匹配设置
+            </Button>
             {!currentHistoryId && (
               <Button
                 size="small"
@@ -640,9 +608,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           </div>
         )}
 
-      {/* 搜索、筛选与排序 */}
+      {/* 搜索与排序 */}
       <section className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative min-w-0 flex-1">
             <Search
               size={16}
@@ -660,64 +628,26 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
               className="w-full rounded-lg border border-gray-200 py-2 pl-9 pr-3 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/30"
             />
           </div>
-        </div>
-
-        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label="筛选匹配结果"
+          <select
+            aria-label="排序方式"
+            value={resultSort}
+            onChange={(event) => {
+              setResultSort(event.target.value as ParticipantResultSort);
+              setCurrentPage(1);
+            }}
+            className="w-full shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/30 sm:w-36"
           >
-            {visibleFilterOptions.map((option) => {
-              const active = option.value === resultFilter;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => {
-                    setResultFilter(option.value);
-                    setCurrentPage(1);
-                  }}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    active
-                      ? "border-primary-200 bg-primary-50 text-primary-700"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {option.label}
-                  <span className="tabular-nums text-[11px] opacity-70">
-                    {option.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <label className="flex shrink-0 items-center gap-2 text-xs text-gray-500">
-            <ArrowUpDown size={15} />
-            <span>排序</span>
-            <select
-              value={resultSort}
-              onChange={(event) => {
-                setResultSort(event.target.value as ResultSort);
-                setCurrentPage(1);
-              }}
-              className="rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-sm text-gray-700 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400/30"
-            >
-              <option value="attention">需处理优先</option>
-              <option value="score-asc">最高匹配度从低到高</option>
-              <option value="score-desc">最高匹配度从高到低</option>
-              <option value="name">按姓名排序</option>
-            </select>
-          </label>
+            <option value="score-desc">高匹配优先</option>
+            <option value="score-asc">低匹配优先</option>
+            <option value="name">按姓名</option>
+          </select>
         </div>
-          </section>
+      </section>
 
-          <section
-            id="matching-result-list"
-            className="scroll-mt-4 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
-          >
+      <section
+        id="matching-result-list"
+        className="scroll-mt-4 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+      >
         <h3 className="sr-only">参与者匹配名单</h3>
         <div className="hidden grid-cols-[220px_minmax(0,1fr)_220px] gap-4 border-b border-gray-100 bg-gray-50 px-4 py-3 text-xs font-medium text-gray-500 lg:grid">
           <span>参与者</span>
@@ -736,8 +666,12 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
               return (
                 <li
                   key={row.id}
-                  className={`group/result-row relative transition-colors ${
-                    expanded ? "bg-primary-50/60" : "bg-white"
+                  id={`matching-result-${row.ownerId}`}
+                  tabIndex={-1}
+                  className={`group/result-row relative scroll-mt-4 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-300 ${
+                    expanded
+                      ? "bg-primary-50/60 hover:bg-primary-50/80"
+                      : "bg-white hover:bg-primary-50/40"
                   }`}
                 >
                   {expanded && (
@@ -751,59 +685,69 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                       <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-400 lg:hidden">
                         参与者
                       </p>
-                      <div className="flex min-w-0 items-center gap-3">
-                        <UserHoverCard
-                          user={toUserBrief(row.owner)}
-                          onViewProfile={handleViewProfile}
-                        >
+                      <UserHoverCard
+                        user={toUserBrief(row.owner)}
+                        onViewProfile={handleViewProfile}
+                        placement="bottom"
+                        focusWithin
+                        className="w-full"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
                           <Avatar participant={row.owner} size="md" />
-                        </UserHoverCard>
-                        <div className="min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => handleViewProfile(row.ownerId)}
-                            className="block max-w-full truncate text-left text-sm font-semibold text-gray-900 hover:text-primary-600"
-                          >
-                            {row.owner?.name || row.ownerId.slice(0, 8)}
-                          </button>
-                          {getParticipantMeta(row.owner) && (
-                            <p className="mt-0.5 truncate text-xs text-gray-500">
-                              {getParticipantMeta(row.owner)}
-                            </p>
-                          )}
-                          {(row.hasConflict ||
-                            row.hasNoMatches ||
-                            row.isLowMatch) && (
-                            <div className="mt-1.5 flex flex-wrap gap-1.5">
-                              {row.hasConflict && (
-                                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">
-                                  有冲突
-                                </span>
-                              )}
-                              {row.hasNoMatches && (
-                                <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">
-                                  无结果
-                                </span>
-                              )}
-                              {row.isLowMatch && (
-                                <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">
-                                  低匹配
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {!!row.owner?.imageCount && row.owner.enrollmentId && (
+                          <div className="min-w-0">
                             <button
                               type="button"
-                              onClick={() => setImageViewer(row.owner!)}
-                              className="mt-1 inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleViewProfile(row.ownerId);
+                              }}
+                              className="block max-w-full truncate text-left text-sm font-semibold text-gray-900 hover:text-primary-600"
                             >
-                              <ImageIcon size={12} />
-                              报名图片 {row.owner.imageCount}
+                              {row.owner?.name || row.ownerId.slice(0, 8)}
                             </button>
-                          )}
+                            {getParticipantMeta(row.owner) && (
+                              <p className="mt-0.5 truncate text-xs text-gray-500">
+                                {getParticipantMeta(row.owner)}
+                              </p>
+                            )}
+                            {(row.hasConflict ||
+                              row.hasNoMatches ||
+                              row.isLowMatch) && (
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {row.hasConflict && (
+                                  <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                                    有冲突
+                                  </span>
+                                )}
+                                {row.hasNoMatches && (
+                                  <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                                    无结果
+                                  </span>
+                                )}
+                                {row.isLowMatch && (
+                                  <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                                    低匹配
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {!!row.owner?.imageCount &&
+                              row.owner.enrollmentId && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setImageViewer(row.owner!);
+                                  }}
+                                  className="mt-1 inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700"
+                                >
+                                  <ImageIcon size={12} />
+                                  报名图片 {row.owner.imageCount}
+                                </button>
+                              )}
+                          </div>
                         </div>
-                      </div>
+                      </UserHoverCard>
                     </div>
 
                     {!expanded && (
@@ -837,21 +781,14 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                                       {match.candidate?.name ||
                                         match.candidateId.slice(0, 8)}
                                     </p>
-                                    <div className="mt-0.5 flex items-center gap-1.5 text-[11px]">
-                                      <span className="tabular-nums text-gray-500">
-                                        {match.scorePercent != null
-                                          ? `${match.scorePercent}%`
-                                          : "暂无得分"}
+                                    {match.reciprocalRank != null && (
+                                      <span
+                                        className="mt-0.5 inline-flex rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                                        title={`双方互荐 · 对方第 ${match.reciprocalRank} 位`}
+                                      >
+                                        双方互荐
                                       </span>
-                                      {match.reciprocalRank != null && (
-                                        <span
-                                          className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"
-                                          title="双方互荐"
-                                        >
-                                          <span className="sr-only">双方互荐</span>
-                                        </span>
-                                      )}
-                                    </div>
+                                    )}
                                   </div>
                                 </div>
                               </UserHoverCard>
@@ -985,13 +922,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                                     </p>
                                   )}
                                 </div>
-                                <span
-                                  className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold tabular-nums ${getScoreTone(match.scorePercent)}`}
-                                >
-                                  {match.scorePercent != null
-                                    ? `${match.scorePercent}%`
-                                    : "—"}
-                                </span>
                               </article>
                             </UserHoverCard>
                           ))}
@@ -1015,12 +945,11 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
               type="button"
               onClick={() => {
                 setSearchKeyword("");
-                setResultFilter("all");
                 setCurrentPage(1);
               }}
               className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700"
             >
-              清除筛选
+              清除搜索
             </button>
           </div>
         )}
@@ -1089,9 +1018,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
             系统会为每位参与者独立生成一份有序推荐名单，顺序与用户侧一致。
           </p>
           <p>
-            匹配度表示“参与者 → 推荐对象”这一方向的规则得分，不代表双方一定互荐。
-          </p>
-          <p>
             “双方互荐”表示两人都进入了对方名单；单向推荐仍是有效结果。
           </p>
         </div>
@@ -1156,7 +1082,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         groups={publishGroupStats}
         participantCount={matchResults.length}
         participants={participantPreviews}
-        matchingStats={matchingStats}
         onConfirm={handlePublishClick}
         onCancel={() => setShowPublishDialog(false)}
         isLoading={isPublishing}
