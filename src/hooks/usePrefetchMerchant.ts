@@ -7,6 +7,10 @@ import {
 } from "@/features/merchant/user-pool/services/userPoolApi";
 import { getMerchantActivities } from "@/features/merchant/activity-manage/services/activityManageApi";
 import type { CustomTag } from "@/features/merchant/user-pool/types";
+import {
+  merchantCacheTimes,
+  merchantQueryKeys,
+} from "@/features/merchant/queryKeys";
 
 /**
  * 商家端 Tab/Sidebar 预拉取钩子
@@ -22,9 +26,10 @@ export function usePrefetchMerchantProfile() {
   const qc = useQueryClient();
   return useCallback(() => {
     qc.prefetchQuery({
-      queryKey: ["merchant", "profile"],
+      queryKey: merchantQueryKeys.profile(),
       queryFn: () => merchantApi.getMerchantProfile(),
-      staleTime: 5 * 60 * 1000,
+      staleTime: merchantCacheTimes.profileStale,
+      gcTime: merchantCacheTimes.profileGc,
     });
   }, [qc]);
 }

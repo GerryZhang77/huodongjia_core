@@ -37,6 +37,10 @@ export interface UserHoverCardProps {
   onViewProfile?: (userId: string) => void;
   /** 自定义操作区（如关注/私信按钮）；显示在"查看主页"按钮上方 */
   actionsSlot?: React.ReactNode;
+  /** 资料卡内的补充内容（如受保护的报名图片预览） */
+  detailsSlot?: React.ReactNode;
+  /** 悬停意图成立后执行的轻量预取 */
+  onPrefetch?: () => void | Promise<unknown>;
   /** 额外的类名 */
   className?: string;
   /** 是否允许通过键盘聚焦触发悬浮卡片 */
@@ -58,6 +62,8 @@ export interface UserCardContentProps {
   onViewProfile?: () => void;
   /** 自定义操作区（如关注/私信按钮）；显示在"查看主页"按钮上方 */
   actionsSlot?: React.ReactNode;
+  /** 展示在操作区之前的补充内容 */
+  detailsSlot?: React.ReactNode;
   /** 额外的类名 */
   className?: string;
 }

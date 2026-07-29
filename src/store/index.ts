@@ -113,7 +113,7 @@ export const useStore = create<AppState>((set, get) => ({
         id: '1',
         username: 'merchant',
         role: 'merchant',
-        name: '商家用户'
+        name: '主办方'
       }
       set({ user, isAuthenticated: true })
       return true

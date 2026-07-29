@@ -972,7 +972,8 @@ const EnrollmentManagementNew: React.FC = () => {
                             sessionScope,
                             id || "",
                             enrollment.id,
-                          );
+                            { contentLimit: 4 },
+                          ).catch(() => undefined);
                         }
                       : undefined
                   }

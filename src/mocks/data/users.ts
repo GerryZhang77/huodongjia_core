@@ -24,7 +24,7 @@ export interface MockUser {
 // 测试账号数据
 // ========================================
 
-// 商家账号
+// 主办方账号
 export const mockOrganizer: MockUser = {
   id: "org_001",
   phone: "13800138001",

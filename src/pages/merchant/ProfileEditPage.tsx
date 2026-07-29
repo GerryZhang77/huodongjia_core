@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Form,
   Input,
@@ -20,9 +20,16 @@ import { MerchantLayout } from "@/components/layout";
 import {
   merchantApi,
   uploadMerchantAvatar,
+  type MerchantProfileResponse,
   type MerchantPrivacySettings,
+  type UpdateMerchantProfileRequest,
 } from "@/services";
 import { sanitizeRedirectPath } from "@/utils/redirect";
+import { useMerchantProfile } from "@/features/merchant/hooks";
+import { merchantQueryKeys } from "@/features/merchant/queryKeys";
+import { useAuthStore } from "@/features/auth/stores";
+
+const PROFILE_KEY = merchantQueryKeys.profile();
 
 // 行业选项
 const industryOptions = [
@@ -64,6 +71,7 @@ const ProfileEditPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const updateUser = useAuthStore((state) => state.updateUser);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -76,10 +84,7 @@ const ProfileEditPage: React.FC = () => {
   const goBack = () => navigate(returnPath);
 
   // 拉真实商家资料
-  const { data: profileResp, isLoading } = useQuery({
-    queryKey: ["merchant", "profile"],
-    queryFn: () => merchantApi.getMerchantProfile(),
-  });
+  const { data: profileResp, isLoading } = useMerchantProfile();
   const profile = profileResp?.profile;
 
   // 初始化表单数据
@@ -160,7 +165,7 @@ const ProfileEditPage: React.FC = () => {
       const values = await form.validateFields();
       setLoading(true);
 
-      const payload = {
+      const payload: UpdateMerchantProfileRequest = {
         ...values,
         avatar: avatarList[0]?.url ?? null,
         email: normalizeText(values.email),
@@ -180,11 +185,46 @@ const ProfileEditPage: React.FC = () => {
         return;
       }
 
+      const savedIdentity = res.data?.user;
+      const savedName =
+        savedIdentity?.name ?? String(payload.name || "").trim();
+      const savedAvatar = savedIdentity?.avatar ?? payload.avatar ?? null;
+      const savedPhone = savedIdentity?.phone ?? payload.phone ?? null;
+      const savedOccupation =
+        savedIdentity?.occupation ?? payload.occupation ?? null;
+      const savedCompany = savedIdentity?.company ?? payload.company ?? null;
+
+      queryClient.setQueryData<MerchantProfileResponse>(
+        PROFILE_KEY,
+        (current) =>
+          current?.profile
+            ? {
+                ...current,
+                profile: {
+                  ...current.profile,
+                  ...payload,
+                  ...(savedIdentity || {}),
+                },
+              }
+            : current,
+      );
+      updateUser({
+        name: savedName,
+        avatar: savedAvatar,
+        phone: savedPhone,
+        occupation: savedOccupation,
+        company: savedCompany,
+        ...(savedIdentity?.tags ? { tags: savedIdentity.tags } : {}),
+      });
+
       Toast.show({ icon: "success", content: "资料已更新" });
-      queryClient.invalidateQueries({ queryKey: ["merchant", "profile"] });
+      void queryClient.invalidateQueries({ queryKey: PROFILE_KEY });
       queryClient.removeQueries({ queryKey: ["nfc"] });
-      if (profile?.id) {
-        queryClient.invalidateQueries({ queryKey: ["publicProfile", profile.id] });
+      const profileId = savedIdentity?.id || profile?.id;
+      if (profileId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["publicProfile", profileId],
+        });
       }
       navigate(returnPath);
     } catch (error) {

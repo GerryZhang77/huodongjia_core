@@ -557,7 +557,7 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
             </div>
             {fieldMapping.some((m) => m.targetField === "_custom") && (
               <div className="custom-fields-hint">
-                💡 未识别的字段将保存为自定义字段，商家可在详情中查看
+                💡 未识别的字段将保存为自定义字段，主办方可在详情中查看
               </div>
             )}
             <div className="preview-table-container">

@@ -69,7 +69,7 @@ export const UserAgreement: FC<UserAgreementProps> = ({ className = "" }) => {
         </p>
         <p className="text-gray-600 leading-relaxed mb-3">
           3.2
-          商家用户（活动主办方）可以通过本平台发布活动信息、管理报名、进行参与者匹配分组等。
+          活动主办方可以通过本平台发布活动信息、管理报名、进行参与者匹配分组等。
         </p>
         <p className="text-gray-600 leading-relaxed mb-3">
           3.3

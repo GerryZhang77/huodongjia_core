@@ -305,7 +305,7 @@ const FieldEditCard: React.FC<{
                     ))}
                   </select>
                   <p className="text-[11px] leading-relaxed text-blue-700 dark:text-blue-300">
-                    图片仅用于本次报名，只有本活动商家可查看，不会进入用户个人资料或公开页面。
+                    图片仅用于本次报名，只有本活动主办方可查看，不会进入用户个人资料或公开页面。
                   </p>
                 </div>
               )}

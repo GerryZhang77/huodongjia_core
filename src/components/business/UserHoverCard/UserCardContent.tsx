@@ -16,9 +16,9 @@ const GENDER_LABEL: Record<string, string> = {
 
 export const UserCardContent: FC<UserCardContentProps> = ({
   user,
-  matchScore,
   onViewProfile,
   actionsSlot,
+  detailsSlot,
   className,
 }) => {
   const getAvatarContent = () => {
@@ -46,7 +46,7 @@ export const UserCardContent: FC<UserCardContentProps> = ({
       className={clsx(
         "w-72 bg-white dark:bg-gray-800 rounded-xl shadow-lg",
         "border border-gray-100 dark:border-gray-700",
-        "overflow-hidden",
+        "max-h-[calc(100vh-1rem)] overflow-x-hidden overflow-y-auto",
         className
       )}
     >
@@ -155,6 +155,12 @@ export const UserCardContent: FC<UserCardContentProps> = ({
                 +{user.tags.length - 3}
               </span>
             )}
+          </div>
+        )}
+
+        {detailsSlot && (
+          <div className="mb-3 border-t border-gray-100 pt-3 dark:border-gray-700">
+            {detailsSlot}
           </div>
         )}
 

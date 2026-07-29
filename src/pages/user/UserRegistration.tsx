@@ -325,7 +325,7 @@ const EnrollmentImageField: FC<{
 
       <div className="flex items-start gap-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
         <ShieldCheck size={14} className="mt-0.5 flex-shrink-0 text-green-600" />
-        <span>仅本活动商家可查看，不会公开展示，也不会保存到你的个人信息或信息库。</span>
+        <span>仅本活动主办方可查看，不会公开展示，也不会保存到你的个人信息或信息库。</span>
       </div>
     </div>
   );
@@ -753,7 +753,7 @@ const UserRegistration: FC = () => {
         <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center">
           <AlertCircle size={40} className="mb-3 text-gray-300" />
           <p className="text-base font-medium text-gray-700 dark:text-gray-200">
-            主办方账号不可报名
+            主办方不能报名自己创建的活动
           </p>
           <button
             type="button"

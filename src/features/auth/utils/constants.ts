@@ -11,7 +11,7 @@ import type { AccountOption } from "../types";
  */
 export const TEST_ACCOUNTS: AccountOption[] = [
   {
-    label: "商家账号",
+    label: "主办方测试账号",
     value: "org1",
     description: "密码: 123456",
   },

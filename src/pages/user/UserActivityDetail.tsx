@@ -243,7 +243,7 @@ const UserActivityDetail: FC = () => {
     : isBusinessUser
       ? "/dashboard"
       : "/";
-  const homeLabel = isBusinessUser ? "商家后台" : "首页";
+  const homeLabel = isBusinessUser ? "主办方工作台" : "首页";
   const handleBackToHome = () => {
     navigate(homePath, { replace: true });
   };
@@ -319,7 +319,7 @@ const UserActivityDetail: FC = () => {
             variant: "primary" as const,
           }
         : {
-            btnLabel: "主办方账号不可报名",
+            btnLabel: "主办方不能报名自己创建的活动",
             disabled: true,
             variant: "light" as const,
           }

@@ -292,7 +292,7 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
             标签
           </h4>
           <TagGroup
-            title="商家标签"
+            title="自定义标签"
             tags={user.customTags}
             variant="custom"
             colorMap={customTagColorMap}

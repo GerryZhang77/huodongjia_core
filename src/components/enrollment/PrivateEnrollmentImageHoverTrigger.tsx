@@ -5,12 +5,16 @@ import {
   useState,
   type FC,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import { Image as ImageIcon } from "lucide-react";
+import { useAuthStore } from "@/features/auth/stores";
+import { prefetchEnrollmentImages } from "@/features/enrollment/hooks/useEnrollmentImages";
 import PrivateEnrollmentImageGallery from "./PrivateEnrollmentImageGallery";
 
 const SHOW_DELAY = 240;
 const HIDE_DELAY = 160;
+const PREFETCH_DELAY = 120;
 const CARD_WIDTH = 288;
 const CARD_HEIGHT_ESTIMATE = 270;
 const VIEWPORT_GAP = 8;
@@ -32,12 +36,15 @@ const PrivateEnrollmentImageHoverTrigger: FC<
   imageCount,
   onOpenFullGallery,
 }) => {
+  const queryClient = useQueryClient();
+  const sessionScope = useAuthStore((state) => state.user?.id || "anonymous");
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const showTimerRef = useRef<number | null>(null);
   const hideTimerRef = useRef<number | null>(null);
+  const prefetchTimerRef = useRef<number | null>(null);
 
   const clearShowTimer = useCallback(() => {
     if (showTimerRef.current != null) {
@@ -52,6 +59,23 @@ const PrivateEnrollmentImageHoverTrigger: FC<
       hideTimerRef.current = null;
     }
   }, []);
+
+  const clearPrefetchTimer = useCallback(() => {
+    if (prefetchTimerRef.current != null) {
+      window.clearTimeout(prefetchTimerRef.current);
+      prefetchTimerRef.current = null;
+    }
+  }, []);
+
+  const prefetchPreview = useCallback(() => {
+    void prefetchEnrollmentImages(
+      queryClient,
+      sessionScope,
+      activityId,
+      participantId,
+      { contentLimit: 4 },
+    ).catch(() => undefined);
+  }, [activityId, participantId, queryClient, sessionScope]);
 
   const calculatePosition = useCallback(() => {
     const trigger = triggerRef.current;
@@ -77,22 +101,41 @@ const PrivateEnrollmentImageHoverTrigger: FC<
     setPosition({ top, left });
   }, []);
 
-  const showPreview = useCallback(() => {
-    clearHideTimer();
-    clearShowTimer();
-    showTimerRef.current = window.setTimeout(() => {
-      calculatePosition();
-      setIsVisible(true);
-    }, SHOW_DELAY);
-  }, [calculatePosition, clearHideTimer, clearShowTimer]);
+  const showPreview = useCallback(
+    (prefetchImmediately = false) => {
+      clearHideTimer();
+      clearShowTimer();
+      clearPrefetchTimer();
+      if (prefetchImmediately) {
+        prefetchPreview();
+      } else {
+        prefetchTimerRef.current = window.setTimeout(
+          prefetchPreview,
+          PREFETCH_DELAY,
+        );
+      }
+      showTimerRef.current = window.setTimeout(() => {
+        calculatePosition();
+        setIsVisible(true);
+      }, SHOW_DELAY);
+    },
+    [
+      calculatePosition,
+      clearHideTimer,
+      clearPrefetchTimer,
+      clearShowTimer,
+      prefetchPreview,
+    ],
+  );
 
   const hidePreview = useCallback(() => {
     clearShowTimer();
     clearHideTimer();
+    clearPrefetchTimer();
     hideTimerRef.current = window.setTimeout(() => {
       setIsVisible(false);
     }, HIDE_DELAY);
-  }, [clearHideTimer, clearShowTimer]);
+  }, [clearHideTimer, clearPrefetchTimer, clearShowTimer]);
 
   const keepPreviewOpen = useCallback(() => {
     clearHideTimer();
@@ -101,16 +144,23 @@ const PrivateEnrollmentImageHoverTrigger: FC<
   const openFullGallery = useCallback(() => {
     clearShowTimer();
     clearHideTimer();
+    clearPrefetchTimer();
     setIsVisible(false);
     onOpenFullGallery();
-  }, [clearHideTimer, clearShowTimer, onOpenFullGallery]);
+  }, [
+    clearHideTimer,
+    clearPrefetchTimer,
+    clearShowTimer,
+    onOpenFullGallery,
+  ]);
 
   useEffect(
     () => () => {
       clearShowTimer();
       clearHideTimer();
+      clearPrefetchTimer();
     },
-    [clearHideTimer, clearShowTimer],
+    [clearHideTimer, clearPrefetchTimer, clearShowTimer],
   );
 
   useEffect(() => {
@@ -136,13 +186,14 @@ const PrivateEnrollmentImageHoverTrigger: FC<
           event.stopPropagation();
           openFullGallery();
         }}
-        onMouseEnter={showPreview}
+        onMouseEnter={() => showPreview(false)}
         onMouseLeave={hidePreview}
-        onFocus={showPreview}
+        onFocus={() => showPreview(true)}
         onBlur={hidePreview}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             clearShowTimer();
+            clearPrefetchTimer();
             setIsVisible(false);
           }
         }}

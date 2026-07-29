@@ -6,6 +6,7 @@
  */
 export const merchantQueryKeys = {
   root: ["merchant"] as const,
+  profile: () => ["merchant", "profile"] as const,
   activities: () => ["merchant", "activities"] as const,
   activity: (activityId: string | undefined) =>
     ["merchant", "activity", activityId] as const,
@@ -32,6 +33,8 @@ export const merchantQueryKeys = {
 };
 
 export const merchantCacheTimes = {
+  profileStale: 5 * 60 * 1000,
+  profileGc: 30 * 60 * 1000,
   activityStale: 2 * 60 * 1000,
   activityGc: 30 * 60 * 1000,
   enrollmentStale: 45 * 1000,

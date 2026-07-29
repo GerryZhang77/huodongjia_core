@@ -15,11 +15,9 @@ import {
   CalendarDays,
   UserSearch,
 } from "lucide-react";
-import { useAuthStore } from "@/features/auth/stores";
 import { useLogout } from "@/features/auth/hooks";
-import { useQuery } from "@tanstack/react-query";
 import { useMerchantNotifications } from "@/features/merchant/notifications";
-import { merchantApi } from "@/services";
+import { useMerchantIdentity } from "@/features/merchant/hooks";
 import {
   usePrefetchMerchantProfile,
   usePrefetchMerchantUserPool,
@@ -40,7 +38,7 @@ interface NavItem {
 export const MerchantDesktopSidebar: FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = useAuthStore((state) => state.user);
+  const { user, displayName, avatarUrl } = useMerchantIdentity();
   const logout = useLogout();
   const prefetchProfile = usePrefetchMerchantProfile();
   const prefetchUserPool = usePrefetchMerchantUserPool();
@@ -51,13 +49,6 @@ export const MerchantDesktopSidebar: FC = () => {
 
   const { data: notifData } = useMerchantNotifications();
   const unreadCount = notifData?.data?.unreadCount ?? 0;
-
-  const { data: profileData } = useQuery({
-    queryKey: ["merchant", "profile"],
-    queryFn: () => merchantApi.getMerchantProfile(),
-    staleTime: 5 * 60 * 1000,
-  });
-  const avatarUrl = profileData?.profile?.avatar;
 
   // 商家端导航配置 - 5项: 活动管理 | 创建活动 | 用户管理 | 消息 | 我的
   const navItems: NavItem[] = [
@@ -132,7 +123,7 @@ export const MerchantDesktopSidebar: FC = () => {
               活动家
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              商家管理后台
+              主办方工作台
             </p>
           </div>
         </button>
@@ -140,21 +131,21 @@ export const MerchantDesktopSidebar: FC = () => {
           <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 rounded-xl border border-primary-100 dark:border-primary-800">
             <div className="w-10 h-10 rounded-full overflow-hidden shadow-md flex-shrink-0">
               {avatarUrl ? (
-                <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
                   <span className="text-white font-semibold text-sm">
-                    {user.name?.charAt(0) || "商"}
+                    {displayName.charAt(0) || "主"}
                   </span>
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {user.name || "商家"}
+                {displayName}
               </p>
               <p className="text-xs text-primary-600 dark:text-primary-400 font-medium">
-                {user.user_type === "admin" ? "管理员" : "商家账号"}
+                {user.user_type === "admin" ? "平台管理员" : "活动主办方"}
               </p>
             </div>
           </div>

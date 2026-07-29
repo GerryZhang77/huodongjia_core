@@ -8,7 +8,7 @@ import {
 interface PrivateEnrollmentImageGalleryProps {
   activityId: string;
   participantId: string;
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "embedded";
   maxImages?: number;
   onOpenFullGallery?: () => void;
 }
@@ -23,10 +23,12 @@ const PrivateEnrollmentImageGallery: React.FC<
   onOpenFullGallery,
 }) => {
   const isCompact = variant === "compact";
+  const isEmbedded = variant === "embedded";
+  const isPreview = isCompact || isEmbedded;
   const { images, total, isLoading, isFetching, error } = useEnrollmentImages(
     activityId,
     participantId,
-    { contentLimit: isCompact ? (maxImages ?? 4) : undefined },
+    { contentLimit: isPreview ? (maxImages ?? 4) : undefined },
   );
   const [previewId, setPreviewId] = useState<string | null>(null);
   const preview = images.find((image) => image.id === previewId);
@@ -43,7 +45,7 @@ const PrivateEnrollmentImageGallery: React.FC<
   if (isLoading && images.length === 0) {
     return (
       <div
-        className={`${isCompact ? "" : "mb-5"} flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-500`}
+        className={`${isPreview ? "" : "mb-5"} flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-500`}
       >
         <LoaderCircle size={16} className="animate-spin" />
         正在安全加载报名图片…
@@ -55,7 +57,7 @@ const PrivateEnrollmentImageGallery: React.FC<
       ?.response?.data?.message;
     return (
       <div
-        className={`${isCompact ? "" : "mb-5"} rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600`}
+        className={`${isPreview ? "" : "mb-5"} rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600`}
       >
         {apiMessage || "报名图片加载失败"}
       </div>
@@ -63,9 +65,15 @@ const PrivateEnrollmentImageGallery: React.FC<
   }
   if (images.length === 0) return null;
 
-  if (isCompact) {
+  if (isPreview) {
     return (
-      <div className="w-72 rounded-xl border border-gray-100 bg-white p-3 shadow-xl">
+      <div
+        className={
+          isCompact
+            ? "w-72 rounded-xl border border-gray-100 bg-white p-3 shadow-xl"
+            : "w-full"
+        }
+      >
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
             <ImageIcon size={15} className="text-purple-500" />
@@ -74,7 +82,7 @@ const PrivateEnrollmentImageGallery: React.FC<
               <LoaderCircle size={12} className="animate-spin text-gray-400" />
             )}
           </div>
-          <span className="text-xs text-gray-400">仅商家可见</span>
+          <span className="text-[11px] text-gray-400">仅主办方可见</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {images.map((image, index) => (
@@ -110,13 +118,15 @@ const PrivateEnrollmentImageGallery: React.FC<
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={onOpenFullGallery}
-          className="mt-2 w-full rounded-lg py-1.5 text-xs font-medium text-primary-600 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
-        >
-          查看全部 {total} 张
-        </button>
+        {onOpenFullGallery && (
+          <button
+            type="button"
+            onClick={onOpenFullGallery}
+            className="mt-2 w-full rounded-lg py-1.5 text-xs font-medium text-primary-600 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+          >
+            查看全部 {total} 张
+          </button>
+        )}
       </div>
     );
   }
@@ -126,7 +136,9 @@ const PrivateEnrollmentImageGallery: React.FC<
       <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-900">
         <ImageIcon size={16} className="text-gray-500" />
         报名图片
-        <span className="text-xs font-normal text-gray-400">仅商家可见</span>
+        <span className="text-xs font-normal text-gray-400">
+          仅本活动主办方可见
+        </span>
         {isFetching && !isLoading && (
           <LoaderCircle size={13} className="animate-spin text-gray-400" />
         )}

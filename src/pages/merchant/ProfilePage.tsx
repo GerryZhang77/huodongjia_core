@@ -6,7 +6,7 @@
 import React, { useState, useRef } from "react";
 import {
   useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   User,
   Building,
@@ -40,10 +40,9 @@ import { Dialog,
 } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
-import {
-  merchantApi,
-  type MerchantProfileResponse,
-  type MerchantPrivacySettings,
+import type {
+  MerchantProfileResponse,
+  MerchantPrivacySettings,
 } from "@/services";
 import { useStore } from "@/store";
 import { useThemeStore } from "@/store/themeStore";
@@ -51,6 +50,10 @@ import { ThemeSelector } from "@/components/ui/ThemeSelector";
 import { useSocialStats } from "@/features/social";
 import { useImageUpload } from "@/features/uploads";
 import { useLogout } from "@/features/auth/hooks";
+import { useMerchantProfile } from "@/features/merchant/hooks";
+import { merchantQueryKeys } from "@/features/merchant/queryKeys";
+
+const PROFILE_KEY = merchantQueryKeys.profile();
 
 /**
  * 菜单项组件
@@ -141,16 +144,11 @@ const ProfilePage: React.FC = () => {
   const queryClient = useQueryClient();
 
   // 商家资料 - 与 ProfileEditPage 共享缓存键，避免编辑/返回的二次拉取
-  const PROFILE_KEY = ["merchant", "profile"] as const;
   const {
     data: profileResp,
     isLoading,
     isError,
-  } = useQuery({
-    queryKey: PROFILE_KEY,
-    queryFn: () => merchantApi.getMerchantProfile(),
-    staleTime: 5 * 60 * 1000,
-  });
+  } = useMerchantProfile();
   const profile = profileResp?.success ? profileResp.profile : null;
 
   const { data: socialStats } = useSocialStats(profile?.id);
@@ -511,7 +509,7 @@ const ProfilePage: React.FC = () => {
               <div className="flex items-center justify-between py-3 px-4">
                 <div className="flex items-center gap-3">
                   <Fingerprint size={18} className="text-gray-400 dark:text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">商家 ID</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">主办方 ID</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-400 dark:text-gray-500 font-mono truncate max-w-[160px]">{profile.id}</span>

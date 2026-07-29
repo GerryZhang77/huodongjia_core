@@ -7,8 +7,8 @@ import { FC, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Bell } from "lucide-react";
 import { BreadcrumbItem } from "./types";
-import { useAuthStore } from "@/features/auth/stores";
 import { useMerchantNotifications } from "@/features/merchant/notifications";
+import { useMerchantIdentity } from "@/features/merchant/hooks";
 
 interface MerchantTopBarProps {
   /** 页面标题 */
@@ -37,7 +37,7 @@ export const MerchantTopBar: FC<MerchantTopBarProps> = ({
   isMobile = false,
 }) => {
   const navigate = useNavigate();
-  const user = useAuthStore((state) => state.user);
+  const { displayName, avatarUrl } = useMerchantIdentity();
   const { data: notificationsData } = useMerchantNotifications();
   const unreadCount = notificationsData?.data?.unreadCount ?? 0;
 
@@ -95,12 +95,20 @@ export const MerchantTopBar: FC<MerchantTopBarProps> = ({
                 {/* 用户头像 */}
                 <button
                   onClick={() => navigate("/dashboard/profile")}
-                  className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-sm"
+                  className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary-400 to-primary-600 shadow-sm"
                   aria-label="个人中心"
                 >
-                  <span className="text-white text-sm font-medium">
-                    {user?.name?.charAt(0) || "商"}
-                  </span>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-sm font-medium text-white">
+                      {displayName.charAt(0) || "主"}
+                    </span>
+                  )}
                 </button>
               </>
             )}

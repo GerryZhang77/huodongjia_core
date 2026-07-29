@@ -1,11 +1,26 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import type {
   MatchConstraints,
   ParticipantMatchResult,
 } from "../../types";
+import { prefetchEnrollmentImages } from "@/features/enrollment/hooks/useEnrollmentImages";
 import ResultsTab from "./index";
+
+vi.mock("@/features/enrollment/hooks/useEnrollmentImages", () => ({
+  prefetchEnrollmentImages: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/components/enrollment/PrivateEnrollmentImageGallery", () => ({
+  default: ({ participantId }: { participantId: string }) => (
+    <div>报名图片预览 {participantId}</div>
+  ),
+}));
 
 const constraints: MatchConstraints = {
   countMode: "range",
@@ -28,43 +43,51 @@ const matchResults: ParticipantMatchResult[] = [
 ];
 
 const renderResults = (onRematch = vi.fn()) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   const view = render(
-    <MemoryRouter>
-      <ResultsTab
-        activityId="event-1"
-        matchResults={matchResults}
-        participants={[
-          {
-            id: "owner",
-            name: "参与者甲",
-            occupation: "产品经理",
-            city: "上海",
-          },
-          {
-            id: "candidate",
-            name: "推荐对象乙",
-            avatar: "https://example.com/candidate.png",
-            occupation: "设计师",
-            city: "北京",
-          },
-        ]}
-        registrationSchemaGroups={[]}
-        eligibleParticipantCount={2}
-        rules={[]}
-        isPublishing={false}
-        onPublish={vi.fn()}
-        onRematch={onRematch}
-        isRematching={false}
-        constraints={constraints}
-        onResultsChanged={vi.fn()}
-      />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <ResultsTab
+          activityId="event-1"
+          matchResults={matchResults}
+          participants={[
+            {
+              id: "owner",
+              name: "参与者甲",
+              occupation: "产品经理",
+              city: "上海",
+            },
+            {
+              id: "candidate",
+              enrollmentId: "candidate-enrollment",
+              imageCount: 3,
+              name: "推荐对象乙",
+              avatar: "https://example.com/candidate.png",
+              occupation: "设计师",
+              city: "北京",
+            },
+          ]}
+          registrationSchemaGroups={[]}
+          eligibleParticipantCount={2}
+          rules={[]}
+          isPublishing={false}
+          onPublish={vi.fn()}
+          onRematch={onRematch}
+          isRematching={false}
+          constraints={constraints}
+          onResultsChanged={vi.fn()}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
   return { ...view, onRematch };
 };
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.mocked(prefetchEnrollmentImages).mockClear();
 });
 
 describe("ResultsTab interactions", () => {
@@ -84,15 +107,18 @@ describe("ResultsTab interactions", () => {
     ).not.toBeNull();
   });
 
-  it("keeps recommendation cards concise while exposing the profile action on hover", () => {
+  it("keeps recommendation cards concise while exposing profile and enrollment images on hover", () => {
     vi.useFakeTimers();
     renderResults();
 
     expect(screen.getByAltText("推荐对象乙")).not.toBeNull();
     expect(screen.getByText("设计师 · 北京")).not.toBeNull();
+    expect(screen.getByLabelText("3 张报名图片")).not.toBeNull();
 
     fireEvent.mouseEnter(
-      screen.getByRole("button", { name: "查看推荐对象乙的资料" }),
+      screen.getByRole("button", {
+        name: "查看推荐对象乙的资料和 3 张报名图片",
+      }),
     );
     act(() => {
       vi.advanceTimersByTime(300);
@@ -101,6 +127,39 @@ describe("ResultsTab interactions", () => {
     expect(
       screen.getByRole("button", { name: "查看个人主页" }),
     ).not.toBeNull();
+    expect(
+      screen.getByText("报名图片预览 candidate-enrollment"),
+    ).not.toBeNull();
+    expect(prefetchEnrollmentImages).toHaveBeenCalledTimes(1);
+    expect(prefetchEnrollmentImages).toHaveBeenCalledWith(
+      expect.any(QueryClient),
+      "anonymous",
+      "event-1",
+      "candidate-enrollment",
+      { contentLimit: 4 },
+    );
+  });
+
+  it("does not prefetch images when the pointer only passes over an item", () => {
+    vi.useFakeTimers();
+    renderResults();
+
+    const item = screen.getByRole("button", {
+      name: "查看推荐对象乙的资料和 3 张报名图片",
+    });
+    fireEvent.mouseEnter(item);
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    fireEvent.mouseLeave(item);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(prefetchEnrollmentImages).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("dialog", { name: "推荐对象乙的用户资料" }),
+    ).toBeNull();
   });
 
   it("uses concise sorting labels without the redundant filter toolbar", () => {

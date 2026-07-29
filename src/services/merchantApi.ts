@@ -92,6 +92,25 @@ export interface UpdateMerchantProfileRequest {
   privacy_settings?: MerchantPrivacySettings;
 }
 
+export interface UpdatedMerchantIdentity {
+  id: string;
+  name: string;
+  avatar: string | null;
+  phone: string | null;
+  occupation: string | null;
+  company: string | null;
+  tags: string[];
+}
+
+export interface UpdateMerchantProfileResponse {
+  success: boolean;
+  message: string;
+  /** 新版后端返回真实落库值；旧版后端缺省时前端会用提交值即时同步。 */
+  data?: {
+    user?: UpdatedMerchantIdentity;
+  };
+}
+
 // ========================================
 // API 函数
 // ========================================
@@ -108,8 +127,8 @@ export async function getMerchantProfile(): Promise<MerchantProfileResponse> {
  */
 export async function updateMerchantProfile(
   data: UpdateMerchantProfileRequest
-): Promise<{ success: boolean; message: string }> {
-  return api.put<{ success: boolean; message: string }>(
+): Promise<UpdateMerchantProfileResponse> {
+  return api.put<UpdateMerchantProfileResponse>(
     "/api/merchant/profile",
     data
   );

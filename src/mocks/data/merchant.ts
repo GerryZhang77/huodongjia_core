@@ -258,7 +258,7 @@ export const mockMerchantNotifications: MerchantNotification[] = [
     id: "mn_004",
     type: "system",
     title: "系统通知",
-    content: "您的商家认证已通过，现在可以使用全部功能。",
+    content: "您的主办方认证已通过，现在可以使用全部功能。",
     isRead: true,
     createdAt: "2025-01-10T09:00:00Z",
   },

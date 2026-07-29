@@ -1,4 +1,9 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import {
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PrivateEnrollmentImageHoverTrigger from "./PrivateEnrollmentImageHoverTrigger";
 
@@ -12,10 +17,19 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const renderTrigger = (ui: ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+};
+
 describe("PrivateEnrollmentImageHoverTrigger", () => {
   it("shows the protected image preview after hovering", () => {
     vi.useFakeTimers();
-    render(
+    renderTrigger(
       <PrivateEnrollmentImageHoverTrigger
         activityId="event-1"
         participantId="participant-1"
@@ -40,7 +54,7 @@ describe("PrivateEnrollmentImageHoverTrigger", () => {
 
   it("opens the full gallery on click", () => {
     const onOpenFullGallery = vi.fn();
-    render(
+    renderTrigger(
       <PrivateEnrollmentImageHoverTrigger
         activityId="event-1"
         participantId="participant-1"

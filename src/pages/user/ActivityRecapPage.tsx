@@ -107,7 +107,7 @@ const ActivityRecapPage: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-2xl py-16 px-4 text-center border border-gray-100 dark:border-gray-700">
               <Images size={36} className="text-gray-300 mx-auto mb-2" />
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {isOrganizer ? "你还没有发布活动回顾" : "商家暂未发布活动回顾"}
+                {isOrganizer ? "你还没有发布活动回顾" : "主办方暂未发布活动回顾"}
               </p>
               {isOrganizer && eventId && (
                 <Button

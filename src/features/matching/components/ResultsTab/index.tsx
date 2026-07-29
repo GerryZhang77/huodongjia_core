@@ -5,8 +5,9 @@
  * 这里按参与者维度展示：左侧为本人信息，右侧并排显示其 top5 候选，支持展开查看详细排序
  */
 
-import React, { useState, useMemo } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Send,
   Info,
@@ -21,6 +22,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
@@ -37,6 +39,8 @@ import { HistoryDetailDialog } from "../HistoryDetailDialog";
 import ManualMatchEditor from "../ManualMatchEditor";
 import PrivateEnrollmentImageGallery from "@/components/enrollment/PrivateEnrollmentImageGallery";
 import PrivateEnrollmentImageHoverTrigger from "@/components/enrollment/PrivateEnrollmentImageHoverTrigger";
+import { prefetchEnrollmentImages } from "@/features/enrollment/hooks/useEnrollmentImages";
+import { useAuthStore } from "@/features/auth/stores";
 import type {
   MatchConstraints,
   MatchingSchemaGroup,
@@ -53,6 +57,7 @@ import {
   sortParticipantResultRows,
 } from "./resultViewModel";
 import type {
+  CandidateMatchView,
   ParticipantResultSort,
   ResultParticipant,
 } from "./resultViewModel";
@@ -182,6 +187,161 @@ const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }>
 
 const LOW_MATCH_THRESHOLD = 40;
 const PAGE_SIZE = 15;
+
+interface RecommendationParticipantItemProps {
+  activityId: string;
+  match: CandidateMatchView;
+  variant: "compact" | "expanded";
+  onViewProfile: (userId: string) => void;
+  onOpenFullGallery: (participant: Participant) => void;
+}
+
+const RecommendationParticipantItem = memo(
+  ({
+    activityId,
+    match,
+    variant,
+    onViewProfile,
+    onOpenFullGallery,
+  }: RecommendationParticipantItemProps) => {
+    const queryClient = useQueryClient();
+    const sessionScope = useAuthStore(
+      (state) => state.user?.id || "anonymous",
+    );
+    const candidate = match.candidate;
+    const participantName =
+      candidate?.name || match.candidateId.slice(0, 8);
+    const imageCount = Math.max(0, Number(candidate?.imageCount) || 0);
+    const enrollmentId = candidate?.enrollmentId;
+    const canPreviewImages = Boolean(imageCount && enrollmentId);
+
+    const handlePrefetch = useCallback(() => {
+      if (!enrollmentId || !canPreviewImages) return;
+      return prefetchEnrollmentImages(
+        queryClient,
+        sessionScope,
+        activityId,
+        enrollmentId,
+        { contentLimit: 4 },
+      );
+    }, [
+      activityId,
+      canPreviewImages,
+      enrollmentId,
+      queryClient,
+      sessionScope,
+    ]);
+
+    const handleOpenFullGallery = useCallback(() => {
+      if (candidate) onOpenFullGallery(candidate);
+    }, [candidate, onOpenFullGallery]);
+
+    const detailsSlot =
+      canPreviewImages && enrollmentId ? (
+        <PrivateEnrollmentImageGallery
+          activityId={activityId}
+          participantId={enrollmentId}
+          variant="embedded"
+          maxImages={4}
+          onOpenFullGallery={handleOpenFullGallery}
+        />
+      ) : undefined;
+
+    const imageCountBadge = canPreviewImages ? (
+      <span
+        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-600"
+        title={`${imageCount} 张报名图片`}
+        aria-label={`${imageCount} 张报名图片`}
+      >
+        <ImageIcon size={11} aria-hidden="true" />
+        {imageCount}
+      </span>
+    ) : null;
+
+    return (
+      <UserHoverCard
+        user={toUserBrief(candidate, match.candidateId)}
+        placement="bottom"
+        focusable
+        onViewProfile={onViewProfile}
+        onPrefetch={canPreviewImages ? handlePrefetch : undefined}
+        detailsSlot={detailsSlot}
+        triggerAriaLabel={
+          canPreviewImages
+            ? `查看${participantName}的资料和 ${imageCount} 张报名图片`
+            : `查看${participantName}的资料`
+        }
+        className="group w-full rounded-xl focus:outline-none"
+      >
+        {variant === "compact" ? (
+          <div className="flex min-h-16 min-w-0 items-center gap-2 rounded-xl border border-transparent bg-gray-50 px-2.5 py-2 transition-colors group-hover:border-primary-200 group-hover:bg-primary-50 group-focus-visible:border-primary-300 group-focus-visible:bg-primary-50 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-primary-600 shadow-sm">
+              {match.rank}
+            </span>
+            <Avatar participant={candidate} size="sm" />
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="truncate text-xs font-semibold text-gray-800">
+                  {participantName}
+                </p>
+                {match.reciprocalRank != null && (
+                  <span
+                    className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                    title={`双方互荐 · 对方第 ${match.reciprocalRank} 位`}
+                  >
+                    互荐
+                  </span>
+                )}
+              </div>
+              {getParticipantMeta(candidate) && (
+                <p
+                  className="mt-0.5 truncate text-[11px] text-gray-500"
+                  title={getParticipantMeta(candidate)}
+                >
+                  {getParticipantMeta(candidate)}
+                </p>
+              )}
+            </div>
+            {imageCountBadge}
+          </div>
+        ) : (
+          <article className="flex h-[76px] min-w-0 items-center gap-2.5 rounded-xl border border-primary-100 bg-white px-3 py-2.5 shadow-sm transition-all group-hover:-translate-y-0.5 group-hover:border-primary-300 group-hover:shadow-md group-focus-visible:border-primary-400 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-50 text-[11px] font-semibold text-primary-700">
+              {match.rank}
+            </span>
+            <Avatar participant={candidate} size="sm" />
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <p className="truncate text-sm font-semibold text-gray-900">
+                  {participantName}
+                </p>
+                {match.reciprocalRank != null && (
+                  <span
+                    className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                    title={`双方互荐 · 对方第 ${match.reciprocalRank} 位`}
+                  >
+                    双方
+                  </span>
+                )}
+              </div>
+              {getParticipantMeta(candidate) && (
+                <p
+                  className="mt-0.5 truncate text-xs text-gray-500"
+                  title={getParticipantMeta(candidate)}
+                >
+                  {getParticipantMeta(candidate)}
+                </p>
+              )}
+            </div>
+            {imageCountBadge}
+          </article>
+        )}
+      </UserHoverCard>
+    );
+  },
+);
+
+RecommendationParticipantItem.displayName = "RecommendationParticipantItem";
 
 const getParticipantSearchText = (participant?: Participant): string =>
   [
@@ -332,13 +492,21 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   };
 
   // 跳转到用户主页：同标签跳，保证返回按钮可用
-  const handleViewProfile = (userId: string) => {
-    if (!userId) return;
-    const fallbackName = participantMap.get(userId)?.name;
-    const qs = new URLSearchParams();
-    if (fallbackName) qs.set("fallbackName", fallbackName);
-    navigate(`/u/profile/${userId}${qs.toString() ? `?${qs}` : ""}`);
-  };
+  const handleViewProfile = useCallback(
+    (userId: string) => {
+      if (!userId) return;
+      const fallbackName = participantMap.get(userId)?.name;
+      const qs = new URLSearchParams();
+      if (fallbackName) qs.set("fallbackName", fallbackName);
+      navigate(`/u/profile/${userId}${qs.toString() ? `?${qs}` : ""}`);
+    },
+    [navigate, participantMap],
+  );
+
+  const handleOpenEnrollmentImages = useCallback(
+    (participant: Participant) => setImageViewer(participant),
+    [],
+  );
 
   // 发布
   const handlePublishClick = async (
@@ -741,7 +909,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                             participantId={row.owner.enrollmentId}
                             participantName={row.owner.name}
                             imageCount={row.owner.imageCount}
-                            onOpenFullGallery={() => setImageViewer(row.owner!)}
+                            onOpenFullGallery={() =>
+                              handleOpenEnrollmentImages(row.owner!)
+                            }
                           />
                         </div>
                       )}
@@ -755,54 +925,16 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                         {row.matches.length > 0 ? (
                           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                             {previewMatches.map((match) => (
-                              <UserHoverCard
+                              <RecommendationParticipantItem
                                 key={match.id}
-                                user={toUserBrief(
-                                  match.candidate,
-                                  match.candidateId,
-                                )}
-                                placement="bottom"
-                                focusable
+                                activityId={activityId}
+                                match={match}
+                                variant="compact"
                                 onViewProfile={handleViewProfile}
-                                triggerAriaLabel={`查看${
-                                  match.candidate?.name || "推荐对象"
-                                }的资料`}
-                                className="group w-full rounded-xl focus:outline-none"
-                              >
-                                <div className="flex min-h-16 min-w-0 items-center gap-2 rounded-xl border border-transparent bg-gray-50 px-2.5 py-2 transition-colors group-hover:border-primary-200 group-hover:bg-primary-50 group-focus-visible:border-primary-300 group-focus-visible:bg-primary-50 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
-                                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-primary-600 shadow-sm">
-                                    {match.rank}
-                                  </span>
-                                  <Avatar
-                                    participant={match.candidate}
-                                    size="sm"
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex min-w-0 items-center gap-1.5">
-                                      <p className="truncate text-xs font-semibold text-gray-800">
-                                        {match.candidate?.name ||
-                                          match.candidateId.slice(0, 8)}
-                                      </p>
-                                      {match.reciprocalRank != null && (
-                                        <span
-                                          className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
-                                          title={`双方互荐 · 对方第 ${match.reciprocalRank} 位`}
-                                        >
-                                          互荐
-                                        </span>
-                                      )}
-                                    </div>
-                                    {getParticipantMeta(match.candidate) && (
-                                      <p
-                                        className="mt-0.5 truncate text-[11px] text-gray-500"
-                                        title={getParticipantMeta(match.candidate)}
-                                      >
-                                        {getParticipantMeta(match.candidate)}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </UserHoverCard>
+                                onOpenFullGallery={
+                                  handleOpenEnrollmentImages
+                                }
+                              />
                             ))}
                           </div>
                         ) : (
@@ -890,51 +1022,16 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                       {row.matches.length > 0 ? (
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                           {row.matches.map((match) => (
-                            <UserHoverCard
+                            <RecommendationParticipantItem
                               key={match.id}
-                              user={toUserBrief(
-                                match.candidate,
-                                match.candidateId,
-                              )}
-                              placement="bottom"
-                              focusable
+                              activityId={activityId}
+                              match={match}
+                              variant="expanded"
                               onViewProfile={handleViewProfile}
-                              triggerAriaLabel={`查看${
-                                match.candidate?.name || "推荐对象"
-                              }的资料`}
-                              className="group w-full rounded-xl focus:outline-none"
-                            >
-                              <article className="flex h-[76px] min-w-0 items-center gap-2.5 rounded-xl border border-primary-100 bg-white px-3 py-2.5 shadow-sm transition-all group-hover:-translate-y-0.5 group-hover:border-primary-300 group-hover:shadow-md group-focus-visible:border-primary-400 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
-                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-50 text-[11px] font-semibold text-primary-700">
-                                  {match.rank}
-                                </span>
-                                <Avatar participant={match.candidate} size="sm" />
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex min-w-0 items-center gap-1.5">
-                                    <p className="truncate text-sm font-semibold text-gray-900">
-                                      {match.candidate?.name ||
-                                        match.candidateId.slice(0, 8)}
-                                    </p>
-                                    {match.reciprocalRank != null && (
-                                      <span
-                                        className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
-                                        title={`双方互荐 · 对方第 ${match.reciprocalRank} 位`}
-                                      >
-                                        双方
-                                      </span>
-                                    )}
-                                  </div>
-                                  {getParticipantMeta(match.candidate) && (
-                                    <p
-                                      className="mt-0.5 truncate text-xs text-gray-500"
-                                      title={getParticipantMeta(match.candidate)}
-                                    >
-                                      {getParticipantMeta(match.candidate)}
-                                    </p>
-                                  )}
-                                </div>
-                              </article>
-                            </UserHoverCard>
+                              onOpenFullGallery={
+                                handleOpenEnrollmentImages
+                              }
+                            />
                           ))}
                         </div>
                       ) : (
@@ -1117,12 +1214,12 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         )}
 
       {imageViewer?.enrollmentId && (
-        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/45 p-4" onClick={() => setImageViewer(null)}>
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/45 p-4" onClick={() => setImageViewer(null)}>
           <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5" onClick={(event) => event.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900">{imageViewer.name} 的报名图片</h3>
-                <p className="mt-1 text-xs text-gray-500">仅本活动商家可见</p>
+                <p className="mt-1 text-xs text-gray-500">仅本活动主办方可见</p>
               </div>
               <button type="button" onClick={() => setImageViewer(null)} className="rounded-full p-2 text-gray-500 hover:bg-gray-100"><X size={18} /></button>
             </div>

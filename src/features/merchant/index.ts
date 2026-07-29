@@ -17,3 +17,6 @@ export * from "./user-pool";
 
 // Notifications - 商家通知
 export * from "./notifications";
+
+// Profile - 主办方资料与导航身份
+export * from "./hooks";

@@ -126,6 +126,7 @@ export async function prefetchEnrollmentImages(
   sessionScope: string,
   activityId: string,
   participantId: string,
+  options: { contentLimit?: number } = {},
 ) {
   if (!sessionScope || sessionScope === "anonymous") return;
   const metadata = await queryClient.ensureQueryData({
@@ -134,8 +135,12 @@ export async function prefetchEnrollmentImages(
     staleTime: IMAGE_STALE_TIME,
     gcTime: IMAGE_GC_TIME,
   });
+  const contentMetadata =
+    typeof options.contentLimit === "number"
+      ? metadata.slice(0, Math.max(0, options.contentLimit))
+      : metadata;
   await Promise.all(
-    metadata.map((asset) =>
+    contentMetadata.map((asset) =>
       queryClient.prefetchQuery({
         queryKey: enrollmentImageKeys.content(
           sessionScope,
@@ -146,6 +151,7 @@ export async function prefetchEnrollmentImages(
         queryFn: () => getEnrollmentImageBlob(activityId, participantId, asset.id),
         staleTime: IMAGE_STALE_TIME,
         gcTime: IMAGE_GC_TIME,
+        retry: 1,
       }),
     ),
   );

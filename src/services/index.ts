@@ -85,6 +85,8 @@ export type {
   MerchantProfile,
   MerchantProfileResponse,
   UpdateMerchantProfileRequest,
+  UpdateMerchantProfileResponse,
+  UpdatedMerchantIdentity,
   MerchantPrivacySettings,
   MerchantStats,
 } from "./merchantApi";
