@@ -38,7 +38,6 @@ import { MatchingHistoryPanel } from "../MatchingHistoryPanel";
 import { HistoryDetailDialog } from "../HistoryDetailDialog";
 import ManualMatchEditor from "../ManualMatchEditor";
 import PrivateEnrollmentImageGallery from "@/components/enrollment/PrivateEnrollmentImageGallery";
-import PrivateEnrollmentImageHoverTrigger from "@/components/enrollment/PrivateEnrollmentImageHoverTrigger";
 import { prefetchEnrollmentImages } from "@/features/enrollment/hooks/useEnrollmentImages";
 import { useAuthStore } from "@/features/auth/stores";
 import type {
@@ -188,6 +187,108 @@ const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }>
 const LOW_MATCH_THRESHOLD = 40;
 const PAGE_SIZE = 15;
 
+const getEnrollmentImageCount = (participant?: Participant): number =>
+  Math.max(0, Number(participant?.imageCount) || 0);
+
+const EnrollmentImageCountBadge: React.FC<{ participant?: Participant }> = ({
+  participant,
+}) => {
+  const imageCount = getEnrollmentImageCount(participant);
+  if (!imageCount || !participant?.enrollmentId) return null;
+
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-600"
+      title={`${imageCount} 张报名图片`}
+      aria-label={`${imageCount} 张报名图片`}
+    >
+      <ImageIcon size={11} aria-hidden="true" />
+      {imageCount}
+    </span>
+  );
+};
+
+interface ParticipantHoverPreviewProps {
+  activityId: string;
+  participant?: Participant;
+  fallbackId: string;
+  children: React.ReactNode;
+  className?: string;
+  onViewProfile: (userId: string) => void;
+  onOpenFullGallery: (participant: Participant) => void;
+}
+
+const ParticipantHoverPreview: React.FC<ParticipantHoverPreviewProps> = ({
+  activityId,
+  participant,
+  fallbackId,
+  children,
+  className,
+  onViewProfile,
+  onOpenFullGallery,
+}) => {
+  const queryClient = useQueryClient();
+  const sessionScope = useAuthStore(
+    (state) => state.user?.id || "anonymous",
+  );
+  const participantName =
+    participant?.name || fallbackId.slice(0, 8) || "未知用户";
+  const imageCount = getEnrollmentImageCount(participant);
+  const enrollmentId = participant?.enrollmentId;
+  const canPreviewImages = Boolean(imageCount && enrollmentId);
+
+  const handlePrefetch = useCallback(() => {
+    if (!enrollmentId || !canPreviewImages) return;
+    return prefetchEnrollmentImages(
+      queryClient,
+      sessionScope,
+      activityId,
+      enrollmentId,
+      { contentLimit: 4 },
+    );
+  }, [
+    activityId,
+    canPreviewImages,
+    enrollmentId,
+    queryClient,
+    sessionScope,
+  ]);
+
+  const handleOpenFullGallery = useCallback(() => {
+    if (participant) onOpenFullGallery(participant);
+  }, [onOpenFullGallery, participant]);
+
+  const detailsSlot =
+    canPreviewImages && enrollmentId ? (
+      <PrivateEnrollmentImageGallery
+        activityId={activityId}
+        participantId={enrollmentId}
+        variant="embedded"
+        maxImages={4}
+        onOpenFullGallery={handleOpenFullGallery}
+      />
+    ) : undefined;
+
+  return (
+    <UserHoverCard
+      user={toUserBrief(participant, fallbackId)}
+      placement="bottom"
+      focusable
+      onViewProfile={onViewProfile}
+      onPrefetch={canPreviewImages ? handlePrefetch : undefined}
+      detailsSlot={detailsSlot}
+      triggerAriaLabel={
+        canPreviewImages
+          ? `查看${participantName}的资料和 ${imageCount} 张报名图片`
+          : `查看${participantName}的资料`
+      }
+      className={className}
+    >
+      {children}
+    </UserHoverCard>
+  );
+};
+
 interface RecommendationParticipantItemProps {
   activityId: string;
   match: CandidateMatchView;
@@ -204,73 +305,17 @@ const RecommendationParticipantItem = memo(
     onViewProfile,
     onOpenFullGallery,
   }: RecommendationParticipantItemProps) => {
-    const queryClient = useQueryClient();
-    const sessionScope = useAuthStore(
-      (state) => state.user?.id || "anonymous",
-    );
     const candidate = match.candidate;
     const participantName =
       candidate?.name || match.candidateId.slice(0, 8);
-    const imageCount = Math.max(0, Number(candidate?.imageCount) || 0);
-    const enrollmentId = candidate?.enrollmentId;
-    const canPreviewImages = Boolean(imageCount && enrollmentId);
-
-    const handlePrefetch = useCallback(() => {
-      if (!enrollmentId || !canPreviewImages) return;
-      return prefetchEnrollmentImages(
-        queryClient,
-        sessionScope,
-        activityId,
-        enrollmentId,
-        { contentLimit: 4 },
-      );
-    }, [
-      activityId,
-      canPreviewImages,
-      enrollmentId,
-      queryClient,
-      sessionScope,
-    ]);
-
-    const handleOpenFullGallery = useCallback(() => {
-      if (candidate) onOpenFullGallery(candidate);
-    }, [candidate, onOpenFullGallery]);
-
-    const detailsSlot =
-      canPreviewImages && enrollmentId ? (
-        <PrivateEnrollmentImageGallery
-          activityId={activityId}
-          participantId={enrollmentId}
-          variant="embedded"
-          maxImages={4}
-          onOpenFullGallery={handleOpenFullGallery}
-        />
-      ) : undefined;
-
-    const imageCountBadge = canPreviewImages ? (
-      <span
-        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-600"
-        title={`${imageCount} 张报名图片`}
-        aria-label={`${imageCount} 张报名图片`}
-      >
-        <ImageIcon size={11} aria-hidden="true" />
-        {imageCount}
-      </span>
-    ) : null;
 
     return (
-      <UserHoverCard
-        user={toUserBrief(candidate, match.candidateId)}
-        placement="bottom"
-        focusable
+      <ParticipantHoverPreview
+        activityId={activityId}
+        participant={candidate}
+        fallbackId={match.candidateId}
         onViewProfile={onViewProfile}
-        onPrefetch={canPreviewImages ? handlePrefetch : undefined}
-        detailsSlot={detailsSlot}
-        triggerAriaLabel={
-          canPreviewImages
-            ? `查看${participantName}的资料和 ${imageCount} 张报名图片`
-            : `查看${participantName}的资料`
-        }
+        onOpenFullGallery={onOpenFullGallery}
         className="group w-full rounded-xl focus:outline-none"
       >
         {variant === "compact" ? (
@@ -302,7 +347,7 @@ const RecommendationParticipantItem = memo(
                 </p>
               )}
             </div>
-            {imageCountBadge}
+            <EnrollmentImageCountBadge participant={candidate} />
           </div>
         ) : (
           <article className="flex h-[76px] min-w-0 items-center gap-2.5 rounded-xl border border-primary-100 bg-white px-3 py-2.5 shadow-sm transition-all group-hover:-translate-y-0.5 group-hover:border-primary-300 group-hover:shadow-md group-focus-visible:border-primary-400 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
@@ -333,10 +378,10 @@ const RecommendationParticipantItem = memo(
                 </p>
               )}
             </div>
-            {imageCountBadge}
+            <EnrollmentImageCountBadge participant={candidate} />
           </article>
         )}
-      </UserHoverCard>
+      </ParticipantHoverPreview>
     );
   },
 );
@@ -853,26 +898,20 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                       <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-gray-400 lg:hidden">
                         参与者
                       </p>
-                      <UserHoverCard
-                        user={toUserBrief(row.owner)}
+                      <ParticipantHoverPreview
+                        activityId={activityId}
+                        participant={row.owner}
+                        fallbackId={row.ownerId}
                         onViewProfile={handleViewProfile}
-                        placement="bottom"
-                        focusWithin
-                        className="w-full"
+                        onOpenFullGallery={handleOpenEnrollmentImages}
+                        className="group w-full rounded-xl focus:outline-none"
                       >
-                        <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex min-h-16 min-w-0 items-center gap-3 rounded-xl border border-transparent px-2.5 py-2 transition-colors group-hover:border-primary-200 group-hover:bg-primary-50 group-focus-visible:border-primary-300 group-focus-visible:bg-primary-50 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
                           <Avatar participant={row.owner} size="md" />
-                          <div className="min-w-0">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleViewProfile(row.ownerId);
-                              }}
-                              className="block max-w-full truncate text-left text-sm font-semibold text-gray-900 hover:text-primary-600"
-                            >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-gray-900">
                               {row.owner?.name || row.ownerId.slice(0, 8)}
-                            </button>
+                            </p>
                             {getParticipantMeta(row.owner) && (
                               <p className="mt-0.5 truncate text-xs text-gray-500">
                                 {getParticipantMeta(row.owner)}
@@ -900,21 +939,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                               </div>
                             )}
                           </div>
+                          <EnrollmentImageCountBadge participant={row.owner} />
                         </div>
-                      </UserHoverCard>
-                      {!!row.owner?.imageCount && row.owner.enrollmentId && (
-                        <div className="mt-1 pl-[52px]">
-                          <PrivateEnrollmentImageHoverTrigger
-                            activityId={activityId}
-                            participantId={row.owner.enrollmentId}
-                            participantName={row.owner.name}
-                            imageCount={row.owner.imageCount}
-                            onOpenFullGallery={() =>
-                              handleOpenEnrollmentImages(row.owner!)
-                            }
-                          />
-                        </div>
-                      )}
+                      </ParticipantHoverPreview>
                     </div>
 
                     {!expanded && (

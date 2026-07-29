@@ -55,6 +55,8 @@ const renderResults = (onRematch = vi.fn()) => {
           participants={[
             {
               id: "owner",
+              enrollmentId: "owner-enrollment",
+              imageCount: 2,
               name: "参与者甲",
               occupation: "产品经理",
               city: "上海",
@@ -91,12 +93,21 @@ afterEach(() => {
 });
 
 describe("ResultsTab interactions", () => {
-  it("shows the user card when hovering the participant information area", () => {
+  it("uses the whole participant item to preview profile and enrollment images", () => {
     vi.useFakeTimers();
     renderResults();
 
+    expect(screen.getByLabelText("2 张报名图片")).not.toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "查看参与者甲的 2 张报名图片",
+      }),
+    ).toBeNull();
+
     fireEvent.mouseEnter(
-      screen.getByRole("button", { name: "参与者甲" }),
+      screen.getByRole("button", {
+        name: "查看参与者甲的资料和 2 张报名图片",
+      }),
     );
     act(() => {
       vi.advanceTimersByTime(300);
@@ -105,6 +116,17 @@ describe("ResultsTab interactions", () => {
     expect(
       screen.getByRole("dialog", { name: "参与者甲的用户资料" }),
     ).not.toBeNull();
+    expect(
+      screen.getByText("报名图片预览 owner-enrollment"),
+    ).not.toBeNull();
+    expect(prefetchEnrollmentImages).toHaveBeenCalledTimes(1);
+    expect(prefetchEnrollmentImages).toHaveBeenCalledWith(
+      expect.any(QueryClient),
+      "anonymous",
+      "event-1",
+      "owner-enrollment",
+      { contentLimit: 4 },
+    );
   });
 
   it("keeps recommendation cards concise while exposing profile and enrollment images on hover", () => {
