@@ -459,11 +459,7 @@ function App() {
                 {/* 活动报名页 */}
                 <Route
                   path="/u/activities/:id/register"
-                  element={
-                    <ProtectedRoute requiredRole="user">
-                      <UserRegistration />
-                    </ProtectedRoute>
-                  }
+                  element={<UserRegistration />}
                 />
 
                 {/* 匹配结果页 */}

@@ -32,6 +32,21 @@ type ParticipantBrief = {
   registrationTypeName?: string;
 };
 
+const getCandidateLoadErrorMessage = (error: unknown): string => {
+  const apiError = error as {
+    code?: string;
+    message?: string;
+    response?: { data?: { message?: string } };
+  };
+  if (apiError.response?.data?.message) {
+    return apiError.response.data.message;
+  }
+  if (apiError.code === "ECONNABORTED") {
+    return "候选人加载超时，请重试";
+  }
+  return "候选人加载失败，请检查网络后重试";
+};
+
 const ManualMatchEditor: React.FC<{
   open: boolean;
   activityId: string;
@@ -59,6 +74,10 @@ const ManualMatchEditor: React.FC<{
   const [maxAge, setMaxAge] = useState("");
   const [registrationTypeId, setRegistrationTypeId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [candidateLoadError, setCandidateLoadError] = useState<string | null>(
+    null,
+  );
+  const [candidateReloadKey, setCandidateReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [locking, setLocking] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -95,8 +114,10 @@ const ManualMatchEditor: React.FC<{
   useEffect(() => {
     if (!open) return;
     let active = true;
+    const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setLoading(true);
+      setCandidateLoadError(null);
       void searchMatchCandidates(activityId, source.id, {
         q: query,
         gender,
@@ -104,6 +125,8 @@ const ManualMatchEditor: React.FC<{
         maxAge: maxAge ? Number(maxAge) : undefined,
         registrationTypeId,
         pageSize: 100,
+      }, {
+        signal: controller.signal,
       })
         .then((result) => {
           if (active) {
@@ -113,7 +136,10 @@ const ManualMatchEditor: React.FC<{
           }
         })
         .catch((error) => {
-          if (active) Toast.show({ icon: "fail", content: error.message || "搜索候选人失败" });
+          if (active && !controller.signal.aborted) {
+            setCandidates([]);
+            setCandidateLoadError(getCandidateLoadErrorMessage(error));
+          }
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -121,9 +147,20 @@ const ManualMatchEditor: React.FC<{
     }, 250);
     return () => {
       active = false;
+      controller.abort();
       window.clearTimeout(timer);
     };
-  }, [activityId, gender, maxAge, minAge, open, query, registrationTypeId, source.id]);
+  }, [
+    activityId,
+    candidateReloadKey,
+    gender,
+    maxAge,
+    minAge,
+    open,
+    query,
+    registrationTypeId,
+    source.id,
+  ]);
 
   useEffect(() => {
     if (!open || candidates.length === 0) return;
@@ -354,7 +391,18 @@ const ManualMatchEditor: React.FC<{
 
             <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
               {loading ? (
-                <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500"><LoaderCircle size={17} className="animate-spin" />搜索中</div>
+                <div aria-live="polite" className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500"><LoaderCircle size={17} className="animate-spin" />搜索中</div>
+              ) : candidateLoadError ? (
+                <div role="alert" className="rounded-xl border border-red-100 bg-red-50 px-4 py-6 text-center">
+                  <p className="text-sm text-red-600">{candidateLoadError}</p>
+                  <button
+                    type="button"
+                    onClick={() => setCandidateReloadKey((key) => key + 1)}
+                    className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700"
+                  >
+                    重新加载
+                  </button>
+                </div>
               ) : candidates.length === 0 ? (
                 <div className="py-8 text-center text-sm text-gray-400">没有符合筛选条件的报名人员</div>
               ) : candidates.map((candidate) => {

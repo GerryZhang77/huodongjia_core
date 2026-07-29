@@ -18,6 +18,7 @@ import type {
   MatchResultState,
   MatchingHistory,
 } from "../types";
+import { api } from "@/services/api";
 
 // 兼容别名
 type MatchRule = MatchingRule;
@@ -721,6 +722,7 @@ export const searchMatchCandidates = async (
     page?: number;
     pageSize?: number;
   } = {},
+  options: { signal?: AbortSignal } = {},
 ): Promise<{
   candidates: MatchCandidate[];
   total: number;
@@ -728,16 +730,23 @@ export const searchMatchCandidates = async (
   isLocked: boolean;
   config?: MatchConstraints;
 }> => {
-  const token = getToken();
-  const params = new URLSearchParams();
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== "") params.set(key, String(value));
-  });
-  const response = await fetch(
-    `/api/match/${activityId}/results/${sourceUserId}/candidates?${params.toString()}`,
-    { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
+  const data = await api.get<{
+    success: boolean;
+    message?: string;
+    data: {
+      candidates: MatchCandidate[];
+      total: number;
+      selectedIds: string[];
+      isLocked: boolean;
+      config?: MatchConstraints;
+    };
+  }>(
+    `/api/match/${activityId}/results/${sourceUserId}/candidates`,
+    {
+      params: filters,
+      signal: options.signal,
+    },
   );
-  const data = await response.json();
   if (!data.success) throw new Error(data.message || "搜索候选人失败");
   return data.data;
 };

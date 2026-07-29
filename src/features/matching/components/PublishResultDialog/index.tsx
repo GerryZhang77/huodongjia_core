@@ -1,7 +1,7 @@
 /**
  * PublishResultDialog - 发布匹配结果对话框
  * 支持发布结果并发送通知给参与者
- * 支持站内通知、短信、邮件多种通知渠道
+ * 当前仅开放站内通知，短信和邮件渠道待真实发送能力接入后再展示
  * 参考 SendNotificationDialog 组件设计
  */
 
@@ -14,8 +14,6 @@ import {
   AlertTriangle,
   BarChart3,
   MessageSquare,
-  Mail,
-  Smartphone,
   Users,
   ChevronDown,
   ChevronUp,
@@ -36,8 +34,6 @@ export interface MatchGroupStats {
 export interface ParticipantPreview {
   id: string;
   name: string;
-  phone?: string;
-  email?: string;
   groupName?: string;
 }
 
@@ -85,10 +81,6 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
     DEFAULT_NOTIFICATION_CONTENT,
   );
   const [showContentEditor, setShowContentEditor] = useState(false);
-  // 通知渠道选择
-  const [selectedChannels, setSelectedChannels] = useState<
-    NotificationChannel[]
-  >(["inApp"]);
   // 人员预览展开状态
   const [showParticipantPreview, setShowParticipantPreview] = useState(false);
 
@@ -110,30 +102,10 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
     };
   }, [groups]);
 
-  // 计算各渠道可通知人数
-  const channelStats = useMemo(() => {
-    const withPhone = participants.filter((p) => p.phone).length;
-    const withEmail = participants.filter((p) => p.email).length;
-    return {
-      inApp: participantCount,
-      sms: withPhone,
-      email: withEmail,
-    };
-  }, [participants, participantCount]);
-
-  // 切换通知渠道
-  const toggleChannel = (channel: NotificationChannel) => {
-    setSelectedChannels((prev) =>
-      prev.includes(channel)
-        ? prev.filter((c) => c !== channel)
-        : [...prev, channel],
-    );
-  };
-
   const handleConfirm = () => {
-    if (sendNotification && selectedChannels.length > 0) {
+    if (sendNotification) {
       onConfirm(true, {
-        channels: selectedChannels,
+        channels: ["inApp"],
         content: customContent,
       });
     } else {
@@ -223,6 +195,10 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
                 </span>
               </div>
               <button
+                type="button"
+                role="switch"
+                aria-checked={sendNotification}
+                aria-label="发布后发送站内通知"
                 onClick={() => setSendNotification(!sendNotification)}
                 className={`relative w-12 h-6 rounded-full transition-colors ${
                   sendNotification ? "bg-primary-500" : "bg-gray-300"
@@ -238,135 +214,25 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
 
             {sendNotification ? (
               <div className="space-y-3">
-                {/* 通知渠道选择 */}
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500 mb-2">选择通知渠道：</p>
-
-                  {/* 站内通知 */}
-                  <button
-                    onClick={() => toggleChannel("inApp")}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
-                      selectedChannels.includes("inApp")
-                        ? "bg-primary-50 border-primary-300"
-                        : "bg-white border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Bell
-                        size={16}
-                        className={
-                          selectedChannels.includes("inApp")
-                            ? "text-primary-500"
-                            : "text-gray-400"
-                        }
-                      />
-                      <span
-                        className={`text-sm ${selectedChannels.includes("inApp") ? "text-primary-700" : "text-gray-600"}`}
-                      >
+                <div className="flex items-center justify-between rounded-lg border border-primary-200 bg-primary-50 p-3">
+                  <div className="flex items-center gap-2">
+                    <Bell size={16} className="text-primary-500" />
+                    <div>
+                      <p className="text-sm font-medium text-primary-700">
                         站内通知
-                      </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        发布后通知平台内参与者
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">
-                        {channelStats.inApp} 人
-                      </span>
-                      {selectedChannels.includes("inApp") && (
-                        <CheckCircle size={16} className="text-primary-500" />
-                      )}
-                    </div>
-                  </button>
-
-                  {/* 短信通知 */}
-                  <button
-                    onClick={() => toggleChannel("sms")}
-                    disabled={channelStats.sms === 0}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
-                      selectedChannels.includes("sms")
-                        ? "bg-green-50 border-green-300"
-                        : channelStats.sms === 0
-                          ? "bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed"
-                          : "bg-white border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Smartphone
-                        size={16}
-                        className={
-                          selectedChannels.includes("sms")
-                            ? "text-green-500"
-                            : "text-gray-400"
-                        }
-                      />
-                      <span
-                        className={`text-sm ${selectedChannels.includes("sms") ? "text-green-700" : "text-gray-600"}`}
-                      >
-                        短信通知
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">
-                        {channelStats.sms} 人有手机号
-                      </span>
-                      {selectedChannels.includes("sms") && (
-                        <CheckCircle size={16} className="text-green-500" />
-                      )}
-                    </div>
-                  </button>
-
-                  {/* 邮件通知 */}
-                  <button
-                    onClick={() => toggleChannel("email")}
-                    disabled={channelStats.email === 0}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
-                      selectedChannels.includes("email")
-                        ? "bg-purple-50 border-purple-300"
-                        : channelStats.email === 0
-                          ? "bg-gray-100 border-gray-200 opacity-60 cursor-not-allowed"
-                          : "bg-white border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Mail
-                        size={16}
-                        className={
-                          selectedChannels.includes("email")
-                            ? "text-purple-500"
-                            : "text-gray-400"
-                        }
-                      />
-                      <span
-                        className={`text-sm ${selectedChannels.includes("email") ? "text-purple-700" : "text-gray-600"}`}
-                      >
-                        邮件通知
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500">
-                        {channelStats.email} 人有邮箱
-                      </span>
-                      {selectedChannels.includes("email") && (
-                        <CheckCircle size={16} className="text-purple-500" />
-                      )}
-                    </div>
-                  </button>
-                </div>
-
-                {/* 已选择渠道提示 */}
-                {selectedChannels.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle size={14} />
-                    <span>
-                      将通过 {selectedChannels.length} 种渠道通知参与者
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">
+                      {participantCount} 人
                     </span>
+                    <CheckCircle size={16} className="text-primary-500" />
                   </div>
-                )}
-
-                {selectedChannels.length === 0 && (
-                  <div className="flex items-center gap-2 text-sm text-orange-600">
-                    <AlertTriangle size={14} />
-                    <span>请至少选择一种通知渠道</span>
-                  </div>
-                )}
+                </div>
 
                 {/* 通知内容编辑 */}
                 <div>
@@ -434,21 +300,6 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 text-gray-400">
-                              {p.phone && (
-                                <span title={p.phone}>
-                                  <Smartphone
-                                    size={12}
-                                    className="text-green-400"
-                                  />
-                                </span>
-                              )}
-                              {p.email && (
-                                <span title={p.email}>
-                                  <Mail size={12} className="text-purple-400" />
-                                </span>
-                              )}
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -490,11 +341,7 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
           <Button
             size="large"
             onClick={handleConfirm}
-            disabled={
-              isLoading ||
-              participantCount === 0 ||
-              (sendNotification && selectedChannels.length === 0)
-            }
+            disabled={isLoading || participantCount === 0}
             className="flex-1"
           >
             {isLoading ? (

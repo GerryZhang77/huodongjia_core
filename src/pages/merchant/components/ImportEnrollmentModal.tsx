@@ -38,7 +38,7 @@ interface FieldMapping {
 // 目标字段定义
 const TARGET_FIELDS = [
   { key: "name", label: "姓名", required: true },
-  { key: "phone", label: "手机号", required: false },
+  { key: "phone", label: "手机号", required: true },
   { key: "email", label: "邮箱", required: false },
   { key: "gender", label: "性别", required: false },
   { key: "age", label: "年龄", required: false },

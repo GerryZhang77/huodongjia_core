@@ -100,7 +100,7 @@ export interface UpdateMerchantProfileRequest {
  * 获取商家资料
  */
 export async function getMerchantProfile(): Promise<MerchantProfileResponse> {
-  return api.get<MerchantProfileResponse>("/api/auth/me");
+  return api.get<MerchantProfileResponse>("/api/merchant/profile");
 }
 
 /**
@@ -110,21 +110,21 @@ export async function updateMerchantProfile(
   data: UpdateMerchantProfileRequest
 ): Promise<{ success: boolean; message: string }> {
   return api.put<{ success: boolean; message: string }>(
-    "/api/dashboard/organizer",
+    "/api/merchant/profile",
     data
   );
 }
 
 /**
  * 上传商家头像
- * POST /api/dashboard/organizer/update-avatar
+ * POST /api/merchant/profile/avatar
  */
 export async function uploadMerchantAvatar(
   file: File
 ): Promise<{ success: boolean; data?: { url: string }; message?: string }> {
   const formData = new FormData();
   formData.append("file", file);
-  return api.post("/api/dashboard/organizer/update-avatar", formData, {
+  return api.post("/api/merchant/profile/avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 60_000,
   });

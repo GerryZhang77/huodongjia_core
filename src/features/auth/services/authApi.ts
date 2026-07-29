@@ -12,6 +12,13 @@ type RawAuthUser = Partial<User> & {
   userType?: User["user_type"];
 };
 
+export type SmsVerificationPurpose =
+  | "register"
+  | "login"
+  | "reset_password"
+  | "enrollment"
+  | "bind_phone";
+
 function normalizeAuthUser(raw?: RawAuthUser | null): User | undefined {
   if (!raw?.id) return undefined;
 
@@ -101,11 +108,13 @@ export async function login(
 export async function loginBySms(
   phone: string,
   code: string,
+  purpose: "login" | "enrollment" = "login",
 ): Promise<LoginResponse> {
   try {
     const response = await api.post<LoginResponse>("/api/auth/login-sms", {
       phone,
       code,
+      purpose,
     });
     return response;
   } catch (error: unknown) {
@@ -173,7 +182,7 @@ export async function getCurrentUser(): Promise<LoginResponse> {
  */
 export async function sendSmsCode(
   phone: string,
-  _type: "register" | "login" | "reset_password" = "register"
+  type: SmsVerificationPurpose = "register"
 ): Promise<{ success: boolean; message: string }> {
   try {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
@@ -185,7 +194,7 @@ export async function sendSmsCode(
 
     const response = await api.post<{ success: boolean; message: string }>(
       "/api/auth/send-code",
-      { phoneNumber: phone }
+      { phoneNumber: phone, purpose: type }
     );
 
     return response;
@@ -207,12 +216,13 @@ export async function sendSmsCode(
  */
 export async function verifySmsCode(
   phone: string,
-  code: string
+  code: string,
+  purpose?: SmsVerificationPurpose,
 ): Promise<{ success: boolean; message: string; verified?: boolean }> {
   try {
     const response = await api.post<{ success: boolean; message: string }>(
       "/api/auth/verify-code",
-      { phoneNumber: phone, code }
+      { phoneNumber: phone, code, ...(purpose ? { purpose } : {}) }
     );
 
     return {
@@ -233,10 +243,38 @@ export async function verifySmsCode(
 }
 
 /**
+ * 已登录用户通过短信验证码绑定手机号。若手机号已属于历史账号，后端会返回
+ * 合并后的账号与新 token。
+ */
+export async function bindPhoneBySms(
+  phone: string,
+  code: string,
+  purpose: "bind_phone" | "enrollment" = "bind_phone",
+): Promise<LoginResponse> {
+  try {
+    return await api.post<LoginResponse>("/api/auth/bind-phone", {
+      phone,
+      code,
+      purpose,
+    });
+  } catch (error: unknown) {
+    const axiosError = error as {
+      response?: { data?: { message?: string; code?: string } };
+    };
+    return {
+      success: false,
+      message:
+        axiosError.response?.data?.message || "手机号绑定失败，请稍后重试",
+      code: axiosError.response?.data?.code,
+    };
+  }
+}
+
+/**
  * 用户注册
  * POST /api/auth/register
  *
- * 后端接受 { account, password, phone?, userType?, name? }
+ * 后端接受 { account, password, phone?, sms_code?, userType?, name? }
  * account 为学号（3-20位字母/数字/下划线）
  */
 export async function register(credentials: {
@@ -254,6 +292,7 @@ export async function register(credentials: {
       account: credentials.account,
       password: credentials.password,
       phone: credentials.phone,
+      sms_code: credentials.sms_code,
       name: credentials.name || credentials.account,
       userType: credentials.userType || "user",
     });

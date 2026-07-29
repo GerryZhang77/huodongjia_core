@@ -51,8 +51,13 @@ export type LoadedEnrollmentImage = EnrollmentImageAsset & {
   isError: boolean;
 };
 
-export function useEnrollmentImages(activityId: string, participantId: string) {
+export function useEnrollmentImages(
+  activityId: string,
+  participantId: string,
+  options: { contentLimit?: number } = {},
+) {
   const sessionScope = useAuthStore((state) => state.user?.id || "anonymous");
+  const contentLimit = options.contentLimit;
   const metadataQuery = useQuery({
     queryKey: enrollmentImageKeys.list(sessionScope, activityId, participantId),
     queryFn: () => getEnrollmentImages(activityId, participantId),
@@ -65,8 +70,15 @@ export function useEnrollmentImages(activityId: string, participantId: string) {
     () => metadataQuery.data ?? [],
     [metadataQuery.data],
   );
+  const contentMetadata = useMemo(
+    () =>
+      typeof contentLimit === "number"
+        ? metadata.slice(0, Math.max(0, contentLimit))
+        : metadata,
+    [contentLimit, metadata],
+  );
   const imageQueries = useQueries({
-    queries: metadata.map((asset) => ({
+    queries: contentMetadata.map((asset) => ({
       queryKey: enrollmentImageKeys.content(
         sessionScope,
         activityId,
@@ -82,7 +94,7 @@ export function useEnrollmentImages(activityId: string, participantId: string) {
 
   const images = useMemo<LoadedEnrollmentImage[]>(
     () =>
-      metadata.map((asset, index) => {
+      contentMetadata.map((asset, index) => {
         const query = imageQueries[index];
         const cacheKey = `${sessionScope}:${activityId}:${participantId}:${asset.id}`;
         return {
@@ -94,11 +106,12 @@ export function useEnrollmentImages(activityId: string, participantId: string) {
           isError: query?.isError ?? false,
         };
       }),
-    [activityId, imageQueries, metadata, participantId, sessionScope],
+    [activityId, contentMetadata, imageQueries, participantId, sessionScope],
   );
 
   return {
     images,
+    total: metadata.length,
     isLoading:
       metadataQuery.isPending || imageQueries.some((query) => query.isPending),
     isFetching:

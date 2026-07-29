@@ -86,14 +86,7 @@ export function useRegister(): UseRegisterReturn {
     setError(null);
 
     try {
-      // 先验证短信验证码
-      const verifyResult = await authApi.verifySmsCode(phone, smsCode);
-      if (!verifyResult.success || !verifyResult.verified) {
-        setError(verifyResult.message || "验证码错误");
-        return false;
-      }
-
-      // 注册 — 使用 username 作为 account（若未提供则用手机号）
+      // 注册接口在服务端原子校验验证码，避免仅依赖可绕过的前端校验。
       const response = await authApi.register({
         account: username || phone,
         password,

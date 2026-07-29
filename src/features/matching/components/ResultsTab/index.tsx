@@ -18,7 +18,6 @@ import {
   LockKeyhole,
   ShieldCheck,
   FilePenLine,
-  Image as ImageIcon,
   X,
   ChevronDown,
   ChevronUp,
@@ -37,6 +36,7 @@ import { MatchingHistoryPanel } from "../MatchingHistoryPanel";
 import { HistoryDetailDialog } from "../HistoryDetailDialog";
 import ManualMatchEditor from "../ManualMatchEditor";
 import PrivateEnrollmentImageGallery from "@/components/enrollment/PrivateEnrollmentImageGallery";
+import PrivateEnrollmentImageHoverTrigger from "@/components/enrollment/PrivateEnrollmentImageHoverTrigger";
 import type {
   MatchConstraints,
   MatchingSchemaGroup,
@@ -164,6 +164,8 @@ const Avatar: React.FC<{ participant?: Participant; size?: "sm" | "md" | "lg" }>
       <img
         src={participant.avatar}
         alt={participant.name}
+        loading="lazy"
+        decoding="async"
         className={`${sizeCls} rounded-full object-cover flex-shrink-0`}
       />
     );
@@ -431,8 +433,6 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
           id: r.userId,
           name: p?.name || r.userId.slice(0, 6),
           groupName: p?.name || "",
-          phone: p?.phone,
-          email: p?.email,
         } as ParticipantPreview;
       }),
     [matchResults, participantMap],
@@ -731,23 +731,20 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                                 )}
                               </div>
                             )}
-                            {!!row.owner?.imageCount &&
-                              row.owner.enrollmentId && (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setImageViewer(row.owner!);
-                                  }}
-                                  className="mt-1 inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700"
-                                >
-                                  <ImageIcon size={12} />
-                                  报名图片 {row.owner.imageCount}
-                                </button>
-                              )}
                           </div>
                         </div>
                       </UserHoverCard>
+                      {!!row.owner?.imageCount && row.owner.enrollmentId && (
+                        <div className="mt-1 pl-[52px]">
+                          <PrivateEnrollmentImageHoverTrigger
+                            activityId={activityId}
+                            participantId={row.owner.enrollmentId}
+                            participantName={row.owner.name}
+                            imageCount={row.owner.imageCount}
+                            onOpenFullGallery={() => setImageViewer(row.owner!)}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {!expanded && (
@@ -766,28 +763,42 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                                 )}
                                 placement="bottom"
                                 focusable
-                                showProfileAction={false}
+                                onViewProfile={handleViewProfile}
                                 triggerAriaLabel={`查看${
                                   match.candidate?.name || "推荐对象"
                                 }的资料`}
                                 className="group w-full rounded-xl focus:outline-none"
                               >
-                                <div className="flex min-h-14 min-w-0 items-center gap-2 rounded-xl border border-transparent bg-gray-50 px-2.5 py-2 transition-colors group-hover:border-primary-200 group-hover:bg-primary-50 group-focus-visible:border-primary-300 group-focus-visible:bg-primary-50 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
+                                <div className="flex min-h-16 min-w-0 items-center gap-2 rounded-xl border border-transparent bg-gray-50 px-2.5 py-2 transition-colors group-hover:border-primary-200 group-hover:bg-primary-50 group-focus-visible:border-primary-300 group-focus-visible:bg-primary-50 group-focus-visible:ring-2 group-focus-visible:ring-primary-200">
                                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-primary-600 shadow-sm">
                                     {match.rank}
                                   </span>
+                                  <Avatar
+                                    participant={match.candidate}
+                                    size="sm"
+                                  />
                                   <div className="min-w-0 flex-1">
-                                    <p className="truncate text-xs font-medium text-gray-800">
-                                      {match.candidate?.name ||
-                                        match.candidateId.slice(0, 8)}
-                                    </p>
-                                    {match.reciprocalRank != null && (
-                                      <span
-                                        className="mt-0.5 inline-flex rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
-                                        title={`双方互荐 · 对方第 ${match.reciprocalRank} 位`}
+                                    <div className="flex min-w-0 items-center gap-1.5">
+                                      <p className="truncate text-xs font-semibold text-gray-800">
+                                        {match.candidate?.name ||
+                                          match.candidateId.slice(0, 8)}
+                                      </p>
+                                      {match.reciprocalRank != null && (
+                                        <span
+                                          className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+                                          title={`双方互荐 · 对方第 ${match.reciprocalRank} 位`}
+                                        >
+                                          互荐
+                                        </span>
+                                      )}
+                                    </div>
+                                    {getParticipantMeta(match.candidate) && (
+                                      <p
+                                        className="mt-0.5 truncate text-[11px] text-gray-500"
+                                        title={getParticipantMeta(match.candidate)}
                                       >
-                                        双方互荐
-                                      </span>
+                                        {getParticipantMeta(match.candidate)}
+                                      </p>
                                     )}
                                   </div>
                                 </div>
@@ -887,7 +898,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
                               )}
                               placement="bottom"
                               focusable
-                              showProfileAction={false}
+                              onViewProfile={handleViewProfile}
                               triggerAriaLabel={`查看${
                                 match.candidate?.name || "推荐对象"
                               }的资料`}

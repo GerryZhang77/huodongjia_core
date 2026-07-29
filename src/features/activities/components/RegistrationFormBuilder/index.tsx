@@ -23,9 +23,10 @@ import type {
   RegistrationFormField,
   FormFieldType,
 } from "../../types";
+import { ensureRequiredPhoneField } from "../ActivityForm/registrationTypeDefaults";
 
 // 完全锁定（不可展开编辑）的预设项
-const LOCKED_PRESET_KEYS: string[] = [];
+const LOCKED_PRESET_KEYS: string[] = ["phone"];
 const DEFAULT_PRESET_FIELDS: RegistrationFormField[] = [
   {
     key: "name",
@@ -40,9 +41,9 @@ const DEFAULT_PRESET_FIELDS: RegistrationFormField[] = [
     key: "phone",
     label: "手机号",
     type: "text",
-    required: false,
+    required: true,
     preset: true,
-    deletable: true,
+    deletable: false,
     placeholder: "请输入手机号",
   },
   {
@@ -345,8 +346,9 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
   value,
   onChange,
 }) => {
-  const fields =
-    value && value.length > 0 ? value : DEFAULT_PRESET_FIELDS;
+  const fields = ensureRequiredPhoneField(
+    value && value.length > 0 ? value : DEFAULT_PRESET_FIELDS,
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
@@ -457,7 +459,7 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
               className="text-warning-500 dark:text-warning-400 flex-shrink-0 mt-0.5"
             />
             <p className="text-xs text-warning-700 dark:text-warning-300 leading-relaxed">
-              姓名、手机号涉及用户隐私，建议仅在确实需要时启用必填
+              手机号用于账号识别和验证码登录，固定为必填且不会公开展示；其他隐私字段请按活动需要收集
             </p>
           </div>
 

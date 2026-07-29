@@ -56,6 +56,7 @@ describe("OpenEvent LoginForm", () => {
 
   it("密码为空时禁用按钮，填写后可提交并记住账号", async () => {
     renderLoginForm();
+    fireEvent.click(screen.getByRole("tab", { name: "密码登录" }));
 
     const submit = screen.getByRole("button", { name: "登录", exact: true });
     expect(submit).toBeDisabled();
@@ -84,7 +85,9 @@ describe("OpenEvent LoginForm", () => {
 
   it("手机号流程使用单一主按钮并保持四位验证码", async () => {
     renderLoginForm();
-    fireEvent.click(screen.getByRole("tab", { name: "手机登录" }));
+    expect(
+      screen.getByRole("tab", { name: "验证码登录" }),
+    ).toHaveAttribute("aria-selected", "true");
 
     const phone = screen.getByLabelText("手机号");
     const code = screen.getByLabelText("验证码");

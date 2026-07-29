@@ -307,7 +307,7 @@ const UserActivityDetail: FC = () => {
     variant: ButtonVariant;
   } = !isAuthenticated
     ? {
-        btnLabel: "登录/注册后报名",
+        btnLabel: "验证手机号后报名",
         disabled: false,
         variant: "primary" as const,
       }
@@ -339,7 +339,7 @@ const UserActivityDetail: FC = () => {
   const handlePrimaryAction = () => {
     if (!id) return;
     if (!isAuthenticated) {
-      goLoginForActivity();
+      navigate(registrationPath);
       return;
     }
     if (!isParticipantUser) {

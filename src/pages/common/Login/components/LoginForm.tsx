@@ -46,7 +46,9 @@ export const LoginForm = () => {
   const [searchParams] = useSearchParams();
   const { login, loginBySms, loading } = useLogin();
 
-  const [mode, setMode] = useState<LoginMode>("password");
+  const [mode, setMode] = useState<LoginMode>(
+    searchParams.get("mode") === "password" ? "password" : "sms",
+  );
   const [identifier, setIdentifier] = useState(rememberedAccount);
   const [password, setPassword] = useState("");
   const [smsPhone, setSmsPhone] = useState(
@@ -219,20 +221,20 @@ export const LoginForm = () => {
           <button
             type="button"
             role="tab"
+            aria-selected={mode === "sms"}
+            className={mode === "sms" ? "is-active" : ""}
+            onClick={() => switchMode("sms")}
+          >
+            验证码登录
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={mode === "password"}
             className={mode === "password" ? "is-active" : ""}
             onClick={() => switchMode("password")}
           >
             密码登录
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "sms"}
-            className={mode === "sms" ? "is-active" : ""}
-            onClick={() => switchMode("sms")}
-          >
-            手机登录
           </button>
         </div>
 

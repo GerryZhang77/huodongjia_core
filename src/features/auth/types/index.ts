@@ -57,6 +57,7 @@ export interface LoginResponse {
   message: string;
   token?: string; // JWT Token
   user?: User;
+  isNewUser?: boolean;
   code?: string; // 错误代码（ErrorResponse）
 }
 
@@ -84,7 +85,12 @@ export interface AccountOption {
  */
 export interface SendSmsCodeRequest {
   phone: string;
-  type: "register" | "login" | "reset_password";
+  type:
+    | "register"
+    | "login"
+    | "reset_password"
+    | "enrollment"
+    | "bind_phone";
 }
 
 /**

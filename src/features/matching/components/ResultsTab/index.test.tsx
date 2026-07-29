@@ -43,6 +43,7 @@ const renderResults = (onRematch = vi.fn()) => {
           {
             id: "candidate",
             name: "推荐对象乙",
+            avatar: "https://example.com/candidate.png",
             occupation: "设计师",
             city: "北京",
           },
@@ -80,6 +81,25 @@ describe("ResultsTab interactions", () => {
 
     expect(
       screen.getByRole("dialog", { name: "参与者甲的用户资料" }),
+    ).not.toBeNull();
+  });
+
+  it("keeps recommendation cards concise while exposing the profile action on hover", () => {
+    vi.useFakeTimers();
+    renderResults();
+
+    expect(screen.getByAltText("推荐对象乙")).not.toBeNull();
+    expect(screen.getByText("设计师 · 北京")).not.toBeNull();
+
+    fireEvent.mouseEnter(
+      screen.getByRole("button", { name: "查看推荐对象乙的资料" }),
+    );
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(
+      screen.getByRole("button", { name: "查看个人主页" }),
     ).not.toBeNull();
   });
 

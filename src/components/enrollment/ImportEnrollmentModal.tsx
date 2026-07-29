@@ -139,7 +139,7 @@ const TARGET_FIELDS = [
   { key: "account", label: "账号", required: false },
   { key: "gender", label: "性别", required: false },
   { key: "age", label: "年龄", required: false },
-  { key: "phone", label: "手机号", required: false },
+  { key: "phone", label: "手机号", required: true },
   { key: "email", label: "邮箱", required: false },
   { key: "occupation", label: "职业", required: false },
   { key: "company", label: "公司", required: false },

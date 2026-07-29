@@ -20,8 +20,9 @@ import { Dialog } from "antd-mobile";
 import { Toast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui";
 import { UserLayout } from "@/components/layout/UserLayout";
-import { useActivityDetail } from "@/features/user";
+import { useActivityDetail, usePublicActivityDetail } from "@/features/user";
 import { useSubmitEnrollment } from "@/features/user/enrollment/hooks/useSubmitEnrollment";
+import RegistrationPhoneVerification from "@/features/user/enrollment/components/RegistrationPhoneVerification";
 import {
   useProfilePrefill,
   useUpsertFieldLibrary,
@@ -31,6 +32,8 @@ import {
   type UpsertFieldLibraryItem,
 } from "@/features/user/field-library";
 import type { RegistrationFormField } from "@/features/activities/types";
+import { ensureRequiredPhoneField } from "@/features/activities/components/ActivityForm/registrationTypeDefaults";
+import { useAuthStore } from "@/features/auth/stores";
 import { getRegistrationAvailability } from "@/features/user/activity/utils/registrationAvailability";
 import { useImageUpload, type UploadHandle } from "@/features/uploads";
 import {
@@ -43,10 +46,33 @@ import dayjs from "dayjs";
 // 默认报名表 schema（无自定义时使用）
 // ============================================
 const DEFAULT_FORM_SCHEMA: RegistrationFormField[] = [
-  { key: "name", label: "姓名", type: "text", required: false, preset: true, placeholder: "请输入您的姓名" },
-  { key: "phone", label: "手机号", type: "text", required: false, preset: true, placeholder: "请输入手机号" },
-  { key: "gender", label: "性别", type: "radio", required: false, preset: true, options: ["男", "女"] },
+  {
+    key: "name",
+    label: "姓名",
+    type: "text",
+    required: false,
+    preset: true,
+    placeholder: "请输入您的姓名",
+  },
+  {
+    key: "phone",
+    label: "手机号",
+    type: "text",
+    required: true,
+    preset: true,
+    deletable: false,
+    placeholder: "请输入手机号",
+  },
+  {
+    key: "gender",
+    label: "性别",
+    type: "radio",
+    required: false,
+    preset: true,
+    options: ["男", "女"],
+  },
 ];
+const PHONE_PATTERN = /^1[3-9]\d{9}$/;
 
 function getSubmitErrorMessage(error: unknown, fallback = "报名失败，请稍后重试"): string {
   if (typeof error === "object" && error !== null) {
@@ -312,7 +338,8 @@ const DynamicField: FC<{
   field: RegistrationFormField;
   value: string | string[];
   onChange: (value: string | string[]) => void;
-}> = ({ field, value, onChange }) => {
+  readOnly?: boolean;
+}> = ({ field, value, onChange, readOnly = false }) => {
   const stringValue = typeof value === "string" ? value : "";
   const arrayValue = Array.isArray(value) ? value : [];
 
@@ -324,8 +351,10 @@ const DynamicField: FC<{
           inputMode={field.key === "phone" ? "numeric" : undefined}
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
+          readOnly={readOnly}
+          aria-readonly={readOnly}
           placeholder={field.placeholder || `请输入${field.label}`}
-          className="w-full h-12 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all"
+          className={`w-full h-12 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all ${readOnly ? "cursor-not-allowed opacity-80" : ""}`}
         />
       );
 
@@ -400,19 +429,32 @@ const UserRegistration: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, isAuthenticated, authStatus } = useAuthStore();
+  const isParticipantUser = isAuthenticated && user?.user_type === "user";
+  const verifiedPhone = String(user?.phone || "").replace(/\D/g, "");
   const registrationTypeId = searchParams.get("rt") || "";
   const registrationTypeQuery = registrationTypeId
     ? `?rt=${encodeURIComponent(registrationTypeId)}`
     : "";
   const detailPath = id ? `/u/activities/${id}${registrationTypeQuery}` : "/u/home";
 
-  const { data: activityData, isLoading } = useActivityDetail(id, registrationTypeId);
+  const { data: publicActivityData, isLoading: isPublicActivityLoading } =
+    usePublicActivityDetail(id, registrationTypeId);
+  const { data: userActivityData, isLoading: isUserActivityLoading } =
+    useActivityDetail(isParticipantUser ? id : undefined, registrationTypeId);
   const { mutateAsync: submitEnrollment, isPending: isSubmitting } =
     useSubmitEnrollment(id || "", registrationTypeId);
-  const { data: prefillData } = useProfilePrefill();
+  const { data: prefillData } = useProfilePrefill(isParticipantUser);
   const { mutateAsync: upsertFieldsAsync } = useUpsertFieldLibrary();
 
-  const activity = useMemo(() => activityData?.data, [activityData]);
+  const activity = useMemo(
+    () =>
+      isParticipantUser ? userActivityData?.data : publicActivityData?.data,
+    [isParticipantUser, publicActivityData, userActivityData],
+  );
+  const isLoading =
+    authStatus === "checking" ||
+    (isParticipantUser ? isUserActivityLoading : isPublicActivityLoading);
   const registrationAvailability = useMemo(
     () => getRegistrationAvailability(activity),
     [activity],
@@ -420,10 +462,12 @@ const UserRegistration: FC = () => {
 
   // 获取报名表 schema
   const formSchema = useMemo<RegistrationFormField[]>(() => {
-    if (activity?.registrationFormSchema && activity.registrationFormSchema.length > 0) {
-      return activity.registrationFormSchema;
-    }
-    return DEFAULT_FORM_SCHEMA;
+    const schema =
+      activity?.registrationFormSchema &&
+      activity.registrationFormSchema.length > 0
+        ? activity.registrationFormSchema
+        : DEFAULT_FORM_SCHEMA;
+    return ensureRequiredPhoneField(schema);
   }, [activity]);
 
   // 表单数据状态：key -> value
@@ -435,29 +479,39 @@ const UserRegistration: FC = () => {
   // 防止 prefill 多次覆盖用户已修改值
   const hasAppliedPrefill = useRef(false);
 
+  useEffect(() => {
+    hasAppliedPrefill.current = false;
+  }, [user?.id]);
+
   // 自动预填：当 prefill 数据和 schema 都准备好后，把命中的字段填入 formData
   useEffect(() => {
     if (hasAppliedPrefill.current) return;
-    if (!prefillData || !formSchema.length) return;
+    if (!isParticipantUser || !formSchema.length) return;
 
     const next: Record<string, string | string[]> = {};
     const matched = new Set<string>();
-    for (const field of formSchema) {
-      const hit = matchPrefillField(
-        field,
-        prefillData.fields,
-        prefillData.aliases,
-      );
-      if (!hit) continue;
-      next[field.key] = toFormValue(field, hit);
-      matched.add(field.key);
+    if (prefillData) {
+      for (const field of formSchema) {
+        const hit = matchPrefillField(
+          field,
+          prefillData.fields,
+          prefillData.aliases,
+        );
+        if (!hit) continue;
+        next[field.key] = toFormValue(field, hit);
+        matched.add(field.key);
+      }
+    }
+    if (PHONE_PATTERN.test(verifiedPhone)) {
+      next.phone = verifiedPhone;
+      matched.add("phone");
     }
     if (matched.size > 0) {
       setFormData((prev) => ({ ...next, ...prev }));
       setPrefilledKeys(matched);
     }
     hasAppliedPrefill.current = true;
-  }, [prefillData, formSchema]);
+  }, [formSchema, isParticipantUser, prefillData, verifiedPhone]);
 
   const setField = useCallback((key: string, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -479,6 +533,10 @@ const UserRegistration: FC = () => {
   // 校验必填字段
   const isFormValid = useMemo(() => {
     return formSchema.every((field) => {
+      if (field.key === "phone") {
+        const phone = formData[field.key];
+        return typeof phone === "string" && PHONE_PATTERN.test(phone);
+      }
       if (!field.required) return true;
       if (field.type === "image") return (imageAnswers[field.key]?.length || 0) > 0;
       const val = formData[field.key];
@@ -488,6 +546,21 @@ const UserRegistration: FC = () => {
   }, [formSchema, formData, imageAnswers]);
 
   const handleSubmit = async () => {
+    if (!isParticipantUser || !PHONE_PATTERN.test(verifiedPhone)) {
+      Toast.show({
+        icon: "fail",
+        content: "请先完成手机号验证",
+      });
+      return;
+    }
+    if (formData.phone !== verifiedPhone) {
+      Toast.show({
+        icon: "fail",
+        content: "报名手机号必须与已验证手机号一致",
+      });
+      return;
+    }
+
     if (!registrationAvailability.canRegister) {
       Toast.show({
         icon: "fail",
@@ -674,6 +747,29 @@ const UserRegistration: FC = () => {
     );
   }
 
+  if (isAuthenticated && !isParticipantUser) {
+    return (
+      <UserLayout showTabBar={false} showTopBar={true}>
+        <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center">
+          <AlertCircle size={40} className="mb-3 text-gray-300" />
+          <p className="text-base font-medium text-gray-700 dark:text-gray-200">
+            主办方账号不可报名
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(detailPath, { replace: true })}
+            className="mt-4 rounded-lg bg-primary-500 px-4 py-2 text-sm text-white"
+          >
+            返回活动详情
+          </button>
+        </div>
+      </UserLayout>
+    );
+  }
+
+  const hasVerifiedPhone =
+    isParticipantUser && PHONE_PATTERN.test(verifiedPhone);
+
   return (
     <UserLayout
       showTabBar={false}
@@ -689,7 +785,7 @@ const UserRegistration: FC = () => {
       <div className="min-h-screen pb-[140px] md:pb-28">
         {/* 活动预览卡片 */}
         <div className="px-4 pt-4 md:px-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-3 flex gap-3 shadow-sm">
+          <div className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div className="w-[60px] h-[60px] rounded-xl bg-gradient-to-br from-primary-400 to-primary-500 flex items-center justify-center flex-shrink-0">
               <Calendar size={24} className="text-white" />
             </div>
@@ -705,71 +801,83 @@ const UserRegistration: FC = () => {
                 {activity.location.split(" ")[0]}
               </p>
             </div>
-                      <span className="h-fit shrink-0 whitespace-nowrap rounded-full bg-success-50 px-2 py-1 text-[10px] font-medium text-success-600 dark:bg-success-900/30 dark:text-success-400">
+            <span className="h-fit shrink-0 whitespace-nowrap rounded-full bg-success-50 px-2 py-1 text-[10px] font-medium text-success-600 dark:bg-success-900/30 dark:text-success-400">
               {activity.registrationType?.name || "报名中"}
             </span>
           </div>
         </div>
 
-        {/* 动态表单 */}
-        <div className="px-4 py-5 md:px-6 space-y-5">
-          {prefilledKeys.size > 0 && (
-            <div className="flex items-start gap-2 px-3 py-2.5 bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 rounded-lg text-xs text-primary-700 dark:text-primary-300">
-              <Sparkles size={14} className="flex-shrink-0 mt-0.5" />
-              <span>
-                部分字段已根据你的「我的信息库」自动预填，可直接修改。
-              </span>
+        {hasVerifiedPhone ? (
+          <>
+            {/* 动态表单 */}
+            <div className="space-y-5 px-4 py-5 md:px-6">
+              {prefilledKeys.size > 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-primary-100 bg-primary-50 px-3 py-2.5 text-xs text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-300">
+                  <Sparkles size={14} className="mt-0.5 flex-shrink-0" />
+                  <span>
+                    部分字段已根据你的「我的信息库」自动预填，可直接修改。
+                  </span>
+                </div>
+              )}
+              {formSchema.map((field) => {
+                const isPrefilled = prefilledKeys.has(field.key);
+                return (
+                  <div key={field.key}>
+                    <label className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <span>{field.label}</span>
+                      {field.required && (
+                        <span className="text-error-500">*</span>
+                      )}
+                      {isPrefilled && (
+                        <span className="inline-flex items-center gap-0.5 rounded bg-primary-50 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
+                          <Sparkles size={10} />
+                          已预填
+                        </span>
+                      )}
+                    </label>
+                    {field.type === "image" ? (
+                      <EnrollmentImageField
+                        activityId={id || ""}
+                        registrationTypeId={
+                          registrationTypeId || undefined
+                        }
+                        field={field}
+                        onChange={setImageField}
+                        onUploadingChange={setImageFieldUploading}
+                      />
+                    ) : (
+                      <DynamicField
+                        field={field}
+                        value={
+                          formData[field.key] ??
+                          (field.type === "multi-select" ? [] : "")
+                        }
+                        onChange={(val) => setField(field.key, val)}
+                        readOnly={field.key === "phone"}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
-          {formSchema.map((field) => {
-            const isPrefilled = prefilledKeys.has(field.key);
-            return (
-              <div key={field.key}>
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  <span>{field.label}</span>
-                  {field.required && (
-                    <span className="text-error-500">*</span>
-                  )}
-                  {isPrefilled && (
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
-                      <Sparkles size={10} />
-                      已预填
-                    </span>
-                  )}
-                </label>
-                {field.type === "image" ? (
-                  <EnrollmentImageField
-                    activityId={id || ""}
-                    registrationTypeId={registrationTypeId || undefined}
-                    field={field}
-                    onChange={setImageField}
-                    onUploadingChange={setImageFieldUploading}
-                  />
-                ) : (
-                  <DynamicField
-                    field={field}
-                    value={formData[field.key] ?? (field.type === "multi-select" ? [] : "")}
-                    onChange={(val) => setField(field.key, val)}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
 
-        {/* 底部操作栏 - 报名页隐藏 TabBar，专注表单 */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-bottom">
-          <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_12px_rgba(0,0,0,0.3)]">
-            <Button
-              onClick={handleSubmit}
-              disabled={!isFormValid || uploadingImageFields.size > 0}
-              loading={isSubmitting || uploadingImageFields.size > 0}
-              className="w-full h-12 text-base"
-            >
-              {uploadingImageFields.size > 0 ? "图片上传中" : "确认报名"}
-            </Button>
-          </div>
-        </div>
+            {/* 底部操作栏 - 报名页隐藏 TabBar，专注表单 */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-bottom">
+              <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_12px_rgba(0,0,0,0.3)]">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!isFormValid || uploadingImageFields.size > 0}
+                  loading={isSubmitting || uploadingImageFields.size > 0}
+                  className="w-full h-12 text-base"
+                >
+                  {uploadingImageFields.size > 0 ? "图片上传中" : "确认报名"}
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <RegistrationPhoneVerification activityTitle={activity.title} />
+        )}
       </div>
     </UserLayout>
   );
