@@ -88,6 +88,8 @@ export interface EnrollmentImageAsset {
 export interface SendNotificationRequest {
   enrollmentIds: string[];
   message: string;
+  title?: string;
+  type?: "enrollment" | "matching";
   channels?: ("sms" | "email" | "wechat")[];
 }
 
@@ -163,8 +165,9 @@ export async function sendNotification(
   return api.post(`/api/notification/notify`, {
     enrollment_ids: data.enrollmentIds,
     message: data.message,
-    title: '活动通知',
-    type: 'enrollment',
+    title: data.title || "活动通知",
+    type: data.type || "enrollment",
+    event_id: activityId,
   });
 }
 

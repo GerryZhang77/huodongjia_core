@@ -184,13 +184,22 @@ const MatchUniverseCard: FC<{
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <div
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
-                scoreToneClasses[index] || scoreToneClasses[3],
-              )}
-            >
-              {user.rank}
+            <div className="relative shrink-0">
+              <img
+                src={user.avatar}
+                alt={`${user.name}的头像`}
+                loading={index < 3 ? "eager" : "lazy"}
+                decoding="async"
+                className="h-12 w-12 rounded-2xl border border-gray-100 bg-gray-50 object-cover"
+              />
+              <span
+                className={cn(
+                  "absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold shadow-sm",
+                  scoreToneClasses[index] || scoreToneClasses[3],
+                )}
+              >
+                {user.rank}
+              </span>
             </div>
             <div className="min-w-0">
               <div className="truncate text-[18px] font-semibold text-gray-900">
@@ -347,6 +356,7 @@ const UserMatchResult: FC = () => {
 
   const [showNFCModal, setShowNFCModal] = useState(false);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [showAllMatches, setShowAllMatches] = useState(false);
   const [generatedMessages, setGeneratedMessages] = useState<Record<string, string>>({});
   const [generatingUserId, setGeneratingUserId] = useState<string | null>(null);
 
@@ -389,6 +399,7 @@ const UserMatchResult: FC = () => {
       };
     });
   }, [bestMatchesData]);
+  const visibleMatches = showAllMatches ? topMatches : topMatches.slice(0, 3);
 
   useEffect(() => {
     if (!id || topMatches.length === 0) {
@@ -545,7 +556,7 @@ const UserMatchResult: FC = () => {
                 <p className="mt-3 text-sm leading-6 text-gray-500">
                   太棒了！系统基于你的报名信息，在本次活动中找到了
                   <span className="mx-1 font-semibold text-accent-500">
-                    {Math.min(topMatches.length, 3)}
+                    {topMatches.length}
                   </span>
                   位与你契合度较高的对象，推荐优先认识。
                 </p>
@@ -563,7 +574,7 @@ const UserMatchResult: FC = () => {
               </section>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {topMatches.slice(0, 3).map((user, index) => (
+                {visibleMatches.map((user, index) => (
                   <MatchUniverseCard
                     key={user.id}
                     activityId={id!}
@@ -578,6 +589,26 @@ const UserMatchResult: FC = () => {
                   />
                 ))}
               </div>
+
+              {topMatches.length > 3 ? (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    aria-expanded={showAllMatches}
+                    onClick={() => setShowAllMatches((current) => !current)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-600 shadow-sm transition-colors hover:border-accent-200 hover:text-accent-600"
+                  >
+                    {showAllMatches
+                      ? "收起推荐"
+                      : `查看全部 ${topMatches.length} 位`}
+                    {showAllMatches ? (
+                      <ChevronUp size={16} aria-hidden="true" />
+                    ) : (
+                      <ChevronDown size={16} aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              ) : null}
 
               <section className="rounded-2xl border border-gray-100 bg-white p-4 md:p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">

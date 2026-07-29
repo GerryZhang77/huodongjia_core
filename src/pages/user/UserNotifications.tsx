@@ -16,13 +16,20 @@ import {
   Inbox,
   UserPlus,
   Contact,
+  ChevronRight,
 } from "lucide-react";
+import { Toast } from "antd-mobile";
 import { UserLayout } from "@/components/layout/UserLayout";
 import {
   useNotifications,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
 } from "@/features/user";
+import { fetchBestMatchesWithParticipants } from "@/features/user/hooks/useBestMatches";
+import {
+  resolveNotificationAction,
+  type NotificationAction,
+} from "@/features/user/profile/utils/notificationNavigation";
 import type { Notification } from "@/services/userApi";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -30,6 +37,8 @@ import "dayjs/locale/zh-cn";
 
 dayjs.extend(relativeTime);
 dayjs.locale("zh-cn");
+
+const preloadUserMatchResultRoute = () => import("./UserMatchResult");
 
 // 通知类型
 type NotificationType = Notification["type"];
@@ -136,14 +145,24 @@ const formatTime = (dateStr: string): string => {
 // 通知项组件
 const NotificationItem: FC<{
   notification: Notification;
+  action: NotificationAction;
   onClick: (n: Notification) => void;
-}> = ({ notification, onClick }) => {
-  const config = notificationConfig[notification.type];
+  onIntent: (n: Notification) => void;
+}> = ({ notification, action, onClick, onIntent }) => {
+  const config =
+    notificationConfig[notification.type] || notificationConfig.system;
   const Icon = config.icon;
 
   return (
     <button
       onClick={() => onClick(notification)}
+      onPointerEnter={() => onIntent(notification)}
+      onFocus={() => onIntent(notification)}
+      aria-label={
+        action.label
+          ? `${notification.title}，${action.label}`
+          : notification.title
+      }
       className={`w-full flex items-start gap-3 p-4 md:p-5 text-left transition-colors ${
         notification.isRead
           ? "bg-white dark:bg-gray-800"
@@ -176,10 +195,22 @@ const NotificationItem: FC<{
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
           {notification.content}
         </p>
-        {notification.activityName && (
-          <span className="inline-block mt-2 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 rounded">
-            {notification.activityName}
-          </span>
+        {(notification.activityName || action.label) && (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            {notification.activityName ? (
+              <span className="inline-block max-w-full truncate rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                {notification.activityName}
+              </span>
+            ) : (
+              <span />
+            )}
+            {action.label && (
+              <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-xs font-medium text-primary-600 dark:text-primary-400">
+                {action.label}
+                <ChevronRight size={13} aria-hidden="true" />
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -196,7 +227,7 @@ const UserNotifications: FC = () => {
   const queryClient = useQueryClient();
 
   // 使用 hooks 获取通知数据
-  const { data: notificationsData, isLoading } = useNotifications();
+  const { data: notificationsData } = useNotifications();
   const markReadMutation = useMarkNotificationRead();
   const markAllReadMutation = useMarkAllNotificationsRead();
 
@@ -211,26 +242,43 @@ const UserNotifications: FC = () => {
     );
   }, [notificationsData, notifications]);
 
+  const handleNotificationIntent = (notification: Notification) => {
+    const action = resolveNotificationAction(notification);
+    if (action.kind !== "matching" || !action.activityId) {
+      return;
+    }
+    const activityId = action.activityId;
+
+    void preloadUserMatchResultRoute().catch(() => undefined);
+    void queryClient.prefetchQuery({
+      queryKey: ["user", "best-matches", activityId],
+      queryFn: () => fetchBestMatchesWithParticipants(activityId),
+      staleTime: 10 * 60 * 1000,
+    });
+  };
+
   const handleNotificationClick = (notification: Notification) => {
-    markReadMutation.mutate(notification.id);
-
-    // 社交类通知：跳到与发送者的聊天 / 发送者主页
-    if (
-      (notification.type === "message" ||
-        notification.type === "contact_request") &&
-      notification.senderId
-    ) {
-      navigate(`/u/messages/${notification.senderId}`);
-      return;
-    }
-    if (notification.type === "follow" && notification.senderId) {
-      navigate(`/u/profile/${notification.senderId}`);
-      return;
+    if (!notification.isRead) {
+      markReadMutation.mutate(notification.id);
     }
 
-    if (notification.activityId) {
-      queryClient.invalidateQueries({ queryKey: ["user", "activity", notification.activityId] });
-      navigate(`/u/activities/${notification.activityId}`);
+    const action = resolveNotificationAction(notification);
+    if (action.activityId) {
+      void queryClient.invalidateQueries({
+        queryKey: ["user", "activity", action.activityId],
+      });
+      if (action.kind === "matching") {
+        void queryClient.invalidateQueries({
+          queryKey: ["user", "best-matches", action.activityId],
+        });
+      }
+    }
+
+    if (action.feedback) {
+      Toast.show({ content: action.feedback });
+    }
+    if (action.path) {
+      navigate(action.path);
     }
   };
 
@@ -268,13 +316,18 @@ const UserNotifications: FC = () => {
       {/* 通知列表 */}
       <div className="divide-y divide-gray-100 dark:divide-gray-700 max-w-3xl mx-auto">
         {notifications.length > 0 ? (
-          notifications.map((notification) => (
-            <NotificationItem
-              key={notification.id}
-              notification={notification}
-              onClick={handleNotificationClick}
-            />
-          ))
+          notifications.map((notification) => {
+            const action = resolveNotificationAction(notification);
+            return (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                action={action}
+                onClick={handleNotificationClick}
+                onIntent={handleNotificationIntent}
+              />
+            );
+          })
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">

@@ -714,7 +714,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
           try {
             await sendEnrollmentNotification(activityId, {
               enrollmentIds: published.enrollmentIds,
-              message: "您的匹配结果已出炉，快来查看匹配信息吧！",
+              title: "匹配结果已发布",
+              type: "matching",
+              message: `「${activityQuery.data?.title || "本次活动"}」的匹配结果已发布，查看为你推荐的伙伴`,
             });
           } catch (notificationError) {
             notificationFailed = true;
@@ -759,7 +761,13 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         setIsPublishing(false);
       }
     },
-    [activityId, matchResults.length, queryClient, resultsQuery.data],
+    [
+      activityId,
+      activityQuery.data?.title,
+      matchResults.length,
+      queryClient,
+      resultsQuery.data,
+    ],
   );
 
   const handleValidateResults = useCallback(async () => {

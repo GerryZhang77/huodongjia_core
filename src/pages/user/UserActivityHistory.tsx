@@ -3,14 +3,13 @@
  * 展示用户参与/报名的所有活动
  */
 
-import { FC, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { FC, useEffect, useState, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Calendar } from "lucide-react";
 import { ActivityCard } from "@/components/business/ActivityCard";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { useUserActivities } from "@/features/user";
 import { useSeedFavoriteStatus } from "@/hooks/useSeedFavoriteStatus";
-import type { UserActivity, UserActivityStatus } from "@/services/userApi";
 
 // Tab 配置
 const tabs = [
@@ -22,12 +21,22 @@ const tabs = [
 
 type TabKey = (typeof tabs)[number]["key"];
 
+const isTabKey = (value: string | null): value is TabKey =>
+  tabs.some((tab) => tab.key === value);
+
 const UserActivityHistory: FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get("status");
+  const normalizedRequestedTab = isTabKey(requestedTab) ? requestedTab : "all";
+  const [activeTab, setActiveTab] = useState<TabKey>(normalizedRequestedTab);
+
+  useEffect(() => {
+    setActiveTab(normalizedRequestedTab);
+  }, [normalizedRequestedTab]);
 
   // 使用 hooks 获取活动数据
-  const { data: activitiesData, isLoading } = useUserActivities();
+  const { data: activitiesData } = useUserActivities();
 
   const allActivities = useMemo(() => {
     return activitiesData?.data?.activities || [];
