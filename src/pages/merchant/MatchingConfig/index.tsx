@@ -15,6 +15,7 @@ import {
   ListChecks,
   Loader2,
   PlayCircle,
+  Search,
   Users,
 } from "lucide-react";
 import MerchantLayout from "@/components/layout/MerchantLayout";
@@ -60,6 +61,7 @@ const MatchingConfigPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isSavingRules, setIsSavingRules] = useState(false);
+  const [participantSearch, setParticipantSearch] = useState("");
   const hasExplicitStep = isWizardStep(searchParams.get("step"));
   const [wizardStep, setWizardStepState] = useState<WizardStep>(() =>
     isWizardStep(searchParams.get("step"))
@@ -84,6 +86,7 @@ const MatchingConfigPage: React.FC = () => {
     isCreatingAdjustmentDraft,
     isPreflighting,
     isValidating,
+    isParticipantsRefreshing,
     isRulesLocked,
     matchingProgress,
     matchingMessage,
@@ -92,6 +95,8 @@ const MatchingConfigPage: React.FC = () => {
     rules,
     constraints,
     participants,
+    selectedParticipantIds,
+    resultParticipantUserIds,
     matchResults,
     history,
     registrationSchema,
@@ -104,6 +109,8 @@ const MatchingConfigPage: React.FC = () => {
     resultVersion,
     setRules,
     setConstraints,
+    setParticipantSelected,
+    selectAllParticipants,
     handleSaveRules,
     handleRunPreflight,
     handleStartMatching,
@@ -142,14 +149,44 @@ const MatchingConfigPage: React.FC = () => {
     if (isMatching && wizardStep !== "execute") setWizardStep("execute");
   }, [isMatching, setWizardStep, wizardStep]);
 
-  const participantGroups = useMemo(() => {
-    const groups = new Map<string, typeof participants>();
-    for (const participant of participants) {
-      const label = participant.registrationTypeName || "默认报名类型";
-      groups.set(label, [...(groups.get(label) || []), participant]);
-    }
-    return Array.from(groups.entries());
-  }, [participants]);
+  const selectedParticipantIdSet = useMemo(
+    () => new Set(selectedParticipantIds),
+    [selectedParticipantIds],
+  );
+  const filteredParticipants = useMemo(() => {
+    const keyword = participantSearch.trim().toLowerCase();
+    if (!keyword) return participants;
+    return participants.filter((participant) =>
+      participant.name.toLowerCase().includes(keyword),
+    );
+  }, [participantSearch, participants]);
+  const showRegistrationType = useMemo(
+    () =>
+      new Set(
+        participants.map(
+          (participant) =>
+            participant.registrationTypeId ||
+            participant.registrationTypeName ||
+            "__default__",
+        ),
+      ).size > 1,
+    [participants],
+  );
+  const resultParticipantIdSet = useMemo(
+    () => new Set(resultParticipantUserIds),
+    [resultParticipantUserIds],
+  );
+  const resultParticipants = useMemo(
+    () =>
+      resultParticipantIdSet.size > 0
+        ? participants.filter((participant) =>
+            resultParticipantIdSet.has(participant.id),
+          )
+        : participants,
+    [participants, resultParticipantIdSet],
+  );
+  const resultEligibleParticipantCount =
+    resultParticipantIdSet.size || eligibleParticipantCount;
 
   const enabledRules = useMemo(
     () =>
@@ -306,12 +343,20 @@ const MatchingConfigPage: React.FC = () => {
         {wizardStep === "participants" && (
           <section className="space-y-4">
             <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">确认本次参与人</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    仅包含审核通过且所属报名类型已开启“参与匹配”的平台用户。
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      本次参与匹配 {eligibleParticipantCount} 人
+                    </h2>
+                    {isParticipantsRefreshing && (
+                      <Loader2
+                        size={16}
+                        aria-label="正在更新参与人"
+                        className="animate-spin text-gray-400"
+                      />
+                    )}
+                  </div>
                 </div>
                 <Button
                   variant="outline"
@@ -321,38 +366,103 @@ const MatchingConfigPage: React.FC = () => {
                     })
                   }
                 >
-                  管理报名人员
+                  管理报名
                 </Button>
               </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {participantGroups.map(([name, group]) => (
-                  <div key={name} className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium text-gray-900">{name}</span>
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-xs tabular-nums text-gray-600">
-                        {group.length} 人
-                      </span>
-                    </div>
-                    <p className="mt-2 truncate text-xs text-gray-500">
-                      {group.slice(0, 5).map((item) => item.name).join("、") || "暂无人员"}
-                      {group.length > 5 ? ` 等 ${group.length} 人` : ""}
-                    </p>
+
+              {participants.length > 0 ? (
+                <div className="mt-5 overflow-hidden rounded-xl border border-gray-100">
+                  <div className="flex flex-col gap-3 border-b border-gray-100 bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="relative block w-full sm:max-w-sm">
+                      <Search
+                        size={16}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
+                      <input
+                        type="search"
+                        value={participantSearch}
+                        onChange={(event) => setParticipantSearch(event.target.value)}
+                        placeholder="搜索姓名"
+                        className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+                      />
+                    </label>
+                    {eligibleParticipantCount < participants.length && (
+                      <button
+                        type="button"
+                        onClick={selectAllParticipants}
+                        className="shrink-0 text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        全选
+                      </button>
+                    )}
                   </div>
-                ))}
-                {participantGroups.length === 0 && (
-                  <div className="col-span-full rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500">
-                    暂无可匹配参与人，请先在报名管理中审核并检查报名类型配置。
+
+                  <div className="max-h-[420px] divide-y divide-gray-100 overflow-y-auto">
+                    {filteredParticipants.map((participant) => {
+                      const selected = selectedParticipantIdSet.has(participant.id);
+                      return (
+                        <label
+                          key={participant.id}
+                          className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={(event) =>
+                              setParticipantSelected(
+                                participant.id,
+                                event.target.checked,
+                              )
+                            }
+                            className="h-4 w-4 shrink-0 accent-primary-500"
+                            aria-label={`${selected ? "取消选择" : "选择"}${participant.name}`}
+                          />
+                          {participant.avatar ? (
+                            <img
+                              src={participant.avatar}
+                              alt=""
+                              className="h-9 w-9 shrink-0 rounded-full bg-gray-100 object-cover"
+                            />
+                          ) : (
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-medium text-primary-600">
+                              {participant.name.slice(0, 1)}
+                            </span>
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">
+                            {participant.name}
+                          </span>
+                          {showRegistrationType && (
+                            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-500">
+                              {participant.registrationTypeName || "默认报名"}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                    {filteredParticipants.length === 0 && (
+                      <div className="py-10 text-center text-sm text-gray-500">
+                        没有找到相关参与人
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="mt-5 rounded-xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-500">
+                  暂无可匹配参与人，请先在报名管理中审核报名。
+                </div>
+              )}
+              {participants.length > 0 && eligibleParticipantCount < 2 && (
+                <p className="mt-3 text-sm text-orange-600">至少选择 2 人才能继续</p>
+              )}
             </div>
             <div className="flex justify-end">
               <Button
-                disabled={eligibleParticipantCount === 0}
+                disabled={eligibleParticipantCount < 2}
                 onClick={() => setWizardStep("rules")}
                 iconRight={<ChevronRight size={16} />}
               >
-                下一步：设置规则
+                使用已选 {eligibleParticipantCount} 人，下一步
               </Button>
             </div>
           </section>
@@ -516,15 +626,15 @@ const MatchingConfigPage: React.FC = () => {
           <ResultsTab
             activityId={activityId}
             matchResults={matchResults}
-            participants={participants}
+            participants={resultParticipants}
             registrationSchemaGroups={registrationSchemaGroups}
-            eligibleParticipantCount={eligibleParticipantCount}
+            eligibleParticipantCount={resultEligibleParticipantCount}
             rules={rules}
             isPublishing={isPublishing}
             onPublish={publishAdapter}
             onRematch={() => {
               handleEnterRematchMode();
-              setWizardStep("rules");
+              setWizardStep("participants");
             }}
             isRematching={isMatching}
             history={history}

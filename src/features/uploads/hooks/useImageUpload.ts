@@ -19,7 +19,7 @@
  * 设计要点：
  * - tempUrl 用 URL.createObjectURL 即时生成，立即在 UI 显示
  * - finalUrlPromise resolve 时调用方负责把 tempUrl 替换成真实 url
- * - hook 内部统一在 settle 时 revokeObjectURL，避免内存泄漏
+ * - hook 默认在 settle 时 revokeObjectURL；需要保留失败缩略图时由调用方主动释放
  * - 文件类型 / 大小校验前置，上传前自动压缩大图，降低 413/502 概率
  * - kind 决定调用哪个上传 API；新增类型只改 dispatch
  */
@@ -60,6 +60,14 @@ interface Options {
   upload?: (file: File) => Promise<string>;
   /** 默认 true；设为 false 时由调用方通过 releasePreview 释放。 */
   revokePreviewOnSettled?: boolean;
+  /** 当前上传场景允许的 MIME；未配置时沿用通用图片判断。 */
+  allowedMimeTypes?: readonly string[];
+  /** MIME 缺失时允许通过扩展名兜底，例如 iOS 返回的 HEIC 文件。 */
+  allowedExtensions?: readonly string[];
+  /** 文件格式校验失败提示。 */
+  formatErrorMessage?: string;
+  /** 原始文件超出 maxBytes 时的提示。 */
+  sizeErrorMessage?: string;
 }
 
 const DEFAULT_SOURCE_MAX = 25 * 1024 * 1024;
@@ -97,6 +105,28 @@ function replaceImageExtension(name: string, type: string): string {
 
 function isLikelyImageFile(file: File): boolean {
   return file.type.startsWith("image/") || IMAGE_FILE_NAME_PATTERN.test(file.name);
+}
+
+function getFileNameExtension(fileName: string): string {
+  return fileName.match(/\.[^.]+$/)?.[0]?.toLowerCase() || "";
+}
+
+function isAllowedImageFile(
+  file: File,
+  allowedMimeTypes?: readonly string[],
+  allowedExtensions?: readonly string[],
+): boolean {
+  if (!allowedMimeTypes?.length && !allowedExtensions?.length) {
+    return isLikelyImageFile(file);
+  }
+
+  const mimeType = file.type.toLowerCase();
+  const extension = getFileNameExtension(file.name);
+  if (mimeType && mimeType !== "application/octet-stream") {
+    return Boolean(allowedMimeTypes?.includes(mimeType));
+  }
+
+  return Boolean(extension && allowedExtensions?.includes(extension));
 }
 
 function canvasToBlob(
@@ -176,7 +206,15 @@ async function optimizeImageForUpload(
     throw new Error("GIF 图片过大，请换一张较小的图片");
   }
 
-  const image = await loadImageSource(file);
+  let image: Awaited<ReturnType<typeof loadImageSource>>;
+  try {
+    image = await loadImageSource(file);
+  } catch (error) {
+    // 部分浏览器无法解码 HEIC/HEIF，但后端可以直接接收。原图在后端
+    // 5MB 限制内时跳过前端压缩，避免把可上传的图片误判为失败。
+    if (file.size <= SERVER_SAFE_UPLOAD_MAX) return file;
+    throw error;
+  }
   try {
     const scale = Math.min(1, options.maxDimension / Math.max(image.width, image.height));
     const width = Math.max(1, Math.round(image.width * scale));
@@ -218,14 +256,30 @@ async function optimizeImageForUpload(
 }
 
 function getUploadErrorMessage(error: unknown): string {
-  const maybeAxios = error as { response?: { status?: number } };
+  const maybeAxios = error as {
+    code?: string;
+    response?: { status?: number; data?: { message?: unknown } };
+  };
+  const serverMessage = maybeAxios.response?.data?.message;
+  if (typeof serverMessage === "string" && serverMessage.trim()) {
+    return serverMessage.trim();
+  }
   if (maybeAxios.response?.status === 413) {
     return "图片过大，请换一张较小的图片";
   }
   if (maybeAxios.response?.status === 502 || maybeAxios.response?.status === 504) {
-    return "上传服务暂时不稳定，请稍后重试";
+    return "上传失败，请重试";
   }
-  return error instanceof Error ? error.message : "上传失败";
+  if (error instanceof Error && error.message.startsWith("图片")) {
+    return error.message;
+  }
+  if (!maybeAxios.response || maybeAxios.code === "ERR_NETWORK") {
+    return "上传失败，请重试";
+  }
+  if (error instanceof Error && !/^Request failed with status code/i.test(error.message)) {
+    return error.message;
+  }
+  return "上传失败，请重试";
 }
 
 /**
@@ -267,23 +321,30 @@ export function useImageUpload(opts: Options) {
     showToastOnError = true,
     upload,
     revokePreviewOnSettled = true,
+    allowedMimeTypes,
+    allowedExtensions,
+    formatErrorMessage = "请选择图片文件",
+    sizeErrorMessage,
   } = opts;
 
   const uploadWithPreview = useCallback(
     (file: File): UploadHandle => {
       // 1) 前置校验
-      if (!isLikelyImageFile(file)) {
+      if (!isAllowedImageFile(file, allowedMimeTypes, allowedExtensions)) {
         if (showToastOnError) {
-          Toast.show({ icon: "fail", content: "请选择图片文件" });
+          Toast.show({ icon: "fail", content: formatErrorMessage });
         }
         // 仍返回一个 handle，但 promise reject；tempUrl 用空字符串避免污染列表
         return rejectedUploadHandle("file is not image");
       }
       if (file.size > maxBytes) {
+        const message =
+          sizeErrorMessage ||
+          `图片大小不能超过 ${(maxBytes / 1024 / 1024).toFixed(0)}MB`;
         if (showToastOnError) {
           Toast.show({
             icon: "fail",
-            content: `图片大小不能超过 ${(maxBytes / 1024 / 1024).toFixed(0)}MB`,
+            content: message,
           });
         }
         return rejectedUploadHandle("file too large");
@@ -306,7 +367,7 @@ export function useImageUpload(opts: Options) {
           return realUrl;
         })
         .catch((err) => {
-          releasePreview();
+          if (revokePreviewOnSettled) releasePreview();
           if (showToastOnError) {
             Toast.show({
               icon: "fail",
@@ -318,7 +379,19 @@ export function useImageUpload(opts: Options) {
 
       return { tempUrl, finalUrlPromise, releasePreview };
     },
-    [kind, maxBytes, maxDimension, revokePreviewOnSettled, showToastOnError, upload, uploadMaxBytes],
+    [
+      allowedExtensions,
+      allowedMimeTypes,
+      formatErrorMessage,
+      kind,
+      maxBytes,
+      maxDimension,
+      revokePreviewOnSettled,
+      showToastOnError,
+      sizeErrorMessage,
+      upload,
+      uploadMaxBytes,
+    ],
   );
 
   return { uploadWithPreview };

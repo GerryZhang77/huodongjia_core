@@ -41,6 +41,7 @@ export interface MatchEnrollmentDetail {
   id: string;
   user_id: string;
   name: string;
+  avatar?: string | null;
   status: string;
   created_at: string;
   form_data: Record<string, unknown>;

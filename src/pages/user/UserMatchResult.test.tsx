@@ -102,6 +102,10 @@ describe("UserMatchResult", () => {
     expect(screen.getByText("5")).not.toBeNull();
     expect(screen.getByText("用户1")).not.toBeNull();
     expect(screen.getByRole("img", { name: "用户1的头像" })).not.toBeNull();
+    expect(screen.queryByText("产品经理")).toBeNull();
+    expect(screen.queryByText("活动家")).toBeNull();
+    expect(screen.queryByText("互联网")).toBeNull();
+    expect(screen.queryByText("上海")).toBeNull();
     expect(screen.queryByText("用户4")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "查看全部 5 位" }));

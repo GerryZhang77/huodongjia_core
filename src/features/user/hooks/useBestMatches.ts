@@ -16,13 +16,6 @@ export interface BestMatchUser {
     userId: string;
     name?: string;
     avatar?: string | null;
-    age?: number | null;
-    occupation?: string;
-    company?: string;
-    industry?: string;
-    city?: string;
-    tags?: string[];
-    formData?: Record<string, unknown>;
     status?: string;
   } | null;
 }
@@ -31,15 +24,6 @@ export interface Participant {
   id: string;
   user_id: string;
   name: string;
-  gender?: string;
-  age?: number;
-  phone?: string;
-  email?: string;
-  occupation?: string;
-  company?: string;
-  industry?: string;
-  city?: string;
-  tags?: string[];
   avatar?: string;
 }
 
@@ -96,20 +80,6 @@ const parseMatchScorePayload = (
   return null;
 };
 
-const pickFieldValue = (
-  formData: Record<string, unknown> | undefined,
-  keys: string[],
-): string | undefined => {
-  if (!formData) return undefined;
-  for (const key of keys) {
-    const value = formData[key];
-    if (value !== undefined && value !== null && value !== "") {
-      return String(value);
-    }
-  }
-  return undefined;
-};
-
 export async function fetchBestMatchesWithParticipants(
   eventId: string,
 ): Promise<EnrichedBestMatchUser[]> {
@@ -136,50 +106,11 @@ export async function fetchBestMatchesWithParticipants(
         Math.min(100, scoreDetail?.total_score_percent ?? 0),
       );
 
-      const formData = enrollment.formData || {};
-      const interestsRaw =
-        pickFieldValue(formData, ["兴趣爱好", "interests"]);
-      const tags = enrollment.tags?.length
-        ? enrollment.tags
-        : interestsRaw
-          ? String(interestsRaw).split(/[,，、\s]+/).filter(Boolean)
-          : [];
-
-      const ageRaw = pickFieldValue(formData, ["年龄", "age"]);
-      const ageNum = ageRaw ? Number(ageRaw) : undefined;
-
       return {
         id: enrollment.id,
         user_id: enrollment.userId,
-        name:
-          enrollment.name ||
-          pickFieldValue(formData, ["姓名", "name"]) ||
-          "未知用户",
-        gender: pickFieldValue(formData, ["性别", "gender"]),
-        age:
-          enrollment.age !== null && enrollment.age !== undefined
-            ? enrollment.age
-            : ageNum && !Number.isNaN(ageNum)
-              ? ageNum
-              : undefined,
-        phone: pickFieldValue(formData, ["手机号", "手机", "电话", "phone"]),
-        email: pickFieldValue(formData, ["邮箱", "email"]),
-        occupation:
-          enrollment.occupation ||
-          pickFieldValue(formData, ["职业", "职位", "occupation"]),
-        company:
-          enrollment.company ||
-          pickFieldValue(formData, ["公司", "所在单位", "学校", "company"]),
-        industry:
-          enrollment.industry ||
-          pickFieldValue(formData, ["行业", "关注/从事的行业方向", "industry"]),
-        city:
-          enrollment.city ||
-          pickFieldValue(formData, ["城市", "所在城市", "city"]),
-        tags,
-        avatar:
-          enrollment.avatar ||
-          pickFieldValue(formData, ["头像", "avatar"]),
+        name: enrollment.name || "未知用户",
+        avatar: enrollment.avatar || undefined,
         matchScore,
         rank: 0,
         scoreDetail,

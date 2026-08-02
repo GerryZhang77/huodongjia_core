@@ -82,6 +82,9 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
       queryClient.invalidateQueries({
         queryKey: merchantQueryKeys.matchingParticipants(activityId),
       });
+      queryClient.invalidateQueries({
+        queryKey: merchantQueryKeys.matchingCatalog(activityId),
+      });
     },
   });
 

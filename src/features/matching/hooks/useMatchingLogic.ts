@@ -8,7 +8,7 @@
  * - 支持历史记录回溯
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Toast } from "@/components/ui/Toast";
 import { getActivityById } from "@/features/activities/services/api";
@@ -198,6 +198,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     enabled: queryEnabled,
     staleTime: merchantCacheTimes.matchingParticipantsStale,
     gcTime: merchantCacheTimes.matchingGc,
+    refetchOnMount: "always",
   });
   const historyQuery = useQuery({
     queryKey: merchantQueryKeys.matchingHistory(activityId),
@@ -219,6 +220,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     enabled: queryEnabled,
     staleTime: 5 * 60 * 1000,
     gcTime: merchantCacheTimes.matchingGc,
+    refetchOnMount: "always",
   });
   const configQuery = useQuery({
     queryKey: merchantQueryKeys.matchingConfig(activityId),
@@ -252,6 +254,9 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
   // 数据
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [excludedParticipantIds, setExcludedParticipantIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [registrationSchema, setRegistrationSchema] = useState<
     MatchingSchemaField[]
   >([]);
@@ -259,7 +264,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     MatchingSchemaGroup[]
   >([]);
   const [fieldCatalog, setFieldCatalog] = useState<MatchFieldCatalogItem[]>([]);
-  const [eligibleParticipantCount, setEligibleParticipantCount] = useState(0);
   const [lastPreflightResult, setLastPreflightResult] =
     useState<MatchPreflightResult | null>(null);
   // per-user top5 匹配结果（新模型）
@@ -346,6 +350,20 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   }, [participantsQuery.data, participantsQuery.isFetched]);
 
   useEffect(() => {
+    setExcludedParticipantIds(new Set());
+  }, [activityId]);
+
+  useEffect(() => {
+    const availableIds = new Set(participants.map((participant) => participant.id));
+    setExcludedParticipantIds((current) => {
+      const next = new Set(
+        Array.from(current).filter((participantId) => availableIds.has(participantId)),
+      );
+      return next.size === current.size ? current : next;
+    });
+  }, [participants]);
+
+  useEffect(() => {
     if (!historyQuery.isFetched) return;
     setHistory((historyQuery.data || []) as MatchingHistory[]);
   }, [historyQuery.data, historyQuery.isFetched]);
@@ -358,10 +376,41 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
   useEffect(() => {
     setFieldCatalog(catalogQuery.data?.fields || []);
-    setEligibleParticipantCount(
-      catalogQuery.data?.totalEligibleParticipants || 0,
-    );
   }, [catalogQuery.data]);
+
+  const selectedParticipantIds = useMemo(
+    () =>
+      participants
+        .map((participant) => participant.id)
+        .filter((participantId) => !excludedParticipantIds.has(participantId)),
+    [excludedParticipantIds, participants],
+  );
+  const selectedParticipantFingerprint = useMemo(
+    () => [...selectedParticipantIds].sort().join("|"),
+    [selectedParticipantIds],
+  );
+  const eligibleParticipantCount = selectedParticipantIds.length;
+
+  const setParticipantSelected = useCallback(
+    (participantId: string, selected: boolean) => {
+      setExcludedParticipantIds((current) => {
+        const next = new Set(current);
+        if (selected) next.delete(participantId);
+        else next.add(participantId);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const selectAllParticipants = useCallback(() => {
+    setExcludedParticipantIds(new Set());
+  }, []);
+
+  useEffect(() => {
+    setLastPreflightResult(null);
+    preflightFingerprintRef.current = null;
+  }, [selectedParticipantFingerprint]);
 
   useEffect(() => {
     if (configQuery.data) setConstraints(configQuery.data);
@@ -481,6 +530,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
               results: [] as ParticipantMatchResult[],
               stats: null,
               resultState: undefined,
+              participantUserIds: [] as string[],
             })),
             getMatchingHistory(activityId).catch(() => [] as MatchingHistory[]),
           ]);
@@ -578,8 +628,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       return null;
     }
 
-    if (eligibleParticipantCount === 0) {
-      Toast.show({ content: "暂无审核通过且参与匹配的用户", icon: "fail" });
+    if (eligibleParticipantCount < 2) {
+      Toast.show({ content: "至少选择 2 位参与人", icon: "fail" });
       return null;
     }
 
@@ -589,6 +639,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         activityId,
         enabledRules,
         constraints,
+        selectedParticipantIds,
       );
       setLastPreflightResult(preflightResult);
       if (!preflightResult.canExecute) {
@@ -601,6 +652,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       preflightFingerprintRef.current = JSON.stringify({
         rules: normalizedRules,
         constraints,
+        participantUserIds: [...selectedParticipantIds].sort(),
       });
       return { normalizedRules, enabledRules, preflightResult };
     } catch (error) {
@@ -610,7 +662,13 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     } finally {
       setIsPreflighting(false);
     }
-  }, [activityId, constraints, eligibleParticipantCount, rules]);
+  }, [
+    activityId,
+    constraints,
+    eligibleParticipantCount,
+    rules,
+    selectedParticipantIds,
+  ]);
 
   // === 开始匹配 (异步任务) ===
   const handleStartMatching = useCallback(async () => {
@@ -620,6 +678,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     const fingerprint = JSON.stringify({
       rules: currentNormalizedRules,
       constraints,
+      participantUserIds: [...selectedParticipantIds].sort(),
     });
     const cachedPreflightIsCurrent =
       lastPreflightResult?.canExecute === true &&
@@ -650,7 +709,12 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       setRules(normalizedRules);
       // 开始匹配即固化本次硬约束，确保刷新页面、人工调整与运行快照保持一致。
       await saveMatchConfig(activityId, constraints);
-      const { taskId } = await submitMatchingTask(activityId, enabledRules, constraints);
+      const { taskId } = await submitMatchingTask(
+        activityId,
+        enabledRules,
+        constraints,
+        selectedParticipantIds,
+      );
       currentTaskIdRef.current = taskId;
       clearTaskPolling();
       void pollTaskStatus(activityId);
@@ -679,6 +743,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     lastPreflightResult,
     pollTaskStatus,
     rules,
+    selectedParticipantIds,
   ]);
 
   // === 最小化匹配进度到后台 ===
@@ -878,13 +943,13 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
           results: [] as ParticipantMatchResult[],
           stats: null,
           resultState: undefined,
+          participantUserIds: [] as string[],
         })),
       ]);
 
       setParticipants(participantsData as Participant[]);
       setHistory(historyData);
       setFieldCatalog(catalogData.fields);
-      setEligibleParticipantCount(catalogData.totalEligibleParticipants);
       setMatchResults(matchData.results);
       if (matchData.results.length > 0) {
         setStage(matchData.resultState === "published" ? "published" : "completed");
@@ -939,6 +1004,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     isPreflighting,
     isValidating,
     isRefreshing,
+    isParticipantsRefreshing:
+      participantsQuery.isFetching || catalogQuery.isFetching,
     isRulesLocked,
     matchingProgress,
     matchingMessage,
@@ -950,6 +1017,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     rules,
     constraints,
     participants,
+    selectedParticipantIds,
+    resultParticipantUserIds: resultsQuery.data?.participantUserIds || [],
     matchResults,
     groups, // 历史记录回放保留
     history,
@@ -970,6 +1039,8 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     setRules,
     setConstraints,
     setGroups,
+    setParticipantSelected,
+    selectAllParticipants,
 
     // 规则操作
     handleSaveRules,

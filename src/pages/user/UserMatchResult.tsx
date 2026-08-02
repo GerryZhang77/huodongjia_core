@@ -6,8 +6,7 @@
  * 说明：后端不再区分"分组"与"最佳匹配"—— 每个用户的"小组"就是其 top5 匹配。
  */
 
-import { FC, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { FC, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { Toast } from "antd-mobile";
@@ -40,19 +39,9 @@ interface TopMatchUser {
   id: string;
   name: string;
   avatar: string;
-  role: string;
-  occupation?: string;
-  company?: string;
-  industry?: string;
-  city?: string;
-  gender?: "male" | "female" | "other";
-  age?: number;
-  bio?: string;
-  tags?: string[];
   matchScore: number;
   isManualRecommendation: boolean;
   rank: number;
-  commonTags: string[];
   scoreHighlights: MatchScoreFieldDetail[];
 }
 
@@ -68,44 +57,10 @@ const formatFieldValue = (value?: string): string => {
   return value;
 };
 
-const normalizeDisplayValue = (value: unknown): string | undefined => {
-  if (Array.isArray(value)) {
-    const joined = value.map((item) => String(item ?? "").trim()).filter(Boolean).join("、");
-    return joined || undefined;
-  }
-  if (value === null || value === undefined) {
-    return undefined;
-  }
-  const text = typeof value === "string" ? value.trim() : String(value).trim();
-  return text || undefined;
-};
-
-const resolveScoreFieldValue = (
-  explicitValue: string | undefined,
-  fieldKey: string,
-  fallbackLabel: string | undefined,
-  formData?: Record<string, unknown>,
-  schema?: Array<{ key: string; label: string; type?: string }>,
-): string | undefined => {
-  if (explicitValue && explicitValue.trim()) {
-    return explicitValue.trim();
-  }
-
-  const schemaLabel = getStandardFieldLabel(
-    fieldKey,
-    schema?.find((field) => field.key === fieldKey)?.label?.trim() ||
-      fallbackLabel?.trim(),
-  );
-  const candidates = [fieldKey, schemaLabel].filter(Boolean) as string[];
-
-  for (const candidate of candidates) {
-    const value = normalizeDisplayValue(formData?.[candidate]);
-    if (value) {
-      return value;
-    }
-  }
-
-  return undefined;
+const getMatchModeLabel = (operator: string): string => {
+  if (operator === "complement" || operator === "opposite") return "互补";
+  if (operator === "exact") return "一致";
+  return "相似";
 };
 
 const MatchUniverseCard: FC<{
@@ -132,7 +87,7 @@ const MatchUniverseCard: FC<{
   const detailQuery = useQuery({
     queryKey: ["user", "match-detail", activityId, user.id],
     queryFn: () => getBestMatchDetail(activityId, user.id),
-    enabled: Boolean(activityId && user.id),
+    enabled: Boolean(expanded && activityId && user.id),
     staleTime: 10 * 60 * 1000,
   });
 
@@ -140,9 +95,6 @@ const MatchUniverseCard: FC<{
     detailQuery.data?.data?.score.fields && detailQuery.data.data.score.fields.length > 0
       ? detailQuery.data.data.score.fields
       : user.scoreHighlights;
-  const schema = detailQuery.data?.data?.schema || [];
-  const currentUserFormData = detailQuery.data?.data?.currentUserEnrollment.form_data;
-  const targetUserFormData = detailQuery.data?.data?.targetUserEnrollment.form_data;
   const scoreHighlights = [...detailFields]
     .sort((a, b) => (b.score_percent ?? 0) - (a.score_percent ?? 0))
     .slice(0, 3);
@@ -160,19 +112,18 @@ const MatchUniverseCard: FC<{
   const isGeneratingCurrent = generatingUserId === user.id;
   const isGeneratingOther = Boolean(generatingUserId && generatingUserId !== user.id);
 
-  const badgeLabels = [
-    user.isManualRecommendation ? "主办方推荐" : "高度匹配",
-    ...scoreHighlights
-      .map((field) =>
-        getStandardFieldLabel(
-          field.source_field,
-          field.source_label || field.target_label || field.source_field,
-        ),
-      )
-      .filter(Boolean)
-      .slice(0, 2),
-    user.industry || user.role,
-  ].filter(Boolean);
+  const badgeLabels = user.isManualRecommendation
+    ? ["主办方推荐"]
+    : scoreHighlights
+        .map((field) => {
+          const label = getStandardFieldLabel(
+            field.source_field,
+            field.source_label || field.target_label || field.source_field,
+          );
+          return label ? `${label} · ${getMatchModeLabel(field.operator)}` : "";
+        })
+        .filter(Boolean)
+        .slice(0, 3);
 
   return (
     <div
@@ -205,13 +156,10 @@ const MatchUniverseCard: FC<{
               <div className="truncate text-[18px] font-semibold text-gray-900">
                 {user.name}
               </div>
-              <div className="mt-1 truncate text-sm text-gray-500">
-                {[user.company, user.industry, user.city].filter(Boolean).join(" · ") || user.role}
-              </div>
             </div>
           </div>
         </div>
-            <div className="whitespace-nowrap rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-gray-700">
+        <div className="whitespace-nowrap rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold tabular-nums text-gray-700">
           {user.isManualRecommendation ? "主办方推荐" : `契合度 ${user.matchScore}%`}
         </div>
       </div>
@@ -249,7 +197,7 @@ const MatchUniverseCard: FC<{
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {badgeLabels.slice(0, 4).map((label, badgeIndex) => (
+        {(badgeLabels.length > 0 ? badgeLabels : ["智能匹配"]).map((label, badgeIndex) => (
           <span
             key={`${user.id}-${label}-${badgeIndex}`}
             className={cn(
@@ -274,7 +222,7 @@ const MatchUniverseCard: FC<{
         </button>
         <button
           onClick={() => onViewDetail(user.id)}
-        className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-sm font-medium text-accent-500 hover:text-accent-600 [&>svg]:shrink-0"
+          className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-sm font-medium text-accent-500 hover:text-accent-600 [&>svg]:shrink-0"
         >
           进入详情
           <ChevronRight size={16} />
@@ -297,31 +245,15 @@ const MatchUniverseCard: FC<{
                         field.source_label || field.target_label || field.source_field,
                       )}
                     </p>
-          <span className="whitespace-nowrap rounded-full bg-accent-50 px-2 py-1 text-xs font-medium text-accent-600">
-                      {field.score_percent ?? Math.round(field.score * 100)}分
+                    <span className="whitespace-nowrap rounded-full bg-accent-50 px-2 py-1 text-xs font-medium text-accent-600">
+                      {getMatchModeLabel(field.operator)}
                     </span>
                   </div>
                   <p className="text-xs leading-5 text-gray-500">
-                    你的填写：{formatFieldValue(
-                      resolveScoreFieldValue(
-                        field.current_user_value,
-                        field.source_field,
-                        field.source_label,
-                        currentUserFormData,
-                        schema,
-                      ),
-                    )}
+                    我的选择：{formatFieldValue(field.current_user_value)}
                   </p>
                   <p className="mt-2 text-xs leading-5 text-gray-500">
-                    对方填写：{formatFieldValue(
-                      resolveScoreFieldValue(
-                        field.target_user_value,
-                        field.target_field,
-                        field.target_label,
-                        targetUserFormData,
-                        schema,
-                      ),
-                    )}
+                    对方选择：{formatFieldValue(field.target_user_value)}
                   </p>
                 </div>
               ))
@@ -331,7 +263,6 @@ const MatchUniverseCard: FC<{
               </div>
             )}
           </div>
-
         </div>
       ) : null}
     </div>
@@ -342,17 +273,9 @@ const formatDate = (dateStr: string): string => {
   return dayjs(dateStr).format("M月D日");
 };
 
-const normalizeGender = (g?: string): "male" | "female" | "other" | undefined => {
-  if (!g) return undefined;
-  if (g === "male" || g === "男") return "male";
-  if (g === "female" || g === "女") return "female";
-  return "other";
-};
-
 const UserMatchResult: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const [showNFCModal, setShowNFCModal] = useState(false);
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
@@ -373,7 +296,6 @@ const UserMatchResult: FC = () => {
   const topMatches: TopMatchUser[] = useMemo(() => {
     if (!bestMatchesData || bestMatchesData.length === 0) return [];
     return bestMatchesData.map((user) => {
-      const userRecord = user as typeof user & { bio?: string };
       const scoreHighlights = [...(user.scoreDetail?.fields || [])]
         .sort((a, b) => (b.score_percent ?? 0) - (a.score_percent ?? 0))
         .slice(0, 3);
@@ -382,38 +304,14 @@ const UserMatchResult: FC = () => {
         id: user.user_id,
         name: user.name,
         avatar: user.avatar || generateDefaultAvatar(user.user_id),
-        role: user.occupation || "参与者",
-        occupation: user.occupation,
-        company: user.company,
-        industry: user.industry,
-        city: user.city,
-        gender: normalizeGender(user.gender),
-        age: user.age,
-        bio: userRecord.bio,
-        tags: user.tags || [],
         matchScore: user.matchScore,
         isManualRecommendation: user.isManualRecommendation,
         rank: user.rank,
-        commonTags: [],
         scoreHighlights,
       };
     });
   }, [bestMatchesData]);
   const visibleMatches = showAllMatches ? topMatches : topMatches.slice(0, 3);
-
-  useEffect(() => {
-    if (!id || topMatches.length === 0) {
-      return;
-    }
-
-    topMatches.slice(0, 5).forEach((user) => {
-      queryClient.prefetchQuery({
-        queryKey: ["user", "match-detail", id, user.id],
-        queryFn: () => getBestMatchDetail(id, user.id),
-        staleTime: 10 * 60 * 1000,
-      });
-    });
-  }, [id, queryClient, topMatches]);
 
   const supportsNFC = Boolean(
     (activity as { enableNfc?: boolean } | undefined)?.enableNfc,

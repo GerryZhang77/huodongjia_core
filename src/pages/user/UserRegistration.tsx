@@ -158,9 +158,27 @@ type EnrollmentImageItem = {
   assetId?: string;
   previewUrl: string;
   name: string;
-  status: "uploading" | "ready";
+  file: File;
+  status: "uploading" | "ready" | "error";
   uploadHandle: UploadHandle;
 };
+
+const ENROLLMENT_IMAGE_MIME_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+] as const;
+const ENROLLMENT_IMAGE_EXTENSIONS = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".heic",
+  ".heif",
+] as const;
 
 const EnrollmentImageField: FC<{
   activityId: string;
@@ -192,6 +210,10 @@ const EnrollmentImageField: FC<{
     uploadMaxBytes: 2 * 1024 * 1024,
     maxDimension: 1800,
     revokePreviewOnSettled: false,
+    allowedMimeTypes: ENROLLMENT_IMAGE_MIME_TYPES,
+    allowedExtensions: ENROLLMENT_IMAGE_EXTENSIONS,
+    formatErrorMessage: "图片格式不支持，请选择 JPG、PNG、WebP 或 HEIC 图片",
+    sizeErrorMessage: "图片过大，请选择 25MB 以内的图片",
   });
 
   useEffect(() => {
@@ -238,6 +260,7 @@ const EnrollmentImageField: FC<{
           localId,
           previewUrl: uploadHandle.tempUrl,
           name: file.name,
+          file,
           status: "uploading",
           uploadHandle,
         },
@@ -259,14 +282,70 @@ const EnrollmentImageField: FC<{
         })
         .catch(() => {
           if (mountedRef.current) {
-            setItems((current) => current.filter((item) => item.localId !== localId));
+            setItems((current) =>
+              current.map((item) =>
+                item.localId === localId ? { ...item, status: "error" } : item,
+              ),
+            );
           }
         });
     });
   };
 
+  const retryItem = (item: EnrollmentImageItem) => {
+    if (item.status !== "error") return;
+    const uploadHandle = uploadWithPreview(item.file);
+    if (!uploadHandle.tempUrl) return;
+
+    item.uploadHandle.releasePreview();
+    setItems((current) =>
+      current.map((candidate) =>
+        candidate.localId === item.localId
+          ? {
+              ...candidate,
+              previewUrl: uploadHandle.tempUrl,
+              status: "uploading",
+              uploadHandle,
+            }
+          : candidate,
+      ),
+    );
+
+    uploadHandle.finalUrlPromise
+      .then((assetId) => {
+        if (!mountedRef.current) {
+          uploadHandle.releasePreview();
+          void deletePendingEnrollmentImage(assetId).catch(() => undefined);
+          return;
+        }
+        setItems((current) =>
+          current.map((candidate) =>
+            candidate.localId === item.localId
+              ? { ...candidate, assetId, status: "ready" }
+              : candidate,
+          ),
+        );
+      })
+      .catch(() => {
+        if (mountedRef.current) {
+          setItems((current) =>
+            current.map((candidate) =>
+              candidate.localId === item.localId
+                ? { ...candidate, status: "error" }
+                : candidate,
+            ),
+          );
+        }
+      });
+  };
+
   const removeItem = async (item: EnrollmentImageItem) => {
-    if (item.status === "uploading" || !item.assetId) return;
+    if (item.status === "uploading") return;
+    if (item.status === "error" || !item.assetId) {
+      item.uploadHandle.releasePreview();
+      setItems((current) => current.filter((candidate) => candidate.localId !== item.localId));
+      return;
+    }
     try {
       await deletePendingEnrollmentImage(item.assetId);
       item.uploadHandle.releasePreview();
@@ -291,12 +370,22 @@ const EnrollmentImageField: FC<{
                   <LoaderCircle size={20} className="animate-spin" />
                   上传中
                 </div>
-              ) : (
+              ) : item.status === "error" ? (
+                <button
+                  type="button"
+                  aria-label={`重新上传 ${item.name}`}
+                  onClick={() => retryItem(item)}
+                  className="absolute inset-0 flex items-center justify-center bg-black/55 px-2 text-center text-xs font-medium text-white"
+                >
+                  上传失败 · 重试
+                </button>
+              ) : null}
+              {item.status !== "uploading" && (
                 <button
                   type="button"
                   aria-label={`删除 ${item.name}`}
                   onClick={() => void removeItem(item)}
-                  className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white"
+                  className="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white"
                 >
                   <Trash2 size={14} />
                 </button>

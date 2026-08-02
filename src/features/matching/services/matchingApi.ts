@@ -62,6 +62,7 @@ type MatchResultsApiResponse = {
   version?: number;
   revision?: number;
   sourceMatchStatusId?: string | null;
+  participantUserIds?: string[];
   data?: Omit<MatchResultsApiResponse, "data">;
 };
 
@@ -336,6 +337,7 @@ export const preflightMatching = async (
   activityId: string,
   rules: MatchRule[],
   config?: MatchConstraints,
+  participantUserIds?: string[],
 ): Promise<MatchPreflightResult> => {
   const token = getToken();
   const payloadRules = serializeRulesForBackend(rules);
@@ -346,7 +348,7 @@ export const preflightMatching = async (
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ rules: payloadRules, config }),
+    body: JSON.stringify({ rules: payloadRules, config, participantUserIds }),
   });
 
   const data = await response.json();
@@ -452,7 +454,11 @@ export const executeMatching = async (
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ rules: payloadRules, config: request.config }),
+    body: JSON.stringify({
+      rules: payloadRules,
+      config: request.config,
+      participantUserIds: request.participantUserIds,
+    }),
   });
 
   if (!response.ok) {
@@ -518,6 +524,7 @@ export const getMatchGroups = async (
   version?: number;
   revision?: number;
   sourceMatchStatusId?: string | null;
+  participantUserIds: string[];
 }> => {
   const token = getToken();
 
@@ -578,6 +585,11 @@ export const getMatchGroups = async (
     revision: Number(data.revision || data.data?.revision) || undefined,
     sourceMatchStatusId:
       data.sourceMatchStatusId ?? data.data?.sourceMatchStatusId ?? null,
+    participantUserIds: Array.isArray(
+      data.participantUserIds ?? data.data?.participantUserIds,
+    )
+      ? (data.participantUserIds ?? data.data?.participantUserIds ?? []).map(String)
+      : [],
   };
 };
 
@@ -835,8 +847,9 @@ export const submitMatchingTask = async (
   activityId: string,
   rules: MatchingRule[],
   config?: MatchConstraints,
+  participantUserIds?: string[],
 ): Promise<{ taskId: string }> => {
-  await executeMatching({ activityId, rules, config });
+  await executeMatching({ activityId, rules, config, participantUserIds });
   // 后端立即返回 success，异步执行匹配；用 activityId 作为轮询 key
   return { taskId: activityId };
 };

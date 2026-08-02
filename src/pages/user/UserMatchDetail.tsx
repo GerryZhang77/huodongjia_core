@@ -6,7 +6,6 @@ import {
   AlertCircle,
   ArrowLeft,
   Sparkles,
-  UserRound,
 } from "lucide-react";
 import { UserLayout } from "@/components/layout/UserLayout";
 import { Button } from "@/components/ui";
@@ -19,6 +18,7 @@ import {
   type MatchScoreFieldDetail,
 } from "@/features/user/services/matchApi";
 import { getStandardFieldLabel } from "@/utils/fieldLabels";
+import { generateDefaultAvatar } from "@/utils/avatar";
 
 const operatorTone: Record<string, string> = {
   similarity: "bg-emerald-50 text-emerald-600",
@@ -41,101 +41,10 @@ const formatFieldValue = (value: unknown): string => {
   return String(value);
 };
 
-const resolveScoreFieldValue = (
-  explicitValue: string | undefined,
-  fieldKey: string,
-  fallbackLabel: string | undefined,
-  formData: Record<string, unknown> | undefined,
-  schema: Array<{ key: string; label: string }>,
-): string => {
-  if (explicitValue && explicitValue.trim()) {
-    return explicitValue.trim();
-  }
-
-  const schemaLabel = getStandardFieldLabel(
-    fieldKey,
-    schema.find((field) => field.key === fieldKey)?.label?.trim() ||
-      fallbackLabel?.trim(),
-  );
-  const candidates = [fieldKey, schemaLabel].filter(Boolean) as string[];
-
-  for (const candidate of candidates) {
-    const value = formData?.[candidate];
-    if (value !== null && value !== undefined && value !== "") {
-      return formatFieldValue(value);
-    }
-  }
-
-  return "未填写";
-};
-
-const MatchInfoCard: FC<{
-  title: string;
-  data: Record<string, unknown>;
-  orderedFields: Array<{ key: string; label: string }>;
-}> = ({ title, data, orderedFields }) => {
-  const entries = useMemo(() => {
-    const seenKeys = new Set<string>();
-    const orderedEntries = orderedFields
-      .filter((field) => Object.prototype.hasOwnProperty.call(data, field.key))
-      .map((field) => {
-        seenKeys.add(field.key);
-        return {
-          id: field.key,
-          label: getStandardFieldLabel(field.key, field.label),
-          value: data[field.key],
-        };
-      });
-
-    const extraEntries = Object.entries(data)
-      .filter(([key]) => !seenKeys.has(key))
-      .map(([key, value]) => ({
-        id: key,
-        label: getStandardFieldLabel(key),
-        value,
-      }));
-
-    return [...orderedEntries, ...extraEntries].filter(
-      ({ value }) => value !== null && value !== undefined && value !== "",
-    );
-  }, [data, orderedFields]);
-
-  return (
-    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <UserRound size={16} className="text-gray-400" />
-        <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-      </div>
-      <div className="space-y-3">
-        {entries.length > 0 ? (
-          entries.map(({ id, label, value }) => (
-            <div
-              key={id}
-              className="flex items-start justify-between gap-4 border-b border-gray-50 pb-3 last:border-b-0 last:pb-0"
-            >
-              <span className="text-sm text-gray-500 flex-shrink-0">
-                {label}
-              </span>
-              <span className="text-sm text-gray-900 text-right break-words">
-                {formatFieldValue(value)}
-              </span>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-gray-400">暂无报名信息</p>
-        )}
-      </div>
-    </section>
-  );
-};
-
 const RuleScoreCard: FC<{
   rule: MatchRuleDetail;
   scoreField?: MatchScoreFieldDetail;
-  currentUserFormData: Record<string, unknown>;
-  targetUserFormData: Record<string, unknown>;
-  schema: Array<{ key: string; label: string }>;
-}> = ({ rule, scoreField, currentUserFormData, targetUserFormData, schema }) => {
+}> = ({ rule, scoreField }) => {
   const percent = scoreField?.score_percent ?? Math.round((scoreField?.score ?? 0) * 100);
 
   return (
@@ -160,7 +69,7 @@ const RuleScoreCard: FC<{
           </p>
         </div>
         <span
-              className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${operatorTone[rule.operator] || "bg-gray-100 text-gray-600"}`}
+          className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium ${operatorTone[rule.operator] || "bg-gray-100 text-gray-600"}`}
         >
           {percent}分
         </span>
@@ -175,27 +84,15 @@ const RuleScoreCard: FC<{
 
       <div className="space-y-2 text-sm">
         <div className="flex items-start justify-between gap-4">
-          <span className="text-gray-500">我的信息</span>
+          <span className="text-gray-500">我的选择</span>
           <span className="text-gray-900 text-right break-words">
-            {resolveScoreFieldValue(
-              scoreField?.current_user_value,
-              rule.source_field,
-              rule.source_label,
-              currentUserFormData,
-              schema,
-            )}
+            {formatFieldValue(scoreField?.current_user_value)}
           </span>
         </div>
         <div className="flex items-start justify-between gap-4">
-          <span className="text-gray-500">对方信息</span>
+          <span className="text-gray-500">对方选择</span>
           <span className="text-gray-900 text-right break-words">
-            {resolveScoreFieldValue(
-              scoreField?.target_user_value,
-              rule.target_field,
-              rule.target_label,
-              targetUserFormData,
-              schema,
-            )}
+            {formatFieldValue(scoreField?.target_user_value)}
           </span>
         </div>
       </div>
@@ -229,14 +126,6 @@ const UserMatchDetail: FC = () => {
     matchMessageQuery.data.success
       ? matchMessageQuery.data.data
       : "";
-  const orderedFields = useMemo(
-    () =>
-      (detail?.schema || []).map((field) => ({
-        key: field.key,
-        label: getStandardFieldLabel(field.key, field.label || field.key),
-      })),
-    [detail?.schema],
-  );
   const ruleScoreMap = useMemo(() => {
     const map = new Map<string, MatchScoreFieldDetail>();
     for (const field of detail?.score.fields || []) {
@@ -330,37 +219,35 @@ const UserMatchDetail: FC = () => {
         <div className="bg-gradient-to-br from-primary-400 to-accent-500 px-4 pt-12 pb-8">
           <button
             onClick={() => navigate(-1)}
-          className="mb-5 inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-sm text-white/90 [&>svg]:shrink-0"
+            className="mb-5 inline-flex flex-nowrap items-center gap-1 whitespace-nowrap text-sm text-white/90 [&>svg]:shrink-0"
           >
             <ArrowLeft size={16} />
             返回匹配列表
           </button>
-          <div className="bg-white/12 rounded-3xl p-5 text-white backdrop-blur-sm">
-            <p className="text-sm text-white/80 mb-2">当前匹配对象</p>
-            <h1 className="text-2xl font-bold mb-2">
-              {detail.targetUserEnrollment.name || "未命名用户"}
-            </h1>
-            <p className="text-sm text-white/85">
-              {detail.isManualRecommendation
-                ? "该对象由活动主办方推荐"
-                : `总匹配度 ${detail.score.total_score_percent ?? Math.round(detail.score.total_score * 100)} 分`}
-            </p>
+          <div className="flex items-center gap-4 rounded-3xl bg-white/12 p-5 text-white backdrop-blur-sm">
+            <img
+              src={
+                detail.targetUserEnrollment.avatar ||
+                generateDefaultAvatar(detail.targetUserEnrollment.user_id)
+              }
+              alt={`${detail.targetUserEnrollment.name || "匹配对象"}的头像`}
+              className="h-16 w-16 shrink-0 rounded-2xl border border-white/20 object-cover"
+            />
+            <div className="min-w-0">
+              <p className="mb-1 text-sm text-white/80">当前匹配对象</p>
+              <h1 className="truncate text-2xl font-bold">
+                {detail.targetUserEnrollment.name || "未命名用户"}
+              </h1>
+              <p className="mt-2 text-sm text-white/85">
+                {detail.isManualRecommendation
+                  ? "该对象由活动主办方推荐"
+                  : `总匹配度 ${detail.score.total_score_percent ?? Math.round(detail.score.total_score * 100)} 分`}
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="px-4 py-4 space-y-4">
-          <MatchInfoCard
-            title="对方的报名信息"
-            data={detail.targetUserEnrollment.form_data}
-            orderedFields={orderedFields}
-          />
-
-          <MatchInfoCard
-            title="我的报名信息"
-            data={detail.currentUserEnrollment.form_data}
-            orderedFields={orderedFields}
-          />
-
           <section className="space-y-3">
             <div className="flex items-center gap-2">
               <Sparkles size={18} className="text-accent-500" />
@@ -383,9 +270,6 @@ const UserMatchDetail: FC = () => {
                     key={`${rule.source_field}-${rule.target_field}-${rule.operator}`}
                     rule={rule}
                     scoreField={scoreField}
-                    currentUserFormData={detail.currentUserEnrollment.form_data}
-                    targetUserFormData={detail.targetUserEnrollment.form_data}
-                    schema={orderedFields}
                   />
                 );
               })

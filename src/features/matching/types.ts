@@ -369,6 +369,7 @@ export interface ExecuteMatchRequest {
   activityId: string;
   rules: MatchingRule[];
   config?: MatchConstraints;
+  participantUserIds?: string[];
 }
 
 /**
