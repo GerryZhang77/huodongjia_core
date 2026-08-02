@@ -3,6 +3,9 @@ const STANDARD_FIELD_LABELS: Record<string, string> = {
   account: "账号",
   gender: "性别",
   age: "年龄",
+  birthday: "生日",
+  zodiac: "星座",
+  mbti: "MBTI",
   phone: "手机号",
   email: "邮箱",
   occupation: "职业",
@@ -28,6 +31,35 @@ const STANDARD_FIELD_ALIASES: Record<string, string[]> = {
   name: ["姓名", "名字", "真实姓名", "fullName", "full_name"],
   gender: ["性别", "sex"],
   age: ["年龄"],
+  birthday: [
+    "生日",
+    "出生日期",
+    "出生年月",
+    "出生年月日",
+    "birthdate",
+    "birth_date",
+    "date_of_birth",
+    "dob",
+  ],
+  zodiac: [
+    "星座",
+    "太阳星座",
+    "zodiac",
+    "zodiac_sign",
+    "constellation",
+    "star_sign",
+    "horoscope",
+  ],
+  mbti: [
+    "MBTI",
+    "人格类型",
+    "性格类型",
+    "16型人格",
+    "十六型人格",
+    "mbti_type",
+    "personality_type",
+    "16personalities",
+  ],
   phone: ["手机号", "手机", "电话", "联系电话", "联系方式", "mobile", "tel"],
   email: ["邮箱", "电子邮箱", "邮件", "e-mail", "mail"],
   occupation: ["职业", "岗位", "工作", "job"],
@@ -54,7 +86,7 @@ const normalizeFieldName = (value: string) =>
   value
     .trim()
     .toLowerCase()
-    .replace(/[\s_\-:：/\\()（）\[\]【】]/g, "");
+    .replace(/[\s_:：/\\()（）[\]【】-]/g, "");
 
 const resolveStandardFieldKey = (fieldName?: string): string | null => {
   const normalized = normalizeFieldName(fieldName || "");
@@ -71,6 +103,22 @@ const resolveStandardFieldKey = (fieldName?: string): string | null => {
   }
 
   return null;
+};
+
+export type MatchFieldSemanticType = "birthday" | "zodiac" | "mbti";
+
+export const getMatchFieldSemanticType = (
+  fieldKey?: string,
+  fieldLabel?: string,
+): MatchFieldSemanticType | undefined => {
+  const standardKey =
+    resolveStandardFieldKey(fieldKey) || resolveStandardFieldKey(fieldLabel);
+
+  return standardKey === "birthday" ||
+    standardKey === "zodiac" ||
+    standardKey === "mbti"
+    ? standardKey
+    : undefined;
 };
 
 export const getStandardFieldLabel = (

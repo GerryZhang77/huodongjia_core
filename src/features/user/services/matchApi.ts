@@ -3,9 +3,23 @@
  */
 
 import { api } from "@/services/api";
+import {
+  getMatchFieldSemanticType,
+  type MatchFieldSemanticType,
+} from "@/utils/fieldLabels";
 import { AxiosError } from "axios";
 
-export interface MatchScoreFieldDetail {
+export type { MatchFieldSemanticType } from "@/utils/fieldLabels";
+
+export interface MatchCompatibilityInsight {
+  kind: "zodiac" | "mbti";
+  title: string;
+  source_type: string;
+  target_type: string;
+  reason: string;
+}
+
+export interface MatchExplanationField {
   rule_index: number;
   source_field: string;
   target_field: string;
@@ -13,29 +27,90 @@ export interface MatchScoreFieldDetail {
   target_label?: string;
   operator: string;
   operator_label?: string;
-  weight: number;
-  score: number;
-  weighted_score: number;
-  score_percent?: number;
   current_user_value?: string;
   target_user_value?: string;
+  semantic_type?: MatchFieldSemanticType;
+  compatibility_insight?: MatchCompatibilityInsight;
 }
 
-export interface MatchScorePayload {
-  total_score: number;
-  total_score_percent?: number;
-  fields: MatchScoreFieldDetail[];
+export interface MatchExplanationPayload {
+  fields: MatchExplanationField[];
 }
 
-export interface MatchRuleDetail {
-  source_field: string;
-  target_field: string;
-  source_label?: string;
-  target_label?: string;
-  operator: string;
-  operator_label?: string;
-  weight: number;
-}
+const normalizeCompatibilityInsight = (
+  value: unknown,
+): MatchCompatibilityInsight | undefined => {
+  if (!value || typeof value !== "object") return undefined;
+  const insight = value as Partial<MatchCompatibilityInsight>;
+  if (
+    (insight.kind !== "zodiac" && insight.kind !== "mbti") ||
+    typeof insight.title !== "string" ||
+    typeof insight.source_type !== "string" ||
+    typeof insight.target_type !== "string" ||
+    typeof insight.reason !== "string"
+  ) {
+    return undefined;
+  }
+  return insight as MatchCompatibilityInsight;
+};
+
+export const normalizeMatchExplanation = (
+  rawExplanation: unknown,
+): MatchExplanationPayload => {
+  if (!rawExplanation) return { fields: [] };
+
+  if (typeof rawExplanation === "string") {
+    try {
+      return normalizeMatchExplanation(JSON.parse(rawExplanation));
+    } catch {
+      return { fields: [] };
+    }
+  }
+
+  if (typeof rawExplanation !== "object") return { fields: [] };
+  const payload = rawExplanation as {
+    fields?: Array<Partial<MatchExplanationField>>;
+  };
+  if (!Array.isArray(payload.fields)) return { fields: [] };
+
+  return {
+    fields: payload.fields
+      .filter(
+        (field) =>
+          field &&
+          typeof field.source_field === "string" &&
+          typeof field.target_field === "string" &&
+          typeof field.operator === "string",
+      )
+      .map((field, index) => ({
+        rule_index: Number(field.rule_index) || index,
+        source_field: field.source_field!,
+        target_field: field.target_field!,
+        source_label: field.source_label,
+        target_label: field.target_label,
+        operator: field.operator!,
+        operator_label: field.operator_label,
+        current_user_value: field.current_user_value,
+        target_user_value: field.target_user_value,
+        semantic_type:
+          field.semantic_type === "birthday" ||
+          field.semantic_type === "zodiac" ||
+          field.semantic_type === "mbti"
+            ? field.semantic_type
+            : getMatchFieldSemanticType(
+                field.source_field,
+                field.source_label,
+              ) ||
+              getMatchFieldSemanticType(
+                field.target_field,
+                field.target_label,
+              ),
+        compatibility_insight: normalizeCompatibilityInsight(
+          field.compatibility_insight,
+        ),
+      })),
+  };
+};
 
 export interface MatchEnrollmentDetail {
   id: string;
@@ -61,9 +136,7 @@ export interface MatchDetailResponse {
     }>;
     currentUserEnrollment: MatchEnrollmentDetail;
     targetUserEnrollment: MatchEnrollmentDetail;
-    rules: MatchRuleDetail[];
-    score: MatchScorePayload;
-    isManualRecommendation: boolean;
+    explanation: MatchExplanationPayload;
   };
   message?: string;
 }
@@ -118,7 +191,10 @@ export async function getParticipants(eventId: string) {
  * @returns 匹配寄语
  */
 export async function getMatchMessage(eventId: string, userId: string) {
-  const response = await api.get(`/api/match/${eventId}/${userId}/match_message`);
+  const response = await api.get(
+    `/api/match/${eventId}/${userId}/match_message`,
+    { timeout: 30_000 },
+  );
   return response;
 }
 
@@ -143,5 +219,28 @@ export async function getBestMatchDetail(
   eventId: string,
   userId: string,
 ): Promise<MatchDetailResponse> {
-  return api.get(`/api/match/${eventId}/${userId}/detail`);
+  const response = await api.get<MatchDetailResponse>(
+    `/api/match/${eventId}/${userId}/detail`,
+  );
+  if (!response.data) return response;
+
+  const legacyData = response.data as MatchDetailResponse["data"] & {
+    score?: unknown;
+    rules?: unknown;
+    isManualRecommendation?: unknown;
+  };
+  const legacyScore = legacyData.score;
+
+  return {
+    ...response,
+    data: {
+      event: legacyData.event,
+      schema: legacyData.schema,
+      currentUserEnrollment: legacyData.currentUserEnrollment,
+      targetUserEnrollment: legacyData.targetUserEnrollment,
+      explanation: normalizeMatchExplanation(
+        legacyData.explanation ?? legacyScore,
+      ),
+    },
+  };
 }

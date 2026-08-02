@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   useActivityDetail: vi.fn(),
   useBestMatches: vi.fn(),
   getBestMatchDetail: vi.fn(),
-  getExistingMatchMessage: vi.fn(),
   getMatchMessage: vi.fn(),
 }));
 
@@ -31,9 +30,26 @@ vi.mock("@/features/user/hooks/useBestMatches", () => ({
 
 vi.mock("@/features/user/services/matchApi", () => ({
   getBestMatchDetail: mocks.getBestMatchDetail,
-  getExistingMatchMessage: mocks.getExistingMatchMessage,
   getMatchMessage: mocks.getMatchMessage,
 }));
+
+const compatibilityInsight = {
+  kind: "zodiac" as const,
+  title: "白羊座 × 天秤座",
+  source_type: "白羊座",
+  target_type: "天秤座",
+  reason: "一方果断推进，一方善于协调，适合先确认共同节奏。",
+};
+
+const birthdayField = {
+  rule_index: 0,
+  source_field: "birthday",
+  target_field: "birthday",
+  source_label: "生日",
+  target_label: "生日",
+  operator: "similarity",
+  operator_label: "相似",
+};
 
 const bestMatches = Array.from({ length: 5 }, (_, index) => ({
   id: `enrollment-${index + 1}`,
@@ -45,10 +61,7 @@ const bestMatches = Array.from({ length: 5 }, (_, index) => ({
   industry: "互联网",
   city: "上海",
   tags: [],
-  matchScore: 95 - index,
-  rank: index + 1,
-  scoreDetail: null,
-  isManualRecommendation: false,
+  matchHighlights: index === 0 ? [birthdayField] : [],
 }));
 
 beforeEach(() => {
@@ -70,18 +83,26 @@ beforeEach(() => {
   });
   mocks.getBestMatchDetail.mockResolvedValue({
     data: {
-      score: { fields: [] },
+      explanation: {
+        fields: [
+          {
+            ...birthdayField,
+            current_user_value: "1996.03.21",
+            target_user_value: "2004.10.1",
+            compatibility_insight: compatibilityInsight,
+          },
+        ],
+      },
       schema: [],
       currentUserEnrollment: { form_data: {} },
       targetUserEnrollment: { form_data: {} },
     },
   });
-  mocks.getExistingMatchMessage.mockResolvedValue({ data: "" });
   mocks.getMatchMessage.mockResolvedValue({ data: "欢迎认识" });
 });
 
 describe("UserMatchResult", () => {
-  it("keeps the summary compact, renders avatars, and expands all recommendations", () => {
+  it("keeps the summary compact, hides ranking metadata, and expands all recommendations", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -106,7 +127,30 @@ describe("UserMatchResult", () => {
     expect(screen.queryByText("活动家")).toBeNull();
     expect(screen.queryByText("互联网")).toBeNull();
     expect(screen.queryByText("上海")).toBeNull();
+    expect(screen.queryByText(/契合度/)).toBeNull();
+    expect(screen.queryByText("智能推荐")).toBeNull();
+    expect(screen.queryByText("主办方推荐")).toBeNull();
+    expect(screen.queryByText("相似")).toBeNull();
+    expect(screen.queryByText(/分数|匹配度|契合度|权重/)).toBeNull();
+    expect(screen.queryByText(/\d+%/)).toBeNull();
     expect(screen.queryByText("用户4")).toBeNull();
+
+    fireEvent.mouseEnter(
+      screen.getByRole("button", { name: "查看生日匹配说明" }),
+    );
+    expect(await screen.findByText(compatibilityInsight.reason)).not.toBeNull();
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "查看匹配细节" })[0],
+    );
+    expect(await screen.findByText("1996.03.21")).not.toBeNull();
+    expect(screen.queryByText("3月21日（白羊座）")).toBeNull();
+    expect(screen.queryByText("相似")).toBeNull();
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "查看匹配寄语" })[0],
+    );
+    expect(await screen.findByText("欢迎认识")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "查看全部 5 位" }));
 

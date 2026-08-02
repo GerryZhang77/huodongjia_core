@@ -5,12 +5,16 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getBestMatches,
-  type MatchScorePayload,
+  type MatchExplanationField,
+  type MatchExplanationPayload,
+  normalizeMatchExplanation,
 } from "../services/matchApi";
 
 export interface BestMatchUser {
   user_id: string;
-  scores: MatchScorePayload | null;
+  explanation?: MatchExplanationPayload | null;
+  /** 兼容前后端滚动发布期间的旧字段。解析时只保留非数值说明。 */
+  scores?: unknown;
   participant?: {
     id: string;
     userId: string;
@@ -28,57 +32,8 @@ export interface Participant {
 }
 
 export interface EnrichedBestMatchUser extends Participant {
-  matchScore: number;
-  rank: number;
-  scoreDetail?: MatchScorePayload | null;
-  isManualRecommendation: boolean;
+  matchHighlights: MatchExplanationField[];
 }
-
-const parseMatchScorePayload = (
-  rawScores: unknown,
-): MatchScorePayload | null => {
-  if (!rawScores) return null;
-
-  if (typeof rawScores === "string") {
-    try {
-      return parseMatchScorePayload(JSON.parse(rawScores));
-    } catch {
-      return null;
-    }
-  }
-
-  if (Array.isArray(rawScores)) {
-    const numericValues = rawScores
-      .map((value) => Number(value))
-      .filter((value) => Number.isFinite(value));
-    const totalScore =
-      numericValues.length > 0
-        ? numericValues.reduce((sum, value) => sum + value, 0) /
-          numericValues.length
-        : 0;
-
-    return {
-      total_score: totalScore,
-      total_score_percent: Math.round(totalScore * 100),
-      fields: [],
-    };
-  }
-
-  if (typeof rawScores === "object") {
-    const payload = rawScores as Partial<MatchScorePayload>;
-    const totalScore = Number(payload.total_score);
-    const fields = Array.isArray(payload.fields) ? payload.fields : [];
-    return {
-      total_score: Number.isFinite(totalScore) ? totalScore : 0,
-      total_score_percent: Math.round(
-        (Number.isFinite(totalScore) ? totalScore : 0) * 100,
-      ),
-      fields,
-    };
-  }
-
-  return null;
-};
 
 export async function fetchBestMatchesWithParticipants(
   eventId: string,
@@ -100,10 +55,8 @@ export async function fetchBestMatchesWithParticipants(
         return null;
       }
 
-      const scoreDetail = parseMatchScorePayload(match.scores);
-      const matchScore = Math.max(
-        0,
-        Math.min(100, scoreDetail?.total_score_percent ?? 0),
+      const explanation = normalizeMatchExplanation(
+        match.explanation ?? match.scores,
       );
 
       return {
@@ -111,14 +64,10 @@ export async function fetchBestMatchesWithParticipants(
         user_id: enrollment.userId,
         name: enrollment.name || "未知用户",
         avatar: enrollment.avatar || undefined,
-        matchScore,
-        rank: 0,
-        scoreDetail,
-        isManualRecommendation: !scoreDetail,
+        matchHighlights: explanation.fields,
       };
     })
-    .filter((item): item is NonNullable<typeof item> => item !== null)
-    .map((item, index) => ({ ...item, rank: index + 1 }));
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 }
 
 /**
