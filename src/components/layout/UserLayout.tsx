@@ -121,6 +121,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
                   showBreadcrumb={showBreadcrumb}
                   breadcrumbItems={breadcrumbItems}
                   showNotification={showTabBar}
+                  showDesktopBrand={!showTabBar}
                   rightContent={topBarRightContent}
                 />
               )}
@@ -140,6 +141,7 @@ export const UserLayout: FC<UserLayoutProps> = ({
               showBreadcrumb={showBreadcrumb}
               breadcrumbItems={breadcrumbItems}
               showNotification={showTabBar}
+              showDesktopBrand={!showTabBar}
               rightContent={topBarRightContent}
             />
           )}

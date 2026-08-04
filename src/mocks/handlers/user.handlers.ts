@@ -8,23 +8,24 @@ import {
   getUserProfile,
   updateUserProfile,
   type UserProfile,
-  type InterestTag,
 } from "../data/user-profile";
-import { mockUserActivities, type UserActivity } from "../data/user-activities";
+import { mockUserActivities } from "../data/user-activities";
 import {
-  mockNotifications,
   getAllNotifications,
   getUnreadCount,
   markAsRead,
   markAllAsRead,
-  type Notification,
 } from "../data/user-notifications";
 import { generateDefaultAvatar } from "@/utils/avatar";
 
 // ========================================
 // 收藏数据（内存存储）
 // ========================================
-let favoriteActivityIds: Set<string> = new Set(["ua_001", "ua_003", "ua_006"]);
+const favoriteActivityIds: Set<string> = new Set([
+  "ua_001",
+  "ua_003",
+  "ua_006",
+]);
 
 // ========================================
 // 用户模块 Handlers
@@ -57,6 +58,32 @@ export const userHandlers = [
     return HttpResponse.json({
       success: true,
       data: { activities, total: activities.length, page: 1, pageSize: 20 },
+    });
+  }),
+
+  /**
+   * 游客活动详情
+   * GET /api/public/activities/:id
+   */
+  http.get("/api/public/activities/:id", async ({ params }) => {
+    await delay(200);
+
+    const activity = mockUserActivities.find((item) => item.id === params.id);
+    if (!activity) {
+      return HttpResponse.json(
+        { success: false, message: "活动不存在" },
+        { status: 404 },
+      );
+    }
+
+    return HttpResponse.json({
+      success: true,
+      data: {
+        ...activity,
+        userStatus:
+          activity.activityStatus === "completed" ? "completed" : "recruiting",
+        isFavorite: false,
+      },
     });
   }),
 

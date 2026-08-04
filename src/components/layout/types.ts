@@ -20,6 +20,8 @@ export interface TopBarProps {
   showNotification?: boolean;
   /** Logo 点击回调 */
   onLogoClick?: () => void;
+  /** 桌面端没有侧栏时是否显示品牌 Logo */
+  showDesktopBrand?: boolean;
   /** 自定义右侧内容 */
   rightContent?: React.ReactNode;
 }

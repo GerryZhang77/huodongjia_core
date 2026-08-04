@@ -7,10 +7,7 @@
 import { FC, useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Calendar,
-  MapPin,
   AlertCircle,
-  Sparkles,
   ImagePlus,
   LoaderCircle,
   Trash2,
@@ -40,7 +37,6 @@ import {
   deletePendingEnrollmentImage,
   uploadEnrollmentImage,
 } from "@/services/enrollmentApi";
-import dayjs from "dayjs";
 
 // ============================================
 // 默认报名表 schema（无自定义时使用）
@@ -414,7 +410,7 @@ const EnrollmentImageField: FC<{
 
       <div className="flex items-start gap-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
         <ShieldCheck size={14} className="mt-0.5 flex-shrink-0 text-green-600" />
-        <span>仅本活动主办方可查看，不会公开展示，也不会保存到你的个人信息或信息库。</span>
+        <span>报名信息仅主办方可查看，不会公开展示</span>
       </div>
     </div>
   );
@@ -563,8 +559,6 @@ const UserRegistration: FC = () => {
   const [formData, setFormData] = useState<Record<string, string | string[]>>({});
   const [imageAnswers, setImageAnswers] = useState<Record<string, string[]>>({});
   const [uploadingImageFields, setUploadingImageFields] = useState<Set<string>>(new Set());
-  // 哪些字段被自动预填了（用于视觉提示）
-  const [prefilledKeys, setPrefilledKeys] = useState<Set<string>>(new Set());
   // 防止 prefill 多次覆盖用户已修改值
   const hasAppliedPrefill = useRef(false);
 
@@ -578,7 +572,6 @@ const UserRegistration: FC = () => {
     if (!isParticipantUser || !formSchema.length) return;
 
     const next: Record<string, string | string[]> = {};
-    const matched = new Set<string>();
     if (prefillData) {
       for (const field of formSchema) {
         const hit = matchPrefillField(
@@ -588,16 +581,13 @@ const UserRegistration: FC = () => {
         );
         if (!hit) continue;
         next[field.key] = toFormValue(field, hit);
-        matched.add(field.key);
       }
     }
     if (PHONE_PATTERN.test(verifiedPhone)) {
       next.phone = verifiedPhone;
-      matched.add("phone");
     }
-    if (matched.size > 0) {
+    if (Object.keys(next).length > 0) {
       setFormData((prev) => ({ ...next, ...prev }));
-      setPrefilledKeys(matched);
     }
     hasAppliedPrefill.current = true;
   }, [formSchema, isParticipantUser, prefillData, verifiedPhone]);
@@ -858,6 +848,10 @@ const UserRegistration: FC = () => {
 
   const hasVerifiedPhone =
     isParticipantUser && PHONE_PATTERN.test(verifiedPhone);
+  const registrationTypeName = activity.registrationType?.name?.trim();
+  const showRegistrationType =
+    Boolean(registrationTypeName) &&
+    (Boolean(registrationTypeId) || activity.registrationType?.isDefault === false);
 
   return (
     <UserLayout
@@ -871,57 +865,29 @@ const UserRegistration: FC = () => {
       ]}
       bgColor="bg-gray-50 dark:bg-gray-900"
     >
-      <div className="min-h-screen pb-[140px] md:pb-28">
-        {/* 活动预览卡片 */}
-        <div className="px-4 pt-4 md:px-6">
-          <div className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <div className="w-[60px] h-[60px] rounded-xl bg-gradient-to-br from-primary-400 to-primary-500 flex items-center justify-center flex-shrink-0">
-              <Calendar size={24} className="text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
-                {activity.title}
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
-                <Calendar size={12} />
-                {dayjs(activity.eventStartTime).format("M月D日")}
-                <span className="mx-1">·</span>
-                <MapPin size={12} />
-                {activity.location.split(" ")[0]}
-              </p>
-            </div>
-            <span className="h-fit shrink-0 whitespace-nowrap rounded-full bg-success-50 px-2 py-1 text-[10px] font-medium text-success-600 dark:bg-success-900/30 dark:text-success-400">
-              {activity.registrationType?.name || "报名中"}
+      <div className="mx-auto min-h-screen w-full max-w-3xl pb-[140px] md:pb-28">
+        {showRegistrationType && (
+          <div className="px-4 pt-5 md:px-6">
+            <span className="inline-flex items-center rounded-full bg-[rgba(171,191,255,0.44)] px-3 py-1 text-xs font-medium text-[#4d5ef8] dark:bg-[#4d5ef8]/20 dark:text-[#9ba7ff]">
+              报名类型 · {registrationTypeName}
             </span>
           </div>
-        </div>
+        )}
 
         {hasVerifiedPhone ? (
           <>
             {/* 动态表单 */}
-            <div className="space-y-5 px-4 py-5 md:px-6">
-              {prefilledKeys.size > 0 && (
-                <div className="flex items-start gap-2 rounded-lg border border-primary-100 bg-primary-50 px-3 py-2.5 text-xs text-primary-700 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-300">
-                  <Sparkles size={14} className="mt-0.5 flex-shrink-0" />
-                  <span>
-                    部分字段已根据你的「我的信息库」自动预填，可直接修改。
-                  </span>
-                </div>
-              )}
-              {formSchema.map((field) => {
-                const isPrefilled = prefilledKeys.has(field.key);
-                return (
-                  <div key={field.key}>
+            <div
+              className={`space-y-5 px-4 pb-5 md:px-6 ${
+                showRegistrationType ? "pt-4" : "pt-5"
+              }`}
+            >
+              {formSchema.map((field) => (
+                <div key={field.key}>
                     <label className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300">
                       <span>{field.label}</span>
                       {field.required && (
                         <span className="text-error-500">*</span>
-                      )}
-                      {isPrefilled && (
-                        <span className="inline-flex items-center gap-0.5 rounded bg-primary-50 px-1.5 py-0.5 text-[10px] font-medium text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
-                          <Sparkles size={10} />
-                          已预填
-                        </span>
                       )}
                     </label>
                     {field.type === "image" ? (
@@ -945,9 +911,8 @@ const UserRegistration: FC = () => {
                         readOnly={field.key === "phone"}
                       />
                     )}
-                  </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
 
             {/* 底部操作栏 - 报名页隐藏 TabBar，专注表单 */}

@@ -1,6 +1,6 @@
 # OpenEvent UI Upgrade Plan
 
-Last updated: 2026-06-22
+Last updated: 2026-08-04
 Owner context: HuoDongJia frontend, branch `refactor/tailwind-v3`
 Figma file: https://www.figma.com/design/S6AY0IbBbuKhFRB4YJ3hPl/OpenEvent?node-id=0-1&t=z9qkocNW4TeoUs6I-1
 
@@ -8,7 +8,7 @@ Figma file: https://www.figma.com/design/S6AY0IbBbuKhFRB4YJ3hPl/OpenEvent?node-i
 
 This document is the cross-session source of truth for the OpenEvent UI upgrade plan, scope, decisions, and execution progress.
 
-Business-code implementation has not started. The current task is planning only.
+The user approved and the frontend now contains the targeted registration/activity-detail refinement described below. The broader cross-product OpenEvent migration remains in planning and incremental extraction.
 
 Figma access status:
 
@@ -26,6 +26,17 @@ Figma access status:
 - Wait for user approval before business-code changes.
 - Maintain a standalone document for plan, execution state, and cross-session continuity.
 - Add necessary durable notes to local memory.
+
+Targeted registration/activity-detail refinement requested on 2026-08-04:
+
+- Reuse the current login-page OpenEvent logo on the registration-page chrome.
+- Render mobile registration navigation only once; keep the desktop breadcrumb useful.
+- Remove the registration activity-summary card and the block-level profile-prefill notice.
+- Shorten the enrollment privacy copy to `报名信息仅主办方可查看，不会公开展示`.
+- Remove activity category from the activity-detail presentation.
+- Replace the standalone participant-count row with a compact capacity badge/group using `名额` wording.
+- Rename `联系方式` to `咨询我们` and compact both the contact and organizer presentation.
+- Preserve data fetching, registration-type behavior, prefill behavior, enrollment submission, organizer hover/profile navigation, and capacity enforcement.
 
 ## Codebase Audit Summary
 
@@ -96,8 +107,8 @@ Fill this section only from Figma Desktop MCP output or direct Figma inspection.
 | Top-level pages | Desktop MCP, no node id | `0:1` Page 1 |
 | Design system page | Pending deeper Desktop MCP extraction | Pending |
 | Organizer page frames | Pending deeper Desktop MCP extraction | Pending |
-| User page frames | Desktop MCP partial | `1:55` 编辑名片, `110:3285` 点击查看-活动详情, `102:2143` 活动卡片1, plus related homepage/filter/card nodes under `102:*` |
-| Auth/public frames | Pending deeper Desktop MCP extraction | Pending |
+| User page frames | Desktop MCP partial | `1:55` 编辑名片, `110:3285` 点击查看-活动详情 (`393x1237`), `102:2143` 活动卡片1, plus related homepage/filter/card nodes under `102:*` |
+| Auth/public frames | Desktop MCP confirmed for targeted nodes | `221:3444` desktop 登录 (`1920x1080`), `221:3492` login logo (`117x110`), `16:520` 活动报名 component-state board (`480x804`) |
 | Component library frames | Desktop MCP partial | `27:523` 保存 button instance/style, `Component 1` bottom/system bar instances |
 
 ### Color System
@@ -105,6 +116,7 @@ Fill this section only from Figma Desktop MCP output or direct Figma inspection.
 | Token | Figma style/variable | Value | Usage |
 | --- | --- | --- | --- |
 | brand primary | Desktop MCP partial | `#4D5EF8`, exposed as `var(--p-blue,#4d5ef8)` | Primary CTA, selected tags |
+| brand logo gradient | Desktop MCP `221:3492` | `#539AFF` to `#9BA7FF` | OpenEvent brand mark; reuse existing `src/assets/auth/login/openevent-logo.svg` |
 | brand secondary | Pending access | Pending | Secondary CTA, highlights |
 | accent | Desktop MCP partial | `#E480FF`, `#C09EFF`, `#93A1FF`, `#4AD0FF`, gradients used on hot/full tags | Highlight tags |
 | success | Pending access | Pending | Approved, success feedback |
@@ -155,7 +167,8 @@ Fill this section only from Figma Desktop MCP output or direct Figma inspection.
 
 | Component | States/variants to confirm | Dimensions to confirm |
 | --- | --- | --- |
-| Button | primary confirmed partially; secondary/ghost/outline/destructive/disabled/loading pending | Save button component `72x36`, `px 22`, `py 8`, radius `33`, primary `#4D5EF8`; sheet actions `163x44`, radius `46`; activity detail signup instance `346x52` from metadata |
+| Button | primary registration states confirmed; secondary/ghost/outline/destructive/loading pending | Save button component `72x36`, `px 22`, `py 8`, radius `33`; registration CTA `346x52`, radius `44`, 16px Bold/26px, default `#4D5EF8`, hover `#6C7BFF`, pressed `#192BCF`, disabled `#D9D9D9` (`16:520`, `17:553`) |
+| OpenEvent brand mark | confirmed from login frame | SVG mark `117x110`, aspect ratio `117:110`, gradient `#539AFF` to `#9BA7FF`; node `221:3492`; no wordmark included |
 | Input/Textarea/Search | default, focused, error, disabled | height, padding, radius, border, focus ring |
 | Select/Segmented/Tabs | default, active, disabled | height, underline/indicator, gap |
 | Card/Panel | default, selected, hover, empty/loading | radius, padding, shadow, border |
@@ -167,6 +180,7 @@ Fill this section only from Figma Desktop MCP output or direct Figma inspection.
 | Navigation | user bottom tabbar confirmed partially | `393x60`, top radii `16`, shadow `0px -2px 12.9px 2px rgba(175,226,248,0.44)`, tab slot `98x60`, icon `22-26px`, label `11px` Bold, active color `#81A2FD`, inactive `rgba(0,0,0,0.38)` |
 | Activity card/list item | user list card partially confirmed | Card `345x136`, image `132x136`, card radius `16`, shadow `0px 5px 25.2px rgba(118,171,230,0.4)`, title 14px PingFang SC Heavy, metadata 11px, price/count 12px |
 | Hot activity card | user home confirmed partially | `345x196`, radius `16`, title 16px Heavy white, info 11px Bold `rgba(255,255,255,0.87)`, bottom overlay to `rgba(28,32,139,0.73)`, full tag `75x24`, count badge `67x24`, count badge background `rgba(255,255,255,0.85)` |
+| Activity detail | mobile frame confirmed; targeted content overrides noted above | Frame `393x1237`; poster `402x268`; white content surface top radius `24`; organizer avatar `36x36`, gap `10`, supporting text 12px; metadata icon surface `32x32`, radius `8`, icon `18`; bottom CTA `346x52`, radius `44` (`110:3285`) |
 | Search/city/filter header | user home confirmed partially | City selector `57x26`, text 12px Bold `#262569`; search `211x40`, radius `28`, placeholder 12px Medium `#94A3B8`, search icon 12; filter button `42x40`, radius `16`, icon 24 |
 | Form builder fields | text, select, multi-select, phone, custom fields | row height, controls, drag states |
 
@@ -428,9 +442,12 @@ Minimum route set to verify after implementation:
 - [x] Audited layout shells and major public/user/organizer surfaces.
 - [x] Confirmed cloud/file-key Figma MCP permission blocker.
 - [x] Confirmed local Figma Desktop MCP can read the currently open file.
+- [x] User approved the targeted 2026-08-04 registration/activity-detail refinement.
+- [x] Implemented the shared OpenEvent logo, single mobile breadcrumb, focused registration form, compact capacity presentation, and compact organizer/consultation group.
+- [x] Added targeted unit tests and completed TypeScript, ESLint, diff, and responsive browser QA for the refinement.
 - [ ] Continue local Desktop MCP extraction for all target frames and components.
 - [ ] Fill Figma Parameter Matrix with complete concrete values and node references.
-- [ ] User approves implementation plan.
+- [ ] User approves the broader cross-product implementation plan.
 - [ ] Phase 2 token foundation.
 - [ ] Phase 3 UI primitives.
 - [ ] Phase 4 layout shells.

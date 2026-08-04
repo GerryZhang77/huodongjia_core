@@ -17,7 +17,6 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Tag,
   Phone,
 } from "lucide-react";
 import { Button, type ButtonVariant } from "@/components/ui";
@@ -38,7 +37,6 @@ import type { UserActivityStatus } from "@/services/userApi";
 import { useAuthStore } from "@/features/auth/stores/authStore";
 import { useIsDesktop } from "@/hooks/useMediaQuery";
 import {
-  getCategoryLabel,
   getTagLabel,
   isOnlineOnlyActivity,
 } from "@/features/activities/utils/constants";
@@ -48,6 +46,7 @@ import {
   buildLoginPathWithRedirect,
   savePendingRedirectPath,
 } from "@/utils/redirect";
+import { getActivityCapacityPresentation } from "@/features/user/activity/utils/activityDetailPresentation";
 import dayjs from "dayjs";
 
 // 状态配置
@@ -278,9 +277,13 @@ const UserActivityDetail: FC = () => {
 
   const config = statusConfig[activity.userStatus] || statusConfig.recruiting;
   const registrationAvailability = getRegistrationAvailability(activity);
-  const isFull =
-    activity.maxParticipants > 0 &&
-    activity.currentParticipants >= activity.maxParticipants;
+  const displayedParticipantCount =
+    enrolledCount ?? activity.currentParticipants;
+  const capacityPresentation = getActivityCapacityPresentation(
+    displayedParticipantCount,
+    activity.maxParticipants,
+  );
+  const isFull = capacityPresentation.isFull;
   const displayLocation = isOnlineOnlyActivity(activity.tags)
     ? "线上活动"
     : activity.location || "地点待定";
@@ -358,41 +361,48 @@ const UserActivityDetail: FC = () => {
     }
   };
 
-  const organizerContent = activity.organizer?.id ? (
-    <div
-      className={`flex items-center gap-3 rounded-lg -mx-2 px-2 py-1 transition-colors ${
-        isAuthenticated
-          ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40"
-          : ""
-      }`}
-      onClick={
-        isAuthenticated
-          ? () => navigate(`/u/profile/${activity.organizer.id}`)
-          : undefined
-      }
-      role={isAuthenticated ? "button" : undefined}
-    >
-      <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
-        {activity.organizer.avatar ? (
+  const organizerName = activity.organizer?.name?.trim() || "主办方";
+  const organizerIdentity = (
+    <>
+      <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-primary-100 dark:bg-primary-900/30">
+        {activity.organizer?.avatar ? (
           <img
             src={activity.organizer.avatar}
-            alt={activity.organizer.name}
-            className="w-full h-full object-cover"
+            alt={organizerName}
+            className="h-full w-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-primary-500 font-semibold text-sm">
-            {activity.organizer.name?.charAt(0) || "?"}
+          <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-primary-500">
+            {organizerName.charAt(0) || "?"}
           </div>
         )}
       </div>
-      <div>
-        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          {activity.organizer.name || "主办方"}
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">主办方</p>
+      <p className="flex min-w-0 flex-1 items-center text-xs text-gray-500 dark:text-gray-400">
+        <span className="shrink-0 font-medium text-gray-700 dark:text-gray-200">
+          主办方
+        </span>
+        <span className="mx-1 shrink-0" aria-hidden="true">
+          ·
+        </span>
+        <span className="truncate">{organizerName}</span>
+      </p>
+    </>
+  );
+  const organizerContent =
+    isAuthenticated && activity.organizer?.id ? (
+      <button
+        type="button"
+        className="-mx-1 flex w-full max-w-full items-center gap-2.5 rounded-lg px-1 py-1 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40"
+        onClick={() => navigate(`/u/profile/${activity.organizer.id}`)}
+        aria-label={`查看主办方 ${organizerName}`}
+      >
+        {organizerIdentity}
+      </button>
+    ) : (
+      <div className="flex max-w-full items-center gap-2.5 py-1">
+        {organizerIdentity}
       </div>
-    </div>
-  ) : null;
+    );
 
   return (
     <UserLayout
@@ -521,12 +531,7 @@ const UserActivityDetail: FC = () => {
 
                 {/* 底部标签 */}
                 <div className="absolute bottom-3 left-4 flex gap-1.5 z-20">
-                  {activity.category && (
-                    <span className="shrink-0 whitespace-nowrap rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-medium text-primary-700 backdrop-blur-sm">
-                      {getCategoryLabel(activity.category)}
-                    </span>
-                  )}
-                  {activity.tags.slice(0, activity.category ? 2 : 3).map((tag, i) => (
+                  {activity.tags.slice(0, 3).map((tag, i) => (
                     <span
                       key={i}
                       className="shrink-0 whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-gray-700 backdrop-blur-sm"
@@ -542,13 +547,25 @@ const UserActivityDetail: FC = () => {
 
           {/* 内容区 */}
           <div className="flex-1 px-4 py-5 md:px-6 lg:px-8">
-            {/* 标题 */}
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
-              {activity.title}
-            </h1>
+            {/* 标题与名额 */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <h1 className="min-w-0 text-xl font-bold leading-tight text-gray-900 dark:text-gray-100 md:text-2xl lg:text-3xl">
+                {activity.title}
+              </h1>
+              <span
+                className={`inline-flex w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
+                  isFull
+                    ? "bg-error-50 text-error-600 dark:bg-error-900/20 dark:text-error-400"
+                    : "bg-[rgba(171,191,255,0.44)] text-[#4d5ef8] dark:bg-[#4d5ef8]/20 dark:text-[#9ba7ff]"
+                }`}
+              >
+                <Users size={14} aria-hidden="true" />
+                {capacityPresentation.label}
+              </span>
+            </div>
 
             {/* 信息卡片 - 桌面端网格布局 */}
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+            <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
               {/* 时间 */}
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0">
@@ -600,80 +617,53 @@ const UserActivityDetail: FC = () => {
                 </div>
               </div>
 
-              {/* 人数 */}
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-secondary-50 dark:bg-secondary-900/20 flex items-center justify-center flex-shrink-0">
-                  <Users
-                    size={16}
-                    className="text-secondary-500 dark:text-secondary-400"
-                  />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    参与人数
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {enrolledCount !== null
-                      ? `${enrolledCount}/${activity.maxParticipants}人`
-                      : `${activity.currentParticipants}/${activity.maxParticipants}人`}
-                    {isFull && (
-                      <span className="ml-1 text-secondary-500 dark:text-secondary-400">
-                        已满
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* 分类 */}
-              {activity.category && (
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
-                    <Tag size={16} className="text-purple-500 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">活动分类</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {getCategoryLabel(activity.category)}
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* 分隔线 */}
             <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />
 
-            {/* 主办方 */}
-            {activity.organizer?.id ? (
-              isAuthenticated ? (
-                <MerchantHoverCard
-                  merchantId={activity.organizer.id}
-                  fallbackName={activity.organizer.name}
-                  fallbackAvatar={activity.organizer.avatar}
-                >
-                  {organizerContent}
-                </MerchantHoverCard>
-              ) : (
-                organizerContent
-              )
-            ) : (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/30 flex-shrink-0">
-                  <div className="w-full h-full flex items-center justify-center text-primary-500 font-semibold text-sm">
-                    ?
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    主办方
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    主办方
-                  </p>
-                </div>
+            {/* 主办方与咨询信息 */}
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="min-w-0 flex-1">
+                {activity.organizer?.id ? (
+                  isAuthenticated ? (
+                    <MerchantHoverCard
+                      merchantId={activity.organizer.id}
+                      fallbackName={activity.organizer.name}
+                      fallbackAvatar={activity.organizer.avatar}
+                      className="w-full max-w-full"
+                    >
+                      {organizerContent}
+                    </MerchantHoverCard>
+                  ) : (
+                    organizerContent
+                  )
+                ) : (
+                  organizerContent
+                )}
               </div>
-            )}
+
+              {activity.contactInfo && (
+                <div className="flex min-w-0 items-center gap-2.5 border-t border-gray-100 pt-3 dark:border-gray-700 sm:ml-auto sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-900/20">
+                    <Phone
+                      size={15}
+                      className="text-primary-400"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <p className="min-w-0 break-words text-xs leading-5 text-gray-500 dark:text-gray-400">
+                    <span className="font-medium text-gray-700 dark:text-gray-200">
+                      咨询我们
+                    </span>
+                    <span className="mx-1" aria-hidden="true">
+                      ·
+                    </span>
+                    {activity.contactInfo}
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* 分隔线 */}
             <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />
@@ -711,21 +701,6 @@ const UserActivityDetail: FC = () => {
                 </div>
               );
             })()}
-
-            {/* 联系方式 */}
-            {activity.contactInfo && (
-              <div className="mt-5 flex items-start gap-3 bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-                <div className="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0">
-                  <Phone size={16} className="text-primary-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">联系方式</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {activity.contactInfo}
-                  </p>
-                </div>
-              </div>
-            )}
 
             {/* 状态提示 */}
             {activity.userStatus === "approved" && (
