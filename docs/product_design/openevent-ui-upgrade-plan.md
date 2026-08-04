@@ -36,6 +36,7 @@ Targeted registration/activity-detail refinement requested on 2026-08-04:
 - Remove activity category from the activity-detail presentation.
 - Replace the standalone participant-count row with a compact capacity badge/group using `名额` wording.
 - Rename `联系方式` to `咨询我们` and compact both the contact and organizer presentation.
+- Label the publisher area as `活动发布`; keep the avatar directly adjacent to the publisher name instead of inserting a role label between them.
 - Preserve data fetching, registration-type behavior, prefill behavior, enrollment submission, organizer hover/profile navigation, and capacity enforcement.
 
 ## Codebase Audit Summary

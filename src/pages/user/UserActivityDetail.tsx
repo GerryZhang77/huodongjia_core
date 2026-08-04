@@ -361,7 +361,7 @@ const UserActivityDetail: FC = () => {
     }
   };
 
-  const organizerName = activity.organizer?.name?.trim() || "主办方";
+  const organizerName = activity.organizer?.name?.trim() || "发布者";
   const organizerIdentity = (
     <>
       <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-primary-100 dark:bg-primary-900/30">
@@ -377,14 +377,8 @@ const UserActivityDetail: FC = () => {
           </div>
         )}
       </div>
-      <p className="flex min-w-0 flex-1 items-center text-xs text-gray-500 dark:text-gray-400">
-        <span className="shrink-0 font-medium text-gray-700 dark:text-gray-200">
-          主办方
-        </span>
-        <span className="mx-1 shrink-0" aria-hidden="true">
-          ·
-        </span>
-        <span className="truncate">{organizerName}</span>
+      <p className="min-w-0 flex-1 truncate text-xs font-medium text-gray-700 dark:text-gray-200">
+        {organizerName}
       </p>
     </>
   );
@@ -394,7 +388,7 @@ const UserActivityDetail: FC = () => {
         type="button"
         className="-mx-1 flex w-full max-w-full items-center gap-2.5 rounded-lg px-1 py-1 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40"
         onClick={() => navigate(`/u/profile/${activity.organizer.id}`)}
-        aria-label={`查看主办方 ${organizerName}`}
+        aria-label={`查看活动发布者 ${organizerName}`}
       >
         {organizerIdentity}
       </button>
@@ -622,9 +616,12 @@ const UserActivityDetail: FC = () => {
             {/* 分隔线 */}
             <div className="h-px bg-gray-100 dark:bg-gray-700 my-5" />
 
-            {/* 主办方与咨询信息 */}
+            {/* 活动发布与咨询信息 */}
             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
+                <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  活动发布
+                </p>
                 {activity.organizer?.id ? (
                   isAuthenticated ? (
                     <MerchantHoverCard
