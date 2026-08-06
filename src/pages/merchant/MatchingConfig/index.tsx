@@ -78,7 +78,10 @@ const MatchingConfigPage: React.FC = () => {
     locationState?.returnTo ||
     (activityId ? `/dashboard/activity/${activityId}/detail` : "/dashboard");
 
-  const matching = useMatchingLogic({ activityId: activityId || "" });
+  const matching = useMatchingLogic({
+    activityId: activityId || "",
+    fieldCatalogEnabled: wizardStep === "rules",
+  });
   const {
     stage,
     isLoading,

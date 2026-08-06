@@ -42,6 +42,10 @@ import {
   updateEnrollmentAnswers,
   uploadEnrollmentImage,
 } from "@/services/enrollmentApi";
+import {
+  getIdentityCardFieldError,
+  isIdentityCardField,
+} from "@/features/enrollment/utils/identityCard";
 
 // ============================================
 // 默认报名表 schema（无自定义时使用）
@@ -428,27 +432,36 @@ const DynamicField: FC<{
   field: RegistrationFormField;
   value: string | string[];
   onChange: (value: string | string[]) => void;
-}> = ({ field, value, onChange }) => {
+  error?: string;
+}> = ({ field, value, onChange, error }) => {
   const stringValue = typeof value === "string" ? value : "";
   const arrayValue = Array.isArray(value) ? value : [];
+  const identityCardField = isIdentityCardField(field);
 
   switch (field.type) {
     case "text":
       return (
         <input
           type={field.key === "phone" ? "tel" : "text"}
-          inputMode={field.key === "phone" ? "numeric" : undefined}
+          inputMode={field.key === "phone" ? "numeric" : identityCardField ? "text" : undefined}
           value={stringValue}
-          maxLength={field.key === "phone" ? 11 : undefined}
+          maxLength={field.key === "phone" ? 11 : identityCardField ? 18 : undefined}
+          aria-invalid={Boolean(error)}
           onChange={(e) =>
             onChange(
               field.key === "phone"
                 ? e.target.value.replace(/\D/g, "").slice(0, 11)
+                : identityCardField
+                  ? e.target.value.replace(/[^0-9xX]/g, "").toUpperCase().slice(0, 18)
                 : e.target.value,
             )
           }
           placeholder={field.placeholder || `请输入${field.label}`}
-          className="w-full h-12 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all"
+          className={`w-full h-12 px-4 bg-gray-50 dark:bg-gray-800 border rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
+            error
+              ? "border-error-400 focus:border-error-400 focus:ring-error-100 dark:border-error-700 dark:focus:ring-error-900/40"
+              : "border-gray-200 dark:border-gray-600 focus:border-primary-400 focus:ring-primary-100 dark:focus:ring-primary-900/50"
+          }`}
         />
       );
 
@@ -692,6 +705,16 @@ const UserRegistration: FC = () => {
     [editContext],
   );
 
+  const fieldValidationErrors = useMemo(() => {
+    const errors = new Map<string, string>();
+    for (const field of formSchema) {
+      if (field.type === "image") continue;
+      const error = getIdentityCardFieldError(field, formData[field.key]);
+      if (error) errors.set(field.key, error);
+    }
+    return errors;
+  }, [formData, formSchema]);
+
   const setImageField = useCallback((key: string, ids: string[]) => {
     setImageAnswers((previous) => ({ ...previous, [key]: ids }));
   }, []);
@@ -707,6 +730,7 @@ const UserRegistration: FC = () => {
 
   // 校验必填字段
   const isFormValid = useMemo(() => {
+    if (fieldValidationErrors.size > 0) return false;
     return formSchema.every((field) => {
       if (field.key === "phone") {
         const phone = formData[field.key];
@@ -720,7 +744,7 @@ const UserRegistration: FC = () => {
       if (Array.isArray(val)) return val.length > 0;
       return typeof val === "string" && val.trim().length > 0;
     });
-  }, [formSchema, formData, imageAnswers, isEditMode]);
+  }, [fieldValidationErrors, formSchema, formData, imageAnswers, isEditMode]);
 
   const handleSubmit = async () => {
     if (!isParticipantUser || !PHONE_PATTERN.test(verifiedPhone)) {
@@ -745,6 +769,7 @@ const UserRegistration: FC = () => {
     }
 
     if (!isFormValid) {
+      const firstValidationError = fieldValidationErrors.values().next().value;
       // 找到第一个未填的必填字段
       const missing = formSchema.find((f) => {
         if (!f.required) return false;
@@ -757,7 +782,9 @@ const UserRegistration: FC = () => {
       });
       Toast.show({
         icon: "fail",
-        content: missing ? `请填写「${missing.label}」` : "请填写所有必填项",
+        content:
+          firstValidationError ||
+          (missing ? `请填写「${missing.label}」` : "请填写所有必填项"),
       });
       return;
     }
@@ -1010,10 +1037,11 @@ const UserRegistration: FC = () => {
                 const fieldState = fieldStateByKey.get(field.key);
                 const needsAttention = fieldState && fieldState.state !== "complete";
                 const isConfirmed = confirmedFieldKeys.has(field.key);
+                const fieldValidationError = fieldValidationErrors.get(field.key);
                 return (
                 <div
                   key={field.key}
-                  className={needsAttention && !isConfirmed
+                  className={(needsAttention && !isConfirmed) || fieldValidationError
                     ? "rounded-xl border border-error-300 bg-error-50/60 p-3 dark:border-error-800 dark:bg-error-900/10"
                     : undefined}
                 >
@@ -1050,7 +1078,13 @@ const UserRegistration: FC = () => {
                           (field.type === "multi-select" ? [] : "")
                         }
                         onChange={(val) => setField(field.key, val)}
+                        error={fieldValidationError}
                       />
+                    )}
+                    {fieldValidationError && (
+                      <p className="mt-2 text-xs text-error-600 dark:text-error-400">
+                        {fieldValidationError}
+                      </p>
                     )}
                     {fieldState?.state === "reconfirm" && !isConfirmed && field.type !== "image" && (
                       <button

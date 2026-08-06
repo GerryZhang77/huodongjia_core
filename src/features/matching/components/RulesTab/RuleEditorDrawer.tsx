@@ -210,6 +210,23 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
               typeof option.totalEligibleParticipants === "number"
                 ? ` · ${option.coverage}/${option.totalEligibleParticipants}`
                 : "";
+            const identitySourceIssueText = [
+              typeof option.invalidSourceCount === "number" &&
+              option.invalidSourceCount > 0
+                ? `${option.invalidSourceCount}人身份证无效`
+                : "",
+              typeof option.missingSourceCount === "number" &&
+              option.missingSourceCount > 0
+                ? `${option.missingSourceCount}人未填写`
+                : "",
+            ]
+              .filter(Boolean)
+              .join("，");
+            const availabilityText = identitySourceIssueText
+              ? `（${identitySourceIssueText}）`
+              : option.canMatch === false
+                ? "（数据不足）"
+                : "";
             return (
               <option
                 key={optionValue}
@@ -220,7 +237,7 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
               >
                 {option.label}
                 {coverageText}
-                {option.canMatch === false ? "（数据不足）" : ""}
+                {availabilityText}
               </option>
             );
           })}

@@ -22,8 +22,13 @@ export const merchantQueryKeys = {
     ["merchant", "matching", activityId, "participants"] as const,
   matchingHistory: (activityId: string | undefined) =>
     ["merchant", "matching", activityId, "history"] as const,
-  matchingCatalog: (activityId: string | undefined) =>
-    ["merchant", "matching", activityId, "field-catalog"] as const,
+  matchingCatalog: (
+    activityId: string | undefined,
+    participantScope?: string,
+  ) =>
+    participantScope
+      ? (["merchant", "matching", activityId, "field-catalog", participantScope] as const)
+      : (["merchant", "matching", activityId, "field-catalog"] as const),
   matchingConfig: (activityId: string | undefined) =>
     ["merchant", "matching", activityId, "config"] as const,
   matchingResults: (activityId: string | undefined) =>

@@ -103,6 +103,7 @@ export interface LocalGroupMember {
 // === Hook 配置 ===
 interface UseMatchingLogicOptions {
   activityId: string;
+  fieldCatalogEnabled?: boolean;
 }
 
 const DEFAULT_OPERATOR = "similarity" as const;
@@ -180,7 +181,10 @@ const flattenRegistrationSchemaGroups = (
   return Array.from(fieldsByKey.values());
 };
 
-export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
+export function useMatchingLogic({
+  activityId,
+  fieldCatalogEnabled = true,
+}: UseMatchingLogicOptions) {
   const FOREGROUND_POLL_INTERVAL_MS = 3000;
   const BACKGROUND_POLL_INTERVAL_MS = 5000;
   const queryClient = useQueryClient();
@@ -214,14 +218,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     enabled: queryEnabled,
     staleTime: merchantCacheTimes.activityStale,
     gcTime: merchantCacheTimes.activityGc,
-  });
-  const catalogQuery = useQuery({
-    queryKey: merchantQueryKeys.matchingCatalog(activityId),
-    queryFn: () => getMatchFieldCatalog(activityId),
-    enabled: queryEnabled,
-    staleTime: 5 * 60 * 1000,
-    gcTime: merchantCacheTimes.matchingGc,
-    refetchOnMount: "always",
   });
   const configQuery = useQuery({
     queryKey: merchantQueryKeys.matchingConfig(activityId),
@@ -273,16 +269,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const [groups, setGroups] = useState<MatchGroup[]>([]);
   const [history, setHistory] = useState<MatchingHistory[]>([]);
 
-  // 加载状态
-  const isLoading = [
-    rulesQuery,
-    participantsQuery,
-    historyQuery,
-    activityQuery,
-    catalogQuery,
-    configQuery,
-    resultsQuery,
-  ].some((query) => query.isPending);
   const [isMatching, setIsMatching] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isCreatingAdjustmentDraft, setIsCreatingAdjustmentDraft] =
@@ -323,6 +309,46 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   const [matchingStats, setMatchingStats] = useState<MatchingStats | null>(
     null,
   );
+
+  const selectedParticipantIds = useMemo(
+    () =>
+      participants
+        .map((participant) => participant.id)
+        .filter((participantId) => !excludedParticipantIds.has(participantId)),
+    [excludedParticipantIds, participants],
+  );
+  const selectedParticipantFingerprint = useMemo(
+    () => [...selectedParticipantIds].sort().join("|"),
+    [selectedParticipantIds],
+  );
+  const eligibleParticipantCount = selectedParticipantIds.length;
+  const catalogParticipantScope = `selected:${selectedParticipantFingerprint || "none"}`;
+  const catalogQuery = useQuery({
+    queryKey: merchantQueryKeys.matchingCatalog(
+      activityId,
+      catalogParticipantScope,
+    ),
+    queryFn: () => getMatchFieldCatalog(activityId, selectedParticipantIds),
+    enabled:
+      queryEnabled && fieldCatalogEnabled && participantsQuery.isFetched,
+    staleTime: 0,
+    gcTime: merchantCacheTimes.matchingGc,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+    refetchInterval: fieldCatalogEnabled ? 30 * 1000 : false,
+    refetchIntervalInBackground: false,
+  });
+
+  // 加载状态
+  const isLoading = [
+    rulesQuery,
+    participantsQuery,
+    historyQuery,
+    activityQuery,
+    configQuery,
+    resultsQuery,
+  ].some((query) => query.isPending) ||
+    (fieldCatalogEnabled && catalogQuery.isPending);
 
   const clearTaskPolling = useCallback(() => {
     if (taskPollingRef.current) {
@@ -378,19 +404,6 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
   useEffect(() => {
     setFieldCatalog(catalogQuery.data?.fields || []);
   }, [catalogQuery.data]);
-
-  const selectedParticipantIds = useMemo(
-    () =>
-      participants
-        .map((participant) => participant.id)
-        .filter((participantId) => !excludedParticipantIds.has(participantId)),
-    [excludedParticipantIds, participants],
-  );
-  const selectedParticipantFingerprint = useMemo(
-    () => [...selectedParticipantIds].sort().join("|"),
-    [selectedParticipantIds],
-  );
-  const eligibleParticipantCount = selectedParticipantIds.length;
 
   const setParticipantSelected = useCallback(
     (participantId: string, selected: boolean) => {
@@ -954,7 +967,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       const [participantsData, historyData, catalogData, matchData] = await Promise.all([
         getParticipants(activityId).catch(() => []),
         getMatchingHistory(activityId).catch(() => []),
-        getMatchFieldCatalog(activityId).catch(() => ({
+        getMatchFieldCatalog(activityId, selectedParticipantIds).catch(() => ({
           fields: [] as MatchFieldCatalogItem[],
           totalEligibleParticipants: 0,
         })),
@@ -994,7 +1007,10 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
         historyData,
       );
       queryClient.setQueryData(
-        merchantQueryKeys.matchingCatalog(activityId),
+        merchantQueryKeys.matchingCatalog(
+          activityId,
+          catalogParticipantScope,
+        ),
         catalogData,
       );
       queryClient.setQueryData(
@@ -1009,7 +1025,12 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
     } finally {
       setIsRefreshing(false);
     }
-  }, [activityId, queryClient]);
+  }, [
+    activityId,
+    catalogParticipantScope,
+    queryClient,
+    selectedParticipantIds,
+  ]);
 
   // === 返回状态和方法 ===
   return {

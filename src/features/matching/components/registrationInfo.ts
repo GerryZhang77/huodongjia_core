@@ -1,6 +1,16 @@
 const SENSITIVE_FIELD_PATTERN = /(手机|电话|mobile|phone|邮箱|email|身份证|证件|id.?card|微信|wechat|qq|地址|address|学号|student.?id|联系方式|contact)/i;
 const DUPLICATE_FIELD_PATTERN = /^(姓名|name|头像|avatar|用户id|user.?id)$/i;
 
+export const isPrivateMatchingRegistrationField = (
+  fieldKey: string,
+  fieldLabel?: string,
+): boolean =>
+  [fieldKey, fieldLabel || ""].some(
+    (identity) =>
+      SENSITIVE_FIELD_PATTERN.test(identity) ||
+      DUPLICATE_FIELD_PATTERN.test(identity),
+  );
+
 export type RegistrationInfoItem = {
   label: string;
   value: string;
@@ -22,7 +32,7 @@ export const buildRegistrationInfoItems = (
   return Object.entries(formData).flatMap(([rawLabel, rawValue]) => {
     const fieldKey = rawLabel.trim();
     const label = String(fieldLabels[fieldKey] || fieldKey).trim();
-    if (!label || SENSITIVE_FIELD_PATTERN.test(fieldKey) || SENSITIVE_FIELD_PATTERN.test(label) || DUPLICATE_FIELD_PATTERN.test(fieldKey) || DUPLICATE_FIELD_PATTERN.test(label)) return [];
+    if (!label || isPrivateMatchingRegistrationField(fieldKey, label)) return [];
 
     if (Array.isArray(rawValue)) {
       const tags = rawValue.map(formatScalar).filter(Boolean);

@@ -745,15 +745,6 @@ const UserActivityDetail: FC = () => {
                   报名已通过，点击下方查看分组结果
                 </p>
                 </div>
-                {!enrollmentUpdateRequired && (
-                  <button
-                    type="button"
-                    onClick={() => navigate(registrationPath)}
-                    className="mt-2 text-xs font-medium text-success-700 underline-offset-2 hover:underline dark:text-success-400"
-                  >
-                    修改报名资料
-                  </button>
-                )}
                 {enrollmentUpdateRequired && (
                   <button
                     type="button"

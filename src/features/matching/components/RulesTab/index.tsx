@@ -30,6 +30,7 @@ import {
   normalizeRuleWeight,
   type RuleFieldOption,
 } from "./rulePresentation";
+import { isPrivateMatchingRegistrationField } from "../registrationInfo";
 
 interface RulesTabProps {
   rules: MatchingRule[];
@@ -111,6 +112,9 @@ const RulesTab: React.FC<RulesTabProps> = ({
         totalEligibleParticipants: field.totalEligibleParticipants,
         canMatch: field.canMatch,
         source: field.source,
+        sourceFilledCount: field.sourceFilledCount,
+        invalidSourceCount: field.invalidSourceCount,
+        missingSourceCount: field.missingSourceCount,
       }),
     );
     const visibleSchemaGroups =
@@ -121,7 +125,12 @@ const RulesTab: React.FC<RulesTabProps> = ({
           : [];
     const schemaOptions = visibleSchemaGroups.flatMap((group, groupIndex) =>
       group.fields
-        .filter((field) => field.key && field.type !== "image")
+        .filter(
+          (field) =>
+            field.key &&
+            field.type !== "image" &&
+            !isPrivateMatchingRegistrationField(field.key, field.label),
+        )
         .map(
           (field): RuleFieldOption => ({
             key: field.key,

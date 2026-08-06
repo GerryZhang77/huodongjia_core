@@ -71,6 +71,12 @@ export interface MatchFieldCatalogItem {
   merchantOnly?: boolean;
   /** 派生字段的原始来源说明，例如 identity_document。 */
   derivedFrom?: string;
+  /** 原始身份证字段非空的人数（包含合法与不合法）。 */
+  sourceFilledCount?: number;
+  /** 原始身份证字段非空但无法通过校验的人数。 */
+  invalidSourceCount?: number;
+  /** 未填写原始身份证字段的人数。 */
+  missingSourceCount?: number;
 }
 
 export interface MatchFieldCatalogResponse {

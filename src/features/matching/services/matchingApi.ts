@@ -285,14 +285,19 @@ export const saveMatchRules = async (
 
 export const getMatchFieldCatalog = async (
   activityId: string,
+  participantUserIds?: string[],
 ): Promise<MatchFieldCatalogResponse> => {
   const token = getToken();
 
   const response = await fetch(`/api/match/${activityId}/field-catalog`, {
+    method: participantUserIds ? "POST" : "GET",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
+    ...(participantUserIds
+      ? { body: JSON.stringify({ participantUserIds }) }
+      : {}),
   });
 
   const data = await response.json();

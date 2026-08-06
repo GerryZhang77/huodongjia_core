@@ -12,6 +12,9 @@ export interface RuleFieldOption {
   totalEligibleParticipants?: number;
   canMatch?: boolean;
   source?: string;
+  sourceFilledCount?: number;
+  invalidSourceCount?: number;
+  missingSourceCount?: number;
 }
 
 export interface IndexedMatchingRule {
