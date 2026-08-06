@@ -54,7 +54,8 @@ export type MatchFieldSource =
   | "schema"
   | "import_extra"
   | "standard"
-  | "historical_label";
+  | "historical_label"
+  | "derived_private";
 
 export interface MatchFieldCatalogItem {
   key: string;
@@ -66,6 +67,10 @@ export interface MatchFieldCatalogItem {
   totalEligibleParticipants: number;
   canMatch: boolean;
   aliases?: string[];
+  /** 仅主办方配置匹配时可见，不会出现在用户资料或匹配解释中。 */
+  merchantOnly?: boolean;
+  /** 派生字段的原始来源说明，例如 identity_document。 */
+  derivedFrom?: string;
 }
 
 export interface MatchFieldCatalogResponse {

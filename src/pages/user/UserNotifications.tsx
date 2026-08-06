@@ -66,6 +66,12 @@ const notificationConfig: Record<
     bg: "bg-green-50",
     darkBg: "dark:bg-green-900/30",
   },
+  enrollment_update: {
+    icon: AlertCircle,
+    color: "text-orange-600 dark:text-orange-400",
+    bg: "bg-orange-50",
+    darkBg: "dark:bg-orange-900/30",
+  },
   approval: {
     icon: CheckCircle,
     color: "text-green-600 dark:text-green-400",

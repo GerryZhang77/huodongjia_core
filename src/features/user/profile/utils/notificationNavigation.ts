@@ -19,6 +19,7 @@ export interface NotificationAction {
 const activityNotificationTypes = new Set<Notification["type"]>([
   "activity",
   "enrollment",
+  "enrollment_update",
   "approval",
   "activity_change",
   "waitlist",
@@ -86,10 +87,15 @@ export const resolveNotificationAction = (
 
   if (activityNotificationTypes.has(notification.type)) {
     if (notification.activityId) {
+      const requiresEnrollmentUpdate =
+        notification.type === "enrollment_update" &&
+        notification.data?.kind === "action_required";
       return {
         kind: "activity",
-        path: `/u/activities/${encodeURIComponent(notification.activityId)}`,
-        label: "查看活动",
+        path: `/u/activities/${encodeURIComponent(notification.activityId)}${
+          requiresEnrollmentUpdate ? "/register" : ""
+        }`,
+        label: requiresEnrollmentUpdate ? "完善报名资料" : "查看活动",
         activityId: notification.activityId,
       };
     }

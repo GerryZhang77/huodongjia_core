@@ -19,11 +19,16 @@ import {
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Switch";
+import { Toast } from "@/components/ui/Toast";
 import type {
   RegistrationFormField,
   FormFieldType,
 } from "../../types";
 import { ensureRequiredPhoneField } from "../ActivityForm/registrationTypeDefaults";
+import {
+  findInvalidRegistrationFieldIndex,
+  normalizeRegistrationFieldForMerchant,
+} from "../../utils/registrationFormFields";
 
 // 完全锁定（不可展开编辑）的预设项
 const LOCKED_PRESET_KEYS: string[] = ["phone"];
@@ -113,6 +118,7 @@ const FieldEditCard: React.FC<{
   // 未命名的自定义项不允许折叠（强制展开编辑），锁定项不允许展开
   const canExpand = !isLocked;
   const isEditingCustomField = isExpanded && !field.preset;
+  const hasMissingLabel = !field.label.trim();
 
   const addOption = () => {
     const trimmed = newOption.trim();
@@ -208,9 +214,24 @@ const FieldEditCard: React.FC<{
                   type="text"
                   value={field.label}
                   onChange={(e) => onChange({ ...field, label: e.target.value })}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary-400 transition-colors"
+                  aria-invalid={hasMissingLabel}
+                  aria-describedby={hasMissingLabel ? `field-${field.key}-label-error` : undefined}
+                  className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:outline-none dark:bg-gray-800 dark:text-gray-100 ${
+                    hasMissingLabel
+                      ? "border-error-400 focus:border-error-500 focus:ring-2 focus:ring-error-100 dark:border-error-600 dark:focus:ring-error-900/30"
+                      : "border-gray-200 focus:border-primary-400 dark:border-gray-600"
+                  }`}
                   placeholder="输入名称"
                 />
+                {hasMissingLabel && (
+                  <p
+                    id={`field-${field.key}-label-error`}
+                    role="alert"
+                    className="mt-1 text-xs text-error-500"
+                  >
+                    请填写字段名称，或删除此收集项
+                  </p>
+                )}
               </div>
 
               {/* 类型 */}
@@ -348,7 +369,7 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
 }) => {
   const fields = ensureRequiredPhoneField(
     value && value.length > 0 ? value : DEFAULT_PRESET_FIELDS,
-  );
+  ).map(normalizeRegistrationFieldForMerchant);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
@@ -357,7 +378,11 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
   };
 
   const createEmptyField = (): RegistrationFormField => ({
-      key: `custom_${Date.now()}`,
+      key: `custom_${
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+      }`,
       label: "",
       type: "text",
       required: false,
@@ -401,6 +426,19 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
     setExpandedIndex(to);
   };
 
+  const closeDrawerIfValid = () => {
+    const invalidIndex = findInvalidRegistrationFieldIndex(fields);
+    if (invalidIndex >= 0) {
+      setExpandedIndex(invalidIndex);
+      Toast.show({
+        icon: "fail",
+        content: `第 ${invalidIndex + 1} 个收集项尚未填写名称`,
+      });
+      return;
+    }
+    setDrawerOpen(false);
+  };
+
   // 摘要信息
   const requiredCount = fields.filter((f) => f.required).length;
   const optionalCount = fields.length - requiredCount;
@@ -433,7 +471,7 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
       {/* 编辑抽屉 */}
       <Drawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={closeDrawerIfValid}
         title="报名信息收集"
         placement="bottom"
         size="85vh"
@@ -442,7 +480,7 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
             <Button
               variant="primary"
               block
-              onClick={() => setDrawerOpen(false)}
+              onClick={closeDrawerIfValid}
             >
               完成设置
             </Button>

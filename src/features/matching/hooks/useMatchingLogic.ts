@@ -33,6 +33,7 @@ import {
   MatchingApiError,
 } from "../services/matchingApi";
 import { sendNotification as sendEnrollmentNotification } from "@/services/enrollmentApi";
+import type { NotificationConfig } from "../components/PublishResultDialog";
 
 // 使用重构版类型定义
 import type {
@@ -765,7 +766,10 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
 
   // === 发布结果 ===
   const handlePublish = useCallback(
-    async (sendResultNotification = true) => {
+    async (
+      sendResultNotification = true,
+      notificationConfig?: NotificationConfig,
+    ) => {
       if (matchResults.length === 0) {
         Toast.show({ content: "暂无匹配结果", icon: "fail" });
         return;
@@ -775,14 +779,29 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
       try {
         const published = await publishMatchingResult(activityId);
         let notificationFailed = false;
-        if (sendResultNotification && published.enrollmentIds.length > 0) {
+        let notifiedCount = 0;
+        const publishedEnrollmentIdSet = new Set(published.enrollmentIds);
+        const requestedEnrollmentIds =
+          notificationConfig?.recipientEnrollmentIds ?? published.enrollmentIds;
+        const notificationEnrollmentIds = Array.from(
+          new Set(
+            requestedEnrollmentIds.filter((enrollmentId) =>
+              publishedEnrollmentIdSet.has(enrollmentId),
+            ),
+          ),
+        );
+        if (sendResultNotification && notificationEnrollmentIds.length > 0) {
           try {
-            await sendEnrollmentNotification(activityId, {
-              enrollmentIds: published.enrollmentIds,
+            const notificationResult = await sendEnrollmentNotification(activityId, {
+              enrollmentIds: notificationEnrollmentIds,
               title: "匹配结果已发布",
               type: "matching",
-              message: `「${activityQuery.data?.title || "本次活动"}」的匹配结果已发布，查看为你推荐的伙伴`,
+              message:
+                notificationConfig?.content.trim() ||
+                `「${activityQuery.data?.title || "本次活动"}」的匹配结果已发布，查看为你推荐的伙伴`,
             });
+            notifiedCount =
+              notificationResult.sentCount ?? notificationEnrollmentIds.length;
           } catch (notificationError) {
             notificationFailed = true;
             console.error("Match result published but notification failed:", notificationError);
@@ -799,7 +818,7 @@ export function useMatchingLogic({ activityId }: UseMatchingLogicOptions) {
           content: notificationFailed
             ? "结果已发布，但通知发送失败，可在报名管理中重新通知"
             : sendResultNotification
-            ? `结果发布成功，已通知 ${published.enrollmentIds.length} 位参与者`
+            ? `结果发布成功，已通知 ${notifiedCount} 位参与者`
             : "结果发布成功",
           icon: "success",
         });

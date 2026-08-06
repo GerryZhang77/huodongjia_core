@@ -123,6 +123,39 @@ export const updateActivity = async (
   return response.event;
 };
 
+export interface RegistrationFormImpactPreview {
+  hasChanges: boolean;
+  totalAffectedParticipants: number;
+  typeImpacts: Array<{
+    registrationTypeId: string;
+    registrationTypeName: string;
+    affectedParticipants: number;
+    preservedHistoricalEnrollments?: number;
+    changes: Array<{
+      fieldKey?: string;
+      label: string;
+      kind: string;
+      requiresParticipantAction: boolean;
+      reason?: string;
+    }>;
+  }>;
+}
+
+export const previewRegistrationFormImpact = async (
+  id: string,
+  request: Pick<UpdateActivityRequest, "registrationTypes" | "registrationFormSchema">,
+): Promise<RegistrationFormImpactPreview> => {
+  const response = await api.post<{
+    success: boolean;
+    message?: string;
+    data: RegistrationFormImpactPreview;
+  }>(`/api/events/organizer/${id}/registration-form/impact-preview`, request);
+  if (!response.success) {
+    throw new Error(response.message || "分析报名表影响失败");
+  }
+  return response.data;
+};
+
 /**
  * 删除活动
  */

@@ -50,6 +50,36 @@ export interface Enrollment {
   isExternal?: boolean;
   /** 原始报名表答案，保留动态字段和图片占位信息。 */
   formData?: Record<string, unknown>;
+  formAnswers?: Record<string, unknown>;
+  formSchemaSnapshot?: Array<{
+    key: string;
+    label: string;
+    type?: string;
+    required?: boolean;
+  }>;
+  answerRevision?: number;
+  hasUnreviewedChanges?: boolean;
+  lastParticipantUpdateAt?: string | null;
+  updateRequired?: boolean;
+  updateRequest?: {
+    id: string;
+    status: "action_required" | "submitted" | "reviewed";
+    fieldKeys: string[];
+    fieldReasons: Record<string, string>;
+    note?: string | null;
+    source: "form_change" | "organizer_request";
+    requestedAt: string;
+    submittedAt?: string | null;
+  } | null;
+  latestChanges?: Array<{
+    fieldKey: string;
+    label: string;
+    before: unknown;
+    after: unknown;
+    confirmedOnly?: boolean;
+  }>;
+  latestChangeAt?: string | null;
+  merchantDerivedFields?: Record<string, string | number>;
   status: EnrollmentStatus;
   enrolledAt: string;
   updatedAt: string;

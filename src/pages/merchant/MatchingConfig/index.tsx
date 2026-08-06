@@ -21,6 +21,7 @@ import {
 import MerchantLayout from "@/components/layout/MerchantLayout";
 import { Button } from "@/components/ui";
 import { RulesTab, ResultsTab } from "@/features/matching/components";
+import type { NotificationConfig } from "@/features/matching/components/PublishResultDialog";
 import {
   findDuplicateRuleIndexes,
   hasIncompleteEnabledRules,
@@ -241,9 +242,10 @@ const MatchingConfigPage: React.FC = () => {
 
   const publishAdapter = async (
     sendNotification?: boolean,
+    notificationConfig?: NotificationConfig,
   ): Promise<void | { success: boolean; error?: string }> => {
     try {
-      await handlePublish(sendNotification ?? true);
+      await handlePublish(sendNotification ?? true, notificationConfig);
       return { success: true };
     } catch (error) {
       return {

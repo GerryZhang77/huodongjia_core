@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   bindPhoneBySms: vi.fn(),
   setAuth: vi.fn(),
   invalidateQueries: vi.fn(),
+  isAuthenticated: false,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -24,7 +25,7 @@ vi.mock("@/features/auth/services", () => ({
 
 vi.mock("@/features/auth/stores", () => ({
   useAuthStore: () => ({
-    isAuthenticated: false,
+    isAuthenticated: mocks.isAuthenticated,
     setAuth: mocks.setAuth,
   }),
 }));
@@ -36,6 +37,7 @@ vi.mock("@/components/ui/Toast", () => ({
 describe("RegistrationPhoneVerification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.isAuthenticated = false;
     mocks.sendSmsCode.mockResolvedValue({
       success: true,
       message: "验证码发送成功",
@@ -50,6 +52,17 @@ describe("RegistrationPhoneVerification", () => {
         user_type: "user",
       },
       isNewUser: true,
+    });
+    mocks.bindPhoneBySms.mockResolvedValue({
+      success: true,
+      token: "changed-token",
+      user: {
+        id: "user-1",
+        name: "用户0000",
+        phone: "13900000000",
+        user_type: "user",
+      },
+      isNewUser: false,
     });
     mocks.invalidateQueries.mockResolvedValue(undefined);
   });
@@ -84,6 +97,67 @@ describe("RegistrationPhoneVerification", () => {
         expect.objectContaining({ id: "user-1", phone: "13800000000" }),
         "token",
       );
+    });
+  });
+
+  it("prefills a changed phone and reports the verified value", async () => {
+    const onVerified = vi.fn();
+    render(
+      <RegistrationPhoneVerification
+        activityTitle="测试活动"
+        initialPhone="13900000000"
+        onVerified={onVerified}
+      />,
+    );
+
+    expect(
+      (screen.getByPlaceholderText("请输入 11 位手机号") as HTMLInputElement)
+        .value,
+    ).toBe("13900000000");
+    fireEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+    await waitFor(() => {
+      expect(mocks.sendSmsCode).toHaveBeenCalledWith(
+        "13900000000",
+        "enrollment",
+      );
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("短信验证码"), {
+      target: { value: "1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "验证并继续" }));
+
+    await waitFor(() => {
+      expect(onVerified).toHaveBeenCalledWith(
+        "13900000000",
+        expect.objectContaining({ id: "user-1" }),
+      );
+    });
+  });
+
+  it("uses the authenticated phone-binding flow when changing a phone", async () => {
+    mocks.isAuthenticated = true;
+    render(
+      <RegistrationPhoneVerification
+        activityTitle="测试活动"
+        initialPhone="13900000000"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+    await waitFor(() => expect(mocks.sendSmsCode).toHaveBeenCalled());
+    fireEvent.change(screen.getByPlaceholderText("短信验证码"), {
+      target: { value: "1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "验证并继续" }));
+
+    await waitFor(() => {
+      expect(mocks.bindPhoneBySms).toHaveBeenCalledWith(
+        "13900000000",
+        "1234",
+        "enrollment",
+      );
+      expect(mocks.loginBySms).not.toHaveBeenCalled();
     });
   });
 });

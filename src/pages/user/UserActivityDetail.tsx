@@ -69,23 +69,20 @@ const statusConfig: Record<
   pending: {
     label: "待审核",
     color: "bg-warning-500",
-    btnLabel: "审核中",
-    btnStyle: "bg-gray-200 text-gray-500",
-    disabled: true,
+    btnLabel: "修改报名资料",
+    btnStyle: "bg-primary-400 text-white hover:bg-primary-500",
   },
   rejected: {
     label: "未通过",
     color: "bg-error-500",
-    btnLabel: "报名未通过",
-    btnStyle: "bg-gray-200 text-gray-500",
-    disabled: true,
+    btnLabel: "修改后重新提交",
+    btnStyle: "bg-primary-400 text-white hover:bg-primary-500",
   },
   waitlist: {
     label: "候补中",
     color: "bg-warning-500",
-    btnLabel: "候补中",
-    btnStyle: "bg-gray-200 text-gray-500",
-    disabled: true,
+    btnLabel: "修改报名资料",
+    btnStyle: "bg-primary-400 text-white hover:bg-primary-500",
   },
   cancelled: {
     label: "已取消",
@@ -276,6 +273,7 @@ const UserActivityDetail: FC = () => {
   }
 
   const config = statusConfig[activity.userStatus] || statusConfig.recruiting;
+  const enrollmentUpdateRequired = activity.enrollment?.updateRequired === true;
   const registrationAvailability = getRegistrationAvailability(activity);
   const displayedParticipantCount =
     enrolledCount ?? activity.currentParticipants;
@@ -326,6 +324,12 @@ const UserActivityDetail: FC = () => {
             disabled: true,
             variant: "light" as const,
           }
+      : enrollmentUpdateRequired
+        ? {
+            btnLabel: "完善报名资料",
+            disabled: false,
+            variant: "primary" as const,
+          }
       : activity.userStatus === "recruiting" &&
           !registrationAvailability.canRegister
         ? {
@@ -352,6 +356,11 @@ const UserActivityDetail: FC = () => {
     if (
       activity.userStatus === "recruiting" &&
       registrationAvailability.canRegister
+    ) {
+      navigate(registrationPath);
+    } else if (
+      enrollmentUpdateRequired ||
+      ["pending", "rejected", "waitlist"].includes(activity.userStatus)
     ) {
       navigate(registrationPath);
     } else if (activity.userStatus === "approved") {
@@ -700,8 +709,34 @@ const UserActivityDetail: FC = () => {
             })()}
 
             {/* 状态提示 */}
+            {enrollmentUpdateRequired && (
+              <div className="mt-5 rounded-xl border border-orange-200 bg-orange-50 p-3 dark:border-orange-800/50 dark:bg-orange-900/20">
+                <div className="flex items-start gap-2">
+                  <AlertCircle
+                    size={16}
+                    className="mt-0.5 shrink-0 text-orange-600 dark:text-orange-400"
+                  />
+                  <div>
+                    <p className="text-xs font-medium text-orange-800 dark:text-orange-300">
+                      主办方需要你补充或确认报名资料
+                    </p>
+                    {Boolean(activity.enrollment?.updateFieldLabels?.length) && (
+                      <p className="mt-1 text-xs leading-5 text-orange-700 dark:text-orange-400">
+                        待处理：{activity.enrollment?.updateFieldLabels.join("、")}
+                      </p>
+                    )}
+                    {activity.enrollment?.updateNote && (
+                      <p className="mt-1 text-xs leading-5 text-orange-700 dark:text-orange-400">
+                        {activity.enrollment.updateNote}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
             {activity.userStatus === "approved" && (
-              <div className="mt-5 p-3 bg-success-50 dark:bg-success-900/20 rounded-xl flex items-center gap-2">
+              <div className="mt-5 rounded-xl bg-success-50 p-3 dark:bg-success-900/20">
+                <div className="flex items-center gap-2">
                 <CheckCircle
                   size={16}
                   className="text-success-500 dark:text-success-400 flex-shrink-0"
@@ -709,6 +744,25 @@ const UserActivityDetail: FC = () => {
                 <p className="text-xs text-success-700 dark:text-success-400">
                   报名已通过，点击下方查看分组结果
                 </p>
+                </div>
+                {!enrollmentUpdateRequired && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(registrationPath)}
+                    className="mt-2 text-xs font-medium text-success-700 underline-offset-2 hover:underline dark:text-success-400"
+                  >
+                    修改报名资料
+                  </button>
+                )}
+                {enrollmentUpdateRequired && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/u/activities/${id}/match-result`)}
+                    className="mt-2 text-xs font-medium text-success-700 underline-offset-2 hover:underline dark:text-success-400"
+                  >
+                    查看分组结果
+                  </button>
+                )}
               </div>
             )}
             {activity.userStatus === "pending" && (

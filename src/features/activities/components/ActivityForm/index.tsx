@@ -13,7 +13,6 @@ import {
   TextArea,
   Button,
   ImageUploader,
-  Selector,
   Stepper,
   Switch,
   Card,
@@ -32,11 +31,12 @@ import {
   validateParticipants,
   createTimeValidationRules,
 } from "../../utils";
-import type { ActivityFormData, RegistrationFormField } from "../../types";
+import type { ActivityFormData } from "../../types";
 import { DatePickerField } from "./DatePickerField";
 import { CustomSelector } from "./CustomSelector";
 import { RequirementListEditor } from "./RequirementListEditor";
 import { RegistrationFormBuilder } from "../RegistrationFormBuilder";
+import { findInvalidRegistrationFieldIndex } from "../../utils/registrationFormFields";
 
 interface ActivityFormProps {
   /**
@@ -146,6 +146,17 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         Toast.show({
           icon: "fail",
           content: "请填写活动标题和描述",
+        });
+        return;
+      }
+
+      const invalidFieldIndex = findInvalidRegistrationFieldIndex(
+        values.registration_form_schema || [],
+      );
+      if (invalidFieldIndex >= 0) {
+        Toast.show({
+          icon: "fail",
+          content: `第 ${invalidFieldIndex + 1} 个报名收集项缺少名称`,
         });
         return;
       }

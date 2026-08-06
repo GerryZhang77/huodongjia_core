@@ -71,6 +71,10 @@ import {
 import { useActivityDetail } from "@/features/activities/hooks/useActivityDetail";
 import { getEnrollmentsDetailed } from "@/features/enrollment/services/enrollmentApi";
 import {
+  requestEnrollmentUpdate,
+  reviewEnrollmentChanges,
+} from "@/services/enrollmentApi";
+import {
   merchantCacheTimes,
   merchantQueryKeys,
 } from "@/features/merchant/queryKeys";
@@ -208,6 +212,16 @@ const EnrollmentCard: React.FC<EnrollmentCardProps> = ({
               <span className="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap rounded bg-purple-50 px-1.5 py-0.5 text-xs tabular-nums text-purple-600">
                 <ImageIcon size={11} />
                 {enrollment.imageCount}
+              </span>
+            )}
+            {enrollment.hasUnreviewedChanges && (
+              <span className="whitespace-nowrap rounded bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700">
+                资料有更新
+              </span>
+            )}
+            {enrollment.updateRequired && (
+              <span className="whitespace-nowrap rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">
+                待用户补充
               </span>
             )}
             <span
@@ -673,6 +687,47 @@ const EnrollmentManagementNew: React.FC = () => {
     });
   };
 
+  const refreshDetailEnrollment = async (enrollmentId: string) => {
+    const refreshed = await enrollmentQuery.refetch();
+    const next = refreshed.data?.enrollments?.find(
+      (enrollment) => enrollment.id === enrollmentId,
+    );
+    if (next) setDetailEnrollment(next);
+  };
+
+  const handleRequestEnrollmentUpdate = async (
+    enrollmentId: string,
+    fieldKeys: string[],
+    note?: string,
+  ) => {
+    if (!id) return;
+    try {
+      await requestEnrollmentUpdate(id, enrollmentId, { fieldKeys, note });
+      Toast.show({ icon: "success", content: "已通知参与者补充资料" });
+      await refreshDetailEnrollment(enrollmentId);
+    } catch (error) {
+      Toast.show({
+        icon: "fail",
+        content: error instanceof Error ? error.message : "发送更新要求失败",
+      });
+      throw error;
+    }
+  };
+
+  const handleReviewEnrollmentChanges = async (enrollmentId: string) => {
+    if (!id) return;
+    try {
+      await reviewEnrollmentChanges(id, enrollmentId);
+      Toast.show({ icon: "success", content: "已标记为查看" });
+      await refreshDetailEnrollment(enrollmentId);
+    } catch (error) {
+      Toast.show({
+        icon: "fail",
+        content: error instanceof Error ? error.message : "操作失败",
+      });
+    }
+  };
+
   const handleBatchApprove = () => {
     const ids = [...selectedIds];
     updateStatus(ids, "approved", () => {
@@ -1108,6 +1163,8 @@ const EnrollmentManagementNew: React.FC = () => {
         }}
         onApprove={handleApprove}
         onReject={handleReject}
+        onRequestUpdate={handleRequestEnrollmentUpdate}
+        onReviewChanges={handleReviewEnrollmentChanges}
         onNotify={(enrollmentId) => {
           setShowDetailDrawer(false);
           setSelectedIds([enrollmentId]);

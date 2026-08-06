@@ -101,8 +101,12 @@ const RulesTab: React.FC<RulesTabProps> = ({
         label: getStandardFieldLabel(field.key, field.label || field.key),
         registrationTypeId: field.registrationTypeId,
         groupName:
-          field.registrationTypeName ||
-          (field.source === "import_extra" ? "导入额外字段" : "可匹配字段"),
+          field.source === "derived_private"
+            ? `商家派生字段${field.registrationTypeName ? ` · ${field.registrationTypeName}` : ""}`
+            : field.registrationTypeName ||
+            (field.source === "import_extra"
+              ? "导入额外字段"
+              : "可匹配字段"),
         coverage: field.coverage,
         totalEligibleParticipants: field.totalEligibleParticipants,
         canMatch: field.canMatch,
@@ -137,6 +141,11 @@ const RulesTab: React.FC<RulesTabProps> = ({
     });
     return Array.from(optionByIdentity.values());
   }, [fieldCatalog, schemaFields, schemaGroups]);
+
+  const hasMerchantDerivedFields = useMemo(
+    () => fieldCatalog.some((field) => field.source === "derived_private"),
+    [fieldCatalog],
+  );
 
   const duplicateRuleIndexes = useMemo(
     () => findDuplicateRuleIndexes(rules),
@@ -519,6 +528,15 @@ const RulesTab: React.FC<RulesTabProps> = ({
             <span>
               当前限制会让 {preflightResult.insufficientParticipants}{" "}
               位参与者无法获得最低推荐人数。
+            </span>
+          </div>
+        )}
+
+        {hasMerchantDerivedFields && (
+          <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-600">
+            <LockKeyhole size={15} className="mt-0.5 shrink-0 text-slate-500" />
+            <span>
+              商家派生字段由系统在服务端根据身份证号计算，仅主办方可见；身份证原文不会进入匹配规则，也不会出现在用户的匹配解释中。
             </span>
           </div>
         )}

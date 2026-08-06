@@ -5,11 +5,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Toast } from "@/components/ui/Toast";
+import { Dialog } from "antd-mobile";
 import { useQueryClient } from "@tanstack/react-query";
-import { updateActivity } from "../services";
+import { previewRegistrationFormImpact, updateActivity } from "../services";
 import { useActivityStore } from "../stores";
 import { isOnlineOnlyActivity } from "../utils";
-import type { ActivityFormData } from "../types";
+import type { ActivityFormData, UpdateActivityRequest } from "../types";
 import { merchantQueryKeys } from "@/features/merchant/queryKeys";
 
 export const useEditActivity = (activityId: string) => {
@@ -41,8 +42,7 @@ export const useEditActivity = (activityId: string) => {
         : String(data.location || "").trim();
 
       // 转换表单数据为 API 请求格式
-      const requestData: any = {
-        id: activityId,
+      const requestData: UpdateActivityRequest = {
         title: data.title,
         description: data.description,
         registrationStart: data.registration_start.toISOString(),
@@ -58,7 +58,6 @@ export const useEditActivity = (activityId: string) => {
         isPublic: data.is_public,
         allowWaitlist: data.allow_waitlist,
         enableNfc: data.enable_nfc === true,
-        status: "published",
         registrationFormSchema: data.registration_form_schema || undefined,
         registrationTypes: data.registration_types || undefined,
       };
@@ -69,6 +68,31 @@ export const useEditActivity = (activityId: string) => {
       }
       if (data.images) {
         requestData.images = data.images;
+      }
+
+      const formImpact = await previewRegistrationFormImpact(activityId, {
+        registrationFormSchema: requestData.registrationFormSchema,
+        registrationTypes: requestData.registrationTypes,
+      });
+      if (formImpact.hasChanges) {
+        const changedTypeCount = formImpact.typeImpacts.length;
+        const preservedCount = formImpact.typeImpacts.reduce(
+          (total, impact) => total + (impact.preservedHistoricalEnrollments || 0),
+          0,
+        );
+        const impactSummary = formImpact.totalAffectedParticipants > 0
+          ? `将通知 ${formImpact.totalAffectedParticipants} 位已报名用户补充或确认资料。`
+          : "现有报名资料无需用户补填。";
+        const preservedSummary = preservedCount > 0
+          ? ` 已移除报名类型中的 ${preservedCount} 条历史报名仍会保留。`
+          : "";
+        const confirmed = await Dialog.confirm({
+          title: "确认更新报名表？",
+          content: `本次修改涉及 ${changedTypeCount} 个报名类型。${impactSummary}${preservedSummary}`,
+          confirmText: "确认更新",
+          cancelText: "继续编辑",
+        });
+        if (!confirmed) return;
       }
 
       const activity = await updateActivity(activityId, requestData);

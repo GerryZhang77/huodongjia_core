@@ -110,7 +110,8 @@ export interface Notification {
     | "reminder"
     | "message"
     | "follow"
-    | "contact_request";
+    | "contact_request"
+    | "enrollment_update";
   isRead: boolean;
   createdAt: string;
   activityId?: string;
@@ -188,6 +189,16 @@ export interface UserActivity {
     eligibilityMode?: "public" | "allowlist";
     accessAllowed?: boolean;
     accessDeniedReason?: string;
+  } | null;
+  enrollment?: {
+    id: string;
+    status: UserActivityStatus;
+    updateRequired: boolean;
+    updateFieldKeys: string[];
+    updateFieldLabels: string[];
+    updateNote?: string | null;
+    hasUnreviewedChanges: boolean;
+    lastParticipantUpdateAt?: string | null;
   } | null;
 }
 

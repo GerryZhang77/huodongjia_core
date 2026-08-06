@@ -4,6 +4,7 @@
  */
 
 import { api } from "@/services/api";
+import type { RegistrationFormField } from "@/features/activities/types";
 
 // ============================================
 // 类型定义
@@ -83,6 +84,51 @@ export interface EnrollmentImageAsset {
   mime_type: string;
   size_bytes: number;
   created_at: string;
+}
+
+export type EnrollmentEditFieldState =
+  | "complete"
+  | "missing_required"
+  | "invalid_option"
+  | "reconfirm";
+
+export interface EnrollmentEditContext {
+  activityId: string;
+  activityTitle: string;
+  schema: RegistrationFormField[];
+  schemaVersion: number;
+  registrationType: { id: string; name: string } | null;
+  enrollment: {
+    id: string;
+    status: EnrollmentStatus;
+    answers: Record<string, string | string[]>;
+    answerRevision: number;
+    hasUnreviewedChanges: boolean;
+    lastParticipantUpdateAt?: string | null;
+  };
+  fieldStates: Array<{
+    key: string;
+    state: EnrollmentEditFieldState;
+    reason?: string;
+  }>;
+  updateRequest: {
+    id: string;
+    fieldKeys: string[];
+    fieldReasons: Record<string, string>;
+    note?: string | null;
+    source: "form_change" | "organizer_request";
+    requestedAt: string;
+  } | null;
+  canEdit: boolean;
+  editBlockedReason?: string;
+}
+
+export interface EnrollmentAnswerChange {
+  fieldKey: string;
+  label: string;
+  before: unknown;
+  after: unknown;
+  confirmedOnly: boolean;
 }
 
 export interface SendNotificationRequest {
@@ -191,6 +237,48 @@ export async function submitEnrollment(
     imageAnswers: imageAnswers || {},
     ...(registrationTypeId ? { registrationTypeId } : {}),
   });
+}
+
+export async function getEnrollmentEditContext(
+  activityId: string,
+): Promise<{ success: boolean; data: EnrollmentEditContext }> {
+  return api.get(`/api/user/activities/${activityId}/enrollment-edit-context`);
+}
+
+export async function updateEnrollmentAnswers(
+  activityId: string,
+  data: {
+    answers: Record<string, string | string[]>;
+    schemaVersion: number;
+    answerRevision: number;
+    confirmedFieldKeys?: string[];
+  },
+): Promise<{
+  success: boolean;
+  message?: string;
+  data?: { changedFields: EnrollmentAnswerChange[]; status: EnrollmentStatus };
+}> {
+  return api.patch(`/api/user/activities/${activityId}/enrollment`, data);
+}
+
+export async function requestEnrollmentUpdate(
+  eventId: string,
+  participantId: string,
+  data: { fieldKeys: string[]; note?: string },
+): Promise<{ success: boolean; message?: string }> {
+  return api.post(
+    `/api/enrollments/${eventId}/${participantId}/update-request`,
+    data,
+  );
+}
+
+export async function reviewEnrollmentChanges(
+  eventId: string,
+  participantId: string,
+): Promise<{ success: boolean; message?: string }> {
+  return api.post(
+    `/api/enrollments/${eventId}/${participantId}/changes/review`,
+  );
 }
 
 export async function uploadEnrollmentImage(

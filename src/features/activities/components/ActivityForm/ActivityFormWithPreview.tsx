@@ -61,6 +61,7 @@ import { createDefaultRegistrationTypes } from "./registrationTypeDefaults";
 import { ActivityPreview } from "@/components/business";
 import { useAuthStore } from "@/features/auth/stores";
 import { useIsDesktop } from "@/hooks/useMediaQuery";
+import { findInvalidRegistrationFieldIndex } from "../../utils/registrationFormFields";
 
 interface ActivityFormWithPreviewProps {
   /**
@@ -402,6 +403,21 @@ export const ActivityFormWithPreview: React.FC<
       }
       if (new Set(registrationTypeNames).size !== registrationTypeNames.length) {
         Toast.show({ icon: "fail", content: "报名类型名称不能重复" });
+        return;
+      }
+      const invalidRegistrationTypeIndex = registrationTypes.findIndex(
+        (type: ActivityRegistrationType) =>
+          findInvalidRegistrationFieldIndex(type.formSchema || []) >= 0,
+      );
+      if (invalidRegistrationTypeIndex >= 0) {
+        const invalidType = registrationTypes[invalidRegistrationTypeIndex];
+        const invalidFieldIndex = findInvalidRegistrationFieldIndex(
+          invalidType.formSchema || [],
+        );
+        Toast.show({
+          icon: "fail",
+          content: `报名类型「${registrationTypeNames[invalidRegistrationTypeIndex]}」的第 ${invalidFieldIndex + 1} 个收集项缺少名称`,
+        });
         return;
       }
       const defaultRegistrationType =

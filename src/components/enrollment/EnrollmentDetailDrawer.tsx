@@ -7,7 +7,7 @@
  * 与用户池的 UserDetailDrawer 保持视觉风格一致
  */
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   X,
   UserCircle,
@@ -16,6 +16,8 @@ import {
   XCircle,
   Clock,
   Send,
+  AlertCircle,
+  LockKeyhole,
 } from "lucide-react";
 import { useActivityDetail } from "@/features/activities/hooks/useActivityDetail";
 import type { RegistrationFormField } from "@/features/activities/types";
@@ -42,6 +44,14 @@ export interface EnrollmentDetailDrawerProps {
   onReject?: (id: string) => void;
   /** 发送通知回调 */
   onNotify?: (id: string) => void;
+  /** 指定需要参与者补充或确认的字段。 */
+  onRequestUpdate?: (
+    id: string,
+    fieldKeys: string[],
+    note?: string,
+  ) => Promise<void>;
+  /** 将参与者最新一次修改标记为已查看。 */
+  onReviewChanges?: (id: string) => Promise<void>;
 }
 
 // ========================================
@@ -61,6 +71,7 @@ const statusStyles: Record<string, string> = {
 // ========================================
 
 const formatFieldValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === "") return "";
   if (Array.isArray(value)) {
     return value.join("、");
   }
@@ -102,25 +113,56 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
   onApprove,
   onReject,
   onNotify,
+  onRequestUpdate,
+  onReviewChanges,
 }) => {
   const { activity } = useActivityDetail(activityId);
+  const [requestMode, setRequestMode] = useState(false);
+  const [requestFieldKeys, setRequestFieldKeys] = useState<Set<string>>(new Set());
+  const [requestNote, setRequestNote] = useState("");
+  const [requesting, setRequesting] = useState(false);
+
+  useEffect(() => {
+    setRequestMode(false);
+    setRequestFieldKeys(new Set());
+    setRequestNote("");
+  }, [enrollment?.id, visible]);
+
+  const currentSchema = useMemo(() => {
+    const registrationTypeSchema = activity?.registrationTypes?.find(
+      (type) => type.id === enrollment?.registrationTypeId,
+    )?.formSchema;
+    if (registrationTypeSchema?.length) return registrationTypeSchema;
+    if (activity?.registrationFormSchema?.length) {
+      return activity.registrationFormSchema;
+    }
+    return (enrollment?.formSchemaSnapshot || []) as RegistrationFormField[];
+  }, [activity, enrollment]);
 
   const fieldLabelMap = useMemo(() => {
-    const event = activity as
-      | { registrationFormSchema?: RegistrationFormField[] | null }
-      | undefined;
-    const schema = event?.registrationFormSchema ?? [];
-
     return new Map(
-      (Array.isArray(schema) ? schema : [])
+      currentSchema
         .filter((field) => field?.key)
         .map((field) => [field.key, field.label || field.key]),
     );
-  }, [activity]);
+  }, [currentSchema]);
 
   if (!visible || !enrollment) return null;
 
-  const formDataEntries = Object.entries(enrollment.formData || {}).filter(
+  const canonicalEntries = currentSchema
+    .map((field) => [field.key, enrollment.formAnswers?.[field.key]] as const)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "");
+  const canonicalKeys = new Set(canonicalEntries.map(([key]) => key));
+  const canonicalLabels = new Set(canonicalEntries.map(([key]) => fieldLabelMap.get(key) || key));
+  const legacyEntries = Object.entries(enrollment.formData || {}).filter(
+    ([key, value]) =>
+      !canonicalKeys.has(key) &&
+      !canonicalLabels.has(key) &&
+      value !== null &&
+      value !== undefined &&
+      value !== "",
+  );
+  const formDataEntries = [...canonicalEntries, ...legacyEntries].filter(
     ([, value]) => value !== null && value !== undefined && value !== "",
   );
   const formDataKeys = new Set(formDataEntries.map(([key]) => key));
@@ -142,6 +184,29 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  };
+
+  const derivedLabels: Record<string, string> = {
+    __merchant_derived_household_province: "户籍（省级）",
+    __merchant_derived_age: "年龄",
+    __merchant_derived_zodiac: "星座",
+    __merchant_derived_birth_year: "出生年份",
+  };
+  const derivedEntries = Object.entries(enrollment.merchantDerivedFields || {});
+
+  const submitUpdateRequest = async () => {
+    if (!onRequestUpdate || requestFieldKeys.size === 0) return;
+    setRequesting(true);
+    try {
+      await onRequestUpdate(
+        enrollment.id,
+        Array.from(requestFieldKeys),
+        requestNote.trim() || undefined,
+      );
+      setRequestMode(false);
+    } finally {
+      setRequesting(false);
+    }
   };
 
   return (
@@ -194,6 +259,11 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
                     {enrollment.registrationTypeName}
                   </span>
                 )}
+                {enrollment.hasUnreviewedChanges && (
+                  <span className="whitespace-nowrap rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+                    资料有更新
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-500">
                 {enrollment.gender && (
@@ -224,6 +294,58 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
             </div>
           )}
 
+          {enrollment.updateRequired && (
+            <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-xs text-orange-700">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium">已要求参与者更新资料</p>
+                  <p className="mt-1 leading-5">
+                    {(enrollment.updateRequest?.fieldKeys || [])
+                      .map((key) => fieldLabelMap.get(key) || key)
+                      .join("、")}
+                  </p>
+                  {enrollment.updateRequest?.note && (
+                    <p className="mt-1 leading-5">说明：{enrollment.updateRequest.note}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {enrollment.latestChanges && enrollment.latestChanges.length > 0 && (
+            <div className="mb-5">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h4 className="text-sm font-semibold text-gray-900">最近修改</h4>
+                {enrollment.hasUnreviewedChanges && onReviewChanges && (
+                  <button
+                    type="button"
+                    onClick={() => onReviewChanges(enrollment.id)}
+                    className="text-xs font-medium text-primary-500 hover:text-primary-600"
+                  >
+                    标记已查看
+                  </button>
+                )}
+              </div>
+              <div className="divide-y divide-orange-100 rounded-xl border border-orange-100 bg-orange-50/60 px-3">
+                {enrollment.latestChanges.map((change) => (
+                  <div key={change.fieldKey} className="py-2.5 text-xs">
+                    <p className="font-medium text-gray-800">{change.label}</p>
+                    {change.confirmedOnly ? (
+                      <p className="mt-1 text-orange-700">参与者确认原内容无误</p>
+                    ) : (
+                      <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-start gap-2 text-gray-500">
+                        <span className="break-words line-through">{formatFieldValue(change.before) || "未填写"}</span>
+                        <span>→</span>
+                        <span className="break-words font-medium text-gray-800">{formatFieldValue(change.after) || "未填写"}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 基本信息 */}
           <div className="mb-5">
             <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
@@ -250,6 +372,71 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
               activityId={activityId}
               participantId={enrollment.id}
             />
+          )}
+
+          {derivedEntries.length > 0 && (
+            <div className="mb-5">
+              <h4 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+                <LockKeyhole size={15} className="text-slate-500" />
+                商家派生信息
+              </h4>
+              <div className="rounded-xl bg-slate-50 px-4 py-1">
+                {derivedEntries.map(([key, value]) => (
+                  <FormDataRow
+                    key={key}
+                    label={derivedLabels[key] || key}
+                    value={value}
+                  />
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] leading-4 text-gray-400">
+                根据报名身份证号在服务端推算，仅主办方可见；户籍为身份证签发地区省级推断。
+              </p>
+            </div>
+          )}
+
+          {requestMode && (
+            <div className="absolute bottom-20 left-4 right-4 z-20 max-h-[60vh] overflow-y-auto rounded-xl border border-primary-100 bg-white p-3 shadow-xl">
+              <p className="text-sm font-medium text-gray-900">选择需补充或确认的字段</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {currentSchema.filter((field) => field.type !== "image").map((field) => (
+                  <label key={field.key} className="flex items-start gap-2 text-xs text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={requestFieldKeys.has(field.key)}
+                      onChange={(event) => setRequestFieldKeys((previous) => {
+                        const next = new Set(previous);
+                        if (event.target.checked) next.add(field.key);
+                        else next.delete(field.key);
+                        return next;
+                      })}
+                      className="mt-0.5"
+                    />
+                    <span>{field.label}</span>
+                  </label>
+                ))}
+              </div>
+              <textarea
+                value={requestNote}
+                onChange={(event) => setRequestNote(event.target.value)}
+                placeholder="补充说明（选填）"
+                rows={2}
+                className="mt-3 w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs outline-none focus:border-primary-400"
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setRequestMode(false)} className="px-3 py-1.5 text-xs text-gray-500">
+                  取消
+                </button>
+                <button
+                  type="button"
+                  disabled={requestFieldKeys.size === 0 || requesting}
+                  onClick={submitUpdateRequest}
+                  className="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+                >
+                  {requesting ? "发送中…" : "发送更新要求"}
+                </button>
+              </div>
+            </div>
           )}
 
           {/* 个人简介 / 匹配需求 */}
@@ -308,6 +495,15 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
 
         {/* 底部操作栏 */}
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-4 flex gap-3 safe-area-pb">
+          {onRequestUpdate && !requestMode && (
+            <button
+              type="button"
+              className="flex flex-1 items-center justify-center whitespace-nowrap rounded-[22px] border border-primary-200 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50"
+              onClick={() => setRequestMode(true)}
+            >
+              要求补充资料
+            </button>
+          )}
           {enrollment.status === "pending" ? (
             <>
               <button

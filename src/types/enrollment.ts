@@ -73,6 +73,38 @@ export interface Enrollment {
 
   // 表单数据（原始提交数据）
   formData?: Record<string, unknown>;
+  /** 以稳定字段 key 保存的当前答案。 */
+  formAnswers?: Record<string, unknown>;
+  formSchemaSnapshot?: Array<{
+    key: string;
+    label: string;
+    type?: string;
+    required?: boolean;
+  }>;
+  answerRevision?: number;
+  hasUnreviewedChanges?: boolean;
+  lastParticipantUpdateAt?: string | null;
+  updateRequired?: boolean;
+  updateRequest?: {
+    id: string;
+    status: "action_required" | "submitted" | "reviewed";
+    fieldKeys: string[];
+    fieldReasons: Record<string, string>;
+    note?: string | null;
+    source: "form_change" | "organizer_request";
+    requestedAt: string;
+    submittedAt?: string | null;
+  } | null;
+  latestChanges?: Array<{
+    fieldKey: string;
+    label: string;
+    before: unknown;
+    after: unknown;
+    confirmedOnly?: boolean;
+  }>;
+  latestChangeAt?: string | null;
+  /** 仅商家可见，由身份证号在服务端派生，不包含身份证原文。 */
+  merchantDerivedFields?: Record<string, string | number>;
 
   // 状态
   status: EnrollmentStatus;

@@ -644,8 +644,9 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
         const p = participantMap.get(r.userId);
         return {
           id: r.userId,
+          enrollmentId: p?.enrollmentId,
           name: p?.name || r.userId.slice(0, 6),
-          groupName: p?.name || "",
+          avatar: p?.avatar,
         } as ParticipantPreview;
       }),
     [matchResults, participantMap],

@@ -8,6 +8,8 @@ export {
   getActivityById,
   createActivity,
   updateActivity,
+  previewRegistrationFormImpact,
   deleteActivity,
   uploadCoverImage,
 } from "./activityApi";
+export type { RegistrationFormImpactPreview } from "./activityApi";

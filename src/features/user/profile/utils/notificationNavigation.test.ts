@@ -71,6 +71,23 @@ describe("resolveNotificationAction", () => {
     ).toBe("/u/profile/user-3");
   });
 
+  it("opens the enrollment editor for action-required form updates", () => {
+    expect(
+      resolveNotificationAction(
+        createNotification({
+          type: "enrollment_update",
+          activityId: "event-1",
+          data: { kind: "action_required" },
+        }),
+      ),
+    ).toEqual({
+      kind: "activity",
+      path: "/u/activities/event-1/register",
+      label: "完善报名资料",
+      activityId: "event-1",
+    });
+  });
+
   it("does not invent a destination for a generic system notification", () => {
     expect(resolveNotificationAction(createNotification({}))).toEqual({
       kind: "none",

@@ -16,14 +16,33 @@ const COUNTDOWN_SECONDS = 60;
 
 interface RegistrationPhoneVerificationProps {
   activityTitle: string;
+  initialPhone?: string;
+  title?: string;
+  description?: string;
+  successMessage?: string;
+  compact?: boolean;
+  onVerified?: (
+    phone: string,
+    verifiedUser: { id: string },
+  ) => void | Promise<void>;
 }
 
 const RegistrationPhoneVerification: FC<
   RegistrationPhoneVerificationProps
-> = ({ activityTitle }) => {
+> = ({
+  activityTitle,
+  initialPhone = "",
+  title = "验证手机号后继续报名",
+  description,
+  successMessage,
+  compact = false,
+  onVerified,
+}) => {
   const queryClient = useQueryClient();
   const { isAuthenticated, setAuth } = useAuthStore();
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(() =>
+    initialPhone.replace(/\D/g, "").slice(0, 11),
+  );
   const [code, setCode] = useState("");
   const [sentPhone, setSentPhone] = useState("");
   const [countdown, setCountdown] = useState(0);
@@ -89,15 +108,18 @@ const RegistrationPhoneVerification: FC<
       }
 
       setAuth(response.user, response.token);
+      await onVerified?.(phone, response.user);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["user", "activity"] }),
         queryClient.invalidateQueries({ queryKey: ["user", "profile-prefill"] }),
       ]);
       Toast.show({
         icon: "success",
-        content: response.isNewUser
-          ? "手机号验证成功，平台账号已创建"
-          : "手机号验证成功",
+        content:
+          successMessage ||
+          (response.isNewUser
+            ? "手机号验证成功，平台账号已创建"
+            : "手机号验证成功"),
       });
     } finally {
       setVerifying(false);
@@ -105,17 +127,24 @@ const RegistrationPhoneVerification: FC<
   };
 
   return (
-    <section className="mx-4 mt-5 rounded-2xl border border-primary-100 bg-white p-5 shadow-sm dark:border-primary-900/40 dark:bg-gray-800 md:mx-6">
+    <section
+      className={
+        compact
+          ? "rounded-2xl bg-white p-5 dark:bg-gray-800"
+          : "mx-4 mt-5 rounded-2xl border border-primary-100 bg-white p-5 shadow-sm dark:border-primary-900/40 dark:bg-gray-800 md:mx-6"
+      }
+    >
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-900/30">
           <Smartphone size={20} aria-hidden="true" />
         </div>
         <div>
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-            验证手机号后继续报名
+            {title}
           </h2>
           <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
-            手机号用于识别你在「{activityTitle}」中的报名记录，并作为后续验证码登录方式。
+            {description ||
+              `手机号用于识别你在「${activityTitle}」中的报名记录，并作为后续验证码登录方式。`}
           </p>
         </div>
       </div>
@@ -129,6 +158,7 @@ const RegistrationPhoneVerification: FC<
             type="tel"
             inputMode="numeric"
             autoComplete="tel"
+            autoFocus={compact}
             value={phone}
             maxLength={11}
             onChange={(event) => {

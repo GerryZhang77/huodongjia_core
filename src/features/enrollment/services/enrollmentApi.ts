@@ -40,6 +40,16 @@ interface BackendEnrollment {
   occupation?: string | null;
   other_info?: string | null;
   formData?: Record<string, unknown> | null;
+  formAnswers?: Record<string, unknown> | null;
+  formSchemaSnapshot?: Enrollment["formSchemaSnapshot"];
+  answerRevision?: number | null;
+  hasUnreviewedChanges?: boolean | null;
+  lastParticipantUpdateAt?: string | null;
+  updateRequired?: boolean | null;
+  updateRequest?: Enrollment["updateRequest"];
+  latestChanges?: Enrollment["latestChanges"];
+  latestChangeAt?: string | null;
+  merchantDerivedFields?: Record<string, string | number> | null;
   registrationTypeId?: string | null;
   registrationTypeName?: string | null;
   registrationTypeMatchEnabled?: boolean | null;
@@ -118,6 +128,16 @@ const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
       backend.user_id ?? backend.userId
     ),
     formData: otherInfo,
+    formAnswers: backend.formAnswers || {},
+    formSchemaSnapshot: backend.formSchemaSnapshot || [],
+    answerRevision: backend.answerRevision || 1,
+    hasUnreviewedChanges: backend.hasUnreviewedChanges === true,
+    lastParticipantUpdateAt: backend.lastParticipantUpdateAt || null,
+    updateRequired: backend.updateRequired === true,
+    updateRequest: backend.updateRequest || null,
+    latestChanges: backend.latestChanges || [],
+    latestChangeAt: backend.latestChangeAt || null,
+    merchantDerivedFields: backend.merchantDerivedFields || {},
     status: backend.status as EnrollmentStatus,
     enrolledAt: backend.created_at ?? backend.createdAt ?? "",
     updatedAt: backend.updated_at ?? backend.updatedAt ?? "",

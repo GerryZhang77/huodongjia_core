@@ -17,6 +17,7 @@ import {
   ChevronRight,
   MessageCircle,
   Contact,
+  AlertCircle,
 } from "lucide-react";
 import { MerchantLayout } from "@/components/layout";
 import { api } from "@/services/api/client";
@@ -28,6 +29,7 @@ import {
 
 const notificationIcons: Record<string, React.ReactNode> = {
   enrollment: <UserPlus size={18} />,
+  enrollment_update: <AlertCircle size={18} />,
   approval: <UserPlus size={18} />,
   match: <GitMerge size={18} />,
   system: <Settings size={18} />,
@@ -39,6 +41,7 @@ const notificationIcons: Record<string, React.ReactNode> = {
 
 const notificationColors: Record<string, string> = {
   enrollment: "bg-primary-100 text-primary-500",
+  enrollment_update: "bg-orange-100 text-orange-600",
   approval: "bg-primary-100 text-primary-500",
   match: "bg-accent-100 text-accent-500",
   system: "bg-gray-100 text-gray-500",

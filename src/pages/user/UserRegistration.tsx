@@ -12,8 +12,10 @@ import {
   LoaderCircle,
   Trash2,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { Dialog } from "antd-mobile";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Toast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui";
 import { UserLayout } from "@/components/layout/UserLayout";
@@ -30,11 +32,14 @@ import {
 } from "@/features/user/field-library";
 import type { RegistrationFormField } from "@/features/activities/types";
 import { ensureRequiredPhoneField } from "@/features/activities/components/ActivityForm/registrationTypeDefaults";
+import { getParticipantVisibleRegistrationFields } from "@/features/activities/utils/registrationFormFields";
 import { useAuthStore } from "@/features/auth/stores";
 import { getRegistrationAvailability } from "@/features/user/activity/utils/registrationAvailability";
 import { useImageUpload, type UploadHandle } from "@/features/uploads";
 import {
   deletePendingEnrollmentImage,
+  getEnrollmentEditContext,
+  updateEnrollmentAnswers,
   uploadEnrollmentImage,
 } from "@/services/enrollmentApi";
 
@@ -423,8 +428,7 @@ const DynamicField: FC<{
   field: RegistrationFormField;
   value: string | string[];
   onChange: (value: string | string[]) => void;
-  readOnly?: boolean;
-}> = ({ field, value, onChange, readOnly = false }) => {
+}> = ({ field, value, onChange }) => {
   const stringValue = typeof value === "string" ? value : "";
   const arrayValue = Array.isArray(value) ? value : [];
 
@@ -435,11 +439,16 @@ const DynamicField: FC<{
           type={field.key === "phone" ? "tel" : "text"}
           inputMode={field.key === "phone" ? "numeric" : undefined}
           value={stringValue}
-          onChange={(e) => onChange(e.target.value)}
-          readOnly={readOnly}
-          aria-readonly={readOnly}
+          maxLength={field.key === "phone" ? 11 : undefined}
+          onChange={(e) =>
+            onChange(
+              field.key === "phone"
+                ? e.target.value.replace(/\D/g, "").slice(0, 11)
+                : e.target.value,
+            )
+          }
           placeholder={field.placeholder || `请输入${field.label}`}
-          className={`w-full h-12 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all ${readOnly ? "cursor-not-allowed opacity-80" : ""}`}
+          className="w-full h-12 px-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all"
         />
       );
 
@@ -529,6 +538,27 @@ const UserRegistration: FC = () => {
     useActivityDetail(isParticipantUser ? id : undefined, registrationTypeId);
   const { mutateAsync: submitEnrollment, isPending: isSubmitting } =
     useSubmitEnrollment(id || "", registrationTypeId);
+  const queryClient = useQueryClient();
+  const editContextQuery = useQuery({
+    queryKey: ["user", "enrollment-edit-context", id],
+    queryFn: () => getEnrollmentEditContext(id || ""),
+    enabled: isParticipantUser && Boolean(id),
+    retry: false,
+    staleTime: 15_000,
+  });
+  const editContext = editContextQuery.data?.data;
+  const isEditMode = Boolean(editContext);
+  const updateEnrollmentMutation = useMutation({
+    mutationFn: (payload: {
+      answers: Record<string, string | string[]>;
+      confirmedFieldKeys: string[];
+    }) =>
+      updateEnrollmentAnswers(id || "", {
+        ...payload,
+        schemaVersion: editContext?.schemaVersion || 1,
+        answerRevision: editContext?.enrollment.answerRevision || 1,
+      }),
+  });
   const { data: prefillData } = useProfilePrefill(isParticipantUser);
   const { mutateAsync: upsertFieldsAsync } = useUpsertFieldLibrary();
 
@@ -539,7 +569,8 @@ const UserRegistration: FC = () => {
   );
   const isLoading =
     authStatus === "checking" ||
-    (isParticipantUser ? isUserActivityLoading : isPublicActivityLoading);
+    (isParticipantUser ? isUserActivityLoading : isPublicActivityLoading) ||
+    (isParticipantUser && editContextQuery.isLoading);
   const registrationAvailability = useMemo(
     () => getRegistrationAvailability(activity),
     [activity],
@@ -548,23 +579,66 @@ const UserRegistration: FC = () => {
   // 获取报名表 schema
   const formSchema = useMemo<RegistrationFormField[]>(() => {
     const schema =
-      activity?.registrationFormSchema &&
+      editContext?.schema?.length
+        ? editContext.schema
+        : activity?.registrationFormSchema &&
       activity.registrationFormSchema.length > 0
         ? activity.registrationFormSchema
         : DEFAULT_FORM_SCHEMA;
-    return ensureRequiredPhoneField(schema);
-  }, [activity]);
+    return getParticipantVisibleRegistrationFields(
+      ensureRequiredPhoneField(schema),
+    );
+  }, [activity, editContext]);
 
   // 表单数据状态：key -> value
   const [formData, setFormData] = useState<Record<string, string | string[]>>({});
   const [imageAnswers, setImageAnswers] = useState<Record<string, string[]>>({});
   const [uploadingImageFields, setUploadingImageFields] = useState<Set<string>>(new Set());
+  const [confirmedFieldKeys, setConfirmedFieldKeys] = useState<Set<string>>(new Set());
+  const [phoneVerificationTarget, setPhoneVerificationTarget] = useState<string | null>(null);
   // 防止 prefill 多次覆盖用户已修改值
   const hasAppliedPrefill = useRef(false);
+  const hasAppliedEnrollment = useRef(false);
+  const touchedFieldKeys = useRef(new Set<string>());
+  const preserveFormForUserId = useRef<string | null>(null);
 
   useEffect(() => {
+    if (
+      user?.id &&
+      preserveFormForUserId.current === user.id
+    ) {
+      preserveFormForUserId.current = null;
+      return;
+    }
     hasAppliedPrefill.current = false;
-  }, [user?.id]);
+    hasAppliedEnrollment.current = false;
+    setFormData({});
+    setImageAnswers({});
+    setConfirmedFieldKeys(new Set());
+    setPhoneVerificationTarget(null);
+    touchedFieldKeys.current.clear();
+  }, [id, registrationTypeId, user?.id]);
+
+  useEffect(() => {
+    if (phoneVerificationTarget === null) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPhoneVerificationTarget(null);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [phoneVerificationTarget]);
+
+  useEffect(() => {
+    if (!editContext || hasAppliedEnrollment.current) return;
+    setFormData((previous) => {
+      const next = { ...previous };
+      for (const [key, value] of Object.entries(editContext.enrollment.answers)) {
+        if (!touchedFieldKeys.current.has(key)) next[key] = value;
+      }
+      return next;
+    });
+    hasAppliedEnrollment.current = true;
+  }, [editContext]);
 
   // 自动预填：当 prefill 数据和 schema 都准备好后，把命中的字段填入 formData
   useEffect(() => {
@@ -587,14 +661,36 @@ const UserRegistration: FC = () => {
       next.phone = verifiedPhone;
     }
     if (Object.keys(next).length > 0) {
-      setFormData((prev) => ({ ...next, ...prev }));
+      setFormData((previous) => {
+        const merged = { ...previous };
+        for (const [key, value] of Object.entries(next)) {
+          if (
+            !touchedFieldKeys.current.has(key) &&
+            !Object.prototype.hasOwnProperty.call(merged, key)
+          ) {
+            merged[key] = value;
+          }
+        }
+        return merged;
+      });
     }
     hasAppliedPrefill.current = true;
   }, [formSchema, isParticipantUser, prefillData, verifiedPhone]);
 
   const setField = useCallback((key: string, value: string | string[]) => {
+    touchedFieldKeys.current.add(key);
     setFormData((prev) => ({ ...prev, [key]: value }));
+    setConfirmedFieldKeys((previous) => new Set(previous).add(key));
   }, []);
+
+  const confirmField = useCallback((key: string) => {
+    setConfirmedFieldKeys((previous) => new Set(previous).add(key));
+  }, []);
+
+  const fieldStateByKey = useMemo(
+    () => new Map(editContext?.fieldStates.map((field) => [field.key, field]) || []),
+    [editContext],
+  );
 
   const setImageField = useCallback((key: string, ids: string[]) => {
     setImageAnswers((previous) => ({ ...previous, [key]: ids }));
@@ -617,12 +713,14 @@ const UserRegistration: FC = () => {
         return typeof phone === "string" && PHONE_PATTERN.test(phone);
       }
       if (!field.required) return true;
-      if (field.type === "image") return (imageAnswers[field.key]?.length || 0) > 0;
+      if (field.type === "image") {
+        return isEditMode || (imageAnswers[field.key]?.length || 0) > 0;
+      }
       const val = formData[field.key];
       if (Array.isArray(val)) return val.length > 0;
       return typeof val === "string" && val.trim().length > 0;
     });
-  }, [formSchema, formData, imageAnswers]);
+  }, [formSchema, formData, imageAnswers, isEditMode]);
 
   const handleSubmit = async () => {
     if (!isParticipantUser || !PHONE_PATTERN.test(verifiedPhone)) {
@@ -632,15 +730,13 @@ const UserRegistration: FC = () => {
       });
       return;
     }
-    if (formData.phone !== verifiedPhone) {
-      Toast.show({
-        icon: "fail",
-        content: "报名手机号必须与已验证手机号一致",
-      });
+    const submittedPhone = String(formData.phone || "").replace(/\D/g, "");
+    if (submittedPhone !== verifiedPhone) {
+      setPhoneVerificationTarget(submittedPhone);
       return;
     }
 
-    if (!registrationAvailability.canRegister) {
+    if (!isEditMode && !registrationAvailability.canRegister) {
       Toast.show({
         icon: "fail",
         content: registrationAvailability.reason || "当前暂不可报名",
@@ -652,7 +748,9 @@ const UserRegistration: FC = () => {
       // 找到第一个未填的必填字段
       const missing = formSchema.find((f) => {
         if (!f.required) return false;
-        if (f.type === "image") return (imageAnswers[f.key]?.length || 0) === 0;
+        if (f.type === "image") {
+          return !isEditMode && (imageAnswers[f.key]?.length || 0) === 0;
+        }
         const val = formData[f.key];
         if (Array.isArray(val)) return val.length === 0;
         return !val || (typeof val === "string" && !val.trim());
@@ -669,19 +767,33 @@ const UserRegistration: FC = () => {
       return;
     }
 
-    // 构建提交数据：将 key-value 映射为 label-value（后端按 label 存储）
+    // 新报名兼容旧接口按 label 提交；修改报名使用稳定 key，避免字段改名后丢答案。
     const submitData: Record<string, string> = {};
+    const updateAnswers: Record<string, string | string[]> = {};
     for (const field of formSchema) {
       if (field.type === "image") continue;
-      const val = formData[field.key];
+      const val = formData[field.key] ?? (field.type === "multi-select" ? [] : "");
+      updateAnswers[field.key] = val;
       if (val !== undefined && val !== "") {
         submitData[field.label] = Array.isArray(val) ? val.join(",") : val;
       }
     }
 
     try {
-      await submitEnrollment({ enrollment: submitData, imageAnswers });
-      Toast.show({ icon: "success", content: "报名成功！", duration: 1500 });
+      if (isEditMode) {
+        await updateEnrollmentMutation.mutateAsync({
+          answers: updateAnswers,
+          confirmedFieldKeys: Array.from(confirmedFieldKeys),
+        });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["user", "enrollment-edit-context", id] }),
+          queryClient.invalidateQueries({ queryKey: ["user"] }),
+        ]);
+        Toast.show({ icon: "success", content: "报名资料已更新", duration: 1500 });
+      } else {
+        await submitEnrollment({ enrollment: submitData, imageAnswers });
+        Toast.show({ icon: "success", content: "报名成功！", duration: 1500 });
+      }
 
       // 收集这次填写中可保存到信息库的字段（非空）
       const toSave: UpsertFieldLibraryItem[] = [];
@@ -776,7 +888,7 @@ const UserRegistration: FC = () => {
     );
   }
 
-  if (!registrationAvailability.canRegister) {
+  if (!isEditMode && !registrationAvailability.canRegister) {
     return (
       <UserLayout showTabBar={true} showTopBar={true}>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-center">
@@ -801,7 +913,7 @@ const UserRegistration: FC = () => {
     );
   }
 
-  if (activity.registrationType?.accessAllowed === false) {
+  if (!isEditMode && activity.registrationType?.accessAllowed === false) {
     return (
       <UserLayout showTabBar={true} showTopBar={true}>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 text-center">
@@ -866,6 +978,18 @@ const UserRegistration: FC = () => {
       bgColor="bg-gray-50 dark:bg-gray-900"
     >
       <div className="mx-auto min-h-screen w-full max-w-3xl pb-[140px] md:pb-28">
+        {isEditMode && editContext?.updateRequest && (
+          <div className="px-4 pt-5 md:px-6">
+            <div className="rounded-xl border border-orange-200 bg-orange-50 px-3.5 py-3 text-sm text-orange-800 dark:border-orange-800/50 dark:bg-orange-900/20 dark:text-orange-300">
+              <p className="font-medium">请补充或确认报名资料</p>
+              <p className="mt-1 text-xs leading-5 opacity-80">
+                {editContext?.updateRequest?.note ||
+                  "需要处理的字段已标出，其他已填写内容会原样保留。"}
+              </p>
+            </div>
+          </div>
+        )}
+
         {showRegistrationType && (
           <div className="px-4 pt-5 md:px-6">
             <span className="inline-flex items-center rounded-full bg-[rgba(171,191,255,0.44)] px-3 py-1 text-xs font-medium text-[#4d5ef8] dark:bg-[#4d5ef8]/20 dark:text-[#9ba7ff]">
@@ -882,15 +1006,33 @@ const UserRegistration: FC = () => {
                 showRegistrationType ? "pt-4" : "pt-5"
               }`}
             >
-              {formSchema.map((field) => (
-                <div key={field.key}>
+              {formSchema.map((field) => {
+                const fieldState = fieldStateByKey.get(field.key);
+                const needsAttention = fieldState && fieldState.state !== "complete";
+                const isConfirmed = confirmedFieldKeys.has(field.key);
+                return (
+                <div
+                  key={field.key}
+                  className={needsAttention && !isConfirmed
+                    ? "rounded-xl border border-error-300 bg-error-50/60 p-3 dark:border-error-800 dark:bg-error-900/10"
+                    : undefined}
+                >
                     <label className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300">
                       <span>{field.label}</span>
                       {field.required && (
                         <span className="text-error-500">*</span>
                       )}
                     </label>
-                    {field.type === "image" ? (
+                    {needsAttention && !isConfirmed && (
+                      <p className="mb-2 text-xs text-error-600 dark:text-error-400">
+                        {fieldState.reason || "请补充或确认此项"}
+                      </p>
+                    )}
+                    {field.type === "image" && isEditMode ? (
+                      <div className="rounded-lg bg-gray-100 px-3 py-2.5 text-xs leading-5 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        已提交的图片会继续保留。如需替换图片，请联系主办方。
+                      </div>
+                    ) : field.type === "image" ? (
                       <EnrollmentImageField
                         activityId={id || ""}
                         registrationTypeId={
@@ -908,11 +1050,20 @@ const UserRegistration: FC = () => {
                           (field.type === "multi-select" ? [] : "")
                         }
                         onChange={(val) => setField(field.key, val)}
-                        readOnly={field.key === "phone"}
                       />
                     )}
+                    {fieldState?.state === "reconfirm" && !isConfirmed && field.type !== "image" && (
+                      <button
+                        type="button"
+                        onClick={() => confirmField(field.key)}
+                        className="mt-2 text-xs font-medium text-primary-500 hover:text-primary-600"
+                      >
+                        当前内容无误，确认此项
+                      </button>
+                    )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* 底部操作栏 - 报名页隐藏 TabBar，专注表单 */}
@@ -921,16 +1072,65 @@ const UserRegistration: FC = () => {
                 <Button
                   onClick={handleSubmit}
                   disabled={!isFormValid || uploadingImageFields.size > 0}
-                  loading={isSubmitting || uploadingImageFields.size > 0}
+                  loading={isSubmitting || updateEnrollmentMutation.isPending || uploadingImageFields.size > 0}
                   className="w-full h-12 text-base"
                 >
-                  {uploadingImageFields.size > 0 ? "图片上传中" : "确认报名"}
+                  {uploadingImageFields.size > 0
+                    ? "图片上传中"
+                    : isEditMode
+                      ? "保存报名资料"
+                      : "确认报名"}
                 </Button>
               </div>
             </div>
           </>
         ) : (
           <RegistrationPhoneVerification activityTitle={activity.title} />
+        )}
+
+        {phoneVerificationTarget !== null && (
+          <div
+            className="fixed inset-0 z-[70] flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4"
+            onMouseDown={(event) => {
+              if (event.currentTarget === event.target) {
+                setPhoneVerificationTarget(null);
+              }
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="验证新手机号"
+              className="relative w-full max-w-md rounded-t-2xl bg-white shadow-2xl dark:bg-gray-800 sm:rounded-2xl"
+            >
+              <button
+                type="button"
+                aria-label="关闭手机号验证"
+                onClick={() => setPhoneVerificationTarget(null)}
+                className="absolute right-3 top-3 z-10 rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+              <RegistrationPhoneVerification
+                activityTitle={activity.title}
+                initialPhone={phoneVerificationTarget}
+                title="验证新手机号"
+                description="为了确保报名联系方式归你本人所有，修改手机号后需要完成一次短信验证。"
+                successMessage="新手机号已验证，请继续提交"
+                compact
+                onVerified={async (phone, verifiedUser) => {
+                  if (verifiedUser.id !== user?.id) {
+                    preserveFormForUserId.current = verifiedUser.id;
+                  }
+                  setField("phone", phone);
+                  setPhoneVerificationTarget(null);
+                  await queryClient.invalidateQueries({
+                    queryKey: ["user", "enrollment-edit-context", id],
+                  });
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </UserLayout>

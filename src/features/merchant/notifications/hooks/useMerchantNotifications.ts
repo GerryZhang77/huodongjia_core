@@ -9,7 +9,8 @@ export type MerchantNotificationType =
   | "approval"
   | "message"
   | "follow"
-  | "contact_request";
+  | "contact_request"
+  | "enrollment_update";
 
 export interface MerchantNotification {
   id: string;

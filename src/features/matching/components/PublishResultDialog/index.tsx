@@ -5,11 +5,10 @@
  * 参考 SendNotificationDialog 组件设计
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Send,
   Bell,
-  BellOff,
   CheckCircle,
   AlertTriangle,
   BarChart3,
@@ -33,8 +32,9 @@ export interface MatchGroupStats {
 /** 参与者信息用于预览 */
 export interface ParticipantPreview {
   id: string;
+  enrollmentId?: string;
   name: string;
-  groupName?: string;
+  avatar?: string;
 }
 
 /** 通知渠道类型 */
@@ -44,6 +44,7 @@ export type NotificationChannel = "inApp" | "sms" | "email";
 export interface NotificationConfig {
   channels: NotificationChannel[];
   content: string;
+  recipientEnrollmentIds: string[];
 }
 
 export interface PublishResultDialogProps {
@@ -76,13 +77,32 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
   onCancel,
   isLoading = false,
 }) => {
-  const [sendNotification, setSendNotification] = useState(true);
   const [customContent, setCustomContent] = useState(
     DEFAULT_NOTIFICATION_CONTENT,
   );
   const [showContentEditor, setShowContentEditor] = useState(false);
   // 人员预览展开状态
   const [showParticipantPreview, setShowParticipantPreview] = useState(false);
+  const selectableEnrollmentIds = useMemo(
+    () => participants.flatMap((participant) =>
+      participant.enrollmentId ? [participant.enrollmentId] : [],
+    ),
+    [participants],
+  );
+  const participantSelectionKey = selectableEnrollmentIds.join("|");
+  const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState<Set<string>>(
+    new Set(),
+  );
+
+  useEffect(() => {
+    if (!visible) return;
+    setSelectedEnrollmentIds(
+      new Set(participantSelectionKey ? participantSelectionKey.split("|") : []),
+    );
+    setCustomContent(DEFAULT_NOTIFICATION_CONTENT);
+    setShowContentEditor(false);
+    setShowParticipantPreview(false);
+  }, [visible, participantSelectionKey]);
 
   // 当前匹配模型是 per-user topN：每个参与者一条记录，
   // members 的首位是本人，其余为推荐对象。
@@ -103,14 +123,33 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
   }, [groups]);
 
   const handleConfirm = () => {
-    if (sendNotification) {
+    const recipientEnrollmentIds = Array.from(selectedEnrollmentIds);
+    if (recipientEnrollmentIds.length > 0) {
       onConfirm(true, {
         channels: ["inApp"],
         content: customContent,
+        recipientEnrollmentIds,
       });
     } else {
       onConfirm(false);
     }
+  };
+
+  const allSelected =
+    selectableEnrollmentIds.length > 0 &&
+    selectedEnrollmentIds.size === selectableEnrollmentIds.length;
+  const toggleAllParticipants = () => {
+    setSelectedEnrollmentIds(
+      allSelected ? new Set() : new Set(selectableEnrollmentIds),
+    );
+  };
+  const toggleParticipant = (enrollmentId: string) => {
+    setSelectedEnrollmentIds((current) => {
+      const next = new Set(current);
+      if (next.has(enrollmentId)) next.delete(enrollmentId);
+      else next.add(enrollmentId);
+      return next;
+    });
   };
 
   if (!visible) return null;
@@ -185,58 +224,44 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
           <div className="p-4 bg-gray-50 rounded-xl">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                {sendNotification ? (
-                  <Bell size={18} className="text-primary-500" />
-                ) : (
-                  <BellOff size={18} className="text-gray-400" />
-                )}
+                <Bell size={18} className="text-primary-500" />
                 <span className="text-sm font-semibold text-gray-800">
-                  通知设置
+                  通知人员
+                </span>
+                <span className="text-xs text-gray-500">
+                  已选 {selectedEnrollmentIds.size}/{selectableEnrollmentIds.length}
                 </span>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={sendNotification}
-                aria-label="发布后发送站内通知"
-                onClick={() => setSendNotification(!sendNotification)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                  sendNotification ? "bg-primary-500" : "bg-gray-300"
-                }`}
-              >
-                <span
-                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${
-                    sendNotification ? "left-7" : "left-1"
-                  }`}
-                />
-              </button>
+              {selectableEnrollmentIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={toggleAllParticipants}
+                  className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                >
+                  {allSelected ? "取消全选" : "全选"}
+                </button>
+              ) : null}
             </div>
 
-            {sendNotification ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-lg border border-primary-200 bg-primary-50 p-3">
-                  <div className="flex items-center gap-2">
-                    <Bell size={16} className="text-primary-500" />
-                    <div>
-                      <p className="text-sm font-medium text-primary-700">
-                        站内通知
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        发布后通知平台内参与者
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">
-                      {participantCount} 人
-                    </span>
-                    <CheckCircle size={16} className="text-primary-500" />
-                  </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border border-primary-200 bg-primary-50 p-3">
+                <div>
+                  <p className="text-sm font-medium text-primary-700">
+                    站内通知
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    只通知下方勾选的参与者
+                  </p>
                 </div>
+                <span className="text-xs font-medium text-primary-600">
+                  {selectedEnrollmentIds.size} 人
+                </span>
+              </div>
 
-                {/* 通知内容编辑 */}
+              {selectedEnrollmentIds.size > 0 ? (
                 <div>
                   <button
+                    type="button"
                     onClick={() => setShowContentEditor(!showContentEditor)}
                     className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700"
                   >
@@ -255,63 +280,86 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
                     />
                   )}
                 </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  未选择通知人员，本次将仅发布结果。
+                </p>
+              )}
 
-                {/* 人员预览 */}
-                {participants.length > 0 && (
-                  <div>
-                    <button
-                      onClick={() =>
-                        setShowParticipantPreview(!showParticipantPreview)
-                      }
-                      className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700"
-                    >
-                      <Users size={14} />
-                      <span>
-                        {showParticipantPreview ? "收起" : "查看通知人员"}
-                      </span>
-                      {showParticipantPreview ? (
-                        <ChevronUp size={14} />
-                      ) : (
-                        <ChevronDown size={14} />
-                      )}
-                    </button>
+              {participants.length > 0 ? (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowParticipantPreview(!showParticipantPreview)
+                    }
+                    className="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-700"
+                  >
+                    <Users size={14} />
+                    <span>
+                      {showParticipantPreview ? "收起人员" : "查看并选择人员"}
+                    </span>
+                    {showParticipantPreview ? (
+                      <ChevronUp size={14} />
+                    ) : (
+                      <ChevronDown size={14} />
+                    )}
+                  </button>
 
-                    {showParticipantPreview && (
-                      <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg bg-white">
-                        <div className="p-2 text-xs text-gray-500 border-b border-gray-100 bg-gray-50 sticky top-0">
-                          共 {participants.length} 人将收到通知
-                        </div>
-                        {participants.map((p, idx) => (
-                          <div
-                            key={p.id}
-                            className={`flex items-center justify-between px-3 py-2 text-sm ${
-                              idx !== participants.length - 1
+                  {showParticipantPreview ? (
+                    <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+                      {participants.map((participant, index) => {
+                        const enrollmentId = participant.enrollmentId;
+                        const selected = Boolean(
+                          enrollmentId && selectedEnrollmentIds.has(enrollmentId),
+                        );
+                        return (
+                          <button
+                            key={participant.id}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={selected}
+                            aria-label={`${selected ? "取消选择" : "选择"}${participant.name}`}
+                            disabled={!enrollmentId}
+                            onClick={() =>
+                              enrollmentId && toggleParticipant(enrollmentId)
+                            }
+                            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 ${
+                              index !== participants.length - 1
                                 ? "border-b border-gray-100"
                                 : ""
                             }`}
                           >
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium text-gray-800">
-                                {p.name}
+                            {participant.avatar ? (
+                              <img
+                                src={participant.avatar}
+                                alt=""
+                                className="h-8 w-8 shrink-0 rounded-full object-cover"
+                              />
+                            ) : (
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-600">
+                                {participant.name.slice(0, 1)}
                               </span>
-                              {p.groupName && (
-                                <span className="ml-2 text-xs text-gray-400">
-                                  {p.groupName}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                不发送通知，成员需主动查看分组结果
-              </p>
-            )}
+                            )}
+                            <span className="min-w-0 flex-1 truncate font-medium text-gray-800">
+                              {participant.name}
+                            </span>
+                            {selected ? (
+                              <CheckCircle
+                                size={18}
+                                className="shrink-0 text-primary-500"
+                              />
+                            ) : (
+                              <span className="h-[18px] w-[18px] shrink-0 rounded-full border border-gray-300" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {/* 发布说明 */}
@@ -321,7 +369,7 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
               <br />
               • 分组结果将对所有参与者可见
               <br />
-              • 参与者可在活动详情中查看自己的分组
+              • 仅勾选的参与者会收到站内通知
               <br />• 发布后仍可调整分组，但需重新发布
             </p>
           </div>
@@ -352,7 +400,9 @@ export const PublishResultDialog: React.FC<PublishResultDialogProps> = ({
             ) : (
               <span className="flex items-center gap-2">
                 <Send size={18} />
-                确认发布
+                {selectedEnrollmentIds.size > 0
+                  ? `发布并通知 ${selectedEnrollmentIds.size} 人`
+                  : "仅发布结果"}
               </span>
             )}
           </Button>
