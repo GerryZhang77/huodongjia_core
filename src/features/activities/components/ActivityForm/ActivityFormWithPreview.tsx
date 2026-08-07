@@ -445,12 +445,6 @@ export const ActivityFormWithPreview: React.FC<
       submitData.cover_image = imageUrls[0];
       submitData.images = imageUrls;
 
-      Toast.show({
-        icon: "loading",
-        content: "正在提交...",
-        duration: 0,
-      });
-
       await onSubmit(submitData);
     } catch (error) {
       console.error("表单提交错误:", error);

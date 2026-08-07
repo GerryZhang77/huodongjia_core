@@ -139,6 +139,14 @@ export interface SendNotificationRequest {
   channels?: ("sms" | "email" | "wechat")[];
 }
 
+interface SendNotificationApiResponse {
+  success: boolean;
+  sentCount?: number;
+  data?: {
+    sent_count?: number;
+  };
+}
+
 // ============================================
 // 商家接口 (B端)
 // ============================================
@@ -208,13 +216,17 @@ export async function sendNotification(
   activityId: string,
   data: SendNotificationRequest
 ): Promise<{ success: boolean; sentCount?: number }> {
-  return api.post(`/api/notification/notify`, {
+  const response = await api.post<SendNotificationApiResponse>(`/api/notification/notify`, {
     enrollment_ids: data.enrollmentIds,
     message: data.message,
     title: data.title || "活动通知",
     type: data.type || "enrollment",
     event_id: activityId,
   });
+  return {
+    success: response.success,
+    sentCount: response.sentCount ?? response.data?.sent_count,
+  };
 }
 
 // ============================================

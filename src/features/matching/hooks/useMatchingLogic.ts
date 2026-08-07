@@ -830,6 +830,8 @@ export function useMatchingLogic({
         Toast.show({
           content: notificationFailed
             ? "结果已发布，但通知发送失败，可在报名管理中重新通知"
+            : sendResultNotification && notifiedCount === 0
+            ? "结果已发布，但没有通知送达，请检查账号绑定或通知偏好"
             : sendResultNotification
             ? `结果发布成功，已通知 ${notifiedCount} 位参与者`
             : "结果发布成功",

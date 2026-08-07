@@ -83,6 +83,11 @@ export const useEditActivity = (activityId: string) => {
         const impactSummary = formImpact.totalAffectedParticipants > 0
           ? `将通知 ${formImpact.totalAffectedParticipants} 位已报名用户补充或确认资料。`
           : "现有报名资料无需用户补填。";
+        const matchedNotificationCount =
+          formImpact.totalMatchedNotificationParticipants || 0;
+        const matchedNotificationSummary = matchedNotificationCount > 0
+          ? ` 另有 ${matchedNotificationCount} 位已完成匹配且无需补填的用户将收到报名表变更通知。`
+          : "";
         const preservedSummary = preservedCount > 0
           ? ` 已移除报名类型中的 ${preservedCount} 条历史报名仍会保留。`
           : "";
@@ -103,13 +108,18 @@ export const useEditActivity = (activityId: string) => {
         const overLimitSummary = overLimitOptions.length > 0
           ? ` 其中${overLimitOptions.join("；")}，相应选项将立即停止接受新报名。`
           : "";
+        // 影响预检已经结束；确认阶段不应继续显示“更新中”，否则会和
+        // 确认弹窗形成两个互相冲突的提交状态。
+        setLoading(false);
+        Toast.clear();
         const confirmed = await Dialog.confirm({
           title: "确认更新报名表？",
-          content: `${formChangeSummary}${impactSummary}${quotaSummary}${overLimitSummary}${preservedSummary}`,
+          content: `${formChangeSummary}${impactSummary}${matchedNotificationSummary}${quotaSummary}${overLimitSummary}${preservedSummary}`,
           confirmText: "确认更新",
           cancelText: "继续编辑",
         });
         if (!confirmed) return;
+        setLoading(true);
       }
 
       const activity = await updateActivity(activityId, requestData);

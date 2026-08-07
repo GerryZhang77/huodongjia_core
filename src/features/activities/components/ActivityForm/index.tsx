@@ -183,13 +183,6 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 
       console.log("表单提交 - 调用 onSubmit", submitData);
 
-      // 显示加载提示
-      Toast.show({
-        icon: "loading",
-        content: "正在提交...",
-        duration: 0,
-      });
-
       await onSubmit(submitData);
 
       console.log("表单提交 - 成功");

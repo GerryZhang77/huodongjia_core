@@ -16,6 +16,11 @@ export interface MatchExportFieldOption {
   totalTypeCount: number;
 }
 
+export const getMatchExportRelationKey = (
+  sourceUserId: string,
+  targetUserId: string,
+): string => `${sourceUserId}::${targetUserId}`;
+
 export const normalizeExportRegistrationTypeId = (
   group: MatchingSchemaGroup,
 ): string | null =>
@@ -65,14 +70,14 @@ export function getDefaultMatchExportHeader(
   side: Exclude<MatchExportSide, 'system'>,
   option: MatchExportFieldOption,
 ): string {
-  const prefix = side === 'source' ? '发起人' : '匹配对象';
+  const prefix = side === 'source' ? '' : '匹配对象-';
   if (option.coveredTypeCount >= option.totalTypeCount) {
-    return `${prefix}-${option.label}`;
+    return `${prefix}${option.label}`;
   }
   const scope = option.typeNames.length <= 2
     ? option.typeNames.join('、')
     : '部分报名类型';
-  return `${prefix}-${option.label}（${scope}）`;
+  return `${prefix}${option.label}（${scope}）`;
 }
 
 export function createFieldExportColumn(

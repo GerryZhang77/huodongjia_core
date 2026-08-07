@@ -31,7 +31,7 @@ describe('matchExportModel', () => {
     const name = options.find((option) => option.fieldKey === 'name')!;
     const company = options.find((option) => option.fieldKey === 'company')!;
     expect(name.sources).toHaveLength(2);
-    expect(getDefaultMatchExportHeader('source', name)).toBe('发起人-姓名');
+    expect(getDefaultMatchExportHeader('source', name)).toBe('姓名');
     expect(getDefaultMatchExportHeader('target', company)).toBe('匹配对象-公司（嘉宾）');
     expect(options.some((option) => option.fieldKey === 'photos')).toBe(false);
   });
@@ -47,8 +47,8 @@ describe('matchExportModel', () => {
     }]);
     const columns = createDefaultMatchExportColumns(options);
     expect(columns.map((column) => column.header)).toEqual([
-      '发起人-姓名',
-      '发起人-手机号',
+      '姓名',
+      '手机号',
       '匹配对象-姓名',
       '匹配对象-手机号',
     ]);

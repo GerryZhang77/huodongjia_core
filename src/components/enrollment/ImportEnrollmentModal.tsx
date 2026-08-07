@@ -26,6 +26,10 @@ import type {
   ActivityRegistrationType,
   RegistrationFormField,
 } from "@/features/activities/types";
+import {
+  findUnsafeSpreadsheetIntegerCells,
+  getUnsafeSpreadsheetIntegerMessage,
+} from "@/features/enrollment/utils/spreadsheetImport";
 
 // ========================================
 // 类型定义
@@ -701,6 +705,12 @@ const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
         if (rawJsonData.length === 0) {
           setErrors(["Excel 文件为空，请检查文件内容"]);
+          return;
+        }
+
+        const unsafeIntegerCells = findUnsafeSpreadsheetIntegerCells(rawJsonData);
+        if (unsafeIntegerCells.length > 0) {
+          setErrors([getUnsafeSpreadsheetIntegerMessage(unsafeIntegerCells)]);
           return;
         }
 

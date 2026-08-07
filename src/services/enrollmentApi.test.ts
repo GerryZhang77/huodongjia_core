@@ -15,7 +15,10 @@ import { sendNotification } from "./enrollmentApi";
 describe("sendNotification", () => {
   beforeEach(() => {
     apiMocks.post.mockReset();
-    apiMocks.post.mockResolvedValue({ success: true });
+    apiMocks.post.mockResolvedValue({
+      success: true,
+      data: { sent_count: 2 },
+    });
   });
 
   it("preserves matching semantics and activity context", async () => {
@@ -48,5 +51,20 @@ describe("sendNotification", () => {
       type: "enrollment",
       event_id: "event-2",
     });
+  });
+
+  it("normalizes the backend sent_count for publish feedback", async () => {
+    apiMocks.post.mockResolvedValueOnce({
+      success: true,
+      data: { sent_count: 0 },
+    });
+
+    await expect(
+      sendNotification("event-3", {
+        enrollmentIds: ["enrollment-4"],
+        type: "matching",
+        message: "匹配结果已发布",
+      }),
+    ).resolves.toEqual({ success: true, sentCount: 0 });
   });
 });
