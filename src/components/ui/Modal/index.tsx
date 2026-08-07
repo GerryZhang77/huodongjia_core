@@ -26,6 +26,7 @@ import { clsx } from "clsx";
 import { X } from "lucide-react";
 import { Button } from "../Button";
 import type { ModalProps } from "./types";
+import { useBodyScrollLock } from "../useBodyScrollLock";
 
 /**
  * Modal 组件
@@ -53,6 +54,7 @@ export const Modal: FC<ModalProps> = ({
   zIndex = 1000,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  useBodyScrollLock(open);
 
   // 宽度映射
   const widthClasses = {
@@ -75,19 +77,6 @@ export const Modal: FC<ModalProps> = ({
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open, closable, onClose]);
-
-  // 阻止 body 滚动
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
 
   // 处理遮罩点击
   const handleMaskClick = (e: React.MouseEvent) => {

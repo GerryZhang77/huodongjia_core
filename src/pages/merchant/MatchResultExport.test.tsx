@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -83,7 +89,10 @@ const renderPage = () => {
 };
 
 describe("MatchResultExportPage", () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.style.overflow = "";
+  });
 
   beforeEach(() => {
     Object.defineProperty(URL, "createObjectURL", {
@@ -339,5 +348,34 @@ describe("MatchResultExportPage", () => {
         ) as HTMLInputElement
       ).value,
     ).toBe("公司");
+  });
+
+  it("restores page scrolling after participant and preview drawers close", async () => {
+    renderPage();
+
+    await screen.findByRole("heading", { name: "选择参与者" });
+    fireEvent.click(
+      screen.getByRole("button", { name: /^选择参与者$/ }),
+    );
+    const participantDrawer = await screen.findByRole("dialog", {
+      name: "选择参与者",
+    });
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.click(
+      within(participantDrawer).getByRole("button", { name: "完成" }),
+    );
+    await waitFor(() => expect(document.body.style.overflow).toBe(""));
+
+    fireEvent.click(screen.getByRole("button", { name: "预览" }));
+    const previewDrawer = await screen.findByRole("dialog", {
+      name: "Excel 内容预览",
+    });
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.click(
+      within(previewDrawer).getByRole("button", { name: "关闭" }),
+    );
+    await waitFor(() => expect(document.body.style.overflow).toBe(""));
   });
 });

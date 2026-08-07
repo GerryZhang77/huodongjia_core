@@ -27,6 +27,7 @@ import { createPortal } from "react-dom";
 import { clsx } from "clsx";
 import { X } from "lucide-react";
 import type { DrawerProps } from "./types";
+import { useBodyScrollLock } from "../useBodyScrollLock";
 
 /**
  * Drawer 组件
@@ -45,6 +46,7 @@ export const Drawer: FC<DrawerProps> = ({
   zIndex = 1000,
 }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
+  useBodyScrollLock(open);
 
   // 尺寸映射
   const sizeClasses = {
@@ -117,21 +119,6 @@ export const Drawer: FC<DrawerProps> = ({
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [open, closable, onClose]);
-
-  // 阻止 body 滚动 - 使用更可靠的方式
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-
-    return () => {
-      document.body.style.overflow = originalOverflow || "";
-    };
-  }, [open]);
 
   // 处理遮罩点击
   const handleMaskClick = () => {
