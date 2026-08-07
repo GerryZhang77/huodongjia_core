@@ -48,6 +48,24 @@ export interface RegistrationFormField {
   options?: string[]; // select/multi-select/radio 时的选项
   /** 图片字段最多允许上传的数量，后端仍会按 schema 再校验一次。 */
   maxImages?: number;
+  /** 用户侧只读的选项名额状态，由活动详情接口实时注入，不写回表单 schema。 */
+  optionAvailability?: Record<
+    string,
+    {
+      capacity?: number;
+      count?: number;
+      remaining?: number;
+      isFull: boolean;
+      overLimit?: boolean;
+      /** 编辑已占位报名时，允许保留当前已满选项。 */
+      canKeepExisting?: boolean;
+    }
+  >;
+}
+
+export interface RegistrationOptionQuotaRule {
+  optionValue: string;
+  capacity: number;
 }
 
 export type RegistrationTypeEligibilityMode = "public" | "allowlist";
@@ -69,6 +87,10 @@ export interface ActivityRegistrationType {
   isDefault: boolean;
   matchEnabled: boolean;
   sortOrder: number;
+  /** 每个报名类型最多一个名额控制字段；仅支持必填的 radio/select。 */
+  quotaFieldKey?: string | null;
+  /** 未出现在规则中的选项表示不单独限制。 */
+  quotaRules?: RegistrationOptionQuotaRule[];
   members: RegistrationTypeMember[];
 }
 

@@ -1071,6 +1071,7 @@ export function useMatchingLogic({
     lastPreflightResult,
     lastValidationResult,
     resultState: resultsQuery.data?.resultState,
+    matchStatusId: resultsQuery.data?.matchStatusId,
     resultVersion: resultsQuery.data?.version,
     resultRevision: resultsQuery.data?.revision,
 

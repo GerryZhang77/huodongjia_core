@@ -128,9 +128,25 @@ export const ActivityFormWithPreview: React.FC<
         ? currentTypesRaw
         : createDefaultRegistrationTypes();
       const safeIndex = Math.min(Math.max(typeIndex, 0), currentTypes.length - 1);
-      const nextTypes = currentTypes.map((type, index) =>
-        index === safeIndex ? { ...type, formSchema: schema } : type,
-      );
+      const nextTypes = currentTypes.map((type, index) => {
+        if (index !== safeIndex) return type;
+        const quotaField = schema.find((field) => field.key === type.quotaFieldKey);
+        const quotaStillValid = Boolean(
+          quotaField && ["radio", "select"].includes(quotaField.type),
+        );
+        const nextSchema = quotaStillValid
+          ? schema.map((field) => field.key === type.quotaFieldKey ? { ...field, required: true } : field)
+          : schema;
+        const optionSet = new Set(quotaField?.options || []);
+        return {
+          ...type,
+          formSchema: nextSchema,
+          quotaFieldKey: quotaStillValid ? type.quotaFieldKey : null,
+          quotaRules: quotaStillValid
+            ? (type.quotaRules || []).filter((rule) => optionSet.has(rule.optionValue))
+            : [],
+        };
+      });
       const defaultType = nextTypes.find((type) => type.isDefault) || nextTypes[0];
 
       form.setFieldsValue({

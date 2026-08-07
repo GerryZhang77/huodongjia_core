@@ -23,6 +23,7 @@ import { Toast } from "@/components/ui/Toast";
 import type {
   RegistrationFormField,
   FormFieldType,
+  RegistrationOptionQuotaRule,
 } from "../../types";
 import { ensureRequiredPhoneField } from "../ActivityForm/registrationTypeDefaults";
 import {
@@ -84,6 +85,13 @@ const TYPE_LABEL_MAP: Record<FormFieldType, string> = {
 interface RegistrationFormBuilderProps {
   value?: RegistrationFormField[];
   onChange?: (fields: RegistrationFormField[]) => void;
+  quotaFieldKey?: string | null;
+  quotaRules?: RegistrationOptionQuotaRule[];
+  onQuotaChange?: (
+    fieldKey: string | null,
+    rules: RegistrationOptionQuotaRule[],
+    fields?: RegistrationFormField[],
+  ) => void;
 }
 
 /**
@@ -100,6 +108,11 @@ const FieldEditCard: React.FC<{
   onMoveDown: () => void;
   isFirst: boolean;
   isLast: boolean;
+  isQuotaField: boolean;
+  hasOtherQuotaField: boolean;
+  quotaRules: RegistrationOptionQuotaRule[];
+  onQuotaEnabledChange: (enabled: boolean) => void;
+  onQuotaCapacityChange: (optionValue: string, capacity: number | null) => void;
 }> = ({
   field,
   isExpanded,
@@ -111,6 +124,11 @@ const FieldEditCard: React.FC<{
   onMoveDown,
   isFirst,
   isLast,
+  isQuotaField,
+  hasOtherQuotaField,
+  quotaRules,
+  onQuotaEnabledChange,
+  onQuotaCapacityChange,
 }) => {
   const [newOption, setNewOption] = useState("");
   const needsOptions = ["select", "multi-select", "radio"].includes(field.type);
@@ -119,6 +137,7 @@ const FieldEditCard: React.FC<{
   const canExpand = !isLocked;
   const isEditingCustomField = isExpanded && !field.preset;
   const hasMissingLabel = !field.label.trim();
+  const canControlQuota = ["radio", "select"].includes(field.type);
 
   const addOption = () => {
     const trimmed = newOption.trim();
@@ -147,6 +166,11 @@ const FieldEditCard: React.FC<{
             </span>
             {field.required && !isEditingCustomField && (
               <span className="text-[10px] text-red-500 font-medium">必填</span>
+            )}
+            {isQuotaField && !isEditingCustomField && (
+              <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+                名额控制
+              </span>
             )}
             {field.preset && (
               <span className="text-[10px] px-1.5 py-0.5 bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400 rounded">
@@ -195,15 +219,19 @@ const FieldEditCard: React.FC<{
       {/* 展开内容 */}
       {isExpanded && (
         <div className="px-3 pb-3 border-t border-gray-100 dark:border-gray-700 pt-3 space-y-3">
-          {/* 预设字段：只显示必填开关 */}
+          {/* 预设字段：保留字段本身，只开放必填与名额设置 */}
           {field.preset ? (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-gray-400">必须填写</span>
-              <Switch
-                checked={field.required}
-                onChange={(checked) => onChange({ ...field, required: checked })}
-                size="small"
-              />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500 dark:text-gray-400">必须填写</span>
+                <Switch
+                  aria-label={`${field.label}必须填写`}
+                  checked={isQuotaField || field.required}
+                  disabled={isQuotaField}
+                  onChange={(checked) => onChange({ ...field, required: checked })}
+                  size="small"
+                />
+              </div>
             </div>
           ) : (
             <>
@@ -335,7 +363,9 @@ const FieldEditCard: React.FC<{
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500 dark:text-gray-400">必须填写</span>
                 <Switch
-                  checked={field.required}
+                  aria-label={`${field.label}必须填写`}
+                  checked={isQuotaField || field.required}
+                  disabled={isQuotaField}
                   onChange={(checked) => onChange({ ...field, required: checked })}
                   size="small"
                 />
@@ -354,6 +384,60 @@ const FieldEditCard: React.FC<{
               </div>
             </>
           )}
+
+          {canControlQuota && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/50 dark:bg-blue-900/20">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-gray-800 dark:text-gray-100">按选项限制名额</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    为各选项设置可报名人数；留空表示不单独限制。活动总名额仍然有效。
+                  </p>
+                </div>
+                <Switch
+                  aria-label={`${field.label}按选项限制名额`}
+                  checked={isQuotaField}
+                  onChange={onQuotaEnabledChange}
+                  size="small"
+                />
+              </div>
+              {!isQuotaField && hasOtherQuotaField && (
+                <p className="mt-2 text-[11px] text-amber-600">
+                  当前报名类型已有一个名额控制字段，开启后将切换到本字段。
+                </p>
+              )}
+              {isQuotaField && (
+                <div className="mt-3 space-y-2 border-t border-blue-100 pt-3 dark:border-blue-900/50">
+                  {(field.options || []).map((option) => {
+                    const rule = quotaRules.find((item) => item.optionValue === option);
+                    return (
+                      <label key={option} className="flex items-center gap-3">
+                        <span className="min-w-0 flex-1 truncate text-xs text-gray-700 dark:text-gray-200">{option}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          inputMode="numeric"
+                          value={rule?.capacity ?? ""}
+                          onChange={(event) => {
+                            const raw = event.target.value;
+                            onQuotaCapacityChange(option, raw === "" ? null : Math.max(0, Math.floor(Number(raw))));
+                          }}
+                          placeholder="不限"
+                          aria-label={`${option}名额`}
+                          className="h-8 w-24 rounded-lg border border-blue-100 bg-white px-2 text-right text-sm text-gray-800 focus:border-primary-400 focus:outline-none dark:border-blue-900 dark:bg-gray-800 dark:text-gray-100"
+                        />
+                        <span className="text-xs text-gray-400">人</span>
+                      </label>
+                    );
+                  })}
+                  {(field.options || []).length === 0 && (
+                    <p className="text-[11px] text-amber-600">请先添加选项，再设置名额。</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -366,6 +450,9 @@ const FieldEditCard: React.FC<{
 export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = ({
   value,
   onChange,
+  quotaFieldKey,
+  quotaRules = [],
+  onQuotaChange,
 }) => {
   const fields = ensureRequiredPhoneField(
     value && value.length > 0 ? value : DEFAULT_PRESET_FIELDS,
@@ -409,12 +496,48 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
     const newFields = [...fields];
     newFields[index] = field;
     updateFields(newFields);
+    if (field.key === quotaFieldKey) {
+      if (!["radio", "select"].includes(field.type)) {
+        onQuotaChange?.(null, [], newFields);
+      } else {
+        const optionSet = new Set(field.options || []);
+        onQuotaChange?.(
+          field.key,
+          quotaRules.filter((rule) => optionSet.has(rule.optionValue)),
+          newFields,
+        );
+      }
+    }
   };
 
   const removeField = (index: number) => {
     const newFields = fields.filter((_, i) => i !== index);
     updateFields(newFields);
+    if (fields[index]?.key === quotaFieldKey) onQuotaChange?.(null, [], newFields);
     setExpandedIndex(null);
+  };
+
+  const setQuotaField = (field: RegistrationFormField, enabled: boolean) => {
+    if (!enabled) {
+      onQuotaChange?.(null, [], fields);
+      return;
+    }
+    const nextFields = fields.map((item) =>
+      item.key === field.key ? { ...item, required: true } : item,
+    );
+    if (onQuotaChange) onQuotaChange(field.key, [], nextFields);
+    else updateFields(nextFields);
+    if (quotaFieldKey && quotaFieldKey !== field.key) {
+      Toast.show({ content: "已将名额控制切换到当前字段" });
+    }
+  };
+
+  const updateQuotaCapacity = (optionValue: string, capacity: number | null) => {
+    const next = quotaRules.filter((rule) => rule.optionValue !== optionValue);
+    if (capacity !== null && Number.isSafeInteger(capacity)) {
+      next.push({ optionValue, capacity });
+    }
+    onQuotaChange?.(quotaFieldKey || null, next);
   };
 
   const moveField = (from: number, to: number) => {
@@ -459,7 +582,8 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
           </div>
           <div className="text-xs text-primary-400 dark:text-primary-500 mt-0.5">
             已设置 {fields.length} 项（{requiredCount} 必填
-            {optionalCount > 0 && `，${optionalCount} 选填`}）· 点击编辑
+            {optionalCount > 0 && `，${optionalCount} 选填`}）
+            {quotaFieldKey && " · 已启用名额控制"} · 点击编辑
           </div>
         </div>
         <Settings2
@@ -523,6 +647,11 @@ export const RegistrationFormBuilder: React.FC<RegistrationFormBuilderProps> = (
                 onMoveDown={() => moveField(index, index + 1)}
                 isFirst={index === 0}
                 isLast={index === fields.length - 1}
+                isQuotaField={field.key === quotaFieldKey}
+                hasOtherQuotaField={Boolean(quotaFieldKey && field.key !== quotaFieldKey)}
+                quotaRules={field.key === quotaFieldKey ? quotaRules : []}
+                onQuotaEnabledChange={(enabled) => setQuotaField(field, enabled)}
+                onQuotaCapacityChange={updateQuotaCapacity}
               />
             ))}
           </div>

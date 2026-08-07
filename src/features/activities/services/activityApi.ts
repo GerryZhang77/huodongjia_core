@@ -139,6 +139,20 @@ export interface RegistrationFormImpactPreview {
       reason?: string;
     }>;
   }>;
+  quotaImpacts: Array<{
+    registrationTypeId: string;
+    registrationTypeName: string;
+    fieldKey: string | null;
+    fieldLabel: string | null;
+    enabled: boolean;
+    historicalEnrollmentsPreserved: boolean;
+    options: Array<{
+      optionValue: string;
+      capacity: number;
+      currentCount: number;
+      overLimit: boolean;
+    }>;
+  }>;
 }
 
 export const previewRegistrationFormImpact = async (

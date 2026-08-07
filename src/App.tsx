@@ -50,6 +50,9 @@ const EnrollmentManagement = lazy(
 const MatchingConfiguration = lazy(
   () => import("./pages/merchant/MatchingConfig"),
 );
+const MatchResultExport = lazy(
+  () => import("./pages/merchant/MatchResultExport"),
+);
 const MerchantNotifications = lazy(
   () => import("./pages/merchant/NotificationsPage"),
 );
@@ -284,6 +287,14 @@ function App() {
                 />
 
                 {/* 匹配配置 */}
+                <Route
+                  path="/dashboard/activity/:id/matching/export"
+                  element={
+                    <ProtectedRoute requiredRole={["organizer", "admin"]}>
+                      <MatchResultExport />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/dashboard/activity/:id/matching"
                   element={

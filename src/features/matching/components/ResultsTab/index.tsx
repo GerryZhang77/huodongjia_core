@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronUp,
   Image as ImageIcon,
+  Download,
 } from "lucide-react";
 import { Button, Modal } from "@/components/ui";
 import { UserHoverCard } from "@/components/business/UserHoverCard";
@@ -42,7 +43,6 @@ import { prefetchEnrollmentImages } from "@/features/enrollment/hooks/useEnrollm
 import { useAuthStore } from "@/features/auth/stores";
 import type {
   MatchConstraints,
-  MatchingSchemaGroup,
   MatchingRule,
   MatchingHistory,
   ParticipantMatchResult,
@@ -70,8 +70,6 @@ interface ResultsTabProps {
   matchResults: ParticipantMatchResult[];
   /** 参与者完整列表（用于渲染本人和 top5 候选的详细信息） */
   participants: Participant[];
-  /** 暂时保留调用契约，废弃工作台将在后续独立清理。 */
-  registrationSchemaGroups: MatchingSchemaGroup[];
   /** 当前规则下实际参与匹配的人数，用于展示结果覆盖率 */
   eligibleParticipantCount?: number;
   rules: MatchRule[];
@@ -90,6 +88,7 @@ interface ResultsTabProps {
   readOnly?: boolean;
   resultState?: MatchResultState;
   resultVersion?: number;
+  matchStatusId?: string;
   validationResult?: MatchValidationResult | null;
   isValidating?: boolean;
   isCreatingAdjustmentDraft?: boolean;
@@ -418,6 +417,7 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
   readOnly = false,
   resultState,
   resultVersion,
+  matchStatusId,
   validationResult,
   isValidating = false,
   isCreatingAdjustmentDraft = false,
@@ -751,6 +751,16 @@ const ResultsTab: React.FC<ResultsTabProps> = ({
               >
                 <History size={18} />
               </button>
+            )}
+            {!currentHistoryId && matchStatusId && (
+              <Button
+                size="small"
+                variant="light"
+                icon={<Download size={15} />}
+                onClick={() => navigate(`/dashboard/activity/${activityId}/matching/export`)}
+              >
+                导出结果
+              </Button>
             )}
             <Button
               size="small"

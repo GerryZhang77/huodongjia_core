@@ -4,7 +4,7 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import type {
   MatchConstraints,
   ParticipantMatchResult,
@@ -42,13 +42,26 @@ const matchResults: ParticipantMatchResult[] = [
   },
 ];
 
-const renderResults = (onRematch = vi.fn()) => {
+const LocationProbe = () => {
+  const location = useLocation();
+  return <output data-testid="location-path">{location.pathname}</output>;
+};
+
+const renderResults = (
+  onRematch = vi.fn(),
+  exportProps: {
+    matchStatusId?: string;
+    resultRevision?: number;
+    resultVersion?: number;
+  } = {},
+) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const view = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
+        <>
         <ResultsTab
           activityId="event-1"
           matchResults={matchResults}
@@ -71,7 +84,6 @@ const renderResults = (onRematch = vi.fn()) => {
               city: "北京",
             },
           ]}
-          registrationSchemaGroups={[]}
           eligibleParticipantCount={2}
           rules={[]}
           isPublishing={false}
@@ -80,7 +92,10 @@ const renderResults = (onRematch = vi.fn()) => {
           isRematching={false}
           constraints={constraints}
           onResultsChanged={vi.fn()}
+          {...exportProps}
         />
+        <LocationProbe />
+        </>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -93,6 +108,20 @@ afterEach(() => {
 });
 
 describe("ResultsTab interactions", () => {
+  it("opens the dedicated relation-based Excel export workspace", () => {
+    renderResults(vi.fn(), {
+      matchStatusId: "match-1",
+      resultRevision: 3,
+      resultVersion: 2,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "导出结果" }));
+
+    expect(screen.getByTestId("location-path").textContent).toBe(
+      "/dashboard/activity/event-1/matching/export",
+    );
+  });
+
   it("uses the whole participant item to preview profile and enrollment images", () => {
     vi.useFakeTimers();
     renderResults();

@@ -110,7 +110,9 @@ const MatchingConfigPage: React.FC = () => {
     lastPreflightResult,
     lastValidationResult,
     resultState,
+    matchStatusId,
     resultVersion,
+    resultRevision,
     setRules,
     setConstraints,
     setParticipantSelected,
@@ -632,7 +634,6 @@ const MatchingConfigPage: React.FC = () => {
             activityId={activityId}
             matchResults={matchResults}
             participants={resultParticipants}
-            registrationSchemaGroups={registrationSchemaGroups}
             eligibleParticipantCount={resultEligibleParticipantCount}
             rules={rules}
             isPublishing={isPublishing}
@@ -649,6 +650,7 @@ const MatchingConfigPage: React.FC = () => {
             readOnly={effectiveResultState === "published"}
             resultState={effectiveResultState}
             resultVersion={resultVersion}
+            matchStatusId={matchStatusId}
             validationResult={lastValidationResult}
             isValidating={isValidating}
             isCreatingAdjustmentDraft={isCreatingAdjustmentDraft}

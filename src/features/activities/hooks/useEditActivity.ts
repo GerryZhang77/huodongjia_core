@@ -86,9 +86,26 @@ export const useEditActivity = (activityId: string) => {
         const preservedSummary = preservedCount > 0
           ? ` 已移除报名类型中的 ${preservedCount} 条历史报名仍会保留。`
           : "";
+        const quotaImpacts = formImpact.quotaImpacts || [];
+        const overLimitOptions = quotaImpacts.flatMap((impact) =>
+          impact.options
+            .filter((option) => option.overLimit)
+            .map((option) =>
+              `${impact.registrationTypeName}的“${option.optionValue}”当前 ${option.currentCount} 人，名额 ${option.capacity} 人`,
+            ),
+        );
+        const formChangeSummary = changedTypeCount > 0
+          ? `本次修改涉及 ${changedTypeCount} 个报名类型的表单。`
+          : "";
+        const quotaSummary = quotaImpacts.length > 0
+          ? ` 已更新 ${quotaImpacts.length} 个报名类型的名额控制；已报名人员不受影响，新报名按新名额执行。`
+          : "";
+        const overLimitSummary = overLimitOptions.length > 0
+          ? ` 其中${overLimitOptions.join("；")}，相应选项将立即停止接受新报名。`
+          : "";
         const confirmed = await Dialog.confirm({
           title: "确认更新报名表？",
-          content: `本次修改涉及 ${changedTypeCount} 个报名类型。${impactSummary}${preservedSummary}`,
+          content: `${formChangeSummary}${impactSummary}${quotaSummary}${overLimitSummary}${preservedSummary}`,
           confirmText: "确认更新",
           cancelText: "继续编辑",
         });

@@ -41,6 +41,7 @@ import {
   QrCode,
   Settings,
   Image as ImageIcon,
+  BarChart3,
 } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { MerchantLayout } from "@/components/layout";
@@ -78,6 +79,7 @@ import {
   merchantCacheTimes,
   merchantQueryKeys,
 } from "@/features/merchant/queryKeys";
+import EnrollmentStatisticsDashboard from "@/features/enrollment/components/EnrollmentStatisticsDashboard";
 
 /**
  * 状态标签颜色映射
@@ -554,6 +556,9 @@ const EnrollmentManagementNew: React.FC = () => {
   const [activeTab, setActiveTab] = useState(
     () => searchParams.get("status") || "all",
   );
+  const [managementView, setManagementView] = useState<"list" | "statistics">(
+    () => searchParams.get("view") === "statistics" ? "statistics" : "list",
+  );
 
   // 分页
   const PAGE_SIZE = 20;
@@ -576,11 +581,13 @@ const EnrollmentManagementNew: React.FC = () => {
         else next.delete("status");
         if (currentPage > 1) next.set("page", String(currentPage));
         else next.delete("page");
+        if (managementView === "statistics") next.set("view", "statistics");
+        else next.delete("view");
         return next;
       },
       { replace: true },
     );
-  }, [activeTab, currentPage, searchKeyword, setSearchParams]);
+  }, [activeTab, currentPage, managementView, searchKeyword, setSearchParams]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -784,6 +791,30 @@ const EnrollmentManagementNew: React.FC = () => {
       <div className="md:flex md:gap-6 md:items-start">
         {/* 左侧主内容 */}
         <div className="flex-1 min-w-0 space-y-4">
+          <div className="inline-flex rounded-xl border border-gray-100 bg-white p-1 shadow-sm" aria-label="报名管理视图">
+            <button
+              type="button"
+              onClick={() => setManagementView("list")}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${managementView === "list" ? "bg-primary-500 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+            >
+              <ListChecks size={15} /> 报名名单
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setManagementView("statistics");
+                setShowFilterDrawer(false);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${managementView === "statistics" ? "bg-primary-500 text-white" : "text-gray-600 hover:bg-gray-50"}`}
+            >
+              <BarChart3 size={15} /> 数据统计
+            </button>
+          </div>
+
+          {managementView === "statistics" ? (
+            <EnrollmentStatisticsDashboard activityId={id || ""} />
+          ) : (
+          <>
           {/* 统计卡片 */}
           <div className="grid grid-cols-4 gap-2 md:gap-3">
             <div className="bg-white rounded-xl p-3 md:p-4 text-center border border-gray-100">
@@ -1058,10 +1089,12 @@ const EnrollmentManagementNew: React.FC = () => {
             )}
             </>
           )}
+          </>
+          )}
         </div>
 
         {/* PC端筛选侧边栏 (仅 md+ 屏幕且打开时) */}
-        {showFilterDrawer && (
+        {managementView === "list" && showFilterDrawer && (
           <div className="hidden md:block w-[320px] flex-shrink-0 sticky top-4">
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               {/* 侧栏头部 */}
@@ -1099,7 +1132,7 @@ const EnrollmentManagementNew: React.FC = () => {
       </div>
 
       {/* 移动端筛选面板（md以下才显示） */}
-      <div className="md:hidden">
+      <div className={managementView === "list" ? "md:hidden" : "hidden"}>
         <FilterDrawer
           visible={showFilterDrawer}
           filterOptions={filterOptions}

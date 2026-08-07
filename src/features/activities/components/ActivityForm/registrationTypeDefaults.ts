@@ -77,6 +77,8 @@ export const createDefaultRegistrationTypes = (): ActivityRegistrationType[] => 
     isDefault: true,
     matchEnabled: true,
     sortOrder: 0,
+    quotaFieldKey: null,
+    quotaRules: [],
     members: [],
   },
 ];

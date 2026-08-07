@@ -55,6 +55,8 @@ function normalizeTypes(
     isDefault: defaultIndex >= 0 ? index === defaultIndex : index === 0,
     matchEnabled: item.matchEnabled !== false,
     sortOrder: item.sortOrder ?? index,
+    quotaFieldKey: item.quotaFieldKey || null,
+    quotaRules: item.quotaRules || [],
     members: item.members || [],
   }));
 }
@@ -71,6 +73,7 @@ const cloneRegistrationType = (
     options: field.options ? [...field.options] : undefined,
   })),
   members: source.members.map((member) => ({ ...member })),
+  quotaRules: (source.quotaRules || []).map((rule) => ({ ...rule })),
 });
 
 export const RegistrationTypesBuilder: React.FC<
@@ -115,6 +118,8 @@ export const RegistrationTypesBuilder: React.FC<
         isDefault: false,
         matchEnabled: true,
         sortOrder: registrationTypes.length,
+        quotaFieldKey: null,
+        quotaRules: [],
         members: [],
       },
     ]);
@@ -387,7 +392,16 @@ export const RegistrationTypesBuilder: React.FC<
             </div>
             <RegistrationFormBuilder
               value={activeType.formSchema}
+              quotaFieldKey={activeType.quotaFieldKey}
+              quotaRules={activeType.quotaRules}
               onChange={(formSchema) => updateActive({ formSchema })}
+              onQuotaChange={(quotaFieldKey, quotaRules, formSchema) =>
+                updateActive({
+                  quotaFieldKey,
+                  quotaRules,
+                  ...(formSchema ? { formSchema } : {}),
+                })
+              }
             />
           </section>
         </div>

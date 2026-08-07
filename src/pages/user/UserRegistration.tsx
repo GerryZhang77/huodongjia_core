@@ -137,23 +137,31 @@ const RadioTags: FC<{
   options: string[];
   value: string;
   onChange: (value: string) => void;
-}> = ({ options, value, onChange }) => {
+  optionAvailability?: RegistrationFormField["optionAvailability"];
+}> = ({ options, value, onChange, optionAvailability }) => {
   return (
     <div className="flex flex-wrap gap-2">
-      {options.map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
-            value === opt
-              ? "border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400"
-              : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
-          }`}
-        >
-          {opt}
-        </button>
-      ))}
+      {options.map((opt) => {
+        const availability = optionAvailability?.[opt];
+        const isFull = availability?.isFull === true && availability.canKeepExisting !== true;
+        return (
+          <button
+            key={opt}
+            type="button"
+            disabled={isFull}
+            onClick={() => onChange(opt)}
+            className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
+              value === opt
+                ? "border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400"
+                : isFull
+                  ? "cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-600"
+                  : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
+            }`}
+          >
+            {opt}{isFull ? " · 名额已满" : ""}
+          </button>
+        );
+      })}
     </div>
   );
 };
@@ -482,6 +490,7 @@ const DynamicField: FC<{
           options={field.options || []}
           value={stringValue}
           onChange={(v) => onChange(v)}
+          optionAvailability={field.optionAvailability}
         />
       );
 
@@ -499,8 +508,12 @@ const DynamicField: FC<{
         >
           <option value="">请选择{field.label}</option>
           {(field.options || []).map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
+            <option
+              key={opt}
+              value={opt}
+              disabled={field.optionAvailability?.[opt]?.isFull === true && field.optionAvailability?.[opt]?.canKeepExisting !== true}
+            >
+              {opt}{field.optionAvailability?.[opt]?.isFull === true && field.optionAvailability?.[opt]?.canKeepExisting !== true ? "（名额已满）" : ""}
             </option>
           ))}
         </select>
@@ -715,6 +728,19 @@ const UserRegistration: FC = () => {
     return errors;
   }, [formData, formSchema]);
 
+  const blockedQuotaSelection = useMemo(() => {
+    for (const field of formSchema) {
+      if (!["radio", "select"].includes(field.type)) continue;
+      const value = formData[field.key];
+      if (typeof value !== "string" || !value) continue;
+      const availability = field.optionAvailability?.[value];
+      if (availability?.isFull && availability.canKeepExisting !== true) {
+        return { field, value };
+      }
+    }
+    return null;
+  }, [formData, formSchema]);
+
   const setImageField = useCallback((key: string, ids: string[]) => {
     setImageAnswers((previous) => ({ ...previous, [key]: ids }));
   }, []);
@@ -731,6 +757,7 @@ const UserRegistration: FC = () => {
   // 校验必填字段
   const isFormValid = useMemo(() => {
     if (fieldValidationErrors.size > 0) return false;
+    if (blockedQuotaSelection) return false;
     return formSchema.every((field) => {
       if (field.key === "phone") {
         const phone = formData[field.key];
@@ -744,7 +771,7 @@ const UserRegistration: FC = () => {
       if (Array.isArray(val)) return val.length > 0;
       return typeof val === "string" && val.trim().length > 0;
     });
-  }, [fieldValidationErrors, formSchema, formData, imageAnswers, isEditMode]);
+  }, [blockedQuotaSelection, fieldValidationErrors, formSchema, formData, imageAnswers, isEditMode]);
 
   const handleSubmit = async () => {
     if (!isParticipantUser || !PHONE_PATTERN.test(verifiedPhone)) {
@@ -769,6 +796,13 @@ const UserRegistration: FC = () => {
     }
 
     if (!isFormValid) {
+      if (blockedQuotaSelection) {
+        Toast.show({
+          icon: "fail",
+          content: `“${blockedQuotaSelection.value}”名额已满，请选择其他选项`,
+        });
+        return;
+      }
       const firstValidationError = fieldValidationErrors.values().next().value;
       // 找到第一个未填的必填字段
       const missing = formSchema.find((f) => {
