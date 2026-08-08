@@ -7,7 +7,8 @@ export type IdentityCardInvalidReason =
   | "format"
   | "checksum"
   | "birth_date"
-  | "province";
+  | "province"
+  | "precision_loss";
 
 export type IdentityCardInspection =
   | { status: "missing" }
@@ -57,6 +58,11 @@ const isRealDate = (year: number, month: number, day: number) => {
 };
 
 export const inspectIdentityCard = (value: unknown): IdentityCardInspection => {
+  // 身份证号一旦进入 JavaScript number，就可能已在调用本函数前丢失末位精度。
+  // 不能再通过 String(value) 假装恢复，否则会误报为普通校验位错误。
+  if (typeof value === "number") {
+    return { status: "invalid", reason: "precision_loss" };
+  }
   if (value == null || !String(value).trim()) return { status: "missing" };
 
   let normalized = String(value).trim().toUpperCase().replace(/\s+/g, "");
@@ -99,6 +105,8 @@ export const getIdentityCardValidationMessage = (
   reason: IdentityCardInvalidReason,
 ): string => {
   switch (reason) {
+    case "precision_loss":
+      return "身份证号码曾被按数字处理，内容可能已失真，请清空后重新输入";
     case "checksum":
       return "身份证号码校验位不正确，请检查后重新输入";
     case "birth_date":

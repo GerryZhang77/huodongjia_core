@@ -8,6 +8,10 @@ import { Toast } from "@/components/ui/Toast";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { useFileUpload, useCreateParticipants } from "../../hooks";
+import {
+  findUnsafeSpreadsheetIntegerCells,
+  getUnsafeSpreadsheetIntegerMessage,
+} from "../../utils/spreadsheetImport";
 import "./index.css";
 
 interface ImportEnrollmentDialogProps {
@@ -201,7 +205,10 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
       console.error("文件解析失败:", error);
       Toast.show({
         icon: "fail",
-        content: "文件解析失败，请检查文件格式",
+        content:
+          error instanceof Error
+            ? error.message
+            : "文件解析失败，请检查文件格式",
       });
     }
   };
@@ -241,6 +248,14 @@ export const ImportEnrollmentDialog: FC<ImportEnrollmentDialogProps> = ({
             });
             return obj;
           });
+
+          const unsafeIntegerCells = findUnsafeSpreadsheetIntegerCells(rows);
+          if (unsafeIntegerCells.length > 0) {
+            reject(
+              new Error(getUnsafeSpreadsheetIntegerMessage(unsafeIntegerCells)),
+            );
+            return;
+          }
 
           resolve({
             headers,
