@@ -490,8 +490,8 @@ export const EnrollmentStatisticsDashboard: React.FC<{ activityId: string }> = (
   const data = query.data;
 
   return (
-    <section className="space-y-4" aria-label="报名信息统计">
-      <div className="rounded-xl border border-gray-100 bg-white p-4">
+    <section className="w-full min-w-0 space-y-4 px-3 pb-4 sm:px-4 md:px-0" aria-label="报名信息统计">
+      <div className="w-full min-w-0 rounded-xl border border-gray-100 bg-white p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900">
@@ -553,7 +553,7 @@ export const EnrollmentStatisticsDashboard: React.FC<{ activityId: string }> = (
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <div className="grid w-full min-w-0 grid-cols-2 gap-2 md:grid-cols-4">
             <div className="rounded-xl border border-primary-100 bg-primary-50 p-4">
               <p className="text-2xl font-bold text-primary-700">{data.summary.scopedTotal}</p>
               <p className="mt-1 text-xs text-primary-600">当前统计人数</p>
@@ -580,9 +580,9 @@ export const EnrollmentStatisticsDashboard: React.FC<{ activityId: string }> = (
               <p className="mt-3 text-sm text-gray-500">当前范围内没有可统计的选项字段</p>
             </div>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid w-full min-w-0 gap-4 lg:grid-cols-2">
               {data.dimensions.map((dimension) => (
-                <article key={`${dimension.registrationTypeId || 'default'}:${dimension.fieldKey}`} className="rounded-xl border border-gray-100 bg-white p-4">
+                <article key={`${dimension.registrationTypeId || 'default'}:${dimension.fieldKey}`} className="w-full min-w-0 rounded-xl border border-gray-100 bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="font-semibold text-gray-900">{dimension.label}</h3>

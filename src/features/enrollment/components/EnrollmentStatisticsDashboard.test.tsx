@@ -113,6 +113,7 @@ describe('EnrollmentStatisticsDashboard', () => {
     });
     expect(screen.getByText('性别')).not.toBeNull();
     expect(screen.getByText('4 人 · 40% · 名额 4')).not.toBeNull();
+    expect(screen.getByRole('region', { name: '报名信息统计' }).className).toContain('px-3');
 
     fireEvent.change(screen.getByLabelText('报名状态'), { target: { value: 'approved' } });
     await waitFor(() => {
