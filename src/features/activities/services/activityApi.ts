@@ -126,11 +126,13 @@ export const updateActivity = async (
 export interface RegistrationFormImpactPreview {
   hasChanges: boolean;
   totalAffectedParticipants: number;
+  totalOptionalNotificationParticipants?: number;
   totalMatchedNotificationParticipants?: number;
   typeImpacts: Array<{
     registrationTypeId: string;
     registrationTypeName: string;
     affectedParticipants: number;
+    optionalNotificationParticipants?: number;
     matchedNotificationParticipants?: number;
     preservedHistoricalEnrollments?: number;
     changes: Array<{

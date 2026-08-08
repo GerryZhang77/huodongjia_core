@@ -84,6 +84,8 @@ export interface EnrollmentImageAsset {
   mime_type: string;
   size_bytes: number;
   created_at: string;
+  status?: "pending" | "attached";
+  attached_at?: string | null;
 }
 
 export type EnrollmentEditFieldState =
@@ -111,6 +113,7 @@ export interface EnrollmentEditContext {
     state: EnrollmentEditFieldState;
     reason?: string;
   }>;
+  imageCountByFieldKey: Record<string, number>;
   updateRequest: {
     id: string;
     fieldKeys: string[];
@@ -264,6 +267,7 @@ export async function updateEnrollmentAnswers(
     schemaVersion: number;
     answerRevision: number;
     confirmedFieldKeys?: string[];
+    imageAnswers?: EnrollmentImageAnswers;
   },
 ): Promise<{
   success: boolean;
@@ -321,6 +325,25 @@ export async function uploadEnrollmentImage(
 
 export async function deletePendingEnrollmentImage(assetId: string): Promise<void> {
   await api.delete(`/api/user/enrollment-images/${assetId}`);
+}
+
+export async function getOwnEnrollmentImages(
+  activityId: string,
+  registrationTypeId?: string,
+): Promise<EnrollmentImageAsset[]> {
+  const response = await api.get<{
+    success: boolean;
+    data: { images: EnrollmentImageAsset[] };
+  }>(`/api/user/activities/${activityId}/enrollment-images`, {
+    params: registrationTypeId ? { registrationTypeId } : undefined,
+  });
+  return response.data.images || [];
+}
+
+export async function getOwnEnrollmentImageBlob(assetId: string): Promise<Blob> {
+  return api.get(`/api/user/enrollment-images/${assetId}/content`, {
+    responseType: "blob",
+  });
 }
 
 export async function getEnrollmentImages(

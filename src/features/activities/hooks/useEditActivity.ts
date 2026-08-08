@@ -85,6 +85,11 @@ export const useEditActivity = (activityId: string) => {
           : "现有报名资料无需用户补填。";
         const matchedNotificationCount =
           formImpact.totalMatchedNotificationParticipants || 0;
+        const optionalNotificationCount =
+          formImpact.totalOptionalNotificationParticipants || 0;
+        const optionalNotificationSummary = optionalNotificationCount > 0
+          ? ` 另有 ${optionalNotificationCount} 位已报名用户将收到“可补充资料”通知，但不会生成强制任务。`
+          : "";
         const matchedNotificationSummary = matchedNotificationCount > 0
           ? ` 另有 ${matchedNotificationCount} 位已完成匹配且无需补填的用户将收到报名表变更通知。`
           : "";
@@ -114,7 +119,7 @@ export const useEditActivity = (activityId: string) => {
         Toast.clear();
         const confirmed = await Dialog.confirm({
           title: "确认更新报名表？",
-          content: `${formChangeSummary}${impactSummary}${matchedNotificationSummary}${quotaSummary}${overLimitSummary}${preservedSummary}`,
+          content: `${formChangeSummary}${impactSummary}${optionalNotificationSummary}${matchedNotificationSummary}${quotaSummary}${overLimitSummary}${preservedSummary}`,
           confirmText: "确认更新",
           cancelText: "继续编辑",
         });

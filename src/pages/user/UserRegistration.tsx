@@ -39,8 +39,11 @@ import { useImageUpload, type UploadHandle } from "@/features/uploads";
 import {
   deletePendingEnrollmentImage,
   getEnrollmentEditContext,
+  getOwnEnrollmentImageBlob,
+  getOwnEnrollmentImages,
   updateEnrollmentAnswers,
   uploadEnrollmentImage,
+  type EnrollmentImageAsset,
 } from "@/services/enrollmentApi";
 import {
   getIdentityCardFieldError,
@@ -169,11 +172,12 @@ const RadioTags: FC<{
 type EnrollmentImageItem = {
   localId: string;
   assetId?: string;
-  previewUrl: string;
+  previewUrl?: string;
   name: string;
-  file: File;
-  status: "uploading" | "ready" | "error";
-  uploadHandle: UploadHandle;
+  file?: File;
+  status: "uploading" | "pending" | "attached" | "error";
+  uploadHandle?: UploadHandle;
+  ownsPreviewUrl?: boolean;
 };
 
 const ENROLLMENT_IMAGE_MIME_TYPES = [
@@ -197,12 +201,25 @@ const EnrollmentImageField: FC<{
   activityId: string;
   registrationTypeId?: string;
   field: RegistrationFormField;
-  onChange: (fieldKey: string, ids: string[]) => void;
+  initialAssets: EnrollmentImageAsset[];
+  isEditMode: boolean;
+  onChange: (fieldKey: string, ids: string[], totalCount: number) => void;
   onUploadingChange: (fieldKey: string, uploading: boolean) => void;
-}> = ({ activityId, registrationTypeId, field, onChange, onUploadingChange }) => {
+  onRefreshAssets: () => void;
+}> = ({
+  activityId,
+  registrationTypeId,
+  field,
+  initialAssets,
+  isEditMode,
+  onChange,
+  onUploadingChange,
+  onRefreshAssets,
+}) => {
   const [items, setItems] = useState<EnrollmentImageItem[]>([]);
   const itemsRef = useRef<EnrollmentImageItem[]>([]);
   const mountedRef = useRef(true);
+  const hydratedAssetIdsRef = useRef(new Set<string>());
   const maxImages = Math.max(1, Math.min(6, field.maxImages || 1));
   const uploadFile = useCallback(
     async (file: File) => {
@@ -234,8 +251,9 @@ const EnrollmentImageField: FC<{
     onChange(
       field.key,
       items
-        .filter((item) => item.status === "ready" && item.assetId)
+        .filter((item) => item.status === "pending" && item.assetId)
         .map((item) => item.assetId!),
+      items.filter((item) => item.status === "pending" || item.status === "attached").length,
     );
     onUploadingChange(field.key, items.some((item) => item.status === "uploading"));
   }, [field.key, items, onChange, onUploadingChange]);
@@ -245,13 +263,45 @@ const EnrollmentImageField: FC<{
     return () => {
       mountedRef.current = false;
       itemsRef.current.forEach((item) => {
-        item.uploadHandle.releasePreview();
-        if (item.assetId) {
-          void deletePendingEnrollmentImage(item.assetId).catch(() => undefined);
-        }
+        item.uploadHandle?.releasePreview();
+        if (item.ownsPreviewUrl && item.previewUrl) URL.revokeObjectURL(item.previewUrl);
       });
     };
   }, []);
+
+  useEffect(() => {
+    for (const asset of initialAssets) {
+      if (hydratedAssetIdsRef.current.has(asset.id)) continue;
+      hydratedAssetIdsRef.current.add(asset.id);
+      setItems((current) => [
+        ...current,
+        {
+          localId: `server-${asset.id}`,
+          assetId: asset.id,
+          name: asset.original_name,
+          status: asset.status === "pending" ? "pending" : "attached",
+        },
+      ]);
+      void getOwnEnrollmentImageBlob(asset.id)
+        .then((blob) => {
+          if (
+            !mountedRef.current ||
+            !itemsRef.current.some((item) => item.assetId === asset.id)
+          ) {
+            return;
+          }
+          const previewUrl = URL.createObjectURL(blob);
+          setItems((current) =>
+            current.map((item) =>
+              item.assetId === asset.id
+                ? { ...item, previewUrl, ownsPreviewUrl: true }
+                : item,
+            ),
+          );
+        })
+        .catch(() => undefined);
+    }
+  }, [initialAssets]);
 
   const handleFiles = (files: FileList | null) => {
     const available = Math.max(0, maxImages - itemsRef.current.length);
@@ -282,18 +332,19 @@ const EnrollmentImageField: FC<{
         .then((assetId) => {
           if (!mountedRef.current) {
             uploadHandle.releasePreview();
-            void deletePendingEnrollmentImage(assetId).catch(() => undefined);
             return;
           }
+          hydratedAssetIdsRef.current.add(assetId);
           setItems((current) =>
             current.map((item) =>
               item.localId === localId
-                ? { ...item, assetId, status: "ready" }
+                ? { ...item, assetId, status: "pending" }
                 : item,
             ),
           );
         })
         .catch(() => {
+          onRefreshAssets();
           if (mountedRef.current) {
             setItems((current) =>
               current.map((item) =>
@@ -306,11 +357,11 @@ const EnrollmentImageField: FC<{
   };
 
   const retryItem = (item: EnrollmentImageItem) => {
-    if (item.status !== "error") return;
+    if (item.status !== "error" || !item.file) return;
     const uploadHandle = uploadWithPreview(item.file);
     if (!uploadHandle.tempUrl) return;
 
-    item.uploadHandle.releasePreview();
+    item.uploadHandle?.releasePreview();
     setItems((current) =>
       current.map((candidate) =>
         candidate.localId === item.localId
@@ -328,18 +379,19 @@ const EnrollmentImageField: FC<{
       .then((assetId) => {
         if (!mountedRef.current) {
           uploadHandle.releasePreview();
-          void deletePendingEnrollmentImage(assetId).catch(() => undefined);
           return;
         }
+        hydratedAssetIdsRef.current.add(assetId);
         setItems((current) =>
           current.map((candidate) =>
             candidate.localId === item.localId
-              ? { ...candidate, assetId, status: "ready" }
+              ? { ...candidate, assetId, status: "pending" }
               : candidate,
           ),
         );
       })
       .catch(() => {
+        onRefreshAssets();
         if (mountedRef.current) {
           setItems((current) =>
             current.map((candidate) =>
@@ -355,13 +407,15 @@ const EnrollmentImageField: FC<{
   const removeItem = async (item: EnrollmentImageItem) => {
     if (item.status === "uploading") return;
     if (item.status === "error" || !item.assetId) {
-      item.uploadHandle.releasePreview();
+      item.uploadHandle?.releasePreview();
       setItems((current) => current.filter((candidate) => candidate.localId !== item.localId));
       return;
     }
+    if (item.status === "attached") return;
     try {
       await deletePendingEnrollmentImage(item.assetId);
-      item.uploadHandle.releasePreview();
+      item.uploadHandle?.releasePreview();
+      if (item.ownsPreviewUrl && item.previewUrl) URL.revokeObjectURL(item.previewUrl);
       setItems((current) => current.filter((candidate) => candidate.localId !== item.localId));
     } catch (error: unknown) {
       Toast.show({
@@ -377,7 +431,13 @@ const EnrollmentImageField: FC<{
         <div className="grid grid-cols-3 gap-2">
           {items.map((item) => (
             <div key={item.localId} className="relative aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
-              <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
+              {item.previewUrl ? (
+                <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-gray-400">
+                  <LoaderCircle size={20} className="animate-spin" />
+                </div>
+              )}
               {item.status === "uploading" ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/45 text-xs text-white">
                   <LoaderCircle size={20} className="animate-spin" />
@@ -392,8 +452,12 @@ const EnrollmentImageField: FC<{
                 >
                   上传失败 · 重试
                 </button>
+              ) : item.status === "attached" ? (
+                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] text-white">
+                  已提交
+                </span>
               ) : null}
-              {item.status !== "uploading" && (
+              {(item.status === "pending" || item.status === "error") && (
                 <button
                   type="button"
                   aria-label={`删除 ${item.name}`}
@@ -423,6 +487,12 @@ const EnrollmentImageField: FC<{
             }}
           />
         </label>
+      )}
+
+      {isEditMode && items.some((item) => item.status === "attached") && (
+        <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+          已提交图片会继续保留；当前仅支持在剩余名额内补充。如需替换已提交图片，请联系主办方。
+        </p>
       )}
 
       <div className="flex items-start gap-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
@@ -574,10 +644,27 @@ const UserRegistration: FC = () => {
   });
   const editContext = editContextQuery.data?.data;
   const isEditMode = Boolean(editContext);
+  const isReadOnly = isEditMode && editContext?.canEdit === false;
+  const effectiveRegistrationTypeId =
+    editContext?.registrationType?.id || registrationTypeId || undefined;
+  const ownEnrollmentImagesQuery = useQuery({
+    queryKey: [
+      "user",
+      "own-enrollment-images",
+      id,
+      effectiveRegistrationTypeId || "default",
+    ],
+    queryFn: () =>
+      getOwnEnrollmentImages(id || "", effectiveRegistrationTypeId),
+    enabled: isParticipantUser && Boolean(id),
+    retry: false,
+    staleTime: 15_000,
+  });
   const updateEnrollmentMutation = useMutation({
     mutationFn: (payload: {
       answers: Record<string, string | string[]>;
       confirmedFieldKeys: string[];
+      imageAnswers: Record<string, string[]>;
     }) =>
       updateEnrollmentAnswers(id || "", {
         ...payload,
@@ -596,7 +683,8 @@ const UserRegistration: FC = () => {
   const isLoading =
     authStatus === "checking" ||
     (isParticipantUser ? isUserActivityLoading : isPublicActivityLoading) ||
-    (isParticipantUser && editContextQuery.isLoading);
+    (isParticipantUser &&
+      (editContextQuery.isLoading || ownEnrollmentImagesQuery.isLoading));
   const registrationAvailability = useMemo(
     () => getRegistrationAvailability(activity),
     [activity],
@@ -619,6 +707,7 @@ const UserRegistration: FC = () => {
   // 表单数据状态：key -> value
   const [formData, setFormData] = useState<Record<string, string | string[]>>({});
   const [imageAnswers, setImageAnswers] = useState<Record<string, string[]>>({});
+  const [imageCounts, setImageCounts] = useState<Record<string, number>>({});
   const [uploadingImageFields, setUploadingImageFields] = useState<Set<string>>(new Set());
   const [confirmedFieldKeys, setConfirmedFieldKeys] = useState<Set<string>>(new Set());
   const [phoneVerificationTarget, setPhoneVerificationTarget] = useState<string | null>(null);
@@ -640,6 +729,7 @@ const UserRegistration: FC = () => {
     hasAppliedEnrollment.current = false;
     setFormData({});
     setImageAnswers({});
+    setImageCounts({});
     setConfirmedFieldKeys(new Set());
     setPhoneVerificationTarget(null);
     touchedFieldKeys.current.clear();
@@ -664,6 +754,14 @@ const UserRegistration: FC = () => {
       return next;
     });
     hasAppliedEnrollment.current = true;
+  }, [editContext]);
+
+  useEffect(() => {
+    if (!editContext?.imageCountByFieldKey) return;
+    setImageCounts((previous) => ({
+      ...editContext.imageCountByFieldKey,
+      ...previous,
+    }));
   }, [editContext]);
 
   // 自动预填：当 prefill 数据和 schema 都准备好后，把命中的字段填入 formData
@@ -741,8 +839,12 @@ const UserRegistration: FC = () => {
     return null;
   }, [formData, formSchema]);
 
-  const setImageField = useCallback((key: string, ids: string[]) => {
+  const setImageField = useCallback((key: string, ids: string[], totalCount: number) => {
     setImageAnswers((previous) => ({ ...previous, [key]: ids }));
+    setImageCounts((previous) => ({ ...previous, [key]: totalCount }));
+    if (totalCount > 0) {
+      setConfirmedFieldKeys((previous) => new Set(previous).add(key));
+    }
   }, []);
 
   const setImageFieldUploading = useCallback((key: string, uploading: boolean) => {
@@ -765,15 +867,22 @@ const UserRegistration: FC = () => {
       }
       if (!field.required) return true;
       if (field.type === "image") {
-        return isEditMode || (imageAnswers[field.key]?.length || 0) > 0;
+        return (imageCounts[field.key] || 0) > 0;
       }
       const val = formData[field.key];
       if (Array.isArray(val)) return val.length > 0;
       return typeof val === "string" && val.trim().length > 0;
     });
-  }, [blockedQuotaSelection, fieldValidationErrors, formSchema, formData, imageAnswers, isEditMode]);
+  }, [blockedQuotaSelection, fieldValidationErrors, formSchema, formData, imageCounts]);
 
   const handleSubmit = async () => {
+    if (isReadOnly) {
+      Toast.show({
+        icon: "fail",
+        content: editContext?.editBlockedReason || "当前报名资料不可修改",
+      });
+      return;
+    }
     if (!isParticipantUser || !PHONE_PATTERN.test(verifiedPhone)) {
       Toast.show({
         icon: "fail",
@@ -808,7 +917,7 @@ const UserRegistration: FC = () => {
       const missing = formSchema.find((f) => {
         if (!f.required) return false;
         if (f.type === "image") {
-          return !isEditMode && (imageAnswers[f.key]?.length || 0) === 0;
+          return (imageCounts[f.key] || 0) === 0;
         }
         const val = formData[f.key];
         if (Array.isArray(val)) return val.length === 0;
@@ -845,6 +954,7 @@ const UserRegistration: FC = () => {
         await updateEnrollmentMutation.mutateAsync({
           answers: updateAnswers,
           confirmedFieldKeys: Array.from(confirmedFieldKeys),
+          imageAnswers,
         });
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["user", "enrollment-edit-context", id] }),
@@ -1051,6 +1161,14 @@ const UserRegistration: FC = () => {
           </div>
         )}
 
+        {isReadOnly && (
+          <div className="px-4 pt-5 md:px-6">
+            <div className="rounded-xl border border-gray-200 bg-gray-100 px-3.5 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+              {editContext?.editBlockedReason || "当前报名资料仅可查看"}
+            </div>
+          </div>
+        )}
+
         {showRegistrationType && (
           <div className="px-4 pt-5 md:px-6">
             <span className="inline-flex items-center rounded-full bg-[rgba(171,191,255,0.44)] px-3 py-1 text-xs font-medium text-[#4d5ef8] dark:bg-[#4d5ef8]/20 dark:text-[#9ba7ff]">
@@ -1062,7 +1180,8 @@ const UserRegistration: FC = () => {
         {hasVerifiedPhone ? (
           <>
             {/* 动态表单 */}
-            <div
+            <fieldset
+              disabled={isReadOnly}
               className={`space-y-5 px-4 pb-5 md:px-6 ${
                 showRegistrationType ? "pt-4" : "pt-5"
               }`}
@@ -1090,19 +1209,20 @@ const UserRegistration: FC = () => {
                         {fieldState.reason || "请补充或确认此项"}
                       </p>
                     )}
-                    {field.type === "image" && isEditMode ? (
-                      <div className="rounded-lg bg-gray-100 px-3 py-2.5 text-xs leading-5 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                        已提交的图片会继续保留。如需替换图片，请联系主办方。
-                      </div>
-                    ) : field.type === "image" ? (
+                    {field.type === "image" ? (
                       <EnrollmentImageField
                         activityId={id || ""}
-                        registrationTypeId={
-                          registrationTypeId || undefined
-                        }
+                        registrationTypeId={effectiveRegistrationTypeId}
                         field={field}
+                        initialAssets={(ownEnrollmentImagesQuery.data || []).filter(
+                          (asset) => asset.field_key === field.key,
+                        )}
+                        isEditMode={isEditMode}
                         onChange={setImageField}
                         onUploadingChange={setImageFieldUploading}
+                        onRefreshAssets={() => {
+                          void ownEnrollmentImagesQuery.refetch();
+                        }}
                       />
                     ) : (
                       <DynamicField
@@ -1132,14 +1252,14 @@ const UserRegistration: FC = () => {
                 </div>
                 );
               })}
-            </div>
+            </fieldset>
 
             {/* 底部操作栏 - 报名页隐藏 TabBar，专注表单 */}
             <div className="fixed bottom-0 left-0 right-0 z-40 safe-area-bottom">
               <div className="max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 pt-3 pb-3 md:px-6 md:pb-4 shadow-[0_-2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_-2px_12px_rgba(0,0,0,0.3)]">
                 <Button
                   onClick={handleSubmit}
-                  disabled={!isFormValid || uploadingImageFields.size > 0}
+                  disabled={isReadOnly || !isFormValid || uploadingImageFields.size > 0}
                   loading={isSubmitting || updateEnrollmentMutation.isPending || uploadingImageFields.size > 0}
                   className="w-full h-12 text-base"
                 >

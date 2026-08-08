@@ -88,6 +88,23 @@ describe("resolveNotificationAction", () => {
     });
   });
 
+  it("opens the enrollment editor for optional supplement notifications", () => {
+    expect(
+      resolveNotificationAction(
+        createNotification({
+          type: "enrollment_update",
+          activityId: "event-1",
+          data: { kind: "supplement_available" },
+        }),
+      ),
+    ).toEqual({
+      kind: "activity",
+      path: "/u/activities/event-1/register",
+      label: "补充报名资料",
+      activityId: "event-1",
+    });
+  });
+
   it("does not invent a destination for a generic system notification", () => {
     expect(resolveNotificationAction(createNotification({}))).toEqual({
       kind: "none",

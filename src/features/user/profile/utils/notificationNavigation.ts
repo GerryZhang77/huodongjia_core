@@ -89,13 +89,21 @@ export const resolveNotificationAction = (
     if (notification.activityId) {
       const requiresEnrollmentUpdate =
         notification.type === "enrollment_update" &&
-        notification.data?.kind === "action_required";
+        ["action_required", "supplement_available"].includes(
+          String(notification.data?.kind || ""),
+        );
+      const isOptionalSupplement =
+        notification.data?.kind === "supplement_available";
       return {
         kind: "activity",
         path: `/u/activities/${encodeURIComponent(notification.activityId)}${
           requiresEnrollmentUpdate ? "/register" : ""
         }`,
-        label: requiresEnrollmentUpdate ? "完善报名资料" : "查看活动",
+        label: requiresEnrollmentUpdate
+          ? isOptionalSupplement
+            ? "补充报名资料"
+            : "完善报名资料"
+          : "查看活动",
         activityId: notification.activityId,
       };
     }
