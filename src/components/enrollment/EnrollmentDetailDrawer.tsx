@@ -495,7 +495,7 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
 
         {/* 底部操作栏 */}
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-4 flex gap-3 safe-area-pb">
-          {onRequestUpdate && !requestMode && (
+          {onRequestUpdate && !requestMode && !enrollment.isExternal && (
             <button
               type="button"
               className="flex flex-1 items-center justify-center whitespace-nowrap rounded-[22px] border border-primary-200 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50"

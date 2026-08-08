@@ -277,7 +277,14 @@ export async function requestEnrollmentUpdate(
   eventId: string,
   participantId: string,
   data: { fieldKeys: string[]; note?: string },
-): Promise<{ success: boolean; message?: string }> {
+): Promise<{
+  success: boolean;
+  message?: string;
+  data?: {
+    notificationStatus: "sent" | "muted" | "external" | "failed";
+    notificationError?: string;
+  };
+}> {
   return api.post(
     `/api/enrollments/${eventId}/${participantId}/update-request`,
     data,

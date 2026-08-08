@@ -709,8 +709,21 @@ const EnrollmentManagementNew: React.FC = () => {
   ) => {
     if (!id) return;
     try {
-      await requestEnrollmentUpdate(id, enrollmentId, { fieldKeys, note });
-      Toast.show({ icon: "success", content: "已通知参与者补充资料" });
+      const result = await requestEnrollmentUpdate(id, enrollmentId, { fieldKeys, note });
+      const notificationStatus = result.data?.notificationStatus;
+      Toast.show({
+        icon: notificationStatus === "failed" || notificationStatus === "external" ? "fail" : "success",
+        content:
+          notificationStatus === "sent"
+            ? "补充任务已创建，站内通知已投递"
+            : notificationStatus === "muted"
+              ? "补充任务已创建；用户开启了免打扰"
+              : notificationStatus === "external"
+                ? "补充任务已创建，但该用户暂无平台账号"
+                : notificationStatus === "failed"
+                  ? "补充任务已创建，但站内通知发送失败"
+                  : "补充任务已创建",
+      });
       await refreshDetailEnrollment(enrollmentId);
     } catch (error) {
       Toast.show({
