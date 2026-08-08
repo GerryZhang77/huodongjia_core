@@ -7,9 +7,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import {
   X,
   Send,
-  MessageSquare,
   Bell,
-  Mail,
   Users,
   Loader2,
   AlertCircle,
@@ -33,8 +31,6 @@ interface SendNotificationModalProps {
   onClose: () => void;
   onSuccess?: (count: number) => void;
 }
-
-type NotificationType = "sms" | "email" | "inapp";
 
 interface NotificationTemplate {
   id: string;
@@ -90,9 +86,6 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
 
   const token = useAuthStore((state) => state.token);
 
-  // 通知类型
-  const [notificationType, setNotificationType] =
-    useState<NotificationType>("inapp");
   // 选择的模板
   const [selectedTemplate, setSelectedTemplate] =
     useState<string>("activity_reminder");
@@ -191,7 +184,6 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
     activityId,
     activityTitle,
     currentContent,
-    notificationType,
     recipients,
     token,
     onSuccess,
@@ -253,29 +245,9 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   通知方式
                 </label>
-                <div className="flex gap-2">
-                  {[
-                    { type: "inapp" as const, label: "站内通知", icon: Bell },
-                    {
-                      type: "sms" as const,
-                      label: "短信",
-                      icon: MessageSquare,
-                    },
-                    { type: "email" as const, label: "邮件", icon: Mail },
-                  ].map(({ type, label, icon: Icon }) => (
-                    <button
-                      key={type}
-                      className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                        notificationType === type
-                          ? "bg-primary-50 border-primary-400 text-primary-600"
-                          : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
-                      onClick={() => setNotificationType(type)}
-                    >
-                      <Icon size={16} />
-                      {label}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-600">
+                  <Bell size={16} />
+                  <span>站内通知</span>
                 </div>
               </div>
 
