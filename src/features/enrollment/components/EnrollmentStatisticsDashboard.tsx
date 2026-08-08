@@ -231,9 +231,9 @@ const StatisticParticipantDrawer: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label="统计人员名单">
+    <div className="fixed inset-0 z-[60] flex justify-end" role="dialog" aria-modal="true" aria-label="统计人员名单">
       <button type="button" className="absolute inset-0 bg-black/40" aria-label="关闭人员名单" onClick={onClose} />
-      <div className="relative flex h-full w-full flex-col bg-white shadow-xl sm:max-w-xl">
+      <div className="relative flex h-full max-h-[100dvh] w-full flex-col bg-white shadow-xl sm:max-w-xl">
         <div className="border-b border-gray-100 px-4 py-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -425,7 +425,7 @@ const StatisticParticipantDrawer: React.FC<{
           )}
         </div>
 
-        <div className="border-t border-gray-100 bg-white px-4 py-3 sm:px-5">
+        <div className="safe-area-pb border-t border-gray-100 bg-white px-4 pt-3 sm:px-5">
           <button
             type="button"
             disabled={selectedIds.size === 0}

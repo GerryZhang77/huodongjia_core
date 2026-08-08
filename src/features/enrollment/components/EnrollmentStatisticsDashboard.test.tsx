@@ -134,11 +134,16 @@ describe('EnrollmentStatisticsDashboard', () => {
     await screen.findByText('当前统计人数');
     fireEvent.click(screen.getByRole('button', { name: /男.*4 人/ }));
     await screen.findByText('张三');
+    const participantDrawer = screen.getByRole('dialog', { name: '统计人员名单' });
+    expect(participantDrawer.className).toContain('z-[60]');
+    expect(participantDrawer.firstElementChild?.nextElementSibling?.className).toContain('max-h-[100dvh]');
     const participantItem = screen.getByRole('checkbox', { name: '选择张三' });
     expect(participantItem.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(participantItem);
     expect(participantItem.getAttribute('aria-checked')).toBe('true');
-    fireEvent.click(screen.getByRole('button', { name: /要求选中的 1 人补充或确认此项/ }));
+    const sendUpdateRequestButton = screen.getByRole('button', { name: /要求选中的 1 人补充或确认此项/ });
+    expect(sendUpdateRequestButton.parentElement?.className).toContain('safe-area-pb');
+    fireEvent.click(sendUpdateRequestButton);
     fireEvent.click(screen.getByRole('button', { name: '确认发送' }));
 
     await waitFor(() => {
