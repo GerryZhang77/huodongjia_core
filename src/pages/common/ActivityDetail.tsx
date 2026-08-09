@@ -314,13 +314,16 @@ const ActivityDetail = () => {
               </button>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
               <div className="min-w-0 rounded-xl bg-primary-50 p-3 text-center">
                 <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-primary-600">{totalApplications}</p>
                 <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">累计报名</p>
               </div>
               <div className="min-w-0 rounded-xl bg-emerald-50 p-3 text-center">
-                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-emerald-600">
+                <p
+                  className="break-all text-xl font-bold leading-tight tabular-nums text-emerald-600"
+                  title={activity.capacity > 0 ? `${occupiedParticipants}/${activity.capacity}` : String(occupiedParticipants)}
+                >
                   {activity.capacity > 0 ? `${occupiedParticipants}/${activity.capacity}` : occupiedParticipants}
                 </p>
                 <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">名额占用</p>

@@ -210,7 +210,7 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-stretch md:justify-end">
+    <div className="fixed inset-0 z-[60] flex items-end md:items-stretch md:justify-end">
       {/* 遮罩 */}
       <div
         className="absolute inset-0 bg-black/40 transition-opacity"
@@ -218,7 +218,12 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
       />
 
       {/* 面板 - 移动端底部弹出 / PC端右侧滑出 */}
-      <div className="relative bg-white w-full md:w-[420px] max-h-[85vh] md:max-h-full md:h-full rounded-t-2xl md:rounded-none flex flex-col animate-slide-up md:animate-none">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="报名详情"
+        className="relative flex h-[85dvh] max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white animate-slide-up md:h-full md:max-h-full md:w-[420px] md:rounded-none md:animate-none"
+      >
         {/* 移动端拖拽指示条 */}
         <div className="flex justify-center pt-2 pb-1 md:hidden">
           <div className="w-10 h-1 bg-gray-300 rounded-full" />
@@ -228,6 +233,8 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
           <h3 className="text-base font-semibold text-gray-900">报名详情</h3>
           <button
+            type="button"
+            aria-label="关闭报名详情"
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
             onClick={onClose}
           >
@@ -236,7 +243,7 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
         </div>
 
         {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto px-5 pb-28">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
           {/* 用户头像 + 名字 + 状态 */}
           <div className="flex items-center gap-4 py-5">
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary-100 to-purple-100 flex items-center justify-center flex-shrink-0">
@@ -494,43 +501,48 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
         </div>
 
         {/* 底部操作栏 */}
-        <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-4 flex gap-3 safe-area-pb">
+        <footer className="safe-area-pb flex shrink-0 flex-col gap-3 border-t border-gray-100 bg-white px-5 pt-4">
           {onRequestUpdate && !requestMode && !enrollment.isExternal && (
             <button
               type="button"
-              className="flex flex-1 items-center justify-center whitespace-nowrap rounded-[22px] border border-primary-200 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50"
+              className="flex w-full items-center justify-center whitespace-nowrap rounded-[22px] border border-primary-200 py-3 text-sm font-medium text-primary-600 hover:bg-primary-50"
               onClick={() => setRequestMode(true)}
             >
               要求补充资料
             </button>
           )}
-          {enrollment.status === "pending" ? (
-            <>
+          <div className="flex w-full gap-3">
+            {enrollment.status === "pending" ? (
+              <>
               <button
-            className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] border border-red-300 py-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 [&>svg]:shrink-0"
+                type="button"
+                className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] border border-red-300 py-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 [&>svg]:shrink-0"
                 onClick={() => onReject?.(enrollment.id)}
               >
                 <XCircle size={16} />
                 拒绝
               </button>
               <button
-            className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-green-500 to-green-600 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
+                type="button"
+                className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-green-500 to-green-600 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
                 onClick={() => onApprove?.(enrollment.id)}
               >
                 <CheckCircle size={16} />
                 通过
               </button>
-            </>
-          ) : (
-            <button
-            className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
-              onClick={() => onNotify?.(enrollment.id)}
-            >
-              <Send size={16} />
-              发送通知
-            </button>
-          )}
-        </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
+                onClick={() => onNotify?.(enrollment.id)}
+              >
+                <Send size={16} />
+                发送通知
+              </button>
+            )}
+          </div>
+        </footer>
       </div>
     </div>
   );
