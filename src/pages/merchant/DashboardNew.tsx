@@ -392,8 +392,9 @@ function toMerchantActivity(a: Activity): MerchantActivity {
     coverImage: backendData.coverImage ?? a.cover_image ?? null,
     // 后端返回 camelCase: capacity
     maxParticipants: backendData.capacity ?? a.max_participants ?? 0,
-    // 后端返回 camelCase: enrolledCount
-    currentParticipants: backendData.enrolledCount ?? 0,
+    // 名额进度只使用 pending + approved；累计报名仍由 enrolledCount 表示。
+    currentParticipants:
+      backendData.occupiedParticipants ?? backendData.currentParticipants ?? 0,
     pendingCount: backendData.pendingCount ?? 0,
     approvedCount: backendData.approvedCount ?? 0,
     hasMatchResult: backendData.hasMatchResult ?? false,

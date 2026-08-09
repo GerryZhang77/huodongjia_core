@@ -35,6 +35,7 @@ import { ensureRequiredPhoneField } from "@/features/activities/components/Activ
 import { getParticipantVisibleRegistrationFields } from "@/features/activities/utils/registrationFormFields";
 import { useAuthStore } from "@/features/auth/stores";
 import { getRegistrationAvailability } from "@/features/user/activity/utils/registrationAvailability";
+import { getActivityCapacityPresentation } from "@/features/user/activity/utils/activityDetailPresentation";
 import { useImageUpload, type UploadHandle } from "@/features/uploads";
 import {
   deletePendingEnrollmentImage,
@@ -146,22 +147,30 @@ const RadioTags: FC<{
     <div className="flex flex-wrap gap-2">
       {options.map((opt) => {
         const availability = optionAvailability?.[opt];
-        const isFull = availability?.isFull === true && availability.canKeepExisting !== true;
+        const optionAtCapacity = availability?.isFull === true;
+        const isDisabled = optionAtCapacity && availability.canKeepExisting !== true;
         return (
           <button
             key={opt}
             type="button"
-            disabled={isFull}
+            disabled={isDisabled}
             onClick={() => onChange(opt)}
             className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-all ${
               value === opt
                 ? "border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400"
-                : isFull
+                : isDisabled
                   ? "cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-600"
                   : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300"
             }`}
           >
-            {opt}{isFull ? " · 名额已满" : ""}
+            {opt}
+            {optionAtCapacity
+              ? availability?.canKeepExisting === true
+                ? " · 已满（当前选择可保留）"
+                : " · 名额已满"
+              : availability?.capacity !== undefined
+                ? ` · 剩余 ${availability.remaining ?? 0}`
+                : ""}
           </button>
         );
       })}
@@ -583,7 +592,14 @@ const DynamicField: FC<{
               value={opt}
               disabled={field.optionAvailability?.[opt]?.isFull === true && field.optionAvailability?.[opt]?.canKeepExisting !== true}
             >
-              {opt}{field.optionAvailability?.[opt]?.isFull === true && field.optionAvailability?.[opt]?.canKeepExisting !== true ? "（名额已满）" : ""}
+              {opt}
+              {field.optionAvailability?.[opt]?.isFull === true
+                ? field.optionAvailability?.[opt]?.canKeepExisting === true
+                  ? "（已满，当前选择可保留）"
+                  : "（名额已满）"
+                : field.optionAvailability?.[opt]?.capacity !== undefined
+                  ? `（剩余 ${field.optionAvailability?.[opt]?.remaining ?? 0}）`
+                  : ""}
             </option>
           ))}
         </select>
@@ -1135,6 +1151,10 @@ const UserRegistration: FC = () => {
   const showRegistrationType =
     Boolean(registrationTypeName) &&
     (Boolean(registrationTypeId) || activity.registrationType?.isDefault === false);
+  const capacityPresentation = getActivityCapacityPresentation(
+    activity.currentParticipants,
+    activity.maxParticipants,
+  );
 
   return (
     <UserLayout
@@ -1176,6 +1196,23 @@ const UserRegistration: FC = () => {
             </span>
           </div>
         )}
+
+        {!isEditMode ? (
+          <div className="px-4 pt-4 md:px-6">
+            <div
+              className={`rounded-xl border px-3.5 py-3 text-sm ${
+                capacityPresentation.isFull
+                  ? "border-error-200 bg-error-50 text-error-700 dark:border-error-800/50 dark:bg-error-900/20 dark:text-error-300"
+                  : "border-primary-100 bg-primary-50 text-primary-700 dark:border-primary-800/50 dark:bg-primary-900/20 dark:text-primary-300"
+              }`}
+            >
+              <p className="font-medium">{capacityPresentation.label}</p>
+              <p className="mt-1 text-xs opacity-75">
+                待审核和已通过报名占用名额；拒绝、候补或取消后会自动释放。
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         {hasVerifiedPhone ? (
           <>

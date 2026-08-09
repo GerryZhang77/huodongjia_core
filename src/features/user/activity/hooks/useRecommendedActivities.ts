@@ -21,7 +21,8 @@ export function useRecommendedActivities(options?: { guest?: boolean }) {
       : ["user", "activities", "recommended"],
     queryFn: () =>
       guest ? getPublicActivityList() : getRecommendedActivities(),
-    staleTime: 15 * 60 * 1000, // 15分钟（首页推荐相对稳定）
+    staleTime: 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 }

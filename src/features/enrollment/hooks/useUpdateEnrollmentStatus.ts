@@ -85,6 +85,13 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
       queryClient.invalidateQueries({
         queryKey: merchantQueryKeys.matchingCatalog(activityId),
       });
+      queryClient.invalidateQueries({
+        queryKey: ["merchant", "enrollment-statistics", activityId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["public", "activity", activityId] });
+      queryClient.invalidateQueries({ queryKey: ["public", "activities"] });
+      queryClient.invalidateQueries({ queryKey: ["user", "activity", activityId] });
+      queryClient.invalidateQueries({ queryKey: ["user", "activities"] });
     },
   });
 

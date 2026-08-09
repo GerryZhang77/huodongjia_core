@@ -245,8 +245,15 @@ const ActivityDetail = () => {
     );
   }
 
+  const totalApplications =
+    activity.totalApplications ?? activity.enrolledCount ?? participantsTotal;
+  const occupiedParticipants =
+    activity.occupiedParticipants ?? activity.enrolledCount ?? 0;
+  const remainingParticipants = activity.capacity > 0
+    ? activity.remainingParticipants ?? Math.max(0, activity.capacity - occupiedParticipants)
+    : null;
   const participationRate = activity.capacity
-    ? Math.round((participantsTotal / activity.capacity) * 100)
+    ? Math.round((occupiedParticipants / activity.capacity) * 100)
     : 0;
   const requirements = parseRequirements(activity.requirements || "");
 
@@ -307,14 +314,22 @@ const ActivityDetail = () => {
               </button>
             </div>
 
-            <div className="mt-5 grid grid-cols-3 gap-2">
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="min-w-0 rounded-xl bg-primary-50 p-3 text-center">
-                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-primary-600">{participantsTotal}</p>
-                <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">已报名</p>
+                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-primary-600">{totalApplications}</p>
+                <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">累计报名</p>
               </div>
               <div className="min-w-0 rounded-xl bg-emerald-50 p-3 text-center">
-                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-emerald-600">{activity.capacity}</p>
-                <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">名额上限</p>
+                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-emerald-600">
+                  {activity.capacity > 0 ? `${occupiedParticipants}/${activity.capacity}` : occupiedParticipants}
+                </p>
+                <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">名额占用</p>
+              </div>
+              <div className="min-w-0 rounded-xl bg-blue-50 p-3 text-center">
+                <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-blue-600">
+                  {remainingParticipants === null ? "不限" : remainingParticipants}
+                </p>
+                <p className="mt-1 truncate whitespace-nowrap text-xs text-gray-500">剩余名额</p>
               </div>
               <div className="min-w-0 rounded-xl bg-orange-50 p-3 text-center">
                 <p className="truncate whitespace-nowrap text-xl font-bold tabular-nums text-orange-600">{participationRate}%</p>
@@ -351,7 +366,7 @@ const ActivityDetail = () => {
         <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm md:p-6">
           <div className="flex gap-1 rounded-xl bg-gray-100 p-1" role="tablist" aria-label="活动详情内容">
             <button type="button" role="tab" aria-selected={activeTab === "info"} onClick={() => updateView({ tab: "info" })} className={`flex-1 whitespace-nowrap rounded-lg py-2 text-sm font-medium ${activeTab === "info" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>详细信息</button>
-            <button type="button" role="tab" aria-selected={activeTab === "participants"} onClick={() => updateView({ tab: "participants" })} className={`flex-1 whitespace-nowrap rounded-lg py-2 text-sm font-medium ${activeTab === "participants" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>参与者 ({activity.enrolledCount})</button>
+            <button type="button" role="tab" aria-selected={activeTab === "participants"} onClick={() => updateView({ tab: "participants" })} className={`flex-1 whitespace-nowrap rounded-lg py-2 text-sm font-medium ${activeTab === "participants" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>参与者 ({totalApplications})</button>
           </div>
 
           {activeTab === "info" ? (

@@ -20,7 +20,9 @@ export function getActivityCapacityPresentation(
 
   const isFull = current >= maximum;
   return {
-    label: `名额 ${current}/${maximum}${isFull ? " · 已满" : ""}`,
+    label: isFull
+      ? `名额 ${current}/${maximum} · 已满`
+      : `名额 ${current}/${maximum} · 剩余 ${maximum - current}`,
     isFull,
   };
 }

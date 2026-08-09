@@ -44,6 +44,11 @@ export interface ApiActivityData {
   registrationStart?: string;
   registrationEnd?: string;
   enrolledCount?: number;
+  currentParticipants?: number;
+  occupiedParticipants?: number;
+  totalApplications?: number;
+  remainingParticipants?: number | null;
+  capacitySummary?: Activity["capacitySummary"];
   // 扩展字段
   category?: string;
   requirements?: string;
@@ -101,6 +106,12 @@ export const mapApiActivityToActivity = (
       location: apiActivity.location,
       capacity: apiActivity.capacity || apiActivity.max_participants || 0,
       enrolledCount: apiActivity.enrolledCount || 0,
+      occupiedParticipants:
+        apiActivity.occupiedParticipants ?? apiActivity.currentParticipants ?? 0,
+      totalApplications:
+        apiActivity.totalApplications ?? apiActivity.enrolledCount ?? 0,
+      remainingParticipants: apiActivity.remainingParticipants ?? null,
+      capacitySummary: apiActivity.capacitySummary ?? null,
       createdAt,
       updatedAt,
       // 扩展字段

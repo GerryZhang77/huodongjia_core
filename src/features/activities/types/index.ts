@@ -110,6 +110,25 @@ export interface Activity {
   location: string;
   capacity: number;
   enrolledCount: number;
+  /** pending + approved，真正占用活动总名额的人数。 */
+  occupiedParticipants?: number;
+  /** 累计报名记录，包含已拒绝/候补/取消。 */
+  totalApplications?: number;
+  remainingParticipants?: number | null;
+  capacitySummary?: {
+    maxParticipants: number;
+    totalApplications: number;
+    occupiedParticipants: number;
+    pendingParticipants: number;
+    approvedParticipants: number;
+    rejectedParticipants: number;
+    waitlistParticipants: number;
+    cancelledParticipants: number;
+    remainingParticipants: number | null;
+    isUnlimited: boolean;
+    isFull: boolean;
+    overLimit: boolean;
+  } | null;
   createdAt: string;
   updatedAt: string;
   images?: string[];

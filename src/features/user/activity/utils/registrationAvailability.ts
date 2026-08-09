@@ -60,10 +60,11 @@ export function getRegistrationAvailability(
     return { canRegister: false, reason: "活动已结束" };
   }
 
-  if (
-    activity.maxParticipants > 0 &&
-    activity.currentParticipants >= activity.maxParticipants
-  ) {
+  const isFull =
+    activity.capacitySummary?.isFull ??
+    (activity.maxParticipants > 0 &&
+      activity.currentParticipants >= activity.maxParticipants);
+  if (isFull) {
     return { canRegister: false, reason: "报名人数已满" };
   }
 

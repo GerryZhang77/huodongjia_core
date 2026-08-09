@@ -16,7 +16,9 @@ export function usePublicActivityDetail(id?: string, registrationTypeId?: string
     queryKey: ["public", "activity", id, registrationTypeId || ""],
     queryFn: () => getPublicActivityDetail(id!, registrationTypeId),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }

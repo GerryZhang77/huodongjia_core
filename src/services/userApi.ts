@@ -153,6 +153,21 @@ export type UserActivityStatus =
   | "cancelled"
   | "completed";
 
+export interface ActivityCapacitySummary {
+  maxParticipants: number;
+  totalApplications: number;
+  occupiedParticipants: number;
+  pendingParticipants: number;
+  approvedParticipants: number;
+  rejectedParticipants: number;
+  waitlistParticipants: number;
+  cancelledParticipants: number;
+  remainingParticipants: number | null;
+  isUnlimited: boolean;
+  isFull: boolean;
+  overLimit: boolean;
+}
+
 export interface UserActivity {
   id: string;
   title: string;
@@ -168,6 +183,7 @@ export interface UserActivity {
   location: string;
   maxParticipants: number;
   currentParticipants: number;
+  capacitySummary?: ActivityCapacitySummary | null;
   tags: string[];
   category?: string;
   requirements?: string;

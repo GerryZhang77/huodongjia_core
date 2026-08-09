@@ -19,7 +19,10 @@ export function useActivityDetail(id?: string, registrationTypeId?: string) {
     queryKey: ["user", "activity", id, registrationTypeId || ""],
     queryFn: () => getUserActivityDetail(id!, registrationTypeId),
     enabled: !!id,
-    staleTime: 15 * 60 * 1000, // 15分钟（活动详情相对稳定）
+    // 活动主体较稳定，但名额是高频动态数据；重新进入页面时必须校准。
+    staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }

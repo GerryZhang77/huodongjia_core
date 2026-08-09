@@ -4,7 +4,7 @@ import { getActivityCapacityPresentation } from "./activityDetailPresentation";
 describe("getActivityCapacityPresentation", () => {
   it("formats a finite capacity as a compact quota label", () => {
     expect(getActivityCapacityPresentation(45, 60)).toEqual({
-      label: "名额 45/60",
+      label: "名额 45/60 · 剩余 15",
       isFull: false,
     });
   });

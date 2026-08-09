@@ -553,7 +553,7 @@ export const EnrollmentStatisticsDashboard: React.FC<{ activityId: string }> = (
         </div>
       ) : (
         <>
-          <div className="grid w-full min-w-0 grid-cols-2 gap-2 md:grid-cols-4">
+          <div className="grid w-full min-w-0 grid-cols-2 gap-2 md:grid-cols-5">
             <div className="rounded-xl border border-primary-100 bg-primary-50 p-4">
               <p className="text-2xl font-bold text-primary-700">{data.summary.scopedTotal}</p>
               <p className="mt-1 text-xs text-primary-600">当前统计人数</p>
@@ -571,6 +571,14 @@ export const EnrollmentStatisticsDashboard: React.FC<{ activityId: string }> = (
                 {data.summary.capacity > 0 ? `${data.summary.globalOccupying}/${data.summary.capacity}` : '不限'}
               </p>
               <p className="mt-1 text-xs text-gray-500">总名额占用</p>
+            </div>
+            <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+              <p className="text-2xl font-bold text-blue-700">
+                {data.summary.capacity > 0
+                  ? Math.max(0, data.summary.capacity - data.summary.globalOccupying)
+                  : '不限'}
+              </p>
+              <p className="mt-1 text-xs text-blue-700">剩余名额</p>
             </div>
           </div>
 

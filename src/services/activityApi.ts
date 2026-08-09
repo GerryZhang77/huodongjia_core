@@ -39,6 +39,24 @@ export interface Activity {
   updated_at?: string;
   /** 商家列表聚合字段，避免前端按活动发起 N+1 请求。 */
   enrolledCount?: number;
+  currentParticipants?: number;
+  occupiedParticipants?: number;
+  remainingParticipants?: number | null;
+  totalApplications?: number;
+  capacitySummary?: {
+    maxParticipants: number;
+    totalApplications: number;
+    occupiedParticipants: number;
+    pendingParticipants: number;
+    approvedParticipants: number;
+    rejectedParticipants: number;
+    waitlistParticipants: number;
+    cancelledParticipants: number;
+    remainingParticipants: number | null;
+    isUnlimited: boolean;
+    isFull: boolean;
+    overLimit: boolean;
+  } | null;
   pendingCount?: number;
   approvedCount?: number;
   hasMatchResult?: boolean;
