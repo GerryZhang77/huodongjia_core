@@ -13,6 +13,7 @@ export const ENROLLMENT_STATUS_OPTIONS = [
   { label: "待审核", value: "pending" },
   { label: "已通过", value: "approved" },
   { label: "已拒绝", value: "rejected" },
+  { label: "候补", value: "waitlist" },
   { label: "已取消", value: "cancelled" },
 ];
 
@@ -25,6 +26,8 @@ export const getStatusColor = (status: EnrollmentStatus): string => {
       return "success";
     case "rejected":
       return "danger";
+    case "waitlist":
+      return "warning";
     case "cancelled":
       return "default";
     default:
@@ -41,6 +44,8 @@ export const getStatusText = (status: EnrollmentStatus): string => {
       return "已通过";
     case "rejected":
       return "已拒绝";
+    case "waitlist":
+      return "候补";
     case "cancelled":
       return "已取消";
     default:

@@ -249,6 +249,9 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                   <Bell size={16} />
                   <span>站内通知</span>
                 </div>
+                <p className="mt-1.5 text-xs text-gray-400">
+                  报名状态短信由报名提交或审核操作自动触发，自定义文案不会作为短信发送。
+                </p>
               </div>
 
               {/* 接收人范围 */}

@@ -209,9 +209,18 @@ export const getEnrollments = async (
  */
 export const updateEnrollmentStatus = async (
   request: UpdateEnrollmentStatusRequest & { activityId: string }
-): Promise<void> => {
+): Promise<{
+  success: boolean;
+  message?: string;
+  data?: {
+    updatedCount: number;
+    inAppNotificationTargetCount: number;
+    smsQueuedCount: number;
+    smsSkippedCount: number;
+  };
+}> => {
   const { activityId, enrollmentIds, status } = request;
-  await api.patch(`/api/enrollments/${activityId}/status`, { enrollment_ids: enrollmentIds, status });
+  return api.patch(`/api/enrollments/${activityId}/status`, { enrollment_ids: enrollmentIds, status });
 };
 
 /**

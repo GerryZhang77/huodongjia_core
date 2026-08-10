@@ -10,6 +10,7 @@ export type EnrollmentStatus =
   | "pending"
   | "approved"
   | "rejected"
+  | "waitlist"
   | "cancelled";
 
 /**

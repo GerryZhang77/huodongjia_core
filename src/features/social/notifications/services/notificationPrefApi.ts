@@ -6,6 +6,7 @@ import { api } from "@/services/api/client";
 
 export interface NotificationPreferences {
   push_enabled: boolean;
+  sms_enabled: boolean;
   sound_enabled: boolean;
   type_settings: Record<string, boolean>; // 各类型开关：message/follow/enrollment...
   dnd_enabled: boolean;

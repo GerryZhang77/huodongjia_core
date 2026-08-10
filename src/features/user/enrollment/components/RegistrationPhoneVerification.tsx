@@ -242,7 +242,9 @@ const RegistrationPhoneVerification: FC<
           className="mt-0.5 shrink-0 text-emerald-600"
           aria-hidden="true"
         />
-        新手机号会自动创建随机密码账号，密码不会展示或发送；以后直接使用手机验证码登录。
+        {isAuthenticated
+          ? "验证成功后将更新账号绑定手机号，原手机号不再用于登录。"
+          : "新手机号会自动创建随机密码账号，密码不会展示或发送；以后直接使用手机验证码登录。"}
       </p>
     </section>
   );

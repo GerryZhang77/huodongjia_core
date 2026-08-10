@@ -58,6 +58,18 @@ export interface EnrollmentDetailResponse {
   message?: string;
 }
 
+export interface EnrollmentSubmissionResponse {
+  success: boolean;
+  data?: {
+    enrollment?: unknown;
+    notification?: {
+      smsQueued: boolean;
+      smsSkippedReason?: string | null;
+    };
+  };
+  message?: string;
+}
+
 export interface ImportEnrollmentResult {
   success: boolean;
   data?: {
@@ -245,7 +257,7 @@ export async function submitEnrollment(
   data: EnrollmentFormData,
   registrationTypeId?: string,
   imageAnswers?: EnrollmentImageAnswers,
-): Promise<EnrollmentDetailResponse> {
+): Promise<EnrollmentSubmissionResponse> {
   // 后端期望 { enrollment: {...} } 格式
   return api.post(`/api/user/activities/${activityId}/enroll`, {
     enrollment: data,

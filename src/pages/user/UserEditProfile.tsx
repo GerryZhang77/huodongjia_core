@@ -25,6 +25,7 @@ import { Button, Input, Switch, Textarea } from "@/components/ui";
 import { useUserProfile, useUpdateProfile } from "@/features/user";
 import { useImageUpload } from "@/features/uploads";
 import { UserLayout } from "@/components/layout/UserLayout";
+import RegistrationPhoneVerification from "@/features/user/enrollment/components/RegistrationPhoneVerification";
 import { eventBus, EVENTS } from "@/utils/eventBus";
 import { sanitizeRedirectPath } from "@/utils/redirect";
 import type { ProfilePrivacySettings } from "@/services/userApi";
@@ -102,6 +103,7 @@ const UserEditProfile: FC = () => {
   });
   const [privacySettings, setPrivacySettings] =
     useState<Required<ProfilePrivacySettings>>(DEFAULT_PRIVACY);
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
 
   // 自定义兴趣输入
   const [customInterest, setCustomInterest] = useState("");
@@ -247,7 +249,6 @@ const UserEditProfile: FC = () => {
           tags: formData.interests,
           photos,
           email: formData.email || undefined,
-          phone: formData.phone || undefined,
           wechat: formData.wechat || undefined,
           privacy_settings: privacySettings,
         },
@@ -417,13 +418,27 @@ const UserEditProfile: FC = () => {
             </h3>
 
             {/* 手机 */}
-            <Input
-              type="tel"
-              placeholder="手机号码"
-              value={formData.phone}
-              onChange={(e) => updateField("phone", e.target.value)}
-              prefix={<Phone size={18} />}
-            />
+            <div>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <Input
+                  type="tel"
+                  placeholder="手机号码"
+                  value={formData.phone}
+                  disabled
+                  prefix={<Phone size={18} />}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowPhoneVerification(true)}
+                >
+                  更换手机号
+                </Button>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">
+                为确保报名短信发送到本人，手机号变更必须完成短信验证。
+              </p>
+            </div>
 
             {/* 邮箱 */}
             <Input
@@ -643,6 +658,38 @@ const UserEditProfile: FC = () => {
           </div>
         </div>
       </div>
+      {showPhoneVerification && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-black/45 sm:items-center sm:p-4"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setShowPhoneVerification(false);
+          }}
+        >
+          <div className="relative w-full max-w-md rounded-t-2xl bg-white shadow-2xl dark:bg-gray-800 sm:rounded-2xl">
+            <button
+              type="button"
+              aria-label="关闭手机号验证"
+              onClick={() => setShowPhoneVerification(false)}
+              className="absolute right-3 top-3 z-10 rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+            <RegistrationPhoneVerification
+              activityTitle="账号安全"
+              initialPhone={formData.phone}
+              title="验证新手机号"
+              description="新手机号验证通过后，将用于登录、报名身份识别和报名状态短信通知。"
+              successMessage="手机号更换成功"
+              compact
+              onVerified={async (phone) => {
+                updateField("phone", phone);
+                setShowPhoneVerification(false);
+                await queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+              }}
+            />
+          </div>
+        </div>
+      )}
     </UserLayout>
   );
 };

@@ -8,7 +8,7 @@
  */
 
 import { FC, ElementType } from "react";
-import { Bell, Volume2, MessageCircle, UserPlus, Activity, Moon } from "lucide-react";
+import { Bell, Volume2, MessageCircle, UserPlus, Activity, Moon, Smartphone } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import {
   useNotificationPreferences,
@@ -111,6 +111,13 @@ export const NotificationPreferencesPanel: FC = () => {
         description="关闭后不再接收任何通知"
         value={pref.push_enabled}
         onChange={(v) => apply({ push_enabled: v })}
+      />
+      <ToggleRow
+        icon={Smartphone}
+        label="报名短信通知"
+        description="接收报名提交、审核结果和候补状态短信"
+        value={pref.sms_enabled !== false}
+        onChange={(v) => apply({ sms_enabled: v })}
       />
       <ToggleRow
         icon={Volume2}

@@ -55,12 +55,24 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
       }
       return { snapshots };
     },
-    onSuccess: (_, { enrollmentIds, status }) => {
+    onSuccess: (result, { enrollmentIds, status }) => {
       const statusText =
-        status === "approved" ? "通过" : status === "rejected" ? "拒绝" : "更新";
+        status === "approved"
+          ? "通过"
+          : status === "rejected"
+            ? "拒绝"
+            : status === "waitlist"
+              ? "加入候补"
+              : "更新";
+      const updatedCount = result.data?.updatedCount ?? enrollmentIds.length;
+      const smsQueuedCount = result.data?.smsQueuedCount ?? 0;
+      const smsSkippedCount = result.data?.smsSkippedCount ?? 0;
+      const smsSummary = smsQueuedCount > 0
+        ? `，${smsQueuedCount} 条短信已加入发送队列${smsSkippedCount > 0 ? `，${smsSkippedCount} 条跳过` : ""}`
+        : "";
       Toast.show({
         icon: "success",
-        content: `已${statusText} ${enrollmentIds.length} 条报名`,
+        content: `已${statusText} ${updatedCount} 条报名${smsSummary}`,
       });
     },
     onError: (error, _vars, ctx) => {

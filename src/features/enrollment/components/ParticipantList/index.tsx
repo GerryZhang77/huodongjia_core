@@ -18,6 +18,7 @@ const statusConfig: Record<EnrollmentStatus, { text: string; color: string }> =
     pending: { text: "待审核", color: "warning" },
     approved: { text: "已通过", color: "success" },
     rejected: { text: "已拒绝", color: "danger" },
+    waitlist: { text: "候补", color: "warning" },
     cancelled: { text: "已取消", color: "default" },
   };
 

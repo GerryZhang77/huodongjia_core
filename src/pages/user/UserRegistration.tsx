@@ -978,8 +978,18 @@ const UserRegistration: FC = () => {
         ]);
         Toast.show({ icon: "success", content: "报名资料已更新", duration: 1500 });
       } else {
-        await submitEnrollment({ enrollment: submitData, imageAnswers });
-        Toast.show({ icon: "success", content: "报名成功！", duration: 1500 });
+        const submitResult = await submitEnrollment({ enrollment: submitData, imageAnswers });
+        const smsQueued = submitResult.data?.notification?.smsQueued === true;
+        const maskedPhone = verifiedPhone
+          ? `${verifiedPhone.slice(0, 3)}****${verifiedPhone.slice(-4)}`
+          : "已验证手机号";
+        Toast.show({
+          icon: "success",
+          content: smsQueued
+            ? `报名已提交，状态短信将发送至 ${maskedPhone}`
+            : "报名已提交，请留意站内状态通知",
+          duration: 2200,
+        });
       }
 
       // 收集这次填写中可保存到信息库的字段（非空）
