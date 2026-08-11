@@ -27,7 +27,7 @@ const enrollments: Enrollment[] = [
     id: "enrollment-2",
     activityId: "activity-1",
     name: "李四",
-    status: "pending",
+    status: "approved",
     registrationTypeName: "嘉宾",
     enrolledAt: "2026-08-10T00:00:00.000Z",
   },
@@ -49,7 +49,7 @@ const recipients = [
     enrollment_id: "enrollment-2",
     name: "李四",
     masked_phone: null,
-    status: "pending",
+    status: "approved",
     registration_type: "嘉宾",
     eligibility: {
       in_app: { eligible: true },
@@ -129,6 +129,8 @@ describe("SendNotificationModal", () => {
     );
 
     expect(screen.getAllByText("已选择 1 人").length).toBeGreaterThan(0);
+    expect(screen.queryByText("站内消息模板")).toBeNull();
+    expect(screen.getByText("站内通知内容").parentElement?.textContent).toContain("报名审核通过");
     await waitFor(() => expect(apiMocks.preview).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole("button", { name: /接收对象/ }));
@@ -142,17 +144,15 @@ describe("SendNotificationModal", () => {
     expect(screen.getAllByText("已选择 2 人").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "短信通知" }));
-    expect(screen.getByText("固定报名状态短信")).toBeTruthy();
+    expect(screen.getByText("报名审核通过短信")).toBeTruthy();
     expect(screen.getByText("短信预计接收").parentElement?.textContent).toContain("1 人");
     expect(screen.getByText(/无有效手机号 1 人/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "核对并发送" }));
     await waitFor(() => expect(screen.getByText("确认发送通知")).toBeTruthy());
-    expect(screen.getByText((_, element) =>
-      element?.tagName === "P"
-      && element.textContent?.replace(/\s+/g, " ").trim()
-        === "将向 2 人发送站内通知， 向 1 人发送短信，预计跳过 1 人。",
-    )).toBeTruthy();
+    expect(screen.getByText("确认发送报名审核通过通知？")).toBeTruthy();
+    expect(screen.queryByText(/将向 .*人发送站内通知/)).toBeNull();
+    expect(screen.queryByText(/异步 Outbox/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "确认发送" }));
     await waitFor(() => expect(apiMocks.send).toHaveBeenCalledTimes(1));
@@ -162,7 +162,7 @@ describe("SendNotificationModal", () => {
       channels: ["in_app", "sms"],
       inApp: {
         title: "活动通知 - 测试活动",
-        message: "您报名的活动即将开始，请准时参加！",
+        message: "报名审核通过",
       },
     });
     await waitFor(() => expect(screen.getByText("通知处理完成")).toBeTruthy());

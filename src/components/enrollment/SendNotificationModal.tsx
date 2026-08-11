@@ -42,18 +42,7 @@ interface SendNotificationModalProps {
   onSuccess?: (result: EnrollmentNotificationSendResult) => void;
 }
 
-interface NotificationTemplate {
-  id: string;
-  name: string;
-  content: string;
-}
-
-const NOTIFICATION_TEMPLATES: NotificationTemplate[] = [
-  { id: "activity_reminder", name: "活动提醒", content: "您报名的活动即将开始，请准时参加！" },
-  { id: "matching_result", name: "匹配结果通知", content: "您的匹配结果已生成，快来查看您的小组成员吧！" },
-  { id: "activity_update", name: "活动更新", content: "活动信息有更新，请查看最新详情。" },
-  { id: "custom", name: "自定义消息", content: "" },
-];
+const APPROVAL_NOTIFICATION_CONTENT = "报名审核通过";
 
 const CHANNEL_LABELS: Record<EnrollmentNotificationChannel, string> = {
   in_app: "站内通知",
@@ -96,8 +85,6 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const [selectedTemplate, setSelectedTemplate] = useState("activity_reminder");
-  const [customContent, setCustomContent] = useState("");
   const [channels, setChannels] = useState<Set<EnrollmentNotificationChannel>>(
     () => new Set(["in_app"]),
   );
@@ -127,8 +114,6 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
     if (!visible) return;
     setSelectedEnrollmentIds(new Set(selectedIds.filter((id) => availableEnrollmentIds.has(id))));
     setChannels(new Set(["in_app"]));
-    setSelectedTemplate("activity_reminder");
-    setCustomContent("");
     setRecipientSearch("");
     setRecipientsExpanded(false);
     setSendResult(null);
@@ -167,11 +152,6 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
       cancelled = true;
     };
   }, [activityId, enrollments, visible]);
-
-  const currentContent = useMemo(() => {
-    if (selectedTemplate === "custom") return customContent;
-    return NOTIFICATION_TEMPLATES.find((template) => template.id === selectedTemplate)?.content || "";
-  }, [customContent, selectedTemplate]);
 
   const previewById = useMemo(
     () => new Map((recipientPreview?.recipients || []).map((recipient) => [recipient.enrollment_id, recipient])),
@@ -283,10 +263,6 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
       setError("请至少选择一位接收对象");
       return;
     }
-    if (channels.has("in_app") && !currentContent.trim()) {
-      setError("请输入站内通知内容");
-      return;
-    }
     setIsPreparingConfirmation(true);
     setError(null);
     try {
@@ -309,7 +285,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
     } finally {
       setIsPreparingConfirmation(false);
     }
-  }, [activityId, channels, currentContent, selectedEnrollmentIds]);
+  }, [activityId, channels, selectedEnrollmentIds]);
 
   const handleConfirmedSend = useCallback(async () => {
     if (!confirmPreview || confirmEnrollmentIds.length === 0) return;
@@ -324,7 +300,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
         inApp: channels.has("in_app")
           ? {
               title: activityTitle ? `活动通知 - ${activityTitle}` : "活动通知",
-              message: currentContent.trim(),
+              message: APPROVAL_NOTIFICATION_CONTENT,
             }
           : undefined,
       });
@@ -335,7 +311,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
     } finally {
       setIsSending(false);
     }
-  }, [activityId, activityTitle, channels, confirmEnrollmentIds, confirmPreview, currentContent, idempotencyKey, onSuccess]);
+  }, [activityId, activityTitle, channels, confirmEnrollmentIds, confirmPreview, idempotencyKey, onSuccess]);
 
   if (!visible) return null;
 
@@ -537,32 +513,10 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                 </section>
 
                 {channels.has("in_app") ? (
-                  <section className="space-y-3">
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">站内消息模板</label>
-                      <select
-                        className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm outline-none focus:border-primary-400"
-                        value={selectedTemplate}
-                        onChange={(event) => setSelectedTemplate(event.target.value)}
-                      >
-                        {NOTIFICATION_TEMPLATES.map((template) => (
-                          <option key={template.id} value={template.id}>{template.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-gray-700">站内通知内容</label>
-                      <textarea
-                        className="h-24 w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-                        placeholder="请输入通知内容"
-                        maxLength={500}
-                        value={selectedTemplate === "custom" ? customContent : currentContent}
-                        onChange={(event) => {
-                          if (selectedTemplate !== "custom") setSelectedTemplate("custom");
-                          setCustomContent(event.target.value);
-                        }}
-                      />
-                      <p className="mt-1 text-right text-xs text-gray-400">{currentContent.length}/500</p>
+                  <section>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">站内通知内容</label>
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800">
+                      {APPROVAL_NOTIFICATION_CONTENT}
                     </div>
                   </section>
                 ) : null}
@@ -572,9 +526,9 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                     <div className="flex items-start gap-2">
                       <Smartphone size={17} className="mt-0.5 shrink-0 text-emerald-600" />
                       <div>
-                        <p className="text-sm font-medium text-emerald-800">固定报名状态短信</p>
+                        <p className="text-sm font-medium text-emerald-800">报名审核通过短信</p>
                         <p className="mt-1 text-xs leading-5 text-emerald-700">
-                          短信内容由后端按每位报名者当前真实状态生成，不会使用上方自定义站内文案，也不能由前端修改模板参数。
+                          仅向当前报名状态为“已通过”的接收对象发送，短信模板参数由后端生成。
                         </p>
                       </div>
                     </div>
@@ -614,25 +568,7 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
         onClose={() => setConfirmOpen(false)}
         type="confirm"
         title="确认发送通知"
-        content={confirmPreview ? (
-          <div className="space-y-2 text-left">
-            <p>
-              将向 <strong>{confirmPreview.channels.in_app.eligible_count}</strong> 人发送站内通知，
-              向 <strong>{confirmPreview.channels.sms.eligible_count}</strong> 人发送短信，预计跳过
-              <strong> {confirmPreview.skipped_count}</strong> 人。
-            </p>
-            {confirmPreview.skip_reasons.length > 0 ? (
-              <ul className="list-disc space-y-1 pl-5 text-xs">
-                {confirmPreview.skip_reasons.map((item) => (
-                  <li key={`${item.channel}:${item.code}`}>
-                    {CHANNEL_LABELS[item.channel]}：{item.label}（{item.count} 人）
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {channels.has("sms") ? <p className="text-xs text-emerald-700">短信将进入异步 Outbox，入队不等于运营商已送达。</p> : null}
-          </div>
-        ) : null}
+        content={confirmPreview ? "确认发送报名审核通过通知？" : null}
         okText="确认发送"
         cancelText="返回修改"
         okLoading={isSending}
