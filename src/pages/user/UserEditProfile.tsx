@@ -678,7 +678,7 @@ const UserEditProfile: FC = () => {
               activityTitle="账号安全"
               initialPhone={formData.phone}
               title="验证新手机号"
-              description="新手机号验证通过后，将用于登录、报名身份识别和报名状态短信通知。"
+              description="新手机号验证通过后，将用于登录、报名身份识别和主办方发送的活动报名通知。"
               successMessage="手机号更换成功"
               compact
               onVerified={async (phone) => {

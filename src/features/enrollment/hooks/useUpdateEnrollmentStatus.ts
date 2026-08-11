@@ -65,14 +65,9 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
               ? "加入候补"
               : "更新";
       const updatedCount = result.data?.updatedCount ?? enrollmentIds.length;
-      const smsQueuedCount = result.data?.smsQueuedCount ?? 0;
-      const smsSkippedCount = result.data?.smsSkippedCount ?? 0;
-      const smsSummary = smsQueuedCount > 0
-        ? `，${smsQueuedCount} 条短信已加入发送队列${smsSkippedCount > 0 ? `，${smsSkippedCount} 条跳过` : ""}`
-        : "";
       Toast.show({
         icon: "success",
-        content: `已${statusText} ${updatedCount} 条报名${smsSummary}`,
+        content: `已${statusText} ${updatedCount} 条报名`,
       });
     },
     onError: (error, _vars, ctx) => {

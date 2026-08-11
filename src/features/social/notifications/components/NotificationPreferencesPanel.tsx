@@ -115,7 +115,7 @@ export const NotificationPreferencesPanel: FC = () => {
       <ToggleRow
         icon={Smartphone}
         label="报名短信通知"
-        description="接收报名提交、审核结果和候补状态短信"
+        description="接收主办方手动发送的报名状态短信"
         value={pref.sms_enabled !== false}
         onChange={(v) => apply({ sms_enabled: v })}
       />

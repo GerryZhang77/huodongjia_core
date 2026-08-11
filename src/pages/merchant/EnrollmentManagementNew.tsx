@@ -1170,13 +1170,16 @@ const EnrollmentManagementNew: React.FC = () => {
         visible={showNotifyModal}
         onClose={() => setShowNotifyModal(false)}
         activityId={id || ""}
+        activityTitle={activity?.title}
         enrollments={enrollments}
         filteredEnrollments={filteredEnrollments}
         selectedIds={selectedIds}
-        onSuccess={(count) => {
-          console.log(
-            `[EnrollmentManagement] 通知发送成功，发送数量: ${count}`,
-          );
+        onSuccess={(result) => {
+          console.log("[EnrollmentManagement] 通知发送完成", {
+            inAppSucceeded: result.in_app_success_count,
+            smsQueued: result.sms_queued_count,
+            skipped: result.skipped_count,
+          });
           setSelectedIds([]);
         }}
       />
