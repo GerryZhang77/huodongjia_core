@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Bell,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Loader2,
@@ -20,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { Dialog } from "@/components/ui";
+import { Toast } from "@/components/ui/Toast";
 import {
   previewEnrollmentNotification,
   sendEnrollmentNotification,
@@ -43,11 +43,6 @@ interface SendNotificationModalProps {
 }
 
 const APPROVAL_NOTIFICATION_CONTENT = "报名审核通过";
-
-const CHANNEL_LABELS: Record<EnrollmentNotificationChannel, string> = {
-  in_app: "站内通知",
-  sms: "短信通知",
-};
 
 const createIdempotencyKey = () => {
   const browserCrypto = globalThis.crypto;
@@ -99,7 +94,6 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
   const [isPreparingConfirmation, setIsPreparingConfirmation] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sendResult, setSendResult] = useState<EnrollmentNotificationSendResult | null>(null);
   const [confirmPreview, setConfirmPreview] = useState<EnrollmentNotificationPreview | null>(null);
   const [confirmEnrollmentIds, setConfirmEnrollmentIds] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -116,7 +110,6 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
     setChannels(new Set(["in_app"]));
     setRecipientSearch("");
     setRecipientsExpanded(false);
-    setSendResult(null);
     setConfirmPreview(null);
     setConfirmEnrollmentIds([]);
     setConfirmOpen(false);
@@ -304,14 +297,15 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
             }
           : undefined,
       });
-      setSendResult(result);
       onSuccess?.(result);
+      onClose();
+      Toast.show({ icon: "success", content: "发送成功" });
     } catch (sendError) {
       setError(getErrorMessage(sendError, "发送失败，请稍后重试"));
     } finally {
       setIsSending(false);
     }
-  }, [activityId, activityTitle, channels, confirmEnrollmentIds, confirmPreview, idempotencyKey, onSuccess]);
+  }, [activityId, activityTitle, channels, confirmEnrollmentIds, confirmPreview, idempotencyKey, onClose, onSuccess]);
 
   if (!visible) return null;
 
@@ -336,52 +330,12 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
-            {sendResult ? (
-              <div className="space-y-5 py-4">
-                <div className="flex flex-col items-center">
-                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                    <CheckCircle2 size={32} className="text-green-500" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">通知处理完成</h3>
-                  {sendResult.idempotent_replay ? (
-                    <p className="mt-1 text-sm text-gray-500">已返回同一请求的原发送结果，未重复发送。</p>
-                  ) : null}
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-xl bg-blue-50 p-3 text-center">
-                    <p className="text-xl font-semibold text-blue-600">{sendResult.in_app_success_count}</p>
-                    <p className="text-xs text-gray-600">站内成功</p>
-                  </div>
-                  <div className="rounded-xl bg-emerald-50 p-3 text-center">
-                    <p className="text-xl font-semibold text-emerald-600">{sendResult.sms_queued_count}</p>
-                    <p className="text-xs text-gray-600">短信入队</p>
-                  </div>
-                  <div className="rounded-xl bg-amber-50 p-3 text-center">
-                    <p className="text-xl font-semibold text-amber-600">{sendResult.skipped_count}</p>
-                    <p className="text-xs text-gray-600">跳过人数</p>
-                  </div>
-                </div>
-                {sendResult.skip_reasons.length > 0 ? (
-                  <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
-                    <p className="mb-2 text-sm font-medium text-amber-800">跳过原因</p>
-                    <ul className="space-y-1 text-sm text-amber-700">
-                      {sendResult.skip_reasons.map((item) => (
-                        <li key={`${item.channel}:${item.code}`}>
-                          {CHANNEL_LABELS[item.channel]}：{item.label}（{item.count} 人）
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+            {error ? (
+              <div className="flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 p-3">
+                <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-500" />
+                <span className="text-sm text-red-600">{error}</span>
               </div>
-            ) : (
-              <>
-                {error ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 p-3">
-                    <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-500" />
-                    <span className="text-sm text-red-600">{error}</span>
-                  </div>
-                ) : null}
+            ) : null}
 
                 <section>
                   <label className="mb-2 block text-sm font-medium text-gray-700">通知方式</label>
@@ -534,31 +488,21 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                     </div>
                   </section>
                 ) : null}
-              </>
-            )}
           </div>
 
           <div className="flex items-center justify-end gap-2 border-t border-gray-100 bg-gray-50 px-4 py-3">
-            {sendResult ? (
-              <button type="button" className="rounded-lg bg-green-500 px-6 py-2 text-sm font-medium text-white hover:bg-green-600" onClick={onClose}>
-                完成
-              </button>
-            ) : (
-              <>
-                <button type="button" className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100" onClick={onClose} disabled={isSending}>
-                  取消
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={prepareConfirmation}
-                  disabled={isLoadingPreview || isPreparingConfirmation || isSending || selectedEnrollmentIds.size === 0}
-                >
-                  {isPreparingConfirmation ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  {isPreparingConfirmation ? "正在核对..." : "核对并发送"}
-                </button>
-              </>
-            )}
+            <button type="button" className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100" onClick={onClose} disabled={isSending}>
+              取消
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={prepareConfirmation}
+              disabled={isLoadingPreview || isPreparingConfirmation || isSending || selectedEnrollmentIds.size === 0}
+            >
+              {isPreparingConfirmation ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              {isPreparingConfirmation ? "正在核对..." : "核对并发送"}
+            </button>
           </div>
         </div>
       </div>

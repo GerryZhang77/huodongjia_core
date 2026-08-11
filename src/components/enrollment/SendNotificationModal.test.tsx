@@ -7,10 +7,16 @@ const apiMocks = vi.hoisted(() => ({
   preview: vi.fn(),
   send: vi.fn(),
 }));
+const toastMocks = vi.hoisted(() => ({
+  show: vi.fn(),
+}));
 
 vi.mock("@/features/enrollment/services/enrollmentNotificationApi", () => ({
   previewEnrollmentNotification: apiMocks.preview,
   sendEnrollmentNotification: apiMocks.send,
+}));
+vi.mock("@/components/ui/Toast", () => ({
+  Toast: { show: toastMocks.show },
 }));
 
 const enrollments: Enrollment[] = [
@@ -95,6 +101,7 @@ describe("SendNotificationModal", () => {
   beforeEach(() => {
     apiMocks.preview.mockReset();
     apiMocks.send.mockReset();
+    toastMocks.show.mockReset();
     apiMocks.preview.mockImplementation(({ enrollmentIds, channels }) =>
       Promise.resolve(makePreview(enrollmentIds, channels)));
     apiMocks.send.mockResolvedValue({
@@ -117,6 +124,7 @@ describe("SendNotificationModal", () => {
   });
 
   it("restores selected rows, supports filtered selection, channel counts and exact send ids", async () => {
+    const onClose = vi.fn();
     render(
       <SendNotificationModal
         visible
@@ -124,7 +132,7 @@ describe("SendNotificationModal", () => {
         activityTitle="测试活动"
         enrollments={enrollments}
         selectedIds={["enrollment-2"]}
-        onClose={vi.fn()}
+        onClose={onClose}
       />,
     );
 
@@ -165,9 +173,12 @@ describe("SendNotificationModal", () => {
         message: "报名审核通过",
       },
     });
-    await waitFor(() => expect(screen.getByText("通知处理完成")).toBeTruthy());
-    expect(screen.getByText("短信入队").parentElement?.textContent).toContain("1");
-    expect(screen.getByText("跳过原因").parentElement?.textContent).toContain("没有已验证的有效手机号");
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(toastMocks.show).toHaveBeenCalledWith({
+      icon: "success",
+      content: "发送成功",
+    });
+    expect(screen.queryByText("通知处理完成")).toBeNull();
   });
 
   it("shows the concrete reason when SMS is unavailable", async () => {
