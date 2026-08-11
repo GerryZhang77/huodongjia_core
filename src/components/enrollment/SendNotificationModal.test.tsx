@@ -136,6 +136,11 @@ describe("SendNotificationModal", () => {
       />,
     );
 
+    const notificationDialog = screen.getByRole("dialog", { name: "发送通知" });
+    expect(notificationDialog.className).toContain("z-[60]");
+    const modalFooter = screen.getByRole("button", { name: "取消" }).parentElement;
+    expect(modalFooter?.className).toContain("safe-area-pb");
+    expect(modalFooter?.className).toContain("shrink-0");
     expect(screen.getAllByText("已选择 1 人").length).toBeGreaterThan(0);
     expect(screen.queryByText("站内消息模板")).toBeNull();
     expect(screen.getByText("站内通知内容").parentElement?.textContent).toContain("报名审核通过");
@@ -152,8 +157,9 @@ describe("SendNotificationModal", () => {
     expect(screen.getAllByText("已选择 2 人").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "短信通知" }));
-    expect(screen.getByText("报名审核通过短信")).toBeTruthy();
-    expect(screen.getByText("短信预计接收").parentElement?.textContent).toContain("1 人");
+    expect(screen.queryByText("报名审核通过短信")).toBeNull();
+    expect(screen.queryByText(/短信模板参数由后端生成/)).toBeNull();
+    expect(screen.getByText("短信预计").parentElement?.textContent).toContain("1 人");
     expect(screen.getByText(/无有效手机号 1 人/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "核对并发送" }));

@@ -311,7 +311,12 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 py-4">
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-3 py-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="发送通知"
+      >
         <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <div>
@@ -450,20 +455,23 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                   ) : null}
                 </section>
 
-                <section className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3">
-                    <p className="text-xs text-gray-500">站内通知预计接收</p>
-                    <p className="mt-1 text-xl font-semibold text-blue-600">{selectedSummary.inAppCount} 人</p>
+                <section className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
+                  <div className="grid grid-cols-2 divide-x divide-gray-200 text-sm">
+                    <div className="flex items-center justify-between pr-3">
+                      <span className="text-gray-500">站内预计</span>
+                      <span className="font-semibold text-blue-600">{selectedSummary.inAppCount} 人</span>
+                    </div>
+                    <div className="flex items-center justify-between pl-3">
+                      <span className="text-gray-500">短信预计</span>
+                      <span className="font-semibold text-emerald-600">{selectedSummary.smsCount} 人</span>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
-                    <p className="text-xs text-gray-500">短信预计接收</p>
-                    <p className="mt-1 text-xl font-semibold text-emerald-600">{selectedSummary.smsCount} 人</p>
-                    {channels.has("sms") ? (
-                      <p className="mt-1 text-xs text-gray-500">
+                  {channels.has("sms")
+                    && (selectedSummary.invalidPhoneCount > 0 || selectedSummary.smsDisabledCount > 0) ? (
+                      <p className="mt-2 border-t border-gray-200 pt-2 text-xs text-amber-700">
                         无有效手机号 {selectedSummary.invalidPhoneCount} 人 · 已关闭短信 {selectedSummary.smsDisabledCount} 人
                       </p>
                     ) : null}
-                  </div>
                 </section>
 
                 {channels.has("in_app") ? (
@@ -475,22 +483,9 @@ const SendNotificationModal: React.FC<SendNotificationModalProps> = ({
                   </section>
                 ) : null}
 
-                {channels.has("sms") ? (
-                  <section className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
-                    <div className="flex items-start gap-2">
-                      <Smartphone size={17} className="mt-0.5 shrink-0 text-emerald-600" />
-                      <div>
-                        <p className="text-sm font-medium text-emerald-800">报名审核通过短信</p>
-                        <p className="mt-1 text-xs leading-5 text-emerald-700">
-                          仅向当前报名状态为“已通过”的接收对象发送，短信模板参数由后端生成。
-                        </p>
-                      </div>
-                    </div>
-                  </section>
-                ) : null}
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-gray-100 bg-gray-50 px-4 py-3">
+          <div className="safe-area-pb flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 bg-gray-50 px-4 pt-3">
             <button type="button" className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100" onClick={onClose} disabled={isSending}>
               取消
             </button>
