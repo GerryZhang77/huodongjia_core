@@ -27,6 +27,9 @@ const userStatusConfig = {
   recruiting: { color: "primary" as const, text: "报名中" },
   pending: { color: "warning" as const, text: "待审核" },
   approved: { color: "success" as const, text: "已通过" },
+  rejected: { color: "gray" as const, text: "审核结束" },
+  waitlist: { color: "warning" as const, text: "候补中" },
+  cancelled: { color: "gray" as const, text: "已取消" },
   completed: { color: "gray" as const, text: "已结束" },
 };
 

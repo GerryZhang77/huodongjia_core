@@ -1173,7 +1173,7 @@ const UserRegistration: FC = () => {
       bgColor="bg-gray-50 dark:bg-gray-900"
     >
       <div className="mx-auto min-h-screen w-full max-w-3xl pb-[140px] md:pb-28">
-        {isEditMode && editContext?.updateRequest && (
+        {isEditMode && editContext?.canEdit !== false && editContext?.updateRequest && (
           <div className="px-4 pt-5 md:px-6">
             <div className="rounded-xl border border-orange-200 bg-orange-50 px-3.5 py-3 text-sm text-orange-800 dark:border-orange-800/50 dark:bg-orange-900/20 dark:text-orange-300">
               <p className="font-medium">请补充或确认报名资料</p>
@@ -1212,7 +1212,7 @@ const UserRegistration: FC = () => {
             >
               <p className="font-medium">{capacityPresentation.label}</p>
               <p className="mt-1 text-xs opacity-75">
-                待审核和已通过报名占用名额；拒绝、候补或取消后会自动释放。
+                待审核和已通过报名占用名额；审核结束、候补或取消后会自动释放。
               </p>
             </div>
           </div>

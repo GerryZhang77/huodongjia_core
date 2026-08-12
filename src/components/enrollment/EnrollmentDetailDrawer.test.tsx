@@ -38,7 +38,7 @@ describe("EnrollmentDetailDrawer", () => {
     expect(dialog.className).toContain("h-[85dvh]");
 
     const approveButton = screen.getByRole("button", { name: "通过" });
-    const rejectButton = screen.getByRole("button", { name: "拒绝" });
+    const rejectButton = screen.getByRole("button", { name: "结束审核" });
     const footer = approveButton.closest("footer");
     expect(footer?.className).toContain("shrink-0");
     expect(footer?.className).toContain("safe-area-pb");

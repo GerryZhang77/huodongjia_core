@@ -8,7 +8,7 @@
 export type UserEnrollmentStatus =
   | "pending" // 待审核
   | "approved" // 已通过
-  | "rejected" // 已拒绝
+  | "rejected" // 用户端展示为审核结束
   | "waitlist" // 候补
   | "cancelled"; // 已取消
 

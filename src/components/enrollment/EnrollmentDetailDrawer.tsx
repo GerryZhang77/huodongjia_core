@@ -40,7 +40,7 @@ export interface EnrollmentDetailDrawerProps {
   onClose: () => void;
   /** 通过回调 */
   onApprove?: (id: string) => void;
-  /** 拒绝回调 */
+  /** 静默结束审核回调 */
   onReject?: (id: string) => void;
   /** 发送通知回调 */
   onNotify?: (id: string) => void;
@@ -520,7 +520,7 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
                 onClick={() => onReject?.(enrollment.id)}
               >
                 <XCircle size={16} />
-                拒绝
+                结束审核
               </button>
               <button
                 type="button"

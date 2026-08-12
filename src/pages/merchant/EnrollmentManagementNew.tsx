@@ -22,6 +22,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Dialog } from "antd-mobile";
 import {
   Users,
   Upload,
@@ -688,10 +689,23 @@ const EnrollmentManagementNew: React.FC = () => {
     });
   };
 
-  const handleReject = (enrollmentId: string) => {
-    updateStatus([enrollmentId], "rejected", () => {
-      setShowDetailDrawer(false);
+  const handleReject = async (enrollmentId: string) => {
+    const confirmed = await Dialog.confirm({
+      title: "结束报名审核",
+      content:
+        "结束审核后会立即释放该报名占用的名额，不会向用户发送站内通知或短信。用户端仅显示“审核结束”，且不能重新提交。",
+      confirmText: "确认结束",
+      cancelText: "取消",
     });
+    if (!confirmed) return;
+    updateStatus(
+      [enrollmentId],
+      "rejected",
+      () => {
+        setShowDetailDrawer(false);
+      },
+      { notificationPolicy: "silent" },
+    );
   };
 
   const refreshDetailEnrollment = async (enrollmentId: string) => {
@@ -755,11 +769,24 @@ const EnrollmentManagementNew: React.FC = () => {
     });
   };
 
-  const handleBatchReject = () => {
+  const handleBatchReject = async () => {
     const ids = [...selectedIds];
-    updateStatus(ids, "rejected", () => {
-      exitSelectionMode();
+    const confirmed = await Dialog.confirm({
+      title: `结束 ${ids.length} 条报名审核`,
+      content:
+        "结束审核后会立即释放其中仍占用的名额，不会向这些用户发送站内通知或短信。用户端仅显示“审核结束”，且不能重新提交。",
+      confirmText: "确认结束",
+      cancelText: "取消",
     });
+    if (!confirmed) return;
+    updateStatus(
+      ids,
+      "rejected",
+      () => {
+        exitSelectionMode();
+      },
+      { notificationPolicy: "silent" },
+    );
   };
 
   // ====== 导入导出 ======
@@ -1021,7 +1048,7 @@ const EnrollmentManagementNew: React.FC = () => {
                     className="h-8 px-3 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
                     onClick={handleBatchReject}
                   >
-                    批量拒绝
+                    批量结束审核
                   </button>
                   <button
                     className="h-8 px-3 rounded-lg bg-accent-400 text-white text-sm font-medium hover:bg-accent-500 transition-colors"

@@ -112,10 +112,10 @@ const MyActivityCard: FC<{
       label: "已通过",
     },
     rejected: {
-      bg: "bg-red-50 dark:bg-red-900/30",
-      text: "text-red-600 dark:text-red-400",
+      bg: "bg-gray-50 dark:bg-gray-700",
+      text: "text-gray-500 dark:text-gray-400",
       icon: XCircle,
-      label: "未通过",
+      label: "审核结束",
     },
     completed: {
       bg: "bg-gray-50 dark:bg-gray-700",

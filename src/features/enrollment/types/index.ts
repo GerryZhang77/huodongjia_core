@@ -210,6 +210,7 @@ export interface UpdateEnrollmentStatusRequest {
   enrollmentIds: string[];
   status: EnrollmentStatus;
   reason?: string;
+  notificationPolicy?: "notify" | "silent";
 }
 
 /**

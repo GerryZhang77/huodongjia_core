@@ -148,7 +148,7 @@ export type UserActivityStatus =
   | "recruiting"
   | "pending"
   | "approved"
-  | "rejected"
+  | "rejected" // 用户端展示为“审核结束”
   | "waitlist"
   | "cancelled"
   | "completed";

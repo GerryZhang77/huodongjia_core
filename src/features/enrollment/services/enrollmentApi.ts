@@ -217,10 +217,18 @@ export const updateEnrollmentStatus = async (
     inAppNotificationTargetCount: number;
     smsQueuedCount: number;
     smsSkippedCount: number;
+    releasedCapacityCount: number;
+    notificationPolicy: "notify" | "silent";
   };
 }> => {
-  const { activityId, enrollmentIds, status } = request;
-  return api.patch(`/api/enrollments/${activityId}/status`, { enrollment_ids: enrollmentIds, status });
+  const { activityId, enrollmentIds, status, notificationPolicy } = request;
+  return api.patch(`/api/enrollments/${activityId}/status`, {
+    enrollment_ids: enrollmentIds,
+    status,
+    ...(notificationPolicy
+      ? { notification_policy: notificationPolicy }
+      : {}),
+  });
 };
 
 /**

@@ -18,6 +18,13 @@ const baseActivity: UserActivity = {
 };
 
 describe("getRegistrationAvailability", () => {
+  it("treats a silently closed review as final for the applicant", () => {
+    expect(getRegistrationAvailability({
+      ...baseActivity,
+      userStatus: "rejected",
+    })).toEqual({ canRegister: false, reason: "审核已结束" });
+  });
+
   it("allows registration after rejected applications release capacity", () => {
     expect(getRegistrationAvailability({
       ...baseActivity,

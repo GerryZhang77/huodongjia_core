@@ -73,10 +73,11 @@ const statusConfig: Record<
     btnStyle: "bg-primary-400 text-white hover:bg-primary-500",
   },
   rejected: {
-    label: "未通过",
-    color: "bg-error-500",
-    btnLabel: "修改后重新提交",
-    btnStyle: "bg-primary-400 text-white hover:bg-primary-500",
+    label: "审核结束",
+    color: "bg-gray-400",
+    btnLabel: "审核已结束",
+    btnStyle: "bg-gray-200 text-gray-500",
+    disabled: true,
   },
   waitlist: {
     label: "候补中",
@@ -273,7 +274,9 @@ const UserActivityDetail: FC = () => {
   }
 
   const config = statusConfig[activity.userStatus] || statusConfig.recruiting;
-  const enrollmentUpdateRequired = activity.enrollment?.updateRequired === true;
+  const enrollmentUpdateRequired =
+    activity.userStatus !== "rejected" &&
+    activity.enrollment?.updateRequired === true;
   const registrationAvailability = getRegistrationAvailability(activity);
   const displayedParticipantCount =
     enrolledCount ?? activity.currentParticipants;
@@ -324,24 +327,30 @@ const UserActivityDetail: FC = () => {
             disabled: true,
             variant: "light" as const,
           }
-      : enrollmentUpdateRequired
+      : activity.userStatus === "rejected"
         ? {
-            btnLabel: "完善报名资料",
-            disabled: false,
-            variant: "primary" as const,
-          }
-      : activity.userStatus === "recruiting" &&
-          !registrationAvailability.canRegister
-        ? {
-            btnLabel: registrationAvailability.reason || "暂不可报名",
+            btnLabel: "审核已结束",
             disabled: true,
             variant: "light" as const,
           }
-        : {
-            btnLabel: config.btnLabel,
-            disabled: config.disabled,
-            variant: participantVariant,
-          };
+        : enrollmentUpdateRequired
+          ? {
+              btnLabel: "完善报名资料",
+              disabled: false,
+              variant: "primary" as const,
+            }
+          : activity.userStatus === "recruiting" &&
+              !registrationAvailability.canRegister
+            ? {
+                btnLabel: registrationAvailability.reason || "暂不可报名",
+                disabled: true,
+                variant: "light" as const,
+              }
+            : {
+                btnLabel: config.btnLabel,
+                disabled: config.disabled,
+                variant: participantVariant,
+              };
 
   const handlePrimaryAction = () => {
     if (!id) return;
@@ -353,6 +362,7 @@ const UserActivityDetail: FC = () => {
       if (isOrganizer) navigate(`/dashboard/activity/${id}/enrollment`);
       return;
     }
+    if (activity.userStatus === "rejected") return;
     if (
       activity.userStatus === "recruiting" &&
       registrationAvailability.canRegister
@@ -360,7 +370,7 @@ const UserActivityDetail: FC = () => {
       navigate(registrationPath);
     } else if (
       enrollmentUpdateRequired ||
-      ["pending", "rejected", "waitlist"].includes(activity.userStatus)
+      ["pending", "waitlist"].includes(activity.userStatus)
     ) {
       navigate(registrationPath);
     } else if (activity.userStatus === "approved") {
@@ -764,6 +774,17 @@ const UserActivityDetail: FC = () => {
                 />
                 <p className="text-xs text-warning-700 dark:text-warning-400">
                   报名审核中，请耐心等待
+                </p>
+              </div>
+            )}
+            {activity.userStatus === "rejected" && (
+              <div className="mt-5 flex items-center gap-2 rounded-xl bg-gray-100 p-3 dark:bg-gray-700/40">
+                <AlertCircle
+                  size={16}
+                  className="flex-shrink-0 text-gray-500 dark:text-gray-400"
+                />
+                <p className="text-xs text-gray-600 dark:text-gray-300">
+                  该报名审核流程已结束
                 </p>
               </div>
             )}

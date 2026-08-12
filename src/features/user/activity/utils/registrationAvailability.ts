@@ -28,7 +28,7 @@ export function getRegistrationAvailability(
     return { canRegister: false, reason: "已报名通过" };
   }
   if (activity.userStatus === "rejected") {
-    return { canRegister: false, reason: "报名未通过" };
+    return { canRegister: false, reason: "审核已结束" };
   }
   if (activity.userStatus === "waitlist") {
     return { canRegister: false, reason: "候补中" };

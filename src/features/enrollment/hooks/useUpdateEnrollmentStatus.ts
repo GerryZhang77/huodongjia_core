@@ -20,10 +20,12 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
     mutationFn: ({
       enrollmentIds,
       status,
+      notificationPolicy,
     }: {
       enrollmentIds: string[];
       status: EnrollmentStatus;
-    }) => updateStatusApi({ activityId, enrollmentIds, status }),
+      notificationPolicy?: "notify" | "silent";
+    }) => updateStatusApi({ activityId, enrollmentIds, status, notificationPolicy }),
     onMutate: async ({ enrollmentIds, status }) => {
       const listKey = merchantQueryKeys.enrollmentList(activityId);
       await queryClient.cancelQueries({ queryKey: listKey });
@@ -56,15 +58,21 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
       return { snapshots };
     },
     onSuccess: (result, { enrollmentIds, status }) => {
+      const updatedCount = result.data?.updatedCount ?? enrollmentIds.length;
+      if (status === "rejected") {
+        const releasedCapacityCount = result.data?.releasedCapacityCount ?? 0;
+        Toast.show({
+          icon: "success",
+          content: `已结束 ${updatedCount} 条报名审核，释放 ${releasedCapacityCount} 个名额，未通知用户`,
+        });
+        return;
+      }
       const statusText =
         status === "approved"
           ? "通过"
-          : status === "rejected"
-            ? "拒绝"
-            : status === "waitlist"
-              ? "加入候补"
-              : "更新";
-      const updatedCount = result.data?.updatedCount ?? enrollmentIds.length;
+          : status === "waitlist"
+            ? "加入候补"
+            : "更新";
       Toast.show({
         icon: "success",
         content: `已${statusText} ${updatedCount} 条报名`,
@@ -105,13 +113,17 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
   const updateStatus = (
     enrollmentIds: string[],
     status: EnrollmentStatus,
-    onSuccess?: () => void
+    onSuccess?: () => void,
+    options?: { notificationPolicy?: "notify" | "silent" },
   ) => {
     if (enrollmentIds.length === 0) {
       Toast.show({ icon: "fail", content: "请先选择要操作的报名" });
       return;
     }
-    mutation.mutate({ enrollmentIds, status }, { onSuccess });
+    mutation.mutate(
+      { enrollmentIds, status, notificationPolicy: options?.notificationPolicy },
+      { onSuccess },
+    );
   };
 
   return { updateStatus, loading: mutation.isPending };
