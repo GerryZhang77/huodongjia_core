@@ -6,46 +6,28 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import type { Enrollment } from "@/features/enrollment/types";
+import {
+  buildEnrollmentExportRow,
+  collectEnrollmentExportFields,
+  type EnrollmentExportField,
+} from "@/features/enrollment/utils/enrollmentExportModel";
 
-/**
- * 格式化日期时间
- */
-const formatDateTime = (dateString?: string): string => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-/**
- * 格式化性别
- */
-const formatGender = (gender?: string): string => {
-  const genderMap: Record<string, string> = {
-    male: "男",
-    female: "女",
-    other: "其他",
-  };
-  return gender ? genderMap[gender] || gender : "";
-};
-
-/**
- * 格式化状态
- */
-const formatStatus = (status: string): string => {
-  const statusMap: Record<string, string> = {
-    pending: "待审核",
-    approved: "已通过",
-    rejected: "已拒绝",
-    cancelled: "已取消",
-  };
-  return statusMap[status] || status;
-};
+const BASE_EXPORT_FIELDS: EnrollmentExportField[] = [
+  { key: "name", label: "姓名", enabled: true },
+  { key: "gender", label: "性别", enabled: true },
+  { key: "age", label: "年龄", enabled: true },
+  { key: "phone", label: "手机号", enabled: true },
+  { key: "email", label: "邮箱", enabled: true },
+  { key: "occupation", label: "职业", enabled: true },
+  { key: "company", label: "公司", enabled: true },
+  { key: "industry", label: "行业", enabled: true },
+  { key: "city", label: "城市", enabled: true },
+  { key: "tags", label: "标签", enabled: true },
+  { key: "registrationTypeName", label: "报名类型", enabled: true },
+  { key: "status", label: "状态", enabled: true },
+  { key: "enrolledAt", label: "报名时间", enabled: true },
+  { key: "updatedAt", label: "更新时间", enabled: true },
+];
 
 /**
  * 导出报名数据为 Excel
@@ -57,64 +39,14 @@ export const exportEnrollmentsToExcel = (
   activityTitle: string = "活动"
 ): void => {
   try {
-    // 1. 准备表头
-    const headers = [
-      "姓名",
-      "性别",
-      "年龄",
-      "手机号",
-      "邮箱",
-      "职业",
-      "公司",
-      "行业",
-      "城市",
-      "标签",
-      "报名类型",
-      "状态",
-      "报名时间",
-      "更新时间",
+    const fields = [
+      ...BASE_EXPORT_FIELDS,
+      ...collectEnrollmentExportFields(enrollments),
     ];
-
-    // 2. 收集所有自定义字段的键
-    const customFieldKeys = new Set<string>();
-    enrollments.forEach((enrollment) => {
-      if (enrollment.customFields) {
-        Object.keys(enrollment.customFields).forEach((key) =>
-          customFieldKeys.add(key)
-        );
-      }
-    });
-
-    // 3. 添加自定义字段到表头
-    const allHeaders = [...headers, ...Array.from(customFieldKeys)];
-
-    // 4. 转换数据为二维数组
-    const data = enrollments.map((enrollment) => {
-      // 标准字段
-      const row = [
-        enrollment.name || "",
-        formatGender(enrollment.gender),
-        enrollment.age?.toString() || "",
-        enrollment.phone || "",
-        enrollment.email || "",
-        enrollment.occupation || "",
-        enrollment.company || "",
-        enrollment.industry || "",
-        enrollment.city || "",
-        enrollment.tags?.join(", ") || "",
-        enrollment.registrationTypeName || "",
-        formatStatus(enrollment.status),
-        formatDateTime(enrollment.enrolledAt),
-        formatDateTime(enrollment.updatedAt),
-      ];
-
-      // 自定义字段
-      customFieldKeys.forEach((key) => {
-        const value = enrollment.customFields?.[key];
-        row.push(value != null ? String(value) : "");
-      });
-
-      return row;
+    const allHeaders = fields.map((field) => field.label);
+    const data = enrollments.map((enrollment, index) => {
+      const row = buildEnrollmentExportRow(enrollment, index, fields);
+      return fields.map((field) => row[field.label] ?? "");
     });
 
     // 5. 将表头和数据合并

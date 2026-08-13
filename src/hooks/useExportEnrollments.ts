@@ -7,6 +7,10 @@ import { useState, useCallback } from "react";
 import { Toast } from "@/components/ui/Toast";
 import * as XLSX from "xlsx";
 import type { Enrollment } from "@/types/enrollment";
+import {
+  buildEnrollmentExportRow,
+  DEFAULT_ENROLLMENT_EXPORT_FIELDS,
+} from "@/features/enrollment/utils/enrollmentExportModel";
 
 interface UseExportEnrollmentsOptions {
   activityId?: string;
@@ -18,26 +22,6 @@ interface UseExportEnrollmentsReturn {
   exportToExcel: (enrollments: Enrollment[], filename?: string) => void;
   downloadFromServer: (token: string, activityId: string) => Promise<void>;
 }
-
-/**
- * 状态标签映射
- */
-const STATUS_MAP: Record<string, string> = {
-  approved: "已通过",
-  pending: "待审核",
-  rejected: "已拒绝",
-  cancelled: "已取消",
-  waitlist: "候补",
-};
-
-/**
- * 性别映射
- */
-const GENDER_MAP: Record<string, string> = {
-  male: "男",
-  female: "女",
-  other: "其他",
-};
 
 /**
  * 导出报名数据 Hook
@@ -62,25 +46,10 @@ export function useExportEnrollments(
 
       try {
         // 转换数据格式
-        const exportData = enrollments.map((e, index) => ({
-          序号: index + 1,
-          姓名: e.name,
-          性别: GENDER_MAP[e.gender || ""] || e.gender || "",
-          年龄: e.age || "",
-          手机号: e.phone || "",
-          邮箱: e.email || "",
-          职业: e.occupation || "",
-          公司: e.company || "",
-          城市: e.city || "",
-          兴趣标签: e.tags?.join("、") || "",
-          报名类型: e.registrationTypeName || "",
-          个人简介: e.bio || "",
-          匹配需求: e.matchingNeeds || "",
-          状态: STATUS_MAP[e.status] || e.status,
-          报名时间: e.enrolledAt
-            ? new Date(e.enrolledAt).toLocaleString("zh-CN")
-            : "",
-        }));
+        const fields = DEFAULT_ENROLLMENT_EXPORT_FIELDS;
+        const exportData = enrollments.map((enrollment, index) =>
+          buildEnrollmentExportRow(enrollment, index, fields),
+        );
 
         // 创建工作簿
         const workbook = XLSX.utils.book_new();

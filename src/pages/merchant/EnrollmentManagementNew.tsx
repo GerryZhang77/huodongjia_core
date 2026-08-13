@@ -1234,7 +1234,7 @@ const EnrollmentManagementNew: React.FC = () => {
         visible={showExportModal}
         onClose={() => setShowExportModal(false)}
         activityId={id || ""}
-        activityTitle="活动"
+        activityTitle={activity?.title}
         enrollments={filteredEnrollments}
       />
 

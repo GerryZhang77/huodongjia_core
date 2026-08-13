@@ -18,6 +18,11 @@ import type {
   Gender,
   EnrollmentStatus,
 } from "../types";
+import {
+  normalizeEnrollmentGender,
+  resolveEnrollmentFormGender,
+  resolveEnrollmentFormName,
+} from "../utils/enrollmentFieldResolver";
 
 /**
  * 后端返回的原始报名数据结构（数据库字段命名）
@@ -35,6 +40,7 @@ interface BackendEnrollment {
   /** 报名表单中"姓名"字段（form_data['姓名']） */
   formName?: string;
   avatar?: string | null;
+  gender?: string | null;
   sex?: string | null;
   age?: number | null;
   occupation?: string | null;
@@ -99,16 +105,27 @@ const transformBackendEnrollment = (backend: BackendEnrollment): Enrollment => {
     | undefined;
 
   const registrationTypeName = backend.registrationTypeName || undefined;
+  const fieldSource = {
+    formAnswers: backend.formAnswers || {},
+    formData: otherInfo,
+    customFields: otherInfo,
+    formSchemaSnapshot: backend.formSchemaSnapshot || [],
+  };
+  const formName = backend.formName?.trim() || resolveEnrollmentFormName(fieldSource);
+  const gender =
+    normalizeEnrollmentGender(backend.gender)
+    || normalizeEnrollmentGender(backend.sex)
+    || resolveEnrollmentFormGender(fieldSource);
 
   return {
     id: backend.id,
     activityId: backend.event_id ?? backend.eventId ?? "",
     userId: backend.user_id ?? backend.userId ?? undefined,
-    name: backend.name,
+    name: backend.name?.trim() || backend.profileName?.trim() || formName || "",
     profileName: backend.profileName || undefined,
-    formName: backend.formName || undefined,
+    formName: formName || undefined,
     avatar: backend.avatar ?? null,
-    gender: (backend.sex as Gender) || undefined,
+    gender: (gender as Gender) || undefined,
     age: backend.age || undefined,
     phone,
     email,
