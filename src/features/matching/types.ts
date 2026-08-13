@@ -13,6 +13,15 @@ export type MatchOperator =
   | "opposite"
   | "distance_decay";
 
+export type MatchRuleInvalidReason =
+  | "FIELD_REMOVED"
+  | "TECHNICAL_FALLBACK"
+  | "PRIVATE_FIELD"
+  | "REGISTRATION_TYPE_UNAVAILABLE"
+  | "INSUFFICIENT_COVERAGE";
+
+export type MatchRuleFieldStatus = MatchRuleInvalidReason | "ACTIVE";
+
 // 兼容旧页面保留的规则类型别名
 export type RuleType =
   | MatchOperator
@@ -32,6 +41,13 @@ export interface MatchingRule {
   target_field?: string;
   source_registration_type_id?: string;
   target_registration_type_id?: string;
+  source_label_snapshot?: string;
+  target_label_snapshot?: string;
+  source_field_status?: MatchRuleFieldStatus;
+  target_field_status?: MatchRuleFieldStatus;
+  valid?: boolean;
+  invalid_reason?: MatchRuleInvalidReason | null;
+  can_match?: boolean;
   operator?: MatchOperator;
   weight: number;
   enabled: boolean;

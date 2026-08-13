@@ -6,7 +6,9 @@ import {
   DEFAULT_MATCH_OPERATOR,
   OPERATOR_OPTIONS,
   getRuleDuplicateKey,
+  getFieldOption,
   getRuleFieldValue,
+  getRuleInvalidMessage,
   getRuleInfluencePercent,
   normalizeRuleWeight,
   parseRuleFieldValue,
@@ -73,6 +75,7 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
     const ensureCurrentField = (
       key?: string,
       registrationTypeId?: string,
+      labelSnapshot?: string,
     ) => {
       if (
         !key ||
@@ -88,20 +91,26 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
 
       nextOptions.push({
         key,
-        label: key,
+        label:
+          labelSnapshot &&
+          !(key.startsWith("custom_") && labelSnapshot === key)
+            ? labelSnapshot
+            : "已删除字段（需重新选择）",
         registrationTypeId,
-        groupName: "当前配置",
-        canMatch: true,
+        groupName: "不可用的当前字段",
+        canMatch: false,
       });
     };
 
     ensureCurrentField(
       draft.source_field,
       draft.source_registration_type_id,
+      draft.source_label_snapshot,
     );
     ensureCurrentField(
       draft.target_field,
       draft.target_registration_type_id,
+      draft.target_label_snapshot,
     );
     return nextOptions;
   }, [draft, fieldOptions]);
@@ -136,6 +145,18 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
       )
     : "";
   const selectedValues = new Set([sourceValue, targetValue]);
+  const sourceOption = getFieldOption(
+    availableOptions,
+    draft.source_field,
+    draft.source_registration_type_id,
+  );
+  const targetOption = getFieldOption(
+    availableOptions,
+    draft.target_field,
+    draft.target_registration_type_id,
+  );
+  const invalidSelection =
+    sourceOption?.canMatch === false || targetOption?.canMatch === false;
   const incomplete =
     !draft.source_field || !draft.target_field || !draft.operator;
   const duplicateKey = getRuleDuplicateKey(draft);
@@ -156,6 +177,18 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
     value: string,
   ) => {
     const { fieldKey, registrationTypeId } = parseRuleFieldValue(value);
+    const selectedOption = getFieldOption(
+      fieldOptions,
+      fieldKey,
+      registrationTypeId,
+    );
+    const validityReset = {
+      valid: undefined,
+      invalid_reason: null,
+      can_match: undefined,
+      source_field_status: undefined,
+      target_field_status: undefined,
+    } as const;
 
     if (slot === "both") {
       setDraft((current) =>
@@ -166,6 +199,9 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
               target_field: fieldKey,
               source_registration_type_id: registrationTypeId,
               target_registration_type_id: registrationTypeId,
+              source_label_snapshot: selectedOption?.label,
+              target_label_snapshot: selectedOption?.label,
+              ...validityReset,
             }
           : current,
       );
@@ -178,6 +214,8 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
             ...current,
             [`${slot}_field`]: fieldKey,
             [`${slot}_registration_type_id`]: registrationTypeId,
+            [`${slot}_label_snapshot`]: selectedOption?.label,
+            ...validityReset,
           }
         : current,
     );
@@ -253,12 +291,17 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
         ...draft,
         target_field: draft.source_field,
         target_registration_type_id: draft.source_registration_type_id,
+        target_label_snapshot: draft.source_label_snapshot,
+        target_field_status: draft.source_field_status,
+        valid: undefined,
+        invalid_reason: null,
+        can_match: undefined,
       });
     }
   };
 
   const handleSave = () => {
-    if (incomplete || duplicate) return;
+    if (incomplete || duplicate || invalidSelection) return;
     onSave({
       ...draft,
       type: draft.operator || DEFAULT_MATCH_OPERATOR,
@@ -296,7 +339,7 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
             </Button>
             <Button
               size="small"
-              disabled={locked || incomplete || duplicate}
+              disabled={locked || incomplete || duplicate || invalidSelection}
               onClick={handleSave}
             >
               保存规则
@@ -448,12 +491,14 @@ const RuleEditorDrawer: React.FC<RuleEditorDrawerProps> = ({
           </div>
         </section>
 
-        {(incomplete || duplicate) && (
+        {(incomplete || duplicate || invalidSelection) && (
           <div className="flex gap-2 rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm text-orange-700">
             <AlertCircle size={17} className="mt-0.5 shrink-0" />
             <span>
               {duplicate
                 ? "这条规则与已有规则重复，请调整字段或匹配偏好。"
+                : invalidSelection
+                  ? getRuleInvalidMessage(draft) || "当前字段已不可用，请重新选择字段。"
                 : "请先补全比较字段和匹配偏好。"}
             </span>
           </div>

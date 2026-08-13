@@ -149,6 +149,28 @@ export const isRuleIncomplete = (rule: MatchingRule) =>
 export const hasIncompleteEnabledRules = (rules: MatchingRule[]) =>
   rules.some(isRuleIncomplete);
 
+export const isRuleInvalid = (rule: MatchingRule) => rule.valid === false;
+
+export const hasInvalidEnabledRules = (rules: MatchingRule[]) =>
+  rules.some((rule) => rule.enabled && isRuleInvalid(rule));
+
+export const getRuleInvalidMessage = (rule: MatchingRule) => {
+  switch (rule.invalid_reason) {
+    case "FIELD_REMOVED":
+      return "报名表字段已删除，请重新选择字段";
+    case "TECHNICAL_FALLBACK":
+      return "字段缺少可展示名称，请先修正报名表或重新选择";
+    case "PRIVATE_FIELD":
+      return "该字段不能用于匹配，请重新选择字段";
+    case "REGISTRATION_TYPE_UNAVAILABLE":
+      return "所属报名类型已停用或不参与匹配，请重新选择字段";
+    case "INSUFFICIENT_COVERAGE":
+      return "当前参与人的字段数据不足，请更换字段或参与人";
+    default:
+      return rule.valid === false ? "匹配字段已不可用，请重新选择" : "";
+  }
+};
+
 export const getRuleInfluencePercent = (
   rule: MatchingRule,
   rules: MatchingRule[],
@@ -203,8 +225,29 @@ export const getRuleFieldSummary = (
     rule.target_registration_type_id,
   );
 
-  const sourceLabel = source?.label || rule.source_field || "待选择字段";
-  const targetLabel = target?.label || rule.target_field || "待选择字段";
+  const getSafeLabel = (
+    fieldKey?: string,
+    labelSnapshot?: string,
+    currentLabel?: string,
+  ) => {
+    if (currentLabel) return currentLabel;
+    if (!fieldKey) return "待选择字段";
+    const snapshot = String(labelSnapshot || "").trim();
+    if (snapshot && !(fieldKey.startsWith("custom_") && snapshot === fieldKey)) {
+      return snapshot;
+    }
+    return "已删除字段";
+  };
+  const sourceLabel = getSafeLabel(
+    rule.source_field,
+    rule.source_label_snapshot,
+    source?.label,
+  );
+  const targetLabel = getSafeLabel(
+    rule.target_field,
+    rule.target_label_snapshot,
+    target?.label,
+  );
   const sourceType = source?.groupName;
   const targetType = target?.groupName;
   const isSameField =

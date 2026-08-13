@@ -128,6 +128,19 @@ export interface RegistrationFormImpactPreview {
   totalAffectedParticipants: number;
   totalOptionalNotificationParticipants?: number;
   totalMatchedNotificationParticipants?: number;
+  totalAffectedMatchingRules?: number;
+  matchingRuleImpacts?: Array<{
+    id: string;
+    source_field: string;
+    target_field: string;
+    source_label_snapshot?: string | null;
+    target_label_snapshot?: string | null;
+    reason:
+      | "FIELD_REMOVED"
+      | "PRIVATE_FIELD"
+      | "REGISTRATION_TYPE_UNAVAILABLE";
+    affectedFieldKeys: string[];
+  }>;
   typeImpacts: Array<{
     registrationTypeId: string;
     registrationTypeName: string;

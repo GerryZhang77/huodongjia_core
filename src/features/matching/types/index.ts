@@ -15,6 +15,8 @@ export type {
 // 从重构版 types.ts 重新导出所有类型
 export {
   type MatchOperator,
+  type MatchRuleInvalidReason,
+  type MatchRuleFieldStatus,
   type MatchingSchemaField,
   type RuleType,
   type MatchingRule,

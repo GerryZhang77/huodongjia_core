@@ -104,6 +104,13 @@ const normalizeRule = (
   target_field: rule.target_field || rule.field || "",
   source_registration_type_id: rule.source_registration_type_id,
   target_registration_type_id: rule.target_registration_type_id,
+  source_label_snapshot: rule.source_label_snapshot,
+  target_label_snapshot: rule.target_label_snapshot,
+  source_field_status: rule.source_field_status,
+  target_field_status: rule.target_field_status,
+  valid: rule.valid,
+  invalid_reason: rule.invalid_reason,
+  can_match: rule.can_match,
   operator: rule.operator || (rule.type as MatchRule["operator"]) || DEFAULT_OPERATOR,
   type: rule.type || rule.operator || DEFAULT_OPERATOR,
   field: rule.field,
@@ -113,11 +120,14 @@ const normalizeRule = (
   config: rule.config,
 });
 
-const serializeRulesForBackend = (rules: MatchRule[]) =>
+const serializeRulesForBackend = (
+  rules: MatchRule[],
+  options: { includeDisabled?: boolean } = {},
+) =>
   rules
     .filter(
       (rule) =>
-        rule.enabled &&
+        (options.includeDisabled || rule.enabled) &&
         rule.source_field &&
         rule.target_field &&
         rule.operator &&
@@ -128,8 +138,11 @@ const serializeRulesForBackend = (rules: MatchRule[]) =>
       target_field: rule.target_field,
       source_registration_type_id: rule.source_registration_type_id,
       target_registration_type_id: rule.target_registration_type_id,
+      source_label_snapshot: rule.source_label_snapshot,
+      target_label_snapshot: rule.target_label_snapshot,
       operator: rule.operator,
       weight: rule.weight,
+      enabled: rule.enabled,
     }));
 
 const mapSchemaFieldsToRules = (
@@ -265,7 +278,7 @@ export const saveMatchRules = async (
   rules: MatchRule[],
 ): Promise<void> => {
   const token = getToken();
-  const payloadRules = serializeRulesForBackend(rules);
+  const payloadRules = serializeRulesForBackend(rules, { includeDisabled: true });
 
   const response = await fetch(`/api/match/${activityId}/rules`, {
     method: "POST",
@@ -279,7 +292,9 @@ export const saveMatchRules = async (
   const data = await response.json();
 
   if (!data.success) {
-    throw new Error(data.message || "保存匹配规则失败");
+    throw new MatchingApiError(data.message || "保存匹配规则失败", {
+      code: data.code,
+    });
   }
 };
 
@@ -358,7 +373,10 @@ export const preflightMatching = async (
 
   const data = await response.json();
   if (!data.success) {
-    throw new Error(data.message || "匹配预检失败");
+    throw new MatchingApiError(data.message || "匹配预检失败", {
+      code: data.code,
+      diagnostics: data.diagnostics,
+    });
   }
 
   return data.data as MatchPreflightResult;

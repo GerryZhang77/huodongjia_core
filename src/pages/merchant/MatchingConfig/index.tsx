@@ -24,6 +24,7 @@ import { RulesTab, ResultsTab } from "@/features/matching/components";
 import type { NotificationConfig } from "@/features/matching/components/PublishResultDialog";
 import {
   findDuplicateRuleIndexes,
+  hasInvalidEnabledRules,
   hasIncompleteEnabledRules,
 } from "@/features/matching/components/RulesTab/rulePresentation";
 import {
@@ -208,6 +209,7 @@ const MatchingConfigPage: React.FC = () => {
   const rulesReadyToContinue =
     enabledRules.length > 0 &&
     !hasIncompleteEnabledRules(rules) &&
+    !hasInvalidEnabledRules(rules) &&
     findDuplicateRuleIndexes(rules).size === 0;
   const currentStepIndex = WIZARD_STEPS.findIndex(
     (step) => step.key === wizardStep,

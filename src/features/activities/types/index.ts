@@ -227,6 +227,8 @@ export interface UpdateActivityRequest {
   enableNfc?: boolean;
   registrationFormSchema?: RegistrationFormField[];
   registrationTypes?: ActivityRegistrationType[];
+  /** 已向主办方展示并确认报名表变更对当前匹配规则的影响。 */
+  confirmMatchRuleChanges?: boolean;
 }
 
 /**

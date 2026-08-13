@@ -27,6 +27,7 @@ export const useEditActivity = (activityId: string) => {
     queryClient.invalidateQueries({ queryKey: merchantQueryKeys.activity(id), ...options });
     queryClient.invalidateQueries({ queryKey: merchantQueryKeys.matchingCatalog(id), ...options });
     queryClient.invalidateQueries({ queryKey: merchantQueryKeys.matchingParticipants(id), ...options });
+    queryClient.invalidateQueries({ queryKey: merchantQueryKeys.matchingRules(id), ...options });
     queryClient.invalidateQueries({ queryKey: ["public", "activity", id], ...options });
     queryClient.invalidateQueries({ queryKey: ["user", "activity", id], ...options });
     queryClient.invalidateQueries({ queryKey: ["user", "activities"], ...options });
@@ -113,17 +114,27 @@ export const useEditActivity = (activityId: string) => {
         const overLimitSummary = overLimitOptions.length > 0
           ? ` 其中${overLimitOptions.join("；")}，相应选项将立即停止接受新报名。`
           : "";
+        const affectedMatchingRuleCount =
+          formImpact.totalAffectedMatchingRules ||
+          formImpact.matchingRuleImpacts?.length ||
+          0;
+        const matchingRuleSummary = affectedMatchingRuleCount > 0
+          ? ` 本次变更会停用 ${affectedMatchingRuleCount} 条当前匹配规则；既有匹配运行记录和历史结果不受影响，请在更新后进入智能匹配重新配置。`
+          : "";
         // 影响预检已经结束；确认阶段不应继续显示“更新中”，否则会和
         // 确认弹窗形成两个互相冲突的提交状态。
         setLoading(false);
         Toast.clear();
         const confirmed = await Dialog.confirm({
           title: "确认更新报名表？",
-          content: `${formChangeSummary}${impactSummary}${optionalNotificationSummary}${matchedNotificationSummary}${quotaSummary}${overLimitSummary}${preservedSummary}`,
+          content: `${formChangeSummary}${impactSummary}${optionalNotificationSummary}${matchedNotificationSummary}${quotaSummary}${overLimitSummary}${preservedSummary}${matchingRuleSummary}`,
           confirmText: "确认更新",
           cancelText: "继续编辑",
         });
         if (!confirmed) return;
+        if (affectedMatchingRuleCount > 0) {
+          requestData.confirmMatchRuleChanges = true;
+        }
         setLoading(true);
       }
 
@@ -148,7 +159,7 @@ export const useEditActivity = (activityId: string) => {
       Toast.clear();
       Toast.show({
         icon: "fail",
-        content: "更新活动失败，请稍后重试",
+        content: error instanceof Error ? error.message : "更新活动失败，请稍后重试",
       });
     } finally {
       setLoading(false);

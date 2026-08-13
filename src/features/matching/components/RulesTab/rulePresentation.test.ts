@@ -6,6 +6,8 @@ import {
   getOperatorMeta,
   getRuleFieldSummary,
   getRuleInfluencePercent,
+  getRuleInvalidMessage,
+  hasInvalidEnabledRules,
   hasIncompleteEnabledRules,
   type RuleFieldOption,
 } from "./rulePresentation";
@@ -66,6 +68,23 @@ describe("matching rule validation", () => {
       disabled: [{ rule: { id: "two" }, index: 1 }],
     });
   });
+
+  it("blocks enabled invalid rules but allows an invalid rule to remain disabled", () => {
+    expect(
+      hasInvalidEnabledRules([
+        makeRule("orphan", { valid: false, invalid_reason: "FIELD_REMOVED" }),
+      ]),
+    ).toBe(true);
+    expect(
+      hasInvalidEnabledRules([
+        makeRule("orphan", {
+          enabled: false,
+          valid: false,
+          invalid_reason: "FIELD_REMOVED",
+        }),
+      ]),
+    ).toBe(false);
+  });
 });
 
 describe("matching rule presentation", () => {
@@ -119,5 +138,40 @@ describe("matching rule presentation", () => {
 
     expect(getRuleInfluencePercent(primary, [primary, supporting])).toBe(71);
     expect(getOperatorMeta("opposite").label).toBe("必须不同");
+  });
+
+  it("never exposes a custom technical key as a field title", () => {
+    expect(
+      getRuleFieldSummary(
+        makeRule("orphan", {
+          source_field: "custom_1785063125127",
+          target_field: "custom_1785063125127",
+          source_label_snapshot: "custom_1785063125127",
+          target_label_snapshot: "custom_1785063125127",
+          valid: false,
+          invalid_reason: "FIELD_REMOVED",
+        }),
+        [],
+      ),
+    ).toBe("已删除字段");
+    expect(
+      getRuleInvalidMessage(
+        makeRule("orphan", { valid: false, invalid_reason: "FIELD_REMOVED" }),
+      ),
+    ).toBe("报名表字段已删除，请重新选择字段");
+  });
+
+  it("uses a product label snapshot when the current field is unavailable", () => {
+    expect(
+      getRuleFieldSummary(
+        makeRule("renamed-or-removed", {
+          source_field: "custom_diet",
+          target_field: "custom_diet",
+          source_label_snapshot: "饮食菜系偏好",
+          target_label_snapshot: "饮食菜系偏好",
+        }),
+        [],
+      ),
+    ).toBe("饮食菜系偏好");
   });
 });

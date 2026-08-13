@@ -26,11 +26,13 @@ import {
   DEFAULT_MATCH_OPERATOR,
   findDuplicateRuleIndexes,
   groupRulesByEnabled,
+  hasInvalidEnabledRules,
   hasIncompleteEnabledRules,
   normalizeRuleWeight,
   type RuleFieldOption,
 } from "./rulePresentation";
 import { isPrivateMatchingRegistrationField } from "../registrationInfo";
+import { isTechnicalFallbackRegistrationField } from "@/features/activities/utils/registrationFormFields";
 
 interface RulesTabProps {
   rules: MatchingRule[];
@@ -129,6 +131,7 @@ const RulesTab: React.FC<RulesTabProps> = ({
           (field) =>
             field.key &&
             field.type !== "image" &&
+            !isTechnicalFallbackRegistrationField(field) &&
             !isPrivateMatchingRegistrationField(field.key, field.label),
         )
         .map(
@@ -163,9 +166,13 @@ const RulesTab: React.FC<RulesTabProps> = ({
   const groupedRules = useMemo(() => groupRulesByEnabled(rules), [rules]);
   const enabledRules = groupedRules.enabled.map(({ rule }) => rule);
   const hasIncompleteRules = hasIncompleteEnabledRules(rules);
+  const hasInvalidRules = hasInvalidEnabledRules(rules);
   const hasDuplicateRules = duplicateRuleIndexes.size > 0;
   const canSubmitRules =
-    enabledRules.length > 0 && !hasIncompleteRules && !hasDuplicateRules;
+    enabledRules.length > 0 &&
+    !hasIncompleteRules &&
+    !hasInvalidRules &&
+    !hasDuplicateRules;
 
   const replaceHardRule = (
     field: "age" | "gender",
@@ -208,6 +215,10 @@ const RulesTab: React.FC<RulesTabProps> = ({
     rule: MatchingRule,
     enabled: boolean,
   ) => {
+    if (enabled && rule.valid === false) {
+      Toast.show({ content: "请先重新选择已失效规则的字段", icon: "fail" });
+      return;
+    }
     updateRuleAtIndex(index, { ...rule, enabled });
     if (!enabled) setDisabledRulesExpanded(true);
   };
@@ -230,6 +241,10 @@ const RulesTab: React.FC<RulesTabProps> = ({
     }
     if (hasIncompleteRules) {
       Toast.show({ content: "请先补全未完成的匹配规则", icon: "fail" });
+      return false;
+    }
+    if (hasInvalidRules) {
+      Toast.show({ content: "请先修复已失效的匹配规则", icon: "fail" });
       return false;
     }
     if (hasDuplicateRules) {
@@ -680,12 +695,14 @@ const RulesTab: React.FC<RulesTabProps> = ({
           )}
         </section>
 
-        {(hasIncompleteRules || hasDuplicateRules) && (
+        {(hasIncompleteRules || hasInvalidRules || hasDuplicateRules) && (
           <div className="flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm text-orange-700">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <span>
               {hasDuplicateRules
                 ? "存在重复规则，请打开标记项修改或删除后继续。"
+                : hasInvalidRules
+                  ? "存在已失效规则，请重新选择字段或停用该规则后继续。"
                 : "存在未完成的规则，请补全后继续。"}
             </span>
           </div>

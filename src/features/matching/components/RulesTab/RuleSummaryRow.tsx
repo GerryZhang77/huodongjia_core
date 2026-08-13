@@ -6,7 +6,9 @@ import {
   getOperatorMeta,
   getRuleFieldSummary,
   getRuleInfluencePercent,
+  getRuleInvalidMessage,
   isRuleIncomplete,
+  isRuleInvalid,
   type RuleFieldOption,
 } from "./rulePresentation";
 
@@ -32,6 +34,8 @@ export function RuleSummaryRow({
   const operator = getOperatorMeta(rule.operator);
   const influence = getRuleInfluencePercent(rule, rules);
   const incomplete = isRuleIncomplete(rule);
+  const invalid = isRuleInvalid(rule);
+  const invalidMessage = getRuleInvalidMessage(rule);
   const fieldSummary = getRuleFieldSummary(rule, fieldOptions);
   const sourceOption = getFieldOption(
     fieldOptions,
@@ -45,6 +49,7 @@ export function RuleSummaryRow({
   );
   const dataUnavailable =
     rule.enabled &&
+    !invalid &&
     (sourceOption?.canMatch === false || targetOption?.canMatch === false);
 
   return (
@@ -77,6 +82,11 @@ export function RuleSummaryRow({
                 与其他规则重复
               </span>
             )}
+            {invalid && invalidMessage && (
+              <span className="font-medium text-orange-600">
+                {invalidMessage}
+              </span>
+            )}
             {dataUnavailable && (
               <span className="font-medium text-orange-600">字段数据不足</span>
             )}
@@ -86,7 +96,7 @@ export function RuleSummaryRow({
       </button>
       <Switch
         checked={rule.enabled}
-        disabled={locked}
+        disabled={locked || (invalid && !rule.enabled)}
         size="small"
         aria-label={`${fieldSummary}规则启用状态`}
         onChange={onEnabledChange}
