@@ -17,6 +17,12 @@ const pendingEnrollment: Enrollment = {
   imageCount: 0,
 };
 
+const approvedEnrollment: Enrollment = {
+  ...pendingEnrollment,
+  id: "enrollment-2",
+  status: "approved",
+};
+
 describe("EnrollmentDetailDrawer", () => {
   it("keeps pending review actions above the mobile tab bar", () => {
     const onApprove = vi.fn();
@@ -48,5 +54,23 @@ describe("EnrollmentDetailDrawer", () => {
     fireEvent.click(rejectButton);
     expect(onApprove).toHaveBeenCalledWith("enrollment-1");
     expect(onReject).toHaveBeenCalledWith("enrollment-1");
+  });
+
+  it("allows an approved enrollment to be cancelled and release capacity", () => {
+    const onCancel = vi.fn();
+
+    render(
+      <EnrollmentDetailDrawer
+        visible
+        activityId="activity-1"
+        enrollment={approvedEnrollment}
+        onClose={vi.fn()}
+        onCancel={onCancel}
+        onNotify={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "取消并释放名额" }));
+    expect(onCancel).toHaveBeenCalledWith("enrollment-2");
   });
 });

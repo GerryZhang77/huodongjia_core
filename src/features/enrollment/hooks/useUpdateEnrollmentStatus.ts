@@ -67,6 +67,14 @@ export const useUpdateEnrollmentStatus = (activityId: string) => {
         });
         return;
       }
+      if (status === "cancelled") {
+        const releasedCapacityCount = result.data?.releasedCapacityCount ?? 0;
+        Toast.show({
+          icon: "success",
+          content: `已取消报名，释放 ${releasedCapacityCount} 个名额`,
+        });
+        return;
+      }
       const statusText =
         status === "approved"
           ? "通过"

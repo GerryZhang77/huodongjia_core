@@ -42,6 +42,8 @@ export interface EnrollmentDetailDrawerProps {
   onApprove?: (id: string) => void;
   /** 静默结束审核回调 */
   onReject?: (id: string) => void;
+  /** 取消已通过报名并释放名额 */
+  onCancel?: (id: string) => void;
   /** 发送通知回调 */
   onNotify?: (id: string) => void;
   /** 指定需要参与者补充或确认的字段。 */
@@ -112,6 +114,7 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
   onClose,
   onApprove,
   onReject,
+  onCancel,
   onNotify,
   onRequestUpdate,
   onReviewChanges,
@@ -530,6 +533,25 @@ const EnrollmentDetailDrawer: React.FC<EnrollmentDetailDrawerProps> = ({
                 <CheckCircle size={16} />
                 通过
               </button>
+              </>
+            ) : enrollment.status === "approved" ? (
+              <>
+                <button
+                  type="button"
+                  className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] border border-red-300 py-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 [&>svg]:shrink-0"
+                  onClick={() => onCancel?.(enrollment.id)}
+                >
+                  <XCircle size={16} />
+                  取消并释放名额
+                </button>
+                <button
+                  type="button"
+                  className="flex flex-1 flex-nowrap items-center justify-center gap-2 whitespace-nowrap rounded-[22px] bg-gradient-to-br from-primary-400 to-primary-500 py-3 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md [&>svg]:shrink-0"
+                  onClick={() => onNotify?.(enrollment.id)}
+                >
+                  <Send size={16} />
+                  发送通知
+                </button>
               </>
             ) : (
               <button

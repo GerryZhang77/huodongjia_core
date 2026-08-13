@@ -36,6 +36,24 @@ describe("updateEnrollmentStatus", () => {
     );
   });
 
+  it("silently cancels an approved enrollment to release capacity", async () => {
+    await updateEnrollmentStatus({
+      activityId: "event-1",
+      enrollmentIds: ["enrollment-2"],
+      status: "cancelled",
+      notificationPolicy: "silent",
+    });
+
+    expect(apiMocks.patch).toHaveBeenCalledWith(
+      "/api/enrollments/event-1/status",
+      {
+        enrollment_ids: ["enrollment-2"],
+        status: "cancelled",
+        notification_policy: "silent",
+      },
+    );
+  });
+
   it("keeps the request compatible when no policy is specified", async () => {
     await updateEnrollmentStatus({
       activityId: "event-1",

@@ -708,6 +708,24 @@ const EnrollmentManagementNew: React.FC = () => {
     );
   };
 
+  const handleCancel = async (enrollmentId: string) => {
+    const confirmed = await Dialog.confirm({
+      title: "取消报名？",
+      content: "将释放 1 个名额，用户端显示“已取消”。",
+      confirmText: "确认取消",
+      cancelText: "返回",
+    });
+    if (!confirmed) return;
+    updateStatus(
+      [enrollmentId],
+      "cancelled",
+      () => {
+        setShowDetailDrawer(false);
+      },
+      { notificationPolicy: "silent" },
+    );
+  };
+
   const refreshDetailEnrollment = async (enrollmentId: string) => {
     const refreshed = await enrollmentQuery.refetch();
     const next = refreshed.data?.enrollments?.find(
@@ -1239,6 +1257,7 @@ const EnrollmentManagementNew: React.FC = () => {
         }}
         onApprove={handleApprove}
         onReject={handleReject}
+        onCancel={handleCancel}
         onRequestUpdate={handleRequestEnrollmentUpdate}
         onReviewChanges={handleReviewEnrollmentChanges}
         onNotify={(enrollmentId) => {
