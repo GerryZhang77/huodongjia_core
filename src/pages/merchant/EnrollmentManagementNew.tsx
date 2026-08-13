@@ -1236,6 +1236,8 @@ const EnrollmentManagementNew: React.FC = () => {
         activityId={id || ""}
         activityTitle={activity?.title}
         enrollments={filteredEnrollments}
+        registrationFormSchema={activity?.registrationFormSchema || undefined}
+        registrationTypes={activity?.registrationTypes}
       />
 
       <RegistrationQrModal

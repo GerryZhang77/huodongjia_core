@@ -8,8 +8,8 @@ import { Toast } from "@/components/ui/Toast";
 import * as XLSX from "xlsx";
 import type { Enrollment } from "@/types/enrollment";
 import {
+  buildEnrollmentExportFields,
   buildEnrollmentExportRow,
-  DEFAULT_ENROLLMENT_EXPORT_FIELDS,
 } from "@/features/enrollment/utils/enrollmentExportModel";
 
 interface UseExportEnrollmentsOptions {
@@ -46,7 +46,7 @@ export function useExportEnrollments(
 
       try {
         // 转换数据格式
-        const fields = DEFAULT_ENROLLMENT_EXPORT_FIELDS;
+        const fields = buildEnrollmentExportFields(enrollments);
         const exportData = enrollments.map((enrollment, index) =>
           buildEnrollmentExportRow(enrollment, index, fields),
         );
@@ -56,22 +56,13 @@ export function useExportEnrollments(
         const worksheet = XLSX.utils.json_to_sheet(exportData);
 
         // 设置列宽
-        const columnWidths = [
-          { wch: 6 }, // 序号
-          { wch: 10 }, // 姓名
-          { wch: 6 }, // 性别
-          { wch: 6 }, // 年龄
-          { wch: 14 }, // 手机号
-          { wch: 24 }, // 邮箱
-          { wch: 12 }, // 职业
-          { wch: 16 }, // 公司
-          { wch: 10 }, // 城市
-          { wch: 20 }, // 兴趣标签
-          { wch: 30 }, // 个人简介
-          { wch: 30 }, // 匹配需求
-          { wch: 10 }, // 状态
-          { wch: 20 }, // 报名时间
-        ];
+        const columnWidths = fields.map((field) => ({
+          wch: field.key === "index"
+            ? 6
+            : field.key === "enrolledAt"
+              ? 20
+              : Math.min(Math.max(field.label.length + 4, 10), 36),
+        }));
         worksheet["!cols"] = columnWidths;
 
         // 添加工作表

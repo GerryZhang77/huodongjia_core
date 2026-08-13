@@ -17,10 +17,10 @@ import {
 import * as XLSX from "xlsx";
 import type { Enrollment } from "@/types/enrollment";
 import {
+  buildEnrollmentExportFields,
   buildEnrollmentExportRow,
-  collectEnrollmentExportFields,
-  DEFAULT_ENROLLMENT_EXPORT_FIELDS,
   type EnrollmentExportField,
+  type EnrollmentExportRegistrationType,
 } from "@/features/enrollment/utils/enrollmentExportModel";
 
 // ========================================
@@ -32,6 +32,8 @@ interface ExportEnrollmentModalProps {
   activityId: string;
   activityTitle?: string;
   enrollments: Enrollment[];
+  registrationFormSchema?: Enrollment["formSchemaSnapshot"];
+  registrationTypes?: EnrollmentExportRegistrationType[];
   onClose: () => void;
 }
 
@@ -41,7 +43,11 @@ function areFieldsSame(a: EnrollmentExportField[], b: EnrollmentExportField[]) {
     (field, index) =>
       field.key === b[index].key &&
       field.label === b[index].label &&
-      field.enabled === b[index].enabled,
+      field.enabled === b[index].enabled &&
+      field.semantic === b[index].semantic &&
+      JSON.stringify(field.stableKeys || []) ===
+        JSON.stringify(b[index].stableKeys || []) &&
+      JSON.stringify(field.labels || []) === JSON.stringify(b[index].labels || []),
   );
 }
 
@@ -55,11 +61,21 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
   activityId,
   activityTitle = "活动",
   enrollments,
+  registrationFormSchema,
+  registrationTypes,
   onClose,
 }) => {
+  const availableFields = useMemo(
+    () =>
+      buildEnrollmentExportFields(enrollments, {
+        registrationFormSchema,
+        registrationTypes,
+      }),
+    [enrollments, registrationFormSchema, registrationTypes],
+  );
   // 导出字段配置
   const [exportFields, setExportFields] = useState<EnrollmentExportField[]>(
-    DEFAULT_ENROLLMENT_EXPORT_FIELDS,
+    availableFields,
   );
   // 导出状态
   const [isExporting, setIsExporting] = useState(false);
@@ -68,25 +84,28 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
   const [previewPage, setPreviewPage] = useState(0);
   const previewPageSize = 5;
 
-  const dynamicFields = useMemo(
-    () => collectEnrollmentExportFields(enrollments),
-    [enrollments],
-  );
-
   useEffect(() => {
     setExportFields((prev) => {
       const previousEnabled = new Map(prev.map((field) => [field.key, field.enabled]));
-      const next = [...DEFAULT_ENROLLMENT_EXPORT_FIELDS, ...dynamicFields].map((field) => ({
+      const next = availableFields.map((field) => ({
         ...field,
         enabled: previousEnabled.get(field.key) ?? field.enabled,
       }));
       return areFieldsSame(prev, next) ? prev : next;
     });
-  }, [dynamicFields]);
+  }, [availableFields]);
 
   // 启用的字段
   const enabledFields = useMemo(
     () => exportFields.filter((f) => f.enabled),
+    [exportFields],
+  );
+  const formFields = useMemo(
+    () => exportFields.filter((field) => field.source === "form"),
+    [exportFields],
+  );
+  const systemFields = useMemo(
+    () => exportFields.filter((field) => field.source === "system"),
     [exportFields],
   );
 
@@ -114,6 +133,27 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
       prev.map((f) => (f.key === key ? { ...f, enabled: !f.enabled } : f)),
     );
   };
+
+  const renderFieldButtons = (fields: EnrollmentExportField[]) =>
+    fields.map((field) => (
+      <button
+        key={field.key}
+        className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+          field.enabled
+            ? "bg-green-50 border-green-300 text-green-700"
+            : "bg-gray-50 border-gray-200 text-gray-500"
+        }`}
+        onClick={() => toggleField(field.key)}
+      >
+        {field.enabled && (
+          <CheckCircle2
+            size={14}
+            className="inline-block mr-1 -mt-0.5"
+          />
+        )}
+        {field.label}
+      </button>
+    ));
 
   // 执行导出
   const handleExport = useCallback(() => {
@@ -257,26 +297,19 @@ const ExportEnrollmentModal: React.FC<ExportEnrollmentModalProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   选择导出字段
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {exportFields.map((field) => (
-                    <button
-                      key={field.key}
-                      className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                        field.enabled
-                          ? "bg-green-50 border-green-300 text-green-700"
-                          : "bg-gray-50 border-gray-200 text-gray-500"
-                      }`}
-                      onClick={() => toggleField(field.key)}
-                    >
-                      {field.enabled && (
-                        <CheckCircle2
-                          size={14}
-                          className="inline-block mr-1 -mt-0.5"
-                        />
-                      )}
-                      {field.label}
-                    </button>
-                  ))}
+                <div className="space-y-3">
+                  <div>
+                    <p className="mb-1.5 text-xs text-gray-500">报名表字段</p>
+                    <div className="flex flex-wrap gap-2">
+                      {renderFieldButtons(formFields)}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-xs text-gray-500">系统字段</p>
+                    <div className="flex flex-wrap gap-2">
+                      {renderFieldButtons(systemFields)}
+                    </div>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                   已选择 {enabledFields.length} 个字段

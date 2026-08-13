@@ -1,11 +1,11 @@
 import type { Enrollment } from "@/types/enrollment";
 import {
-  hasEnrollmentFieldValue,
+  ENROLLMENT_FIELD_ALIASES,
+  identifyStandardEnrollmentField,
   normalizeEnrollmentGender,
   resolveEnrollmentFormGender,
   resolveEnrollmentFormName,
   resolveEnrollmentFormValue,
-  resolveStandardEnrollmentFormValue,
   type StandardEnrollmentField,
 } from "./enrollmentFieldResolver";
 
@@ -13,28 +13,50 @@ export interface EnrollmentExportField {
   key: string;
   label: string;
   enabled: boolean;
+  source: "system" | "form";
+  semantic?: StandardEnrollmentField;
+  stableKeys?: string[];
+  labels?: string[];
 }
 
-export const CUSTOM_ENROLLMENT_EXPORT_FIELD_PREFIX = "custom:";
-const SCHEMA_ENROLLMENT_EXPORT_FIELD_PREFIX = "schema:";
+type EnrollmentSchemaField = NonNullable<Enrollment["formSchemaSnapshot"]>[number];
 
-export const DEFAULT_ENROLLMENT_EXPORT_FIELDS: EnrollmentExportField[] = [
-  { key: "index", label: "序号", enabled: true },
-  { key: "name", label: "姓名", enabled: true },
-  { key: "gender", label: "性别", enabled: true },
-  { key: "age", label: "年龄", enabled: true },
-  { key: "phone", label: "手机号", enabled: true },
-  { key: "email", label: "邮箱", enabled: true },
-  { key: "occupation", label: "职业", enabled: true },
-  { key: "company", label: "公司", enabled: true },
-  { key: "city", label: "城市", enabled: true },
-  { key: "tags", label: "兴趣标签", enabled: true },
-  { key: "registrationTypeName", label: "报名类型", enabled: true },
-  { key: "bio", label: "个人简介", enabled: false },
-  { key: "matchingNeeds", label: "匹配需求", enabled: false },
-  { key: "status", label: "状态", enabled: true },
-  { key: "enrolledAt", label: "报名时间", enabled: true },
+export interface EnrollmentExportRegistrationType {
+  id?: string | null;
+  name?: string | null;
+  formSchema?: EnrollmentSchemaField[] | null;
+}
+
+export interface EnrollmentExportFieldOptions {
+  registrationFormSchema?: EnrollmentSchemaField[] | null;
+  registrationTypes?: EnrollmentExportRegistrationType[] | null;
+}
+
+const LEADING_SYSTEM_EXPORT_FIELDS: EnrollmentExportField[] = [
+  { key: "index", label: "序号", enabled: true, source: "system" },
 ];
+
+const TRAILING_SYSTEM_EXPORT_FIELDS: EnrollmentExportField[] = [
+  {
+    key: "registrationTypeName",
+    label: "报名类型",
+    enabled: true,
+    source: "system",
+  },
+  { key: "status", label: "状态", enabled: true, source: "system" },
+  {
+    key: "enrolledAt",
+    label: "报名时间",
+    enabled: true,
+    source: "system",
+  },
+];
+
+const SYSTEM_EXPORT_FIELD_LABELS = new Set(
+  [...LEADING_SYSTEM_EXPORT_FIELDS, ...TRAILING_SYSTEM_EXPORT_FIELDS].map(
+    (field) => field.label,
+  ),
+);
 
 const STATUS_LABELS: Record<string, string> = {
   approved: "已通过",
@@ -49,40 +71,6 @@ const GENDER_LABELS = {
   female: "女",
   other: "其他",
 } as const;
-
-const RESERVED_CUSTOM_FIELD_LABELS = new Set([
-  ...DEFAULT_ENROLLMENT_EXPORT_FIELDS.map((field) => field.label),
-  "姓名",
-  "性别",
-  "年龄",
-  "手机号",
-  "手机",
-  "电话",
-  "邮箱",
-  "职业",
-  "公司",
-  "城市",
-  "兴趣标签",
-  "标签",
-  "个人简介",
-  "匹配需求",
-  "状态",
-  "报名时间",
-  "更新时间",
-  "name",
-  "gender",
-  "sex",
-  "age",
-  "phone",
-  "email",
-  "occupation",
-  "company",
-  "industry",
-  "city",
-  "bio",
-  "matchingNeeds",
-  "matching_needs",
-]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -128,28 +116,127 @@ export function getEnrollmentCustomExportValue(
   );
 }
 
+function normalizeFieldIdentity(value: unknown): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function uniqueStrings(values: Array<string | undefined>): string[] {
+  return [...new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])];
+}
+
+function getRepresentedCurrentSchemas(
+  enrollments: Enrollment[],
+  options: EnrollmentExportFieldOptions,
+): EnrollmentSchemaField[][] {
+  const registrationTypes = options.registrationTypes || [];
+  const representedTypeIds = new Set(
+    enrollments
+      .map((enrollment) => enrollment.registrationTypeId)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const hasUntypedEnrollment = enrollments.some(
+    (enrollment) => !enrollment.registrationTypeId,
+  );
+  const schemas = registrationTypes
+    .filter(
+      (registrationType) =>
+        registrationType.id && representedTypeIds.has(registrationType.id),
+    )
+    .map((registrationType) => registrationType.formSchema || [])
+    .filter((schema) => schema.length > 0);
+
+  if (
+    options.registrationFormSchema?.length
+    && (hasUntypedEnrollment || registrationTypes.length === 0)
+  ) {
+    schemas.push(options.registrationFormSchema);
+  }
+
+  return schemas;
+}
+
 export function collectEnrollmentExportFields(
   enrollments: Enrollment[],
+  options: EnrollmentExportFieldOptions = {},
 ): EnrollmentExportField[] {
-  const seen = new Set(RESERVED_CUSTOM_FIELD_LABELS);
   const fields: EnrollmentExportField[] = [];
-  const append = (rawLabel: string, stableKey?: string) => {
+  const bySemantic = new Map<StandardEnrollmentField, EnrollmentExportField>();
+  const byStableKey = new Map<string, EnrollmentExportField>();
+  const byLabel = new Map<string, EnrollmentExportField>();
+  const currentSchemas = getRepresentedCurrentSchemas(enrollments, options);
+  const allSchemaFields = [
+    ...currentSchemas.flat(),
+    ...enrollments.flatMap((enrollment) => enrollment.formSchemaSnapshot || []),
+  ];
+  const imageFieldIdentities = new Set(
+    allSchemaFields
+      .filter((field) => field.type === "image")
+      .flatMap((field) => [field.key, field.label])
+      .map(normalizeFieldIdentity)
+      .filter(Boolean),
+  );
+
+  const append = (rawLabel: string, stableKey?: string, type?: string) => {
     const label = rawLabel.trim();
-    if (!label || seen.has(label) || isTechnicalFieldLabel(label)) return;
-    seen.add(label);
-    fields.push({
-      key: stableKey
-        ? `${SCHEMA_ENROLLMENT_EXPORT_FIELD_PREFIX}${stableKey}`
-        : `${CUSTOM_ENROLLMENT_EXPORT_FIELD_PREFIX}${label}`,
+    const normalizedStableKey = stableKey?.trim();
+    if (
+      !label
+      || type === "image"
+      || SYSTEM_EXPORT_FIELD_LABELS.has(label)
+      || isTechnicalFieldLabel(label)
+      || imageFieldIdentities.has(normalizeFieldIdentity(label))
+      || imageFieldIdentities.has(normalizeFieldIdentity(normalizedStableKey))
+    ) {
+      return;
+    }
+
+    const semantic = identifyStandardEnrollmentField(normalizedStableKey, label);
+    const normalizedLabel = normalizeFieldIdentity(label);
+    const existing =
+      (semantic ? bySemantic.get(semantic) : undefined)
+      || (normalizedStableKey ? byStableKey.get(normalizedStableKey) : undefined)
+      || byLabel.get(normalizedLabel);
+
+    if (existing) {
+      existing.stableKeys = uniqueStrings([
+        ...(existing.stableKeys || []),
+        normalizedStableKey,
+      ]);
+      existing.labels = uniqueStrings([...(existing.labels || []), label]);
+      if (normalizedStableKey) byStableKey.set(normalizedStableKey, existing);
+      byLabel.set(normalizedLabel, existing);
+      if (semantic) bySemantic.set(semantic, existing);
+      return;
+    }
+
+    const field: EnrollmentExportField = {
+      key: semantic
+        ? `form:standard:${semantic}`
+        : normalizedStableKey
+          ? `form:key:${normalizedStableKey}`
+          : `form:label:${normalizedLabel}`,
       label,
       enabled: true,
-    });
+      source: "form",
+      semantic,
+      stableKeys: uniqueStrings([normalizedStableKey]),
+      labels: [label],
+    };
+    fields.push(field);
+    if (semantic) bySemantic.set(semantic, field);
+    if (normalizedStableKey) byStableKey.set(normalizedStableKey, field);
+    byLabel.set(normalizedLabel, field);
   };
+
+  for (const schema of currentSchemas) {
+    for (const field of schema) {
+      append(String(field.label || field.key || ""), field.key, field.type);
+    }
+  }
 
   for (const enrollment of enrollments) {
     for (const field of enrollment.formSchemaSnapshot || []) {
-      if (field.type === "image") continue;
-      append(String(field.label || field.key || ""), field.key);
+      append(String(field.label || field.key || ""), field.key, field.type);
     }
     for (const source of [
       enrollment.formData,
@@ -158,32 +245,50 @@ export function collectEnrollmentExportFields(
     ]) {
       if (!isRecord(source)) continue;
       for (const key of Object.keys(source)) {
-        const schemaField = enrollment.formSchemaSnapshot?.find(
-          (field) => field.key === key,
+        const schemaField = allSchemaFields.find(
+          (field) => field.key === key || field.label === key,
         );
-        if (schemaField?.type === "image") continue;
-        append(schemaField?.label || key, schemaField?.key);
+        append(schemaField?.label || key, schemaField?.key, schemaField?.type);
       }
     }
   }
   return fields;
 }
 
-function getStandardFieldValue(
+export function buildEnrollmentExportFields(
+  enrollments: Enrollment[],
+  options: EnrollmentExportFieldOptions = {},
+): EnrollmentExportField[] {
+  return [
+    ...LEADING_SYSTEM_EXPORT_FIELDS.map((field) => ({ ...field })),
+    ...collectEnrollmentExportFields(enrollments, options),
+    ...TRAILING_SYSTEM_EXPORT_FIELDS.map((field) => ({ ...field })),
+  ];
+}
+
+function getFormFieldValue(
   enrollment: Enrollment,
-  field: StandardEnrollmentField,
-  fallback: unknown,
+  field: EnrollmentExportField,
 ): string | number {
-  const formValue = resolveStandardEnrollmentFormValue(enrollment, field);
+  if (field.semantic === "name") return getEnrollmentExportName(enrollment);
+  if (field.semantic === "gender") return getEnrollmentExportGender(enrollment);
+
+  const semanticAliases = field.semantic
+    ? [...ENROLLMENT_FIELD_ALIASES[field.semantic]]
+    : [];
   return toEnrollmentExportValue(
-    hasEnrollmentFieldValue(formValue) ? formValue : fallback,
+    resolveEnrollmentFormValue(enrollment, [
+      ...(field.stableKeys || []),
+      ...(field.labels || []),
+      ...semanticAliases,
+    ]),
   );
 }
 
 export function buildEnrollmentExportRow(
   enrollment: Enrollment,
   index: number,
-  fields: EnrollmentExportField[] = DEFAULT_ENROLLMENT_EXPORT_FIELDS,
+  fields: EnrollmentExportField[],
 ): Record<string, string | number> {
   const row: Record<string, string | number> = {};
 
@@ -191,30 +296,6 @@ export function buildEnrollmentExportRow(
     switch (field.key) {
       case "index":
         row[field.label] = index + 1;
-        break;
-      case "name":
-        row[field.label] = getEnrollmentExportName(enrollment);
-        break;
-      case "gender":
-        row[field.label] = getEnrollmentExportGender(enrollment);
-        break;
-      case "age":
-      case "phone":
-      case "email":
-      case "occupation":
-      case "company":
-      case "industry":
-      case "city":
-      case "bio":
-      case "matchingNeeds":
-        row[field.label] = getStandardFieldValue(
-          enrollment,
-          field.key,
-          enrollment[field.key],
-        );
-        break;
-      case "tags":
-        row[field.label] = enrollment.tags?.join("、") || "";
         break;
       case "registrationTypeName":
         row[field.label] = enrollment.registrationTypeName || "";
@@ -233,19 +314,7 @@ export function buildEnrollmentExportRow(
           : "";
         break;
       default:
-        if (
-          field.key.startsWith(CUSTOM_ENROLLMENT_EXPORT_FIELD_PREFIX)
-          || field.key.startsWith(SCHEMA_ENROLLMENT_EXPORT_FIELD_PREFIX)
-        ) {
-          const stableKey = field.key.startsWith(SCHEMA_ENROLLMENT_EXPORT_FIELD_PREFIX)
-            ? field.key.slice(SCHEMA_ENROLLMENT_EXPORT_FIELD_PREFIX.length)
-            : undefined;
-          row[field.label] = getEnrollmentCustomExportValue(
-            enrollment,
-            field.label,
-            stableKey,
-          );
-        }
+        if (field.source === "form") row[field.label] = getFormFieldValue(enrollment, field);
         break;
     }
   }

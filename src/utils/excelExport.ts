@@ -7,27 +7,9 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import type { Enrollment } from "@/features/enrollment/types";
 import {
+  buildEnrollmentExportFields,
   buildEnrollmentExportRow,
-  collectEnrollmentExportFields,
-  type EnrollmentExportField,
 } from "@/features/enrollment/utils/enrollmentExportModel";
-
-const BASE_EXPORT_FIELDS: EnrollmentExportField[] = [
-  { key: "name", label: "姓名", enabled: true },
-  { key: "gender", label: "性别", enabled: true },
-  { key: "age", label: "年龄", enabled: true },
-  { key: "phone", label: "手机号", enabled: true },
-  { key: "email", label: "邮箱", enabled: true },
-  { key: "occupation", label: "职业", enabled: true },
-  { key: "company", label: "公司", enabled: true },
-  { key: "industry", label: "行业", enabled: true },
-  { key: "city", label: "城市", enabled: true },
-  { key: "tags", label: "标签", enabled: true },
-  { key: "registrationTypeName", label: "报名类型", enabled: true },
-  { key: "status", label: "状态", enabled: true },
-  { key: "enrolledAt", label: "报名时间", enabled: true },
-  { key: "updatedAt", label: "更新时间", enabled: true },
-];
 
 /**
  * 导出报名数据为 Excel
@@ -39,10 +21,7 @@ export const exportEnrollmentsToExcel = (
   activityTitle: string = "活动"
 ): void => {
   try {
-    const fields = [
-      ...BASE_EXPORT_FIELDS,
-      ...collectEnrollmentExportFields(enrollments),
-    ];
+    const fields = buildEnrollmentExportFields(enrollments);
     const allHeaders = fields.map((field) => field.label);
     const data = enrollments.map((enrollment, index) => {
       const row = buildEnrollmentExportRow(enrollment, index, fields);
